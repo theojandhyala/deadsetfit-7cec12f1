@@ -1,13 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Loader2, Play, Plus, Sparkles, ListPlus, Flame } from "lucide-react";
+import { Loader2, Play, Plus, Sparkles, ListPlus, Flame, Trophy } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { GritLogo } from "@/components/GritLogo";
 import { VideoModal } from "@/components/VideoModal";
 import { RestTimer } from "@/components/RestTimer";
+import { Reminders } from "@/components/Reminders";
+import { DailyQuests } from "@/components/DailyQuests";
 import { useAppState } from "@/lib/storage";
 import { EXERCISES, getExercise } from "@/lib/exercises";
-import { defaultSchedule, isoDay, todayKey } from "@/lib/calc";
+import { calculateGritScore, defaultSchedule, gritBadge, badgeColor, isoDay, todayKey } from "@/lib/calc";
 import { generateSchedule } from "@/lib/ai.functions";
 import type { DayKey, Schedule, Program } from "@/lib/types";
 
@@ -115,8 +117,75 @@ function TrainPage() {
           </button>
         </div>
       </header>
+      <Reminders />
 
+      {/* DEADSET Power Level banner — futuristic XP card */}
+      {(() => {
+        const score = calculateGritScore(state);
+        const badge = gritBadge(score.total);
+        const c = badgeColor(badge);
+        const tiers: { name: string; min: number }[] = [
+          { name: "RAW", min: 0 }, { name: "ROOKIE", min: 100 }, { name: "GRINDER", min: 250 },
+          { name: "BEAST", min: 500 }, { name: "ELITE", min: 750 }, { name: "DEADSET GOD", min: 1000 },
+        ];
+        const curIdx = Math.max(0, tiers.findIndex((t) => t.name === badge));
+        const nextTier = tiers[curIdx + 1];
+        const pct = nextTier
+          ? ((score.total - tiers[curIdx].min) / (nextTier.min - tiers[curIdx].min)) * 100
+          : 100;
+        const toNext = nextTier ? nextTier.min - score.total : 0;
+        return (
+          <Link to="/profile" className="block px-5 mb-4">
+            <div className="neon-card grid-bg p-4 pulse-red">
+              <div className="flex items-end justify-between">
+                <div>
+                  <p className="label-cap text-[9px]">POWER LEVEL · LIVE</p>
+                  <p className="display text-5xl font-extrabold leading-none text-accent-red text-glow-red mt-1">{score.total}</p>
+                </div>
+                <div className="text-right">
+                  <span className="label-cap text-[10px] px-2 py-0.5" style={{ background: c + "22", border: `1px solid ${c}`, color: c }}>{badge}</span>
+                  {nextTier && (
+                    <p className="label-cap text-[9px] mt-2 text-grit-dim">
+                      <span className="text-accent-red">{toNext}</span> XP → {nextTier.name}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="xp-bar mt-3"><div className="fill" style={{ width: `${Math.min(100, Math.max(2, pct))}%` }} /></div>
+              <div className="flex justify-between mt-1.5 px-0.5">
+                {tiers.map((t) => (
+                  <span key={t.name} className="text-[9px] tracking-wider"
+                    style={{ color: score.total >= t.min ? "#e63222" : "#3a3a3a", fontWeight: 700 }}>●</span>
+                ))}
+              </div>
+            </div>
+          </Link>
+        );
+      })()}
 
+      <DailyQuests />
+
+      {/* Challenges entry */}
+      <div className="px-5 mb-4">
+        <Link
+          to="/challenges"
+          className="block bg-grit-card border border-accent-red p-3 hover:brightness-110 transition-all relative overflow-hidden grid-bg"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 flex items-center justify-center bg-accent-red text-white flex-shrink-0">
+              <Trophy size={20} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="label-cap text-[9px] text-accent-red">CHALLENGES</p>
+              <p className="display text-lg font-extrabold uppercase text-grit leading-tight">
+                Beat the Boss
+              </p>
+              <p className="text-[11px] text-grit-dim">5-min plank, max push-ups, dead hangs & more</p>
+            </div>
+            <span className="text-accent-red text-xl">→</span>
+          </div>
+        </Link>
+      </div>
 
 
 
