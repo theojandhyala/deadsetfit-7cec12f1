@@ -207,7 +207,7 @@ export const updateMyProfile = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => ProfileInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const patch: Record<string, unknown> = {};
+    const patch: { username?: string; display_name?: string; bio?: string } = {};
     if (data.username !== undefined) patch.username = data.username.toLowerCase();
     if (data.display_name !== undefined) patch.display_name = data.display_name;
     if (data.bio !== undefined) patch.bio = data.bio;
