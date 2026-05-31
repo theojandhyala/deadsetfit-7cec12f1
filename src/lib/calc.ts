@@ -81,3 +81,14 @@ export function calculateStreak(completedDates: string[]) {
   }
   return streak;
 }
+
+// === GRIT Level tiers (by grit_points) ===
+export type GritLevel = "BEGINNER" | "ROOKIE" | "CONTENDER" | "WARRIOR" | "CHAMPION" | "LEGEND";
+export function gritLevel(points: number): GritLevel {
+  if (points >= 2500) return "LEGEND";
+  if (points >= 1000) return "CHAMPION";
+  if (points >= 500) return "WARRIOR";
+  if (points >= 250) return "CONTENDER";
+  if (points >= 100) return "ROOKIE";
+  return "BEGINNER";
+}
