@@ -135,9 +135,9 @@ function LiveWorkoutPage() {
       ...session!.exercises[activeIdx].sets.map((s) => s.weight)
     );
     const isPR = weight > prevBest && weight > 0;
-    const set: CompletedSet = { weight, reps, isPR };
+    const newSet: CompletedSet = { weight, reps, isPR };
     updateSession((sess) => {
-      const exercises = sess.exercises.map((e, i) => (i === activeIdx ? { ...e, sets: [...e.sets, set] } : e));
+      const exercises = sess.exercises.map((e, i) => (i === activeIdx ? { ...e, sets: [...e.sets, newSet] } : e));
       const totalVolume = exercises.reduce((a, e) => a + e.sets.reduce((b, s) => b + s.weight * s.reps, 0), 0);
       const prCount = exercises.reduce((a, e) => a + e.sets.filter((s) => s.isPR).length, 0);
       return { ...sess, exercises, totalVolume, prCount };
