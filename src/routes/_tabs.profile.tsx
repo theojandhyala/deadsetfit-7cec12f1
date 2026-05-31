@@ -50,21 +50,47 @@ function ProfilePage() {
   const delta = p.weightKg - startW;
   const bmi = (p.weightKg / Math.pow(p.heightCm / 100, 2)).toFixed(1);
 
-  function save() {
+  async function save() {
+    if (!p) return;
     const clean = username.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20);
-    set((s) => s.profile ? ({ ...s, profile: {
-      ...s.profile, goal: goal as typeof s.profile.goal, experience: exp as typeof s.profile.experience,
-      weightKg: Number(w) || s.profile.weightKg, heightCm: Number(h) || s.profile.heightCm,
-      username: clean || s.profile.username,
-    }}) : s);
-    setEditing(false);
+    const newWeight = Number(w) || p.weightKg;
+    const newHeight = Number(h) || p.heightCm;
+    const newUsername = clean || p.username;
+    setSavingProfile(true);
+    try {
+      await persist({
+        data: {
+          username: newUsername,
+          display_name: newUsername,
+          goal: goal as "BULK" | "CUT" | "MAINTAIN" | "ATHLETIC",
+          experience: exp as "BEGINNER" | "INTERMEDIATE" | "ADVANCED",
+          weight_kg: newWeight,
+          height_cm: newHeight,
+        },
+      });
+      set((s) => s.profile ? ({ ...s, profile: {
+        ...s.profile, goal: goal as typeof s.profile.goal, experience: exp as typeof s.profile.experience,
+        weightKg: newWeight, heightCm: newHeight, username: newUsername,
+      }}) : s);
+      setEditing(false);
+      toast.success("Profile saved");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't save profile");
+    } finally {
+      setSavingProfile(false);
+    }
   }
 
   function changePhoto(file: File) {
     const r = new FileReader();
-    r.onload = () => set((s) => s.profile ? ({ ...s, profile: { ...s.profile, avatarDataUrl: String(r.result) } }) : s);
+    r.onload = () => {
+      const url = String(r.result);
+      set((s) => s.profile ? ({ ...s, profile: { ...s.profile, avatarDataUrl: url } }) : s);
+      persist({ data: { avatar_url: url } }).catch(() => {});
+    };
     r.readAsDataURL(file);
   }
+
 
   function reset() {
     if (!confirm("Reset all your DEADSET data?")) return;
