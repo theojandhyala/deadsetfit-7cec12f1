@@ -3,9 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { GritLogo } from "@/components/GritLogo";
-import { setState } from "@/lib/storage";
+import { getState, setState, waitForRemoteState } from "@/lib/storage";
 import { defaultSchedule } from "@/lib/calc";
-import { saveProfile } from "@/lib/profile.functions";
+import { getMyProfile, saveProfile } from "@/lib/profile.functions";
+import { profileFromAccount } from "@/lib/account-restore";
 import type { Equipment, Experience, Gender, Goal, Profile, Weakness } from "@/lib/types";
 
 
@@ -25,15 +26,27 @@ function Onboarding() {
   const [idx, setIdx] = useState(0);
   const [draft, setDraft] = useState<Partial<Profile>>({});
   const save = useServerFn(saveProfile);
+  const getProfile = useServerFn(getMyProfile);
   const step = ORDER[idx];
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       const { supabase } = await import("@/integrations/supabase/client");
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) navigate({ to: "/auth", replace: true });
+      if (cancelled) return;
+      if (!session) { navigate({ to: "/auth", replace: true }); return; }
+      await waitForRemoteState(session.user.id);
+      if (cancelled) return;
+      if (getState().profile) { navigate({ to: "/train", replace: true }); return; }
+      const accountProfile = profileFromAccount(await getProfile().catch(() => null));
+      if (accountProfile) {
+        setState((current) => ({ ...current, profile: accountProfile, schedule: current.schedule ?? defaultSchedule(accountProfile) }));
+        navigate({ to: "/train", replace: true });
+      }
     })();
-  }, [navigate]);
+    return () => { cancelled = true; };
+  }, [getProfile, navigate]);
 
   function next(patch: Partial<Profile>) {
     const merged = { ...draft, ...patch };
