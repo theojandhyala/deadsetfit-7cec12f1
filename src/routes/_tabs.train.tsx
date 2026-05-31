@@ -6,6 +6,7 @@ import { GritLogo } from "@/components/GritLogo";
 import { VideoModal } from "@/components/VideoModal";
 import { RestTimer } from "@/components/RestTimer";
 import { Reminders } from "@/components/Reminders";
+import { DailyQuests } from "@/components/DailyQuests";
 import { useAppState } from "@/lib/storage";
 import { EXERCISES, getExercise } from "@/lib/exercises";
 import { calculateGritScore, defaultSchedule, gritBadge, badgeColor, isoDay, todayKey } from "@/lib/calc";
@@ -162,6 +163,9 @@ function TrainPage() {
           </Link>
         );
       })()}
+
+      <DailyQuests />
+
 
       {activeProgram && (
         <div className="px-5 mb-3">
