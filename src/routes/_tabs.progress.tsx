@@ -392,7 +392,7 @@ function ProgressPage() {
         </div>
       </section>
 
-      {viewScan && <ScanModal scan={viewScan} onClose={() => setViewScan(null)} />}
+      {viewScan && <ScanModal scan={viewScan} onClose={() => setViewScan(null)} onDelete={() => deleteScan(viewScan.id)} />}
     </div>
   );
 }
