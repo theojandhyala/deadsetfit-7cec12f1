@@ -46,13 +46,18 @@ function AuthPage() {
         toast.success("Welcome to DEADSET");
         navigate({ to: "/onboarding", replace: true });
       } else {
-        let email = identifier.trim();
-        if (!email.includes("@")) {
-          const res = await resolveUsername({ data: { username: email.replace(/^@/, "") } });
-          email = res.email;
+        const id = identifier.trim();
+        if (id.includes("@")) {
+          const { error } = await supabase.auth.signInWithPassword({ email: id, password });
+          if (error) throw error;
+        } else {
+          const tokens = await usernameSignIn({ data: { username: id.replace(/^@/, ""), password } });
+          const { error } = await supabase.auth.setSession({
+            access_token: tokens.access_token,
+            refresh_token: tokens.refresh_token,
+          });
+          if (error) throw error;
         }
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Auth failed");
