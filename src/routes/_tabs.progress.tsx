@@ -501,7 +501,7 @@ function Input({ label, v, set }: { label: string; v: string; set: (s: string) =
   );
 }
 
-function ScanModal({ scan, onClose }: { scan: PhysiqueScan; onClose: () => void }) {
+function ScanModal({ scan, onClose, onDelete }: { scan: PhysiqueScan; onClose: () => void; onDelete: () => void }) {
   const a = scan.analysis;
   return (
     <div className="fixed inset-0 z-[200] bg-black/90 overflow-auto" onClick={onClose}>
@@ -526,10 +526,38 @@ function ScanModal({ scan, onClose }: { scan: PhysiqueScan; onClose: () => void 
           <Block title="FOCUS NEXT" items={a.focus} color="#f5f5f0" />
         </div>
         {a.leanMassNote && (
-          <p className="text-xs text-grit-dim uppercase tracking-wider mb-6">{a.leanMassNote}</p>
+          <p className="text-xs text-grit-dim uppercase tracking-wider mb-4">{a.leanMassNote}</p>
         )}
+        <button onClick={onDelete} className="w-full border border-accent-red text-accent-red py-2 label-cap text-xs flex items-center justify-center gap-2 hover:bg-accent-red hover:text-black mb-6">
+          <Trash2 size={14} /> Delete Scan
+        </button>
       </div>
     </div>
+  );
+}
+
+function MeasurementsChart({ entries }: { entries: { date: string; chest: number; waist: number; arms: number; legs: number }[] }) {
+  const w = 300, h = 110, pad = 8;
+  const keys: { k: "chest" | "waist" | "arms" | "legs"; color: string }[] = [
+    { k: "chest", color: "#e63222" },
+    { k: "waist", color: "#f5f5f0" },
+    { k: "arms", color: "#7acc7a" },
+    { k: "legs", color: "#7aa3cc" },
+  ];
+  const all = entries.flatMap((e) => keys.map((k) => e[k.k])).filter((v) => v > 0);
+  const min = Math.min(...all), max = Math.max(...all);
+  const range = max - min || 1;
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-28">
+      {keys.map(({ k, color }) => {
+        const pts = entries.map((e, i) => {
+          const x = pad + (i * (w - pad * 2)) / Math.max(1, entries.length - 1);
+          const y = h - pad - ((e[k] - min) / range) * (h - pad * 2);
+          return `${x},${y}`;
+        }).join(" ");
+        return <polyline key={k} points={pts} fill="none" stroke={color} strokeWidth="1.5" />;
+      })}
+    </svg>
   );
 }
 
