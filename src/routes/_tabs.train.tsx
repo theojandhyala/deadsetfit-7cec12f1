@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { Loader2, Play, Plus, Sparkles } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
+import { Loader2, Play, Plus, Sparkles, ListPlus } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { GritLogo } from "@/components/GritLogo";
 import { VideoModal } from "@/components/VideoModal";
@@ -9,7 +9,7 @@ import { useAppState } from "@/lib/storage";
 import { EXERCISES, getExercise } from "@/lib/exercises";
 import { defaultSchedule, isoDay, todayKey } from "@/lib/calc";
 import { generateSchedule } from "@/lib/ai.functions";
-import type { DayKey, Schedule } from "@/lib/types";
+import type { DayKey, Schedule, Program } from "@/lib/types";
 
 const DAY_KEYS: DayKey[] = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
 const DAY_SHORT: Record<DayKey, string> = { MON:"Mon",TUE:"Tue",WED:"Wed",THU:"Thu",FRI:"Fri",SAT:"Sat",SUN:"Sun" };
@@ -23,16 +23,19 @@ function TrainPage() {
   const [state, set] = useAppState();
   const [selectedDay, setSelectedDay] = useState<DayKey>(todayKey());
   const [videoId, setVideoId] = useState<string | null>(null);
+  const [videoQuery, setVideoQuery] = useState<string | null>(null);
   const [videoTitle, setVideoTitle] = useState("");
-  const [logFor, setLogFor] = useState<string | null>(null);
+  const [logFor, setLogFor] = useState<{ id: string; name: string } | null>(null);
   const [resting, setResting] = useState<number | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [genLoading, setGenLoading] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
 
   const generate = useServerFn(generateSchedule);
+  const activeProgram: Program | undefined = state.programs.find((p) => p.id === state.activeProgramId);
   const schedule: Schedule = state.schedule ?? (state.profile ? defaultSchedule(state.profile) : ({} as Schedule));
   const day = schedule[selectedDay];
+  const programDay = activeProgram?.days[selectedDay];
 
   async function handleGenerate() {
     if (!state.profile) return;
@@ -65,10 +68,28 @@ function TrainPage() {
     <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
       <header className="px-5 pt-6 pb-4 flex items-center justify-between">
         <GritLogo className="text-2xl" />
-        <button onClick={() => setEditMode((v) => !v)} className="label-cap" style={{ color: editMode ? "#e63222" : "#8a8a8a" }}>
-          {editMode ? "DONE" : "EDIT"}
-        </button>
+        <div className="flex items-center gap-4">
+          <Link to="/programs" className="label-cap text-grit-dim text-xs flex items-center gap-1">
+            <ListPlus size={14} /> PROGRAMS
+          </Link>
+          <button onClick={() => setEditMode((v) => !v)} className="label-cap" style={{ color: editMode ? "#e63222" : "#8a8a8a" }}>
+            {editMode ? "DONE" : "EDIT"}
+          </button>
+        </div>
       </header>
+
+      {activeProgram && (
+        <div className="px-5 mb-3">
+          <Link
+            to="/programs/$programId"
+            params={{ programId: activeProgram.id }}
+            className="block bg-grit-card border border-accent-red px-3 py-2"
+          >
+            <p className="label-cap text-[9px] text-accent-red">ACTIVE PROGRAM</p>
+            <p className="display uppercase font-extrabold text-grit text-sm truncate">{activeProgram.name}</p>
+          </Link>
+        </div>
+      )}
 
       {/* Weekly strip */}
       <div className="px-5 mb-4">
@@ -76,7 +97,7 @@ function TrainPage() {
           {DAY_KEYS.map((k) => {
             const active = k === selectedDay;
             const isToday = k === todayKey();
-            const lbl = schedule[k]?.label?.split(" — ")[0] || "REST";
+            const lbl = (activeProgram ? activeProgram.days[k].label : schedule[k]?.label)?.split(" — ")[0] || "REST";
             return (
               <button key={k} onClick={() => setSelectedDay(k)}
                 className="flex-shrink-0 min-w-[68px] p-2 border text-center"
@@ -95,15 +116,19 @@ function TrainPage() {
       {/* Today header */}
       <div className="px-5 mb-5">
         <p className="label-cap">{selectedDay === todayKey() ? "Today" : DAY_SHORT[selectedDay]}</p>
-        <h1 className="display text-3xl font-extrabold uppercase text-grit leading-tight mt-1">{day?.label || "REST"}</h1>
+        <h1 className="display text-3xl font-extrabold uppercase text-grit leading-tight mt-1">
+          {(activeProgram ? programDay?.label : day?.label) || "REST"}
+        </h1>
       </div>
 
-      <div className="px-5 mb-5 flex gap-2">
-        <button onClick={handleGenerate} disabled={genLoading} className="btn-grit flex-1">
-          {genLoading ? <Loader2 className="animate-spin mr-2" size={16} /> : <Sparkles size={16} className="mr-2" />}
-          Generate Schedule
-        </button>
-      </div>
+      {!activeProgram && (
+        <div className="px-5 mb-5 flex gap-2">
+          <button onClick={handleGenerate} disabled={genLoading} className="btn-grit flex-1">
+            {genLoading ? <Loader2 className="animate-spin mr-2" size={16} /> : <Sparkles size={16} className="mr-2" />}
+            Generate Schedule
+          </button>
+        </div>
+      )}
       {genError && <p className="px-5 mb-3 text-sm text-accent-red">{genError}</p>}
 
       {/* Edit mode: assign muscle group per day */}
@@ -141,52 +166,98 @@ function TrainPage() {
 
       {/* Exercises */}
       <div className="px-5 flex flex-col gap-3">
-        {(day?.exerciseIds || []).length === 0 && (
-          <div className="bg-grit-card border border-grit p-8 text-center">
-            <p className="display text-2xl uppercase text-grit font-extrabold">Rest Day</p>
-            <p className="text-sm text-[#8a8a8a] mt-2">Recover. Eat. Sleep.</p>
-          </div>
-        )}
-        {(day?.exerciseIds || []).map((id) => {
-          const ex = getExercise(id);
-          if (!ex) return null;
-          const pr = bestSet(state.logs, id);
-          return (
-            <div key={id} className="bg-grit-card border border-grit">
-              <button className="w-full grid grid-cols-[96px_1fr] gap-0 text-left"
-                onClick={() => { setVideoId(ex.videoId); setVideoTitle(ex.name); }}>
-                <div className="relative bg-black" style={{ aspectRatio: "1 / 1" }}>
-                  <img src={`https://img.youtube.com/vi/${ex.videoId}/mqdefault.jpg`} alt={ex.name} className="absolute inset-0 w-full h-full object-cover" />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                    <Play size={26} className="text-white" />
-                  </div>
-                </div>
-                <div className="p-3">
-                  <div className="display uppercase font-extrabold text-grit text-lg leading-tight">{ex.name}</div>
-                  <div className="text-xs text-[#8a8a8a] mt-1">{ex.sets} × {ex.reps}</div>
-                  <div className="flex gap-2 mt-2">
-                    <span className="text-[10px] px-2 py-0.5 border border-grit uppercase font-bold tracking-wider">{ex.skill}</span>
-                    {pr && <span className="text-[10px] px-2 py-0.5 bg-accent-red text-white uppercase font-bold tracking-wider">PR {pr}KG</span>}
-                  </div>
-                </div>
-              </button>
-              <div className="border-t border-grit">
-                <button onClick={() => setLogFor(id)} className="w-full py-3 label-cap" style={{ color: "#e63222" }}>
-                  <Plus size={14} className="inline mr-1 -mt-0.5" /> Log Set
-                </button>
+        {activeProgram ? (
+          <>
+            {(programDay?.items.length || 0) === 0 && (
+              <div className="bg-grit-card border border-grit p-8 text-center">
+                <p className="display text-2xl uppercase text-grit font-extrabold">Rest Day</p>
+                <p className="text-sm text-[#8a8a8a] mt-2">Recover. Eat. Sleep.</p>
               </div>
-            </div>
-          );
-        })}
-        {(day?.exerciseIds?.length || 0) > 0 && (
-          <button onClick={completeWorkout} className="btn-grit mt-4 mb-2">
-            {state.completedDates.includes(isoDay()) ? "Workout Complete ✓" : "Complete Workout"}
-          </button>
+            )}
+            {programDay?.items.map((it) => {
+              const pr = bestSet(state.logs, it.id);
+              return (
+                <div key={it.id} className="bg-grit-card border border-grit">
+                  <button className="w-full p-3 text-left"
+                    onClick={() => { setVideoQuery(it.youtube_query || it.name); setVideoTitle(it.name); }}>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="display uppercase font-extrabold text-grit text-lg leading-tight">{it.name}</div>
+                      <Play size={18} className="text-accent-red flex-shrink-0" />
+                    </div>
+                    <div className="text-xs text-[#8a8a8a] mt-1">{it.sets} × {it.reps}</div>
+                    <div className="flex gap-2 mt-2 flex-wrap">
+                      <span className="text-[10px] px-2 py-0.5 border border-grit uppercase font-bold tracking-wider">{it.equipment}</span>
+                      {it.primary_muscles.slice(0, 2).map((m) => (
+                        <span key={m} className="text-[10px] px-2 py-0.5 border border-grit uppercase font-bold tracking-wider text-grit-dim">{m}</span>
+                      ))}
+                      {pr && <span className="text-[10px] px-2 py-0.5 bg-accent-red text-white uppercase font-bold tracking-wider">PR {pr}KG</span>}
+                    </div>
+                  </button>
+                  <div className="border-t border-grit">
+                    <button onClick={() => setLogFor({ id: it.id, name: it.name })} className="w-full py-3 label-cap" style={{ color: "#e63222" }}>
+                      <Plus size={14} className="inline mr-1 -mt-0.5" /> Log Set
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+            {(programDay?.items.length || 0) > 0 && (
+              <button onClick={completeWorkout} className="btn-grit mt-4 mb-2">
+                {state.completedDates.includes(isoDay()) ? "Workout Complete ✓" : "Complete Workout"}
+              </button>
+            )}
+          </>
+        ) : (
+          <>
+            {(day?.exerciseIds || []).length === 0 && (
+              <div className="bg-grit-card border border-grit p-8 text-center">
+                <p className="display text-2xl uppercase text-grit font-extrabold">Rest Day</p>
+                <p className="text-sm text-[#8a8a8a] mt-2">Recover. Eat. Sleep.</p>
+              </div>
+            )}
+            {(day?.exerciseIds || []).map((id) => {
+              const ex = getExercise(id);
+              if (!ex) return null;
+              const pr = bestSet(state.logs, id);
+              return (
+                <div key={id} className="bg-grit-card border border-grit">
+                  <button className="w-full grid grid-cols-[96px_1fr] gap-0 text-left"
+                    onClick={() => { setVideoId(ex.videoId); setVideoTitle(ex.name); }}>
+                    <div className="relative bg-black" style={{ aspectRatio: "1 / 1" }}>
+                      <img src={`https://img.youtube.com/vi/${ex.videoId}/mqdefault.jpg`} alt={ex.name} className="absolute inset-0 w-full h-full object-cover" />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                        <Play size={26} className="text-white" />
+                      </div>
+                    </div>
+                    <div className="p-3">
+                      <div className="display uppercase font-extrabold text-grit text-lg leading-tight">{ex.name}</div>
+                      <div className="text-xs text-[#8a8a8a] mt-1">{ex.sets} × {ex.reps}</div>
+                      <div className="flex gap-2 mt-2">
+                        <span className="text-[10px] px-2 py-0.5 border border-grit uppercase font-bold tracking-wider">{ex.skill}</span>
+                        {pr && <span className="text-[10px] px-2 py-0.5 bg-accent-red text-white uppercase font-bold tracking-wider">PR {pr}KG</span>}
+                      </div>
+                    </div>
+                  </button>
+                  <div className="border-t border-grit">
+                    <button onClick={() => setLogFor({ id, name: ex.name })} className="w-full py-3 label-cap" style={{ color: "#e63222" }}>
+                      <Plus size={14} className="inline mr-1 -mt-0.5" /> Log Set
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+            {(day?.exerciseIds?.length || 0) > 0 && (
+              <button onClick={completeWorkout} className="btn-grit mt-4 mb-2">
+                {state.completedDates.includes(isoDay()) ? "Workout Complete ✓" : "Complete Workout"}
+              </button>
+            )}
+          </>
         )}
       </div>
 
       {videoId && <VideoModal videoId={videoId} title={videoTitle} onClose={() => setVideoId(null)} />}
-      {logFor && <LogSetModal exerciseId={logFor} onClose={() => setLogFor(null)} onLogged={(secs) => { setLogFor(null); setResting(secs); }} />}
+      {videoQuery && <VideoModal query={videoQuery} title={videoTitle} onClose={() => setVideoQuery(null)} />}
+      {logFor && <LogSetModal exerciseId={logFor.id} exerciseName={logFor.name} onClose={() => setLogFor(null)} onLogged={(secs) => { setLogFor(null); setResting(secs); }} />}
       {resting !== null && <RestTimer seconds={resting} onDone={() => setResting(null)} />}
     </div>
   );
@@ -198,11 +269,12 @@ function bestSet(logs: { exerciseId: string; weight: number }[], id: string) {
   return Math.max(...f.map((l) => l.weight));
 }
 
-function LogSetModal({ exerciseId, onClose, onLogged }: { exerciseId: string; onClose: () => void; onLogged: (rest: number) => void }) {
+function LogSetModal({ exerciseId, exerciseName, onClose, onLogged }: { exerciseId: string; exerciseName?: string; onClose: () => void; onLogged: (rest: number) => void }) {
   const [, set] = useAppState();
   const [weight, setWeight] = useState("");
   const [reps, setReps] = useState("");
   const ex = getExercise(exerciseId);
+  const displayName = exerciseName ?? ex?.name ?? "Exercise";
   function save(rest: number) {
     const w = Number(weight); const r = Number(reps);
     if (!r) return;
@@ -213,7 +285,7 @@ function LogSetModal({ exerciseId, onClose, onLogged }: { exerciseId: string; on
     <div className="fixed inset-0 z-[100] flex items-end" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
       <div className="w-full bg-grit-card border-t border-accent-red p-5 max-w-md mx-auto" onClick={(e) => e.stopPropagation()}>
         <p className="label-cap mb-1">Log Set</p>
-        <h3 className="display text-xl uppercase font-extrabold text-grit mb-4">{ex?.name}</h3>
+        <h3 className="display text-xl uppercase font-extrabold text-grit mb-4">{displayName}</h3>
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div>
             <label className="label-cap block mb-1">Weight (kg)</label>

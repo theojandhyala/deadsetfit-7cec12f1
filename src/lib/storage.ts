@@ -13,6 +13,8 @@ const DEFAULT_STATE: AppState = {
   foodLog: [],
   mealPlan: null,
   completedDates: [],
+  programs: [],
+  activeProgramId: null,
 };
 
 const listeners = new Set<() => void>();
