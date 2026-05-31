@@ -5,11 +5,18 @@ import { DEFAULT_STATE } from "./default-state";
 const KEY = "grit_app_state_v1";
 
 const listeners = new Set<() => void>();
+const syncListeners = new Set<() => void>();
 
 let remoteSyncEnabled = false;
 let suppressNextPush = false;
 let pushTimer: ReturnType<typeof setTimeout> | null = null;
 let pushSaver: ((json: string) => Promise<void>) | null = null;
+let syncUserId: string | null = null;
+let syncReady = false;
+
+function notifySync() {
+  syncListeners.forEach((l) => l());
+}
 
 function read(): AppState {
   if (typeof window === "undefined") return DEFAULT_STATE;
@@ -56,6 +63,45 @@ export function hydrateFromRemote(remote: Partial<AppState>) {
 export function clearLocalState() {
   if (typeof window !== "undefined") localStorage.removeItem(KEY);
   listeners.forEach((l) => l());
+}
+
+export function beginRemoteStateLoad(userId: string) {
+  syncUserId = userId;
+  syncReady = false;
+  notifySync();
+}
+
+export function finishRemoteStateLoad(userId: string) {
+  if (syncUserId === userId) {
+    syncReady = true;
+    notifySync();
+  }
+}
+
+export function clearRemoteStateStatus() {
+  syncUserId = null;
+  syncReady = false;
+  notifySync();
+}
+
+export function isRemoteStateReady(userId: string) {
+  return syncUserId === userId && syncReady;
+}
+
+export function waitForRemoteState(userId: string, timeoutMs = 4000) {
+  if (isRemoteStateReady(userId)) return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    const done = () => {
+      syncListeners.delete(listener);
+      clearTimeout(timer);
+      resolve();
+    };
+    const listener = () => {
+      if (isRemoteStateReady(userId)) done();
+    };
+    const timer = setTimeout(done, timeoutMs);
+    syncListeners.add(listener);
+  });
 }
 
 export function enableRemoteSync(saver: (json: string) => Promise<void>) {
