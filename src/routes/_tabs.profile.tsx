@@ -1,8 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { Flame, LogOut, Crown } from "lucide-react";
+import { useRef, useState } from "react";
+import { Flame, LogOut, Crown, UserPlus, Pencil } from "lucide-react";
 import { useAppState } from "@/lib/storage";
-import { calculateStreak } from "@/lib/calc";
+import {
+  calculateStreak, calculateGritScore, gritBadge, badgeColor,
+  bestSetFor, maxRepsFor,
+} from "@/lib/calc";
 import { GritLogo } from "@/components/GritLogo";
 
 export const Route = createFileRoute("/_tabs/profile")({
@@ -10,25 +13,50 @@ export const Route = createFileRoute("/_tabs/profile")({
   component: ProfilePage,
 });
 
+const PR_LIFTS: Array<{ id: string; label: string; kind: "1RM" | "REPS" }> = [
+  { id: "bench-press", label: "Bench Press", kind: "1RM" },
+  { id: "squat", label: "Squat", kind: "1RM" },
+  { id: "deadlift", label: "Deadlift", kind: "1RM" },
+  { id: "ohp", label: "Overhead Press", kind: "1RM" },
+  { id: "pull-ups", label: "Pull-Ups", kind: "REPS" },
+];
+
 function ProfilePage() {
   const [state, set] = useAppState();
   const navigate = useNavigate();
   const p = state.profile;
+  const fileRef = useRef<HTMLInputElement>(null);
   const [editing, setEditing] = useState(false);
   const [goal, setGoal] = useState<string>(p?.goal || "BULK");
   const [exp, setExp] = useState<string>(p?.experience || "BEGINNER");
   const [w, setW] = useState(String(p?.weightKg ?? ""));
   const [h, setH] = useState(String(p?.heightCm ?? ""));
+  const [username, setUsername] = useState(p?.username || "");
 
   if (!p) return null;
   const streak = calculateStreak(state.completedDates);
+  const score = calculateGritScore(state);
+  const badge = gritBadge(score.total);
+  const badgeC = badgeColor(badge);
+
+  const startW = p.startingWeightKg ?? p.weightKg;
+  const delta = p.weightKg - startW;
+  const bmi = (p.weightKg / Math.pow(p.heightCm / 100, 2)).toFixed(1);
 
   function save() {
+    const clean = username.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20);
     set((s) => s.profile ? ({ ...s, profile: {
       ...s.profile, goal: goal as typeof s.profile.goal, experience: exp as typeof s.profile.experience,
-      weightKg: Number(w) || s.profile.weightKg, heightCm: Number(h) || s.profile.heightCm
+      weightKg: Number(w) || s.profile.weightKg, heightCm: Number(h) || s.profile.heightCm,
+      username: clean || s.profile.username,
     }}) : s);
     setEditing(false);
+  }
+
+  function changePhoto(file: File) {
+    const r = new FileReader();
+    r.onload = () => set((s) => s.profile ? ({ ...s, profile: { ...s.profile, avatarDataUrl: String(r.result) } }) : s);
+    r.readAsDataURL(file);
   }
 
   function reset() {
@@ -41,32 +69,110 @@ function ProfilePage() {
     <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
       <header className="px-5 pt-6 pb-4 flex items-center justify-between">
         <GritLogo className="text-2xl" />
-        <button onClick={() => setEditing((v) => !v)} className="label-cap text-accent-red">{editing ? "Save" : "Edit"}</button>
+        <button onClick={() => editing ? save() : setEditing(true)} className="label-cap text-accent-red">
+          {editing ? "Save" : "Edit"}
+        </button>
       </header>
 
-      {/* Streak */}
+      {/* === Athlete card header === */}
       <section className="px-5 mb-6">
-        <div className="bg-grit-card border border-grit p-5 flex items-center gap-4">
-          <Flame size={36} className="text-accent-red" />
+        <div className="flex items-center gap-4 mb-5">
+          <button onClick={() => fileRef.current?.click()} className="relative shrink-0">
+            <div className="w-20 h-20 rounded-full border-4 border-accent-red overflow-hidden bg-grit-card flex items-center justify-center">
+              {p.avatarDataUrl
+                ? <img src={p.avatarDataUrl} alt="" className="w-full h-full object-cover" />
+                : <span className="display text-2xl font-extrabold text-grit-dim">{(p.username || "G").charAt(0).toUpperCase()}</span>}
+            </div>
+            <span className="absolute -bottom-1 -right-1 bg-accent-red rounded-full p-1.5"><Pencil size={10} /></span>
+          </button>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden"
+            onChange={(e) => e.target.files?.[0] && changePhoto(e.target.files[0])} />
+          <div className="flex-1 min-w-0">
+            {editing ? (
+              <div className="flex items-center gap-1 mb-1 border-b border-grit">
+                <span className="text-grit-dim">@</span>
+                <input value={username} onChange={(e) => setUsername(e.target.value)}
+                  className="bg-transparent outline-none display text-xl font-extrabold text-grit flex-1" />
+              </div>
+            ) : (
+              <p className="display text-xl font-extrabold uppercase text-grit truncate">
+                @{p.username || "athlete"}
+              </p>
+            )}
+            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 mt-1" style={{ background: badgeC + "22", border: `1px solid ${badgeC}` }}>
+              {badge === "GRIT GOD" && <Crown size={11} style={{ color: badgeC }} />}
+              <span className="label-cap text-[10px]" style={{ color: badgeC }}>{badge}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* GRIT Score — huge */}
+        <div className="bg-grit-card border border-grit p-5 mb-3">
+          <p className="label-cap mb-1">GRIT Score</p>
+          <p className="display font-extrabold leading-none text-accent-red" style={{ fontSize: "5rem" }}>
+            {score.total}
+          </p>
+          <div className="mt-3 h-1.5 bg-[#1a1a1a] overflow-hidden">
+            <div className="h-full bg-accent-red transition-all" style={{ width: `${(score.total / 1000) * 100}%` }} />
+          </div>
+          <div className="flex items-center justify-between mt-3">
+            <span className="text-[10px] text-grit-dim uppercase tracking-wider">
+              Streak +{score.streak * 15} · PRs +{score.prs * 25} · Diet +{(score.caloriesHit + score.proteinHit) * 10}
+            </span>
+            <button className="flex items-center gap-1 text-[10px] label-cap text-accent-red"><UserPlus size={11}/> FOLLOW</button>
+          </div>
+        </div>
+
+        {/* Streak */}
+        <div className="bg-grit-card border border-grit p-4 flex items-center gap-4">
+          <Flame size={28} className="text-accent-red" />
           <div>
-            <p className="label-cap">Streak</p>
-            <p className="display text-4xl font-extrabold text-grit leading-none">{streak}<span className="text-base ml-2 text-[#8a8a8a]">days</span></p>
+            <p className="label-cap">Current Streak</p>
+            <p className="display text-2xl font-extrabold text-grit leading-none">
+              {streak}<span className="text-sm ml-2 text-grit-dim">days</span>
+            </p>
           </div>
         </div>
       </section>
 
-      {/* Stats */}
+      {/* === Personal Records === */}
       <section className="px-5 mb-6">
-        <p className="label-cap mb-2">Your Stats</p>
+        <p className="label-cap mb-2">Personal Records</p>
+        <div className="grid grid-cols-2 gap-2">
+          {PR_LIFTS.map((lift) => {
+            if (lift.kind === "REPS") {
+              const reps = maxRepsFor(state.logs, lift.id);
+              return (
+                <div key={lift.id} className="bg-grit-card border border-grit p-3">
+                  <p className="label-cap text-[9px] truncate">{lift.label}</p>
+                  <p className="display text-2xl font-extrabold text-grit leading-none mt-1">
+                    {reps || "—"}<span className="text-xs ml-1 text-grit-dim">reps</span>
+                  </p>
+                </div>
+              );
+            }
+            const best = bestSetFor(state.logs, lift.id);
+            return (
+              <div key={lift.id} className="bg-grit-card border border-grit p-3">
+                <p className="label-cap text-[9px] truncate">{lift.label}</p>
+                <p className="display text-2xl font-extrabold text-grit leading-none mt-1">
+                  {best?.oneRm || "—"}<span className="text-xs ml-1 text-grit-dim">kg</span>
+                </p>
+                {best && <p className="text-[9px] text-grit-dim mt-1">{best.weight}×{best.reps} · 1RM est.</p>}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* === Athlete Stats === */}
+      <section className="px-5 mb-6">
+        <p className="label-cap mb-2">Athlete Stats</p>
         <div className="bg-grit-card border border-grit divide-y divide-[#262626]">
           {editing ? (
             <>
-              <Field label="Goal">
-                <Select value={goal} onChange={setGoal} opts={["BULK","CUT","MAINTAIN","ATHLETIC"]} />
-              </Field>
-              <Field label="Experience">
-                <Select value={exp} onChange={setExp} opts={["BEGINNER","INTERMEDIATE","ADVANCED"]} />
-              </Field>
+              <Field label="Goal"><Select value={goal} onChange={setGoal} opts={["BULK","CUT","MAINTAIN","ATHLETIC"]} /></Field>
+              <Field label="Experience"><Select value={exp} onChange={setExp} opts={["BEGINNER","INTERMEDIATE","ADVANCED"]} /></Field>
               <Field label="Weight"><input value={w} onChange={(e) => setW(e.target.value)} className="input-grit text-right" /></Field>
               <Field label="Height"><input value={h} onChange={(e) => setH(e.target.value)} className="input-grit text-right" /></Field>
               <div className="p-3"><button onClick={save} className="btn-grit w-full">Save Changes</button></div>
@@ -75,12 +181,23 @@ function ProfilePage() {
             <>
               <Stat label="Goal" v={p.goal} />
               <Stat label="Experience" v={p.experience} />
-              <Stat label="Age" v={`${p.age} yrs`} />
-              <Stat label="Weight" v={`${p.weightKg} kg`} />
-              <Stat label="Height" v={`${p.heightCm} cm`} />
-              <Stat label="Gender" v={p.gender} />
               <Stat label="Days / Week" v={String(p.daysPerWeek)} />
+              <Stat label="Current Weight" v={`${p.weightKg} kg`} />
+              <div className="flex justify-between items-center px-4 py-3">
+                <span className="label-cap">Start → Now</span>
+                <span className="text-sm font-bold uppercase text-grit">
+                  {startW} → {p.weightKg} kg{" "}
+                  <span style={{ color: delta === 0 ? "#8a8a8a" : "#e63222" }}>
+                    ({delta > 0 ? "+" : ""}{delta.toFixed(1)})
+                  </span>
+                </span>
+              </div>
+              <Stat label="Height" v={`${p.heightCm} cm`} />
+              <Stat label="Age" v={`${p.age} yrs`} />
+              <Stat label="BMI" v={bmi} />
+              <Stat label="Gender" v={p.gender} />
               <Stat label="Equipment" v={p.equipment.replace("_"," ")} />
+              {p.weakness && <Stat label="Focus Area" v={p.weakness} />}
               {p.injuries && <Stat label="Injuries" v={p.injuries} />}
             </>
           )}

@@ -2,6 +2,7 @@ export type Goal = "BULK" | "CUT" | "MAINTAIN" | "ATHLETIC";
 export type Experience = "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
 export type Equipment = "FULL_GYM" | "HOME_GYM" | "BODYWEIGHT";
 export type Gender = "MALE" | "FEMALE" | "OTHER";
+export type Weakness = "STRENGTH" | "CONSISTENCY" | "DIET" | "RECOVERY";
 
 export interface Profile {
   goal: Goal;
@@ -13,6 +14,10 @@ export interface Profile {
   daysPerWeek: 3 | 4 | 5 | 6;
   equipment: Equipment;
   injuries?: string;
+  weakness?: Weakness;
+  username?: string;
+  avatarDataUrl?: string;
+  startingWeightKg?: number;
 }
 
 export type MuscleGroup =

@@ -1,9 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { GritLogo } from "@/components/GritLogo";
 import { setState } from "@/lib/storage";
 import { defaultSchedule } from "@/lib/calc";
-import type { Equipment, Experience, Gender, Goal, Profile } from "@/lib/types";
+import type { Equipment, Experience, Gender, Goal, Profile, Weakness } from "@/lib/types";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "GRIT — Onboarding" }] }),
@@ -12,9 +12,9 @@ export const Route = createFileRoute("/onboarding")({
 
 type Step =
   | "goal" | "experience" | "age" | "weight" | "height" | "gender"
-  | "days" | "equipment" | "injuries";
+  | "days" | "equipment" | "injuries" | "weakness" | "username" | "photo";
 
-const ORDER: Step[] = ["goal","experience","age","weight","height","gender","days","equipment","injuries"];
+const ORDER: Step[] = ["goal","experience","age","weight","height","gender","days","equipment","injuries","weakness","username","photo"];
 
 function Onboarding() {
   const navigate = useNavigate();
@@ -26,7 +26,7 @@ function Onboarding() {
     const merged = { ...draft, ...patch };
     setDraft(merged);
     if (idx === ORDER.length - 1) {
-      const p = merged as Profile;
+      const p = { ...merged, startingWeightKg: merged.startingWeightKg ?? merged.weightKg } as Profile;
       setState((s) => ({ ...s, profile: p, schedule: defaultSchedule(p) }));
       navigate({ to: "/train", replace: true });
     } else {
@@ -66,6 +66,14 @@ function Onboarding() {
           { v: "FULL_GYM", l: "Full Gym" }, { v: "HOME_GYM", l: "Home Gym" }, { v: "BODYWEIGHT", l: "Bodyweight Only" }
         ]} onPick={(v) => next({ equipment: v as Equipment })} />}
         {step === "injuries" && <Injuries onSubmit={(t) => next({ injuries: t })} onSkip={() => next({ injuries: "" })} />}
+        {step === "weakness" && <Choice title="Your biggest weakness?" options={[
+          { v: "STRENGTH", l: "Strength" },
+          { v: "CONSISTENCY", l: "Consistency" },
+          { v: "DIET", l: "Diet" },
+          { v: "RECOVERY", l: "Recovery" },
+        ]} onPick={(v) => next({ weakness: v as Weakness })} />}
+        {step === "username" && <UsernameStep onSubmit={(u) => next({ username: u })} />}
+        {step === "photo" && <PhotoStep onSubmit={(url) => next({ avatarDataUrl: url })} onSkip={() => next({})} />}
       </div>
     </div>
   );
@@ -116,6 +124,54 @@ function Injuries({ onSubmit, onSkip }: { onSubmit: (s: string) => void; onSkip:
       <textarea value={v} onChange={(e) => setV(e.target.value)} rows={5} className="input-grit mb-4" placeholder="e.g. lower back tweak, bad knee..." />
       <div className="mt-auto flex flex-col gap-3">
         <button onClick={() => onSubmit(v)} className="btn-grit">Finish Setup</button>
+        <button onClick={onSkip} className="btn-ghost">Skip</button>
+      </div>
+    </>
+  );
+}
+
+function UsernameStep({ onSubmit }: { onSubmit: (u: string) => void }) {
+  const [v, setV] = useState("");
+  const clean = v.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20);
+  const valid = clean.length >= 3;
+  return (
+    <>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">Pick a username</h1>
+      <p className="text-sm text-[#8a8a8a] mb-8">Public. Shown on leaderboards and your profile.</p>
+      <div className="flex items-center gap-2 mb-8 border-b-2 border-grit focus-within:border-accent-red">
+        <span className="text-3xl font-display font-extrabold text-grit-dim pb-2">@</span>
+        <input autoFocus value={clean} onChange={(e) => setV(e.target.value)}
+          className="bg-transparent outline-none text-4xl font-display font-extrabold text-grit flex-1 pb-2"
+          placeholder="ironwolf" />
+      </div>
+      <button disabled={!valid} onClick={() => onSubmit(clean)} className="btn-grit mt-auto">Continue</button>
+    </>
+  );
+}
+
+function PhotoStep({ onSubmit, onSkip }: { onSubmit: (url: string) => void; onSkip: () => void }) {
+  const [preview, setPreview] = useState<string | null>(null);
+  const ref = useRef<HTMLInputElement>(null);
+  function pick(file: File) {
+    const reader = new FileReader();
+    reader.onload = () => setPreview(String(reader.result));
+    reader.readAsDataURL(file);
+  }
+  return (
+    <>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">Profile photo</h1>
+      <p className="text-sm text-[#8a8a8a] mb-8">One face. One brand. Optional.</p>
+      <div className="flex justify-center mb-8">
+        <button onClick={() => ref.current?.click()}
+          className="w-40 h-40 rounded-full border-4 border-accent-red overflow-hidden bg-grit-card flex items-center justify-center">
+          {preview ? <img src={preview} alt="" className="w-full h-full object-cover" />
+            : <span className="label-cap">Tap to upload</span>}
+        </button>
+        <input ref={ref} type="file" accept="image/*" className="hidden"
+          onChange={(e) => e.target.files?.[0] && pick(e.target.files[0])} />
+      </div>
+      <div className="mt-auto flex flex-col gap-3">
+        <button disabled={!preview} onClick={() => preview && onSubmit(preview)} className="btn-grit">Finish Setup</button>
         <button onClick={onSkip} className="btn-ghost">Skip</button>
       </div>
     </>
