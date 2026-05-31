@@ -1,9 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { GritLogo } from "@/components/GritLogo";
 import { setState } from "@/lib/storage";
 import { defaultSchedule } from "@/lib/calc";
-import type { Equipment, Experience, Gender, Goal, Profile } from "@/lib/types";
+import type { Equipment, Experience, Gender, Goal, Profile, Weakness } from "@/lib/types";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "GRIT — Onboarding" }] }),
@@ -12,9 +12,9 @@ export const Route = createFileRoute("/onboarding")({
 
 type Step =
   | "goal" | "experience" | "age" | "weight" | "height" | "gender"
-  | "days" | "equipment" | "injuries";
+  | "days" | "equipment" | "injuries" | "weakness" | "username" | "photo";
 
-const ORDER: Step[] = ["goal","experience","age","weight","height","gender","days","equipment","injuries"];
+const ORDER: Step[] = ["goal","experience","age","weight","height","gender","days","equipment","injuries","weakness","username","photo"];
 
 function Onboarding() {
   const navigate = useNavigate();
