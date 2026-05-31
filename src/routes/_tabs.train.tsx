@@ -116,6 +116,29 @@ function TrainPage() {
         </div>
       </header>
 
+      {/* GRIT Score banner */}
+      {(() => {
+        const score = calculateGritScore(state);
+        const badge = gritBadge(score.total);
+        const c = badgeColor(badge);
+        return (
+          <Link to="/profile" className="block px-5 mb-4">
+            <div className="bg-grit-card border border-grit p-4 flex items-center justify-between">
+              <div>
+                <p className="label-cap text-[9px]">GRIT Score</p>
+                <p className="display text-4xl font-extrabold leading-none text-accent-red mt-1">{score.total}</p>
+              </div>
+              <div className="text-right">
+                <span className="label-cap text-[10px] px-2 py-0.5" style={{ background: c + "22", border: `1px solid ${c}`, color: c }}>{badge}</span>
+                <div className="mt-2 w-32 h-1 bg-[#1a1a1a]">
+                  <div className="h-full bg-accent-red" style={{ width: `${(score.total / 1000) * 100}%` }} />
+                </div>
+              </div>
+            </div>
+          </Link>
+        );
+      })()}
+
       {activeProgram && (
         <div className="px-5 mb-3">
           <Link
