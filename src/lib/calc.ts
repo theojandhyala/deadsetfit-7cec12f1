@@ -1,4 +1,4 @@
-import type { Profile } from "./types";
+import type { Profile, AppState, SetLog } from "./types";
 
 export function calculateCalories(p: Profile): number {
   // Mifflin-St Jeor
