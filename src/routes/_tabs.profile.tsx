@@ -267,3 +267,18 @@ function Select({ value, onChange, opts }: { value: string; onChange: (v: string
     </select>
   );
 }
+
+function ScoreRow({ label, detail, pts }: { label: string; detail: string; pts: number }) {
+  const neg = pts < 0;
+  return (
+    <div className="flex items-center justify-between py-2">
+      <div className="min-w-0">
+        <p className="text-xs font-bold uppercase text-grit truncate">{label}</p>
+        <p className="text-[10px] text-grit-dim">{detail}</p>
+      </div>
+      <span className="display text-base font-extrabold tabular-nums" style={{ color: neg ? "#e63222" : pts > 0 ? "#22c55e" : "#8a8a8a" }}>
+        {neg ? "" : "+"}{pts}
+      </span>
+    </div>
+  );
+}
