@@ -13,8 +13,9 @@ interface Props {
 
 export function VideoModal({ videoId, query, title, clipStart, clipEnd, cue, onClose }: Props) {
   const [muted, setMuted] = useState(true);
-  const start = clipStart ?? 5;
-  const end = clipEnd ?? start + 12;
+  // Short, looping form clip — just the key rep, ~6 seconds.
+  const start = clipStart ?? 8;
+  const end = clipEnd ?? start + 6;
 
   const params = new URLSearchParams({
     autoplay: "1",
