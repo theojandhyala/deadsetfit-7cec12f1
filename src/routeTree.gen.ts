@@ -10,16 +10,23 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as TabsRouteImport } from './routes/_tabs'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TabsTrainRouteImport } from './routes/_tabs.train'
 import { Route as TabsProgressRouteImport } from './routes/_tabs.progress'
 import { Route as TabsProfileRouteImport } from './routes/_tabs.profile'
+import { Route as TabsLibraryRouteImport } from './routes/_tabs.library'
 import { Route as TabsDietRouteImport } from './routes/_tabs.diet'
 
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TabsRoute = TabsRouteImport.update({
@@ -46,6 +53,11 @@ const TabsProfileRoute = TabsProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => TabsRoute,
 } as any)
+const TabsLibraryRoute = TabsLibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
+  getParentRoute: () => TabsRoute,
+} as any)
 const TabsDietRoute = TabsDietRouteImport.update({
   id: '/diet',
   path: '/diet',
@@ -54,16 +66,20 @@ const TabsDietRoute = TabsDietRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
   '/diet': typeof TabsDietRoute
+  '/library': typeof TabsLibraryRoute
   '/profile': typeof TabsProfileRoute
   '/progress': typeof TabsProgressRoute
   '/train': typeof TabsTrainRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
   '/diet': typeof TabsDietRoute
+  '/library': typeof TabsLibraryRoute
   '/profile': typeof TabsProfileRoute
   '/progress': typeof TabsProgressRoute
   '/train': typeof TabsTrainRoute
@@ -72,23 +88,43 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_tabs': typeof TabsRouteWithChildren
+  '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
   '/_tabs/diet': typeof TabsDietRoute
+  '/_tabs/library': typeof TabsLibraryRoute
   '/_tabs/profile': typeof TabsProfileRoute
   '/_tabs/progress': typeof TabsProgressRoute
   '/_tabs/train': typeof TabsTrainRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/onboarding' | '/diet' | '/profile' | '/progress' | '/train'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/onboarding'
+    | '/diet'
+    | '/library'
+    | '/profile'
+    | '/progress'
+    | '/train'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/onboarding' | '/diet' | '/profile' | '/progress' | '/train'
+  to:
+    | '/'
+    | '/auth'
+    | '/onboarding'
+    | '/diet'
+    | '/library'
+    | '/profile'
+    | '/progress'
+    | '/train'
   id:
     | '__root__'
     | '/'
     | '/_tabs'
+    | '/auth'
     | '/onboarding'
     | '/_tabs/diet'
+    | '/_tabs/library'
     | '/_tabs/profile'
     | '/_tabs/progress'
     | '/_tabs/train'
@@ -97,6 +133,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   TabsRoute: typeof TabsRouteWithChildren
+  AuthRoute: typeof AuthRoute
   OnboardingRoute: typeof OnboardingRoute
 }
 
@@ -107,6 +144,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_tabs': {
@@ -144,6 +188,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TabsProfileRouteImport
       parentRoute: typeof TabsRoute
     }
+    '/_tabs/library': {
+      id: '/_tabs/library'
+      path: '/library'
+      fullPath: '/library'
+      preLoaderRoute: typeof TabsLibraryRouteImport
+      parentRoute: typeof TabsRoute
+    }
     '/_tabs/diet': {
       id: '/_tabs/diet'
       path: '/diet'
@@ -156,6 +207,7 @@ declare module '@tanstack/react-router' {
 
 interface TabsRouteChildren {
   TabsDietRoute: typeof TabsDietRoute
+  TabsLibraryRoute: typeof TabsLibraryRoute
   TabsProfileRoute: typeof TabsProfileRoute
   TabsProgressRoute: typeof TabsProgressRoute
   TabsTrainRoute: typeof TabsTrainRoute
@@ -163,6 +215,7 @@ interface TabsRouteChildren {
 
 const TabsRouteChildren: TabsRouteChildren = {
   TabsDietRoute: TabsDietRoute,
+  TabsLibraryRoute: TabsLibraryRoute,
   TabsProfileRoute: TabsProfileRoute,
   TabsProgressRoute: TabsProgressRoute,
   TabsTrainRoute: TabsTrainRoute,
@@ -173,6 +226,7 @@ const TabsRouteWithChildren = TabsRoute._addFileChildren(TabsRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   TabsRoute: TabsRouteWithChildren,
+  AuthRoute: AuthRoute,
   OnboardingRoute: OnboardingRoute,
 }
 export const routeTree = rootRouteImport
