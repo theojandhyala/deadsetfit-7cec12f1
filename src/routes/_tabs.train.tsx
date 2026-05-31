@@ -117,6 +117,8 @@ function TrainPage() {
         </div>
       </header>
 
+      <Reminders />
+
       {/* DEADSET Power Level banner — futuristic XP card */}
       {(() => {
         const score = calculateGritScore(state);
