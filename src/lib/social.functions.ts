@@ -128,7 +128,7 @@ export const getLeaderboard = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, display_name, username, avatar_url, grit_points, level")
+      .select("id, display_name, username, avatar_url, grit_points")
       .order("grit_points", { ascending: false })
       .limit(100);
     if (error) throw new Error(error.message);
@@ -136,8 +136,8 @@ export const getLeaderboard = createServerFn({ method: "GET" })
     const myPts = me?.grit_points ?? 0;
     const myLeague = leagueOf(myPts);
     return {
-      top: (data ?? []).map((p, i) => ({ ...p, rank: i + 1, league: leagueOf(p.grit_points ?? 0) })),
-      me: me ? { ...me, rank: (data ?? []).findIndex(p => p.id === userId) + 1, league: myLeague } : null,
+      top: (data ?? []).map((p, i) => ({ ...p, rank: i + 1, league: leagueOf(p.grit_points ?? 0), level: gritLevel(p.grit_points ?? 0) })),
+      me: me ? { ...me, rank: (data ?? []).findIndex(p => p.id === userId) + 1, league: myLeague, level: gritLevel(myPts) } : null,
     };
   });
 
