@@ -96,7 +96,7 @@ function TrainPage() {
           {DAY_KEYS.map((k) => {
             const active = k === selectedDay;
             const isToday = k === todayKey();
-            const lbl = schedule[k]?.label?.split(" — ")[0] || "REST";
+            const lbl = (activeProgram ? activeProgram.days[k].label : schedule[k]?.label)?.split(" — ")[0] || "REST";
             return (
               <button key={k} onClick={() => setSelectedDay(k)}
                 className="flex-shrink-0 min-w-[68px] p-2 border text-center"
@@ -115,15 +115,19 @@ function TrainPage() {
       {/* Today header */}
       <div className="px-5 mb-5">
         <p className="label-cap">{selectedDay === todayKey() ? "Today" : DAY_SHORT[selectedDay]}</p>
-        <h1 className="display text-3xl font-extrabold uppercase text-grit leading-tight mt-1">{day?.label || "REST"}</h1>
+        <h1 className="display text-3xl font-extrabold uppercase text-grit leading-tight mt-1">
+          {(activeProgram ? programDay?.label : day?.label) || "REST"}
+        </h1>
       </div>
 
-      <div className="px-5 mb-5 flex gap-2">
-        <button onClick={handleGenerate} disabled={genLoading} className="btn-grit flex-1">
-          {genLoading ? <Loader2 className="animate-spin mr-2" size={16} /> : <Sparkles size={16} className="mr-2" />}
-          Generate Schedule
-        </button>
-      </div>
+      {!activeProgram && (
+        <div className="px-5 mb-5 flex gap-2">
+          <button onClick={handleGenerate} disabled={genLoading} className="btn-grit flex-1">
+            {genLoading ? <Loader2 className="animate-spin mr-2" size={16} /> : <Sparkles size={16} className="mr-2" />}
+            Generate Schedule
+          </button>
+        </div>
+      )}
       {genError && <p className="px-5 mb-3 text-sm text-accent-red">{genError}</p>}
 
       {/* Edit mode: assign muscle group per day */}
