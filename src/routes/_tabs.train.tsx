@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Loader2, Play, Plus, Sparkles, ListPlus } from "lucide-react";
+import { Loader2, Play, Plus, Sparkles, ListPlus, Flame } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { GritLogo } from "@/components/GritLogo";
 import { VideoModal } from "@/components/VideoModal";
@@ -120,6 +120,15 @@ function TrainPage() {
           {(activeProgram ? programDay?.label : day?.label) || "REST"}
         </h1>
       </div>
+
+      {/* START WORKOUT CTA */}
+      {((activeProgram ? (programDay?.items.length || 0) : (day?.exerciseIds?.length || 0)) > 0) && selectedDay === todayKey() && (
+        <div className="px-5 mb-4">
+          <Link to="/workout/live" className="btn-grit w-full text-base py-4 flex items-center justify-center">
+            <Flame size={18} className="mr-2" /> Start Workout
+          </Link>
+        </div>
+      )}
 
       {!activeProgram && (
         <div className="px-5 mb-5 flex gap-2">
