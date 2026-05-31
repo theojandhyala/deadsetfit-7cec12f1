@@ -108,20 +108,28 @@ function ProfilePage() {
 
         {/* GRIT Score — huge */}
         <div className="bg-grit-card border border-grit p-5 mb-3">
-          <p className="label-cap mb-1">GRIT Score</p>
+          <div className="flex items-center justify-between mb-1">
+            <p className="label-cap">GRIT Score · LIVE</p>
+            <button className="flex items-center gap-1 text-[10px] label-cap text-accent-red"><UserPlus size={11}/> FOLLOW</button>
+          </div>
           <p className="display font-extrabold leading-none text-accent-red" style={{ fontSize: "5rem" }}>
             {score.total}
           </p>
           <div className="mt-3 h-1.5 bg-[#1a1a1a] overflow-hidden">
             <div className="h-full bg-accent-red transition-all" style={{ width: `${(score.total / 1000) * 100}%` }} />
           </div>
-          <div className="flex items-center justify-between mt-3">
-            <span className="text-[10px] text-grit-dim uppercase tracking-wider">
-              Streak +{score.streak * 15} · PRs +{score.prs * 25} · Diet +{(score.caloriesHit + score.proteinHit) * 10}
-            </span>
-            <button className="flex items-center gap-1 text-[10px] label-cap text-accent-red"><UserPlus size={11}/> FOLLOW</button>
+          {/* Live breakdown — every row links to its source tab */}
+          <div className="mt-4 divide-y divide-[#262626] border-t border-[#262626]">
+            <ScoreRow label="Workout Streak" detail={`${score.streak} days × 15`} pts={score.streak * 15} />
+            <ScoreRow label="PRs This Week" detail={`${score.prs} × 25`} pts={score.prs * 25} />
+            <ScoreRow label="Calorie Target Hits" detail={`${score.caloriesHit} days × 10`} pts={score.caloriesHit * 10} />
+            <ScoreRow label="Protein Target Hits" detail={`${score.proteinHit} days × 10`} pts={score.proteinHit * 10} />
+            <ScoreRow label="Photo Check-Ins" detail={`${score.checkIns} × 50`} pts={score.checkIns * 50} />
+            <ScoreRow label="Measurements Logged" detail={`${score.measurements} × 20`} pts={score.measurements * 20} />
+            {score.decay > 0 && <ScoreRow label="48h Inactivity Decay" detail="No activity recently" pts={-score.decay} />}
           </div>
         </div>
+
 
         {/* Streak */}
         <div className="bg-grit-card border border-grit p-4 flex items-center gap-4">
