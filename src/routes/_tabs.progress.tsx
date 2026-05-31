@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
-import { Camera, Trophy, Loader2, Sparkles, Flame, X } from "lucide-react";
+import { Camera, Trophy, Loader2, Sparkles, Flame, X, Trash2 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useAppState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
