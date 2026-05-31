@@ -175,4 +175,7 @@ export interface AppState {
   sessions: WorkoutSession[];
   activeSessionId: string | null;
   physiqueScans: PhysiqueScan[];
+  water: WaterEntry[];
+  waterTargetMl: number;
+  hydrationAlertsEnabled: boolean;
 }
