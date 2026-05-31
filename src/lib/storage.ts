@@ -34,7 +34,10 @@ function write(state: AppState) {
   localStorage.setItem(KEY, JSON.stringify(state));
   listeners.forEach((l) => l());
   if (remoteSyncEnabled && pushSaver) {
-    if (suppressNextPush) { suppressNextPush = false; return; }
+    if (suppressNextPush) {
+      suppressNextPush = false;
+      return;
+    }
     if (pushTimer) clearTimeout(pushTimer);
     const saver = pushSaver;
     pushTimer = setTimeout(() => {
@@ -112,7 +115,10 @@ export function enableRemoteSync(saver: (json: string) => Promise<void>) {
 export function disableRemoteSync() {
   remoteSyncEnabled = false;
   pushSaver = null;
-  if (pushTimer) { clearTimeout(pushTimer); pushTimer = null; }
+  if (pushTimer) {
+    clearTimeout(pushTimer);
+    pushTimer = null;
+  }
 }
 
 function subscribe(l: () => void) {
@@ -131,7 +137,7 @@ export function useAppState(): [AppState, (u: (s: AppState) => AppState) => void
   const state = useSyncExternalStore(
     subscribe,
     () => JSON.stringify(read()),
-    () => JSON.stringify(DEFAULT_STATE)
+    () => JSON.stringify(DEFAULT_STATE),
   );
   const parsed: AppState = mounted ? JSON.parse(state) : DEFAULT_STATE;
   return [parsed, setState];

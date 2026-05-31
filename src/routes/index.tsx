@@ -11,7 +11,10 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "DEADSET — Forge Your Body" },
-      { name: "description", content: "DEADSET is your no-nonsense gym companion. Train. Build. Become." },
+      {
+        name: "description",
+        content: "DEADSET is your no-nonsense gym companion. Train. Build. Become.",
+      },
     ],
   }),
   component: Index,
@@ -24,23 +27,34 @@ function Index() {
     let cancelled = false;
     (async () => {
       const { supabase } = await import("@/integrations/supabase/client");
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (cancelled) return;
-      if (!session) { navigate({ to: "/auth", replace: true }); return; }
+      if (!session) {
+        navigate({ to: "/auth", replace: true });
+        return;
+      }
       await waitForRemoteState(session.user.id);
       if (cancelled) return;
       let s = getState();
       if (!s.profile) {
         const accountProfile = profileFromAccount(await getProfile().catch(() => null));
         if (accountProfile) {
-          setState((current) => ({ ...current, profile: accountProfile, schedule: current.schedule ?? defaultSchedule(accountProfile) }));
+          setState((current) => ({
+            ...current,
+            profile: accountProfile,
+            schedule: current.schedule ?? defaultSchedule(accountProfile),
+          }));
           s = getState();
         }
       }
       if (s.profile) navigate({ to: "/train", replace: true });
       else navigate({ to: "/onboarding", replace: true });
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [getProfile, navigate]);
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-grit">

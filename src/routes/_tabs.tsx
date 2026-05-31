@@ -19,30 +19,48 @@ function TabsLayout() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (cancelled) return;
-      if (!session) { navigate({ to: "/auth", replace: true }); return; }
+      if (!session) {
+        navigate({ to: "/auth", replace: true });
+        return;
+      }
       await waitForRemoteState(session.user.id);
       if (cancelled) return;
       let state = getState();
       if (!state.profile) {
         const accountProfile = profileFromAccount(await getProfile().catch(() => null));
         if (accountProfile) {
-          setState((current) => ({ ...current, profile: accountProfile, schedule: current.schedule ?? defaultSchedule(accountProfile) }));
+          setState((current) => ({
+            ...current,
+            profile: accountProfile,
+            schedule: current.schedule ?? defaultSchedule(accountProfile),
+          }));
           state = getState();
         }
       }
-      if (!state.profile) { navigate({ to: "/onboarding", replace: true }); return; }
+      if (!state.profile) {
+        navigate({ to: "/onboarding", replace: true });
+        return;
+      }
       setReady(true);
     })();
     const { data } = supabase.auth.onAuthStateChange((_e, s) => {
       if (!s) navigate({ to: "/auth", replace: true });
     });
-    return () => { cancelled = true; data.subscription.unsubscribe(); };
+    return () => {
+      cancelled = true;
+      data.subscription.unsubscribe();
+    };
   }, [getProfile, navigate]);
   if (!ready) return <div className="min-h-screen bg-grit" />;
   return (
-    <div className="min-h-screen bg-grit" style={{ paddingBottom: "calc(70px + env(safe-area-inset-bottom))" }}>
+    <div
+      className="min-h-screen bg-grit"
+      style={{ paddingBottom: "calc(70px + env(safe-area-inset-bottom))" }}
+    >
       <Outlet />
       <BottomNav />
     </div>

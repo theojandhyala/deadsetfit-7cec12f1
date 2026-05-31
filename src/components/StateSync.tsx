@@ -2,9 +2,14 @@ import { useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  enableRemoteSync, disableRemoteSync, hydrateFromRemote,
-  clearLocalState, getState, beginRemoteStateLoad,
-  finishRemoteStateLoad, clearRemoteStateStatus,
+  enableRemoteSync,
+  disableRemoteSync,
+  hydrateFromRemote,
+  clearLocalState,
+  getState,
+  beginRemoteStateLoad,
+  finishRemoteStateLoad,
+  clearRemoteStateStatus,
 } from "@/lib/storage";
 import { loadUserState, saveUserState } from "@/lib/user-state.functions";
 
@@ -27,7 +32,11 @@ export function StateSync() {
         const res = await load();
         if (cancelled) return;
         if (res?.data) {
-          try { hydrateFromRemote(JSON.parse(res.data)); } catch { /* ignore */ }
+          try {
+            hydrateFromRemote(JSON.parse(res.data));
+          } catch {
+            /* ignore */
+          }
         } else {
           // First sign-in on this account: push whatever's local so it isn't lost.
           const local = getState();
@@ -35,7 +44,9 @@ export function StateSync() {
             await save({ data: { data: JSON.stringify(local) } }).catch(() => {});
           }
         }
-        enableRemoteSync(async (json) => { await save({ data: { data: json } }); });
+        enableRemoteSync(async (json) => {
+          await save({ data: { data: json } });
+        });
       } catch (e) {
         console.warn("state pull failed", e);
       } finally {
