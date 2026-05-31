@@ -60,9 +60,18 @@ export const getMyProfile = createServerFn({ method: "GET" })
     return data;
   });
 
-export const resolveUsernameToEmail = createServerFn({ method: "POST" })
+/**
+ * Sign in with username + password without ever returning the user's email
+ * to the client. Looks up the email server-side, then performs the password
+ * sign-in against the public anon client and returns the session tokens so
+ * the browser can call `supabase.auth.setSession(...)`.
+ */
+export const signInWithUsername = createServerFn({ method: "POST" })
   .inputValidator((input) =>
-    z.object({ username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/) }).parse(input),
+    z.object({
+      username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/),
+      password: z.string().min(6).max(128),
+    }).parse(input),
   )
   .handler(async ({ data }) => {
     const { data: profile } = await supabaseAdmin
@@ -70,11 +79,24 @@ export const resolveUsernameToEmail = createServerFn({ method: "POST" })
       .select("id")
       .ilike("username", data.username)
       .maybeSingle();
+    if (!profile) throw new Error("Invalid username or password");
 
-    if (!profile) throw new Error("No account found for that username");
+    const { data: userRes, error: lookupErr } = await supabaseAdmin.auth.admin.getUserById(profile.id);
+    if (lookupErr || !userRes?.user?.email) throw new Error("Invalid username or password");
 
-    const { data: userRes, error } = await supabaseAdmin.auth.admin.getUserById(profile.id);
-    if (error || !userRes?.user?.email) throw new Error("No account found for that username");
+    const anon = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_PUBLISHABLE_KEY!,
+      { auth: { persistSession: false, autoRefreshToken: false } },
+    );
+    const { data: signIn, error } = await anon.auth.signInWithPassword({
+      email: userRes.user.email,
+      password: data.password,
+    });
+    if (error || !signIn.session) throw new Error("Invalid username or password");
 
-    return { email: userRes.user.email };
+    return {
+      access_token: signIn.session.access_token,
+      refresh_token: signIn.session.refresh_token,
+    };
   });
