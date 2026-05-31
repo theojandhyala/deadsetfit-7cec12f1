@@ -267,6 +267,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "profiles_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       referrals: {
@@ -316,7 +323,33 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          display_name: string | null
+          id: string | null
+          level: string | null
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          display_name?: string | null
+          id?: string | null
+          level?: string | null
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          display_name?: string | null
+          id?: string | null
+          level?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       gen_ref_code: { Args: never; Returns: string }
