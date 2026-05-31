@@ -21,6 +21,7 @@ import { Route as TabsProgramsRouteImport } from './routes/_tabs.programs'
 import { Route as TabsProfileRouteImport } from './routes/_tabs.profile'
 import { Route as TabsLibraryRouteImport } from './routes/_tabs.library'
 import { Route as TabsDietRouteImport } from './routes/_tabs.diet'
+import { Route as TabsChallengesRouteImport } from './routes/_tabs.challenges'
 import { Route as TabsProgramsProgramIdRouteImport } from './routes/_tabs.programs.$programId'
 
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -82,6 +83,11 @@ const TabsDietRoute = TabsDietRouteImport.update({
   path: '/diet',
   getParentRoute: () => TabsRoute,
 } as any)
+const TabsChallengesRoute = TabsChallengesRouteImport.update({
+  id: '/challenges',
+  path: '/challenges',
+  getParentRoute: () => TabsRoute,
+} as any)
 const TabsProgramsProgramIdRoute = TabsProgramsProgramIdRouteImport.update({
   id: '/$programId',
   path: '/$programId',
@@ -92,6 +98,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
+  '/challenges': typeof TabsChallengesRoute
   '/diet': typeof TabsDietRoute
   '/library': typeof TabsLibraryRoute
   '/profile': typeof TabsProfileRoute
@@ -106,6 +113,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
+  '/challenges': typeof TabsChallengesRoute
   '/diet': typeof TabsDietRoute
   '/library': typeof TabsLibraryRoute
   '/profile': typeof TabsProfileRoute
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   '/_tabs': typeof TabsRouteWithChildren
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
+  '/_tabs/challenges': typeof TabsChallengesRoute
   '/_tabs/diet': typeof TabsDietRoute
   '/_tabs/library': typeof TabsLibraryRoute
   '/_tabs/profile': typeof TabsProfileRoute
@@ -138,6 +147,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/onboarding'
+    | '/challenges'
     | '/diet'
     | '/library'
     | '/profile'
@@ -152,6 +162,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/onboarding'
+    | '/challenges'
     | '/diet'
     | '/library'
     | '/profile'
@@ -167,6 +178,7 @@ export interface FileRouteTypes {
     | '/_tabs'
     | '/auth'
     | '/onboarding'
+    | '/_tabs/challenges'
     | '/_tabs/diet'
     | '/_tabs/library'
     | '/_tabs/profile'
@@ -272,6 +284,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TabsDietRouteImport
       parentRoute: typeof TabsRoute
     }
+    '/_tabs/challenges': {
+      id: '/_tabs/challenges'
+      path: '/challenges'
+      fullPath: '/challenges'
+      preLoaderRoute: typeof TabsChallengesRouteImport
+      parentRoute: typeof TabsRoute
+    }
     '/_tabs/programs/$programId': {
       id: '/_tabs/programs/$programId'
       path: '/$programId'
@@ -295,6 +314,7 @@ const TabsProgramsRouteWithChildren = TabsProgramsRoute._addFileChildren(
 )
 
 interface TabsRouteChildren {
+  TabsChallengesRoute: typeof TabsChallengesRoute
   TabsDietRoute: typeof TabsDietRoute
   TabsLibraryRoute: typeof TabsLibraryRoute
   TabsProfileRoute: typeof TabsProfileRoute
@@ -305,6 +325,7 @@ interface TabsRouteChildren {
 }
 
 const TabsRouteChildren: TabsRouteChildren = {
+  TabsChallengesRoute: TabsChallengesRoute,
   TabsDietRoute: TabsDietRoute,
   TabsLibraryRoute: TabsLibraryRoute,
   TabsProfileRoute: TabsProfileRoute,

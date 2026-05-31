@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Loader2, Play, Plus, Sparkles, ListPlus, Flame } from "lucide-react";
+import { Loader2, Play, Plus, Sparkles, ListPlus, Flame, Trophy } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { GritLogo } from "@/components/GritLogo";
 import { VideoModal } from "@/components/VideoModal";
