@@ -81,6 +81,22 @@ function ProgressPage() {
     }]}));
     setChest(""); setWaist(""); setArms(""); setLegs("");
   }
+  function deleteScan(id: string) {
+    if (!confirm("Delete this scan? This can't be undone.")) return;
+    set((s) => ({ ...s, physiqueScans: s.physiqueScans.filter((p) => p.id !== id) }));
+    setViewScan(null);
+  }
+  function deleteWeight(date: string) {
+    set((s) => ({ ...s, weights: s.weights.filter((w) => w.date !== date) }));
+  }
+  function deleteMeasurement(date: string) {
+    set((s) => ({ ...s, measurements: s.measurements.filter((m) => m.date !== date) }));
+  }
+  function deleteCheckIn(date: string) {
+    if (!confirm("Delete this photo?")) return;
+    set((s) => ({ ...s, checkIns: s.checkIns.filter((c) => c.date !== date) }));
+    setCompare((c) => c.filter((d) => d !== date));
+  }
 
   // PRs across both new sessions and legacy logs
   const prs = useMemo(() => {
