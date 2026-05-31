@@ -17,6 +17,7 @@ const DEFAULT_STATE: AppState = {
   activeProgramId: null,
   sessions: [],
   activeSessionId: null,
+  physiqueScans: [],
 };
 
 const listeners = new Set<() => void>();
