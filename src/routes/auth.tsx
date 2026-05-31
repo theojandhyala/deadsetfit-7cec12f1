@@ -1,14 +1,17 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { GritLogo } from "@/components/GritLogo";
+import { resolveUsernameToEmail } from "@/lib/profile.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "DEADSET — Sign In" }] }),
   component: AuthPage,
 });
+
 
 function AuthPage() {
   const navigate = useNavigate();
