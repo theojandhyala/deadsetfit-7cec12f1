@@ -1,11 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { chatJSON, chatVisionJSON } from "./ai-gateway.server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 // === Photo food analysis ===
 const PhotoInput = z.object({ imageDataUrl: z.string().min(20).max(5_000_000) });
 
 export const analyzeFoodPhoto = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => PhotoInput.parse(d))
   .handler(async ({ data }) => {
     const sys = `You are a nutritionist. Identify the meal in the photo and estimate macros for the visible portion. Reply with strict JSON only:
@@ -70,6 +72,7 @@ const WeeklyInput = z.object({
 });
 
 export const weeklyNutritionReport = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => WeeklyInput.parse(d))
   .handler(async ({ data }) => {
     const sys = `You are an elite sports nutritionist reviewing a week of intake. Reply with strict JSON only:
