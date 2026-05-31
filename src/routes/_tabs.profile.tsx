@@ -102,9 +102,10 @@ function ProfilePage() {
     <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
       <header className="px-5 pt-6 pb-4 flex items-center justify-between">
         <GritLogo className="text-2xl" />
-        <button onClick={() => editing ? save() : setEditing(true)} className="label-cap text-accent-red">
-          {editing ? "Save" : "Edit"}
+        <button onClick={() => editing ? save() : setEditing(true)} disabled={savingProfile} className="label-cap text-accent-red disabled:opacity-50">
+          {editing ? (savingProfile ? "..." : "Save") : "Edit"}
         </button>
+
       </header>
 
       {/* === Athlete card header === */}
