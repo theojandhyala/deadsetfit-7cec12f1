@@ -82,13 +82,126 @@ export function calculateStreak(completedDates: string[]) {
   return streak;
 }
 
-// === GRIT Level tiers (by grit_points) ===
-export type GritLevel = "BEGINNER" | "ROOKIE" | "CONTENDER" | "WARRIOR" | "CHAMPION" | "LEGEND";
-export function gritLevel(points: number): GritLevel {
-  if (points >= 2500) return "LEGEND";
-  if (points >= 1000) return "CHAMPION";
-  if (points >= 500) return "WARRIOR";
-  if (points >= 250) return "CONTENDER";
-  if (points >= 100) return "ROOKIE";
-  return "BEGINNER";
+// === GRIT Badge tiers (by GRIT Score 0–1000) ===
+export type GritBadge = "RAW" | "ROOKIE" | "GRINDER" | "BEAST" | "ELITE" | "GRIT GOD";
+export function gritBadge(score: number): GritBadge {
+  if (score >= 1000) return "GRIT GOD";
+  if (score >= 750) return "ELITE";
+  if (score >= 500) return "BEAST";
+  if (score >= 250) return "GRINDER";
+  if (score >= 100) return "ROOKIE";
+  return "RAW";
+}
+// Legacy alias used by social feed/leaderboard.
+export const gritLevel = gritBadge;
+export type GritLevel = GritBadge;
+
+export function badgeColor(b: GritBadge): string {
+  switch (b) {
+    case "GRIT GOD": return "#e63222";
+    case "ELITE": return "#a78bfa";
+    case "BEAST": return "#fbbf24";
+    case "GRINDER": return "#22c55e";
+    case "ROOKIE": return "#60a5fa";
+    default: return "#8a8a8a";
+  }
+}
+
+// Epley 1RM estimate
+export function estimate1RM(weight: number, reps: number): number {
+  if (weight <= 0 || reps <= 0) return 0;
+  if (reps === 1) return weight;
+  return Math.round(weight * (1 + reps / 30));
+}
+
+export function bestSetFor(logs: SetLog[], exerciseId: string) {
+  const filtered = logs.filter(l => l.exerciseId === exerciseId);
+  if (!filtered.length) return null;
+  let best = { weight: 0, reps: 0, oneRm: 0, date: "" };
+  for (const l of filtered) {
+    const orm = estimate1RM(l.weight, l.reps);
+    if (orm > best.oneRm) best = { weight: l.weight, reps: l.reps, oneRm: orm, date: l.date };
+  }
+  return best;
+}
+
+export function maxRepsFor(logs: SetLog[], exerciseId: string) {
+  const filtered = logs.filter(l => l.exerciseId === exerciseId);
+  if (!filtered.length) return 0;
+  return filtered.reduce((m, l) => Math.max(m, l.reps), 0);
+}
+
+// === GRIT Score ===
+// 0–1000 composite. Computed from local logs.
+//   • Workout streak × 15
+//   • PRs this week × 25
+//   • Calorie target hit × 10/day (this week)
+//   • Protein target hit × 10/day (this week)
+//   • Weekly photo check-in × 50
+//   • Measurements logged this week × 20
+// Decays 100 if no activity in last 48h.
+export interface GritScoreBreakdown {
+  streak: number;
+  prs: number;
+  caloriesHit: number;
+  proteinHit: number;
+  checkIns: number;
+  measurements: number;
+  decay: number;
+  total: number;
+}
+export function calculateGritScore(state: AppState): GritScoreBreakdown {
+  const p = state.profile;
+  if (!p) return { streak: 0, prs: 0, caloriesHit: 0, proteinHit: 0, checkIns: 0, measurements: 0, decay: 0, total: 0 };
+
+  const streak = calculateStreak(state.completedDates);
+  const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+  const weekAgoISO = weekAgo.toISOString().slice(0, 10);
+
+  // PRs this week (from session.prCount)
+  const prs = (state.sessions || [])
+    .filter(s => s.date >= weekAgoISO)
+    .reduce((sum, s) => sum + (s.prCount || 0), 0);
+
+  // Calorie + protein target hits per day this week
+  const cal = calculateCalories(p);
+  const macros = calculateMacros(p, cal);
+  const byDay = new Map<string, { cal: number; pro: number }>();
+  for (const f of state.foodLog || []) {
+    if (f.date < weekAgoISO) continue;
+    const d = byDay.get(f.date) ?? { cal: 0, pro: 0 };
+    d.cal += f.calories; d.pro += f.protein;
+    byDay.set(f.date, d);
+  }
+  let caloriesHit = 0, proteinHit = 0;
+  for (const [, totals] of byDay) {
+    if (Math.abs(totals.cal - cal) / cal <= 0.1) caloriesHit++;
+    if (totals.pro >= macros.protein * 0.9) proteinHit++;
+  }
+
+  const checkIns = (state.checkIns || []).filter(c => c.date >= weekAgoISO).length;
+  const measurements = (state.measurements || []).filter(m => m.date >= weekAgoISO).length;
+
+  // Decay: any activity in last 48h?
+  const lastActivity = Math.max(
+    ...(state.completedDates || []).map(d => new Date(d).getTime()),
+    ...(state.sessions || []).map(s => new Date(s.date).getTime()),
+    ...(state.foodLog || []).map(f => new Date(f.date).getTime()),
+    0
+  );
+  const decay = (Date.now() - lastActivity) > 48 * 3600_000 ? 100 : 0;
+
+  const raw =
+    streak * 15 +
+    prs * 25 +
+    caloriesHit * 10 +
+    proteinHit * 10 +
+    checkIns * 50 +
+    measurements * 20 -
+    decay;
+
+  return {
+    streak, prs, caloriesHit, proteinHit, checkIns, measurements, decay,
+    total: Math.max(0, Math.min(1000, raw)),
+  };
 }
