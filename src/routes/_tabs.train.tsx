@@ -234,7 +234,7 @@ function TrainPage() {
               return (
                 <div key={it.id} className="bg-grit-card border border-grit">
                   <button className="w-full p-3 text-left"
-                    onClick={() => setVideoState({ query: it.youtube_query || it.name, title: it.name, cue: it.instruction })}>
+                    onClick={() => setVideoState({ query: it.youtube_query || it.name, title: it.name })}>
                     <div className="flex items-center justify-between gap-2">
                       <div className="display uppercase font-extrabold text-grit text-lg leading-tight">{it.name}</div>
                       <Play size={18} className="text-accent-red flex-shrink-0" />
