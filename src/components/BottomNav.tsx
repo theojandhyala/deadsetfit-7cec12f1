@@ -1,8 +1,9 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Dumbbell, LineChart, Apple, User } from "lucide-react";
+import { Dumbbell, LineChart, Apple, User, BookOpen } from "lucide-react";
 
 const tabs = [
   { to: "/train", label: "Train", Icon: Dumbbell },
+  { to: "/library", label: "Library", Icon: BookOpen },
   { to: "/progress", label: "Progress", Icon: LineChart },
   { to: "/diet", label: "Diet", Icon: Apple },
   { to: "/profile", label: "Profile", Icon: User },
@@ -25,8 +26,8 @@ export function BottomNav() {
                 className="flex flex-col items-center justify-center gap-1 py-3"
                 style={{ color: active ? "#e63222" : "#8a8a8a" }}
               >
-                <Icon size={22} strokeWidth={2.5} />
-                <span className="text-[10px] font-bold uppercase tracking-widest">{label}</span>
+                <Icon size={20} strokeWidth={2.5} />
+                <span className="text-[9px] font-bold uppercase tracking-widest">{label}</span>
               </Link>
             </li>
           );
