@@ -67,10 +67,28 @@ function TrainPage() {
     <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
       <header className="px-5 pt-6 pb-4 flex items-center justify-between">
         <GritLogo className="text-2xl" />
-        <button onClick={() => setEditMode((v) => !v)} className="label-cap" style={{ color: editMode ? "#e63222" : "#8a8a8a" }}>
-          {editMode ? "DONE" : "EDIT"}
-        </button>
+        <div className="flex items-center gap-4">
+          <Link to="/programs" className="label-cap text-grit-dim text-xs flex items-center gap-1">
+            <ListPlus size={14} /> PROGRAMS
+          </Link>
+          <button onClick={() => setEditMode((v) => !v)} className="label-cap" style={{ color: editMode ? "#e63222" : "#8a8a8a" }}>
+            {editMode ? "DONE" : "EDIT"}
+          </button>
+        </div>
       </header>
+
+      {activeProgram && (
+        <div className="px-5 mb-3">
+          <Link
+            to="/programs/$programId"
+            params={{ programId: activeProgram.id }}
+            className="block bg-grit-card border border-accent-red px-3 py-2"
+          >
+            <p className="label-cap text-[9px] text-accent-red">ACTIVE PROGRAM</p>
+            <p className="display uppercase font-extrabold text-grit text-sm truncate">{activeProgram.name}</p>
+          </Link>
+        </div>
+      )}
 
       {/* Weekly strip */}
       <div className="px-5 mb-4">
