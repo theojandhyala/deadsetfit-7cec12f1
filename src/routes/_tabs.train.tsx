@@ -31,8 +31,10 @@ function TrainPage() {
   const [genError, setGenError] = useState<string | null>(null);
 
   const generate = useServerFn(generateSchedule);
+  const activeProgram: Program | undefined = state.programs.find((p) => p.id === state.activeProgramId);
   const schedule: Schedule = state.schedule ?? (state.profile ? defaultSchedule(state.profile) : ({} as Schedule));
   const day = schedule[selectedDay];
+  const programDay = activeProgram?.days[selectedDay];
 
   async function handleGenerate() {
     if (!state.profile) return;
