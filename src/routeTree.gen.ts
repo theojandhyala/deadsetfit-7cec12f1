@@ -15,9 +15,11 @@ import { Route as TabsRouteImport } from './routes/_tabs'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TabsTrainRouteImport } from './routes/_tabs.train'
 import { Route as TabsProgressRouteImport } from './routes/_tabs.progress'
+import { Route as TabsProgramsRouteImport } from './routes/_tabs.programs'
 import { Route as TabsProfileRouteImport } from './routes/_tabs.profile'
 import { Route as TabsLibraryRouteImport } from './routes/_tabs.library'
 import { Route as TabsDietRouteImport } from './routes/_tabs.diet'
+import { Route as TabsProgramsProgramIdRouteImport } from './routes/_tabs.programs.$programId'
 
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
@@ -48,6 +50,11 @@ const TabsProgressRoute = TabsProgressRouteImport.update({
   path: '/progress',
   getParentRoute: () => TabsRoute,
 } as any)
+const TabsProgramsRoute = TabsProgramsRouteImport.update({
+  id: '/programs',
+  path: '/programs',
+  getParentRoute: () => TabsRoute,
+} as any)
 const TabsProfileRoute = TabsProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -63,6 +70,11 @@ const TabsDietRoute = TabsDietRouteImport.update({
   path: '/diet',
   getParentRoute: () => TabsRoute,
 } as any)
+const TabsProgramsProgramIdRoute = TabsProgramsProgramIdRouteImport.update({
+  id: '/$programId',
+  path: '/$programId',
+  getParentRoute: () => TabsProgramsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -71,8 +83,10 @@ export interface FileRoutesByFullPath {
   '/diet': typeof TabsDietRoute
   '/library': typeof TabsLibraryRoute
   '/profile': typeof TabsProfileRoute
+  '/programs': typeof TabsProgramsRouteWithChildren
   '/progress': typeof TabsProgressRoute
   '/train': typeof TabsTrainRoute
+  '/programs/$programId': typeof TabsProgramsProgramIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -81,8 +95,10 @@ export interface FileRoutesByTo {
   '/diet': typeof TabsDietRoute
   '/library': typeof TabsLibraryRoute
   '/profile': typeof TabsProfileRoute
+  '/programs': typeof TabsProgramsRouteWithChildren
   '/progress': typeof TabsProgressRoute
   '/train': typeof TabsTrainRoute
+  '/programs/$programId': typeof TabsProgramsProgramIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -93,8 +109,10 @@ export interface FileRoutesById {
   '/_tabs/diet': typeof TabsDietRoute
   '/_tabs/library': typeof TabsLibraryRoute
   '/_tabs/profile': typeof TabsProfileRoute
+  '/_tabs/programs': typeof TabsProgramsRouteWithChildren
   '/_tabs/progress': typeof TabsProgressRoute
   '/_tabs/train': typeof TabsTrainRoute
+  '/_tabs/programs/$programId': typeof TabsProgramsProgramIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -105,8 +123,10 @@ export interface FileRouteTypes {
     | '/diet'
     | '/library'
     | '/profile'
+    | '/programs'
     | '/progress'
     | '/train'
+    | '/programs/$programId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -115,8 +135,10 @@ export interface FileRouteTypes {
     | '/diet'
     | '/library'
     | '/profile'
+    | '/programs'
     | '/progress'
     | '/train'
+    | '/programs/$programId'
   id:
     | '__root__'
     | '/'
@@ -126,8 +148,10 @@ export interface FileRouteTypes {
     | '/_tabs/diet'
     | '/_tabs/library'
     | '/_tabs/profile'
+    | '/_tabs/programs'
     | '/_tabs/progress'
     | '/_tabs/train'
+    | '/_tabs/programs/$programId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -181,6 +205,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TabsProgressRouteImport
       parentRoute: typeof TabsRoute
     }
+    '/_tabs/programs': {
+      id: '/_tabs/programs'
+      path: '/programs'
+      fullPath: '/programs'
+      preLoaderRoute: typeof TabsProgramsRouteImport
+      parentRoute: typeof TabsRoute
+    }
     '/_tabs/profile': {
       id: '/_tabs/profile'
       path: '/profile'
@@ -202,13 +233,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TabsDietRouteImport
       parentRoute: typeof TabsRoute
     }
+    '/_tabs/programs/$programId': {
+      id: '/_tabs/programs/$programId'
+      path: '/$programId'
+      fullPath: '/programs/$programId'
+      preLoaderRoute: typeof TabsProgramsProgramIdRouteImport
+      parentRoute: typeof TabsProgramsRoute
+    }
   }
 }
+
+interface TabsProgramsRouteChildren {
+  TabsProgramsProgramIdRoute: typeof TabsProgramsProgramIdRoute
+}
+
+const TabsProgramsRouteChildren: TabsProgramsRouteChildren = {
+  TabsProgramsProgramIdRoute: TabsProgramsProgramIdRoute,
+}
+
+const TabsProgramsRouteWithChildren = TabsProgramsRoute._addFileChildren(
+  TabsProgramsRouteChildren,
+)
 
 interface TabsRouteChildren {
   TabsDietRoute: typeof TabsDietRoute
   TabsLibraryRoute: typeof TabsLibraryRoute
   TabsProfileRoute: typeof TabsProfileRoute
+  TabsProgramsRoute: typeof TabsProgramsRouteWithChildren
   TabsProgressRoute: typeof TabsProgressRoute
   TabsTrainRoute: typeof TabsTrainRoute
 }
@@ -217,6 +268,7 @@ const TabsRouteChildren: TabsRouteChildren = {
   TabsDietRoute: TabsDietRoute,
   TabsLibraryRoute: TabsLibraryRoute,
   TabsProfileRoute: TabsProfileRoute,
+  TabsProgramsRoute: TabsProgramsRouteWithChildren,
   TabsProgressRoute: TabsProgressRoute,
   TabsTrainRoute: TabsTrainRoute,
 }
@@ -232,3 +284,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
