@@ -15,8 +15,8 @@ function ProfilePage() {
   const navigate = useNavigate();
   const p = state.profile;
   const [editing, setEditing] = useState(false);
-  const [goal, setGoal] = useState(p?.goal || "BULK");
-  const [exp, setExp] = useState(p?.experience || "BEGINNER");
+  const [goal, setGoal] = useState<string>(p?.goal || "BULK");
+  const [exp, setExp] = useState<string>(p?.experience || "BEGINNER");
   const [w, setW] = useState(String(p?.weightKg ?? ""));
   const [h, setH] = useState(String(p?.heightCm ?? ""));
 
@@ -25,7 +25,7 @@ function ProfilePage() {
 
   function save() {
     set((s) => s.profile ? ({ ...s, profile: {
-      ...s.profile, goal: goal as typeof p.goal, experience: exp as typeof p.experience,
+      ...s.profile, goal: goal as typeof s.profile.goal, experience: exp as typeof s.profile.experience,
       weightKg: Number(w) || s.profile.weightKg, heightCm: Number(h) || s.profile.heightCm
     }}) : s);
     setEditing(false);
