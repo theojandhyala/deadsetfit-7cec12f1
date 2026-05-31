@@ -13,6 +13,38 @@ import type { DayKey, Schedule, Program } from "@/lib/types";
 
 const DAY_KEYS: DayKey[] = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
 const DAY_SHORT: Record<DayKey, string> = { MON:"Mon",TUE:"Tue",WED:"Wed",THU:"Thu",FRI:"Fri",SAT:"Sat",SUN:"Sun" };
+const DAY_FULL: Record<DayKey, string> = { MON:"Monday",TUE:"Tuesday",WED:"Wednesday",THU:"Thursday",FRI:"Friday",SAT:"Saturday",SUN:"Sunday" };
+
+function dayHype(dayKey: DayKey, label: string, isToday: boolean): { eyebrow: string; line: string } {
+  const focus = (label || "REST").split(" — ")[0];
+  const isRest = focus === "REST" || !focus;
+  const dayName = DAY_FULL[dayKey].toUpperCase();
+  if (isRest) {
+    return {
+      eyebrow: isToday ? `IT'S ${dayName} · REST DAY` : `${dayName} · REST`,
+      line: isToday ? "Recover hard. Eat. Sleep. Come back stronger." : "Scheduled recovery day.",
+    };
+  }
+  const hype: Record<string, string> = {
+    CHEST: "Time to build that armor. Press heavy, control the descent.",
+    BACK: "Pull like you mean it. Width, thickness, no half reps.",
+    LEGS: "No skipping. Drive through the floor and earn the size.",
+    SHOULDERS: "Capped delts day. Press overhead, own every rep.",
+    ARMS: "Pump city. Slow eccentrics, full squeeze.",
+    CORE: "Brace, breathe, burn. Bulletproof the midsection.",
+    PUSH: "Chest, shoulders, triceps — push everything away from you.",
+    PULL: "Back and biceps — pull the weight, pull yourself up.",
+    UPPER: "Upper body grind. Hit every angle.",
+    LOWER: "Quads, hams, glutes. Earn the staircase tomorrow.",
+    FULL: "Full body assault. Compound lifts, big effort.",
+  };
+  const line = hype[focus] ?? "Lock in. Hit every set with intent.";
+  return {
+    eyebrow: isToday ? `IT'S ${dayName} · TODAY'S MISSION` : `${dayName} · ON DECK`,
+    line,
+  };
+}
+
 
 export const Route = createFileRoute("/_tabs/train")({
   head: () => ({ meta: [{ title: "GRIT — Train" }] }),
