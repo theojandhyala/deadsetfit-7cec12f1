@@ -1,12 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import { Flame, LogOut, Crown, UserPlus, Pencil } from "lucide-react";
 import { useAppState } from "@/lib/storage";
 import {
   calculateStreak, calculateGritScore, gritBadge, badgeColor,
   bestSetFor, maxRepsFor,
 } from "@/lib/calc";
+import { saveProfile } from "@/lib/profile.functions";
 import { GritLogo } from "@/components/GritLogo";
+
 
 export const Route = createFileRoute("/_tabs/profile")({
   head: () => ({ meta: [{ title: "DEADSET — Profile" }] }),
@@ -24,6 +28,7 @@ const PR_LIFTS: Array<{ id: string; label: string; kind: "1RM" | "REPS" }> = [
 function ProfilePage() {
   const [state, set] = useAppState();
   const navigate = useNavigate();
+  const persist = useServerFn(saveProfile);
   const p = state.profile;
   const fileRef = useRef<HTMLInputElement>(null);
   const [editing, setEditing] = useState(false);
@@ -32,6 +37,8 @@ function ProfilePage() {
   const [w, setW] = useState(String(p?.weightKg ?? ""));
   const [h, setH] = useState(String(p?.heightCm ?? ""));
   const [username, setUsername] = useState(p?.username || "");
+  const [savingProfile, setSavingProfile] = useState(false);
+
 
   if (!p) return null;
   const streak = calculateStreak(state.completedDates);
@@ -43,21 +50,47 @@ function ProfilePage() {
   const delta = p.weightKg - startW;
   const bmi = (p.weightKg / Math.pow(p.heightCm / 100, 2)).toFixed(1);
 
-  function save() {
+  async function save() {
+    if (!p) return;
     const clean = username.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20);
-    set((s) => s.profile ? ({ ...s, profile: {
-      ...s.profile, goal: goal as typeof s.profile.goal, experience: exp as typeof s.profile.experience,
-      weightKg: Number(w) || s.profile.weightKg, heightCm: Number(h) || s.profile.heightCm,
-      username: clean || s.profile.username,
-    }}) : s);
-    setEditing(false);
+    const newWeight = Number(w) || p.weightKg;
+    const newHeight = Number(h) || p.heightCm;
+    const newUsername = clean || p.username;
+    setSavingProfile(true);
+    try {
+      await persist({
+        data: {
+          username: newUsername,
+          display_name: newUsername,
+          goal: goal as "BULK" | "CUT" | "MAINTAIN" | "ATHLETIC",
+          experience: exp as "BEGINNER" | "INTERMEDIATE" | "ADVANCED",
+          weight_kg: newWeight,
+          height_cm: newHeight,
+        },
+      });
+      set((s) => s.profile ? ({ ...s, profile: {
+        ...s.profile, goal: goal as typeof s.profile.goal, experience: exp as typeof s.profile.experience,
+        weightKg: newWeight, heightCm: newHeight, username: newUsername,
+      }}) : s);
+      setEditing(false);
+      toast.success("Profile saved");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't save profile");
+    } finally {
+      setSavingProfile(false);
+    }
   }
 
   function changePhoto(file: File) {
     const r = new FileReader();
-    r.onload = () => set((s) => s.profile ? ({ ...s, profile: { ...s.profile, avatarDataUrl: String(r.result) } }) : s);
+    r.onload = () => {
+      const url = String(r.result);
+      set((s) => s.profile ? ({ ...s, profile: { ...s.profile, avatarDataUrl: url } }) : s);
+      persist({ data: { avatar_url: url } }).catch(() => {});
+    };
     r.readAsDataURL(file);
   }
+
 
   function reset() {
     if (!confirm("Reset all your DEADSET data?")) return;
@@ -69,9 +102,10 @@ function ProfilePage() {
     <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
       <header className="px-5 pt-6 pb-4 flex items-center justify-between">
         <GritLogo className="text-2xl" />
-        <button onClick={() => editing ? save() : setEditing(true)} className="label-cap text-accent-red">
-          {editing ? "Save" : "Edit"}
+        <button onClick={() => editing ? save() : setEditing(true)} disabled={savingProfile} className="label-cap text-accent-red disabled:opacity-50">
+          {editing ? (savingProfile ? "..." : "Save") : "Edit"}
         </button>
+
       </header>
 
       {/* === Athlete card header === */}

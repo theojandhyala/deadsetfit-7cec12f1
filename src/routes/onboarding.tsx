@@ -1,9 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import { GritLogo } from "@/components/GritLogo";
 import { setState } from "@/lib/storage";
 import { defaultSchedule } from "@/lib/calc";
+import { saveProfile } from "@/lib/profile.functions";
 import type { Equipment, Experience, Gender, Goal, Profile, Weakness } from "@/lib/types";
+
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "DEADSET — Onboarding" }] }),
@@ -20,6 +24,7 @@ function Onboarding() {
   const navigate = useNavigate();
   const [idx, setIdx] = useState(0);
   const [draft, setDraft] = useState<Partial<Profile>>({});
+  const save = useServerFn(saveProfile);
   const step = ORDER[idx];
 
   useEffect(() => {
@@ -36,11 +41,32 @@ function Onboarding() {
     if (idx === ORDER.length - 1) {
       const p = { ...merged, startingWeightKg: merged.startingWeightKg ?? merged.weightKg } as Profile;
       setState((s) => ({ ...s, profile: p, schedule: defaultSchedule(p) }));
-      navigate({ to: "/train", replace: true });
+      save({
+        data: {
+          username: p.username,
+          display_name: p.username,
+          goal: p.goal,
+          experience: p.experience,
+          gender: p.gender,
+          age: p.age,
+          weight_kg: p.weightKg,
+          height_cm: p.heightCm,
+          days_per_week: p.daysPerWeek,
+          equipment: p.equipment,
+          avatar_url: p.avatarDataUrl,
+          onboarded: true,
+        },
+      })
+        .then(() => navigate({ to: "/train", replace: true }))
+        .catch((e: Error) => {
+          toast.error(e.message || "Couldn't save profile");
+          navigate({ to: "/train", replace: true });
+        });
     } else {
       setIdx(idx + 1);
     }
   }
+
 
   return (
     <div className="min-h-screen bg-grit flex flex-col" style={{ paddingTop: "env(safe-area-inset-top)" }}>

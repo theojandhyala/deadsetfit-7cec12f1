@@ -1,8 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { GritLogo } from "@/components/GritLogo";
+import { resolveUsernameToEmail } from "@/lib/profile.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
@@ -10,12 +12,14 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+
 function AuthPage() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const resolveUsername = useServerFn(resolveUsernameToEmail);
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((_e, session) => {
@@ -32,8 +36,9 @@ function AuthPage() {
     setBusy(true);
     try {
       if (mode === "signup") {
+        if (!identifier.includes("@")) throw new Error("Enter a valid email to sign up");
         const { data, error } = await supabase.auth.signUp({
-          email,
+          email: identifier,
           password,
           options: { emailRedirectTo: window.location.origin },
         });
@@ -45,6 +50,11 @@ function AuthPage() {
           toast.success("Account created. Check your email to confirm.");
         }
       } else {
+        let email = identifier.trim();
+        if (!email.includes("@")) {
+          const res = await resolveUsername({ data: { username: email.replace(/^@/, "") } });
+          email = res.email;
+        }
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
@@ -54,6 +64,7 @@ function AuthPage() {
       setBusy(false);
     }
   }
+
 
   async function google() {
     setBusy(true);
@@ -76,14 +87,17 @@ function AuthPage() {
 
         <form onSubmit={submit} className="space-y-3">
           <input
-            type="email"
+            type="text"
             required
-            placeholder="EMAIL"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            autoCapitalize="none"
+            autoCorrect="off"
+            placeholder={mode === "signup" ? "EMAIL" : "EMAIL OR USERNAME"}
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
             className="w-full px-3 py-3 text-sm uppercase tracking-wider"
             style={{ background: "#0a0a0a", color: "#f5f5f0", border: "1px solid #2a2a2a" }}
           />
+
           <input
             type="password"
             required
