@@ -3,7 +3,7 @@ import { useMemo, useRef, useState } from "react";
 import { Camera, Trophy, Loader2, Sparkles, Flame, X } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useAppState } from "@/lib/storage";
-import { EXERCISES, getExercise } from "@/lib/exercises";
+import { getExercise } from "@/lib/exercises";
 import { isoDay, calculateStreak } from "@/lib/calc";
 import { analyzePhysique } from "@/lib/physique.functions";
 import type { PhysiqueScan } from "@/lib/types";
