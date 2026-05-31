@@ -68,10 +68,118 @@ export type Database = {
         }
         Relationships: []
       }
+      follows: {
+        Row: {
+          created_at: string
+          follower_id: string
+          following_id: string
+        }
+        Insert: {
+          created_at?: string
+          follower_id: string
+          following_id: string
+        }
+        Update: {
+          created_at?: string
+          follower_id?: string
+          following_id?: string
+        }
+        Relationships: []
+      }
+      post_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_likes: {
+        Row: {
+          created_at: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      posts: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          image_url: string | null
+          kind: string
+          metadata: Json
+          user_id: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          kind: string
+          metadata?: Json
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          kind?: string
+          metadata?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           active_program_id: string | null
           age: number
+          avatar_url: string | null
+          bio: string | null
           checkin_streak: number
           created_at: string
           days_per_week: number
@@ -87,13 +195,19 @@ export type Database = {
           id: string
           level: string
           onboarded: boolean
+          pro_until: string | null
+          referral_code: string | null
+          referred_by: string | null
           updated_at: string
+          username: string | null
           weight_kg: number
           workout_streak: number
         }
         Insert: {
           active_program_id?: string | null
           age?: number
+          avatar_url?: string | null
+          bio?: string | null
           checkin_streak?: number
           created_at?: string
           days_per_week?: number
@@ -109,13 +223,19 @@ export type Database = {
           id: string
           level?: string
           onboarded?: boolean
+          pro_until?: string | null
+          referral_code?: string | null
+          referred_by?: string | null
           updated_at?: string
+          username?: string | null
           weight_kg?: number
           workout_streak?: number
         }
         Update: {
           active_program_id?: string | null
           age?: number
+          avatar_url?: string | null
+          bio?: string | null
           checkin_streak?: number
           created_at?: string
           days_per_week?: number
@@ -131,9 +251,45 @@ export type Database = {
           id?: string
           level?: string
           onboarded?: boolean
+          pro_until?: string | null
+          referral_code?: string | null
+          referred_by?: string | null
           updated_at?: string
+          username?: string | null
           weight_kg?: number
           workout_streak?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referrals: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          referred_id: string
+          referrer_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          referred_id: string
+          referrer_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          referred_id?: string
+          referrer_id?: string
         }
         Relationships: []
       }
@@ -163,6 +319,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      gen_ref_code: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
