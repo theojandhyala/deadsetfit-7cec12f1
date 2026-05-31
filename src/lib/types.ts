@@ -103,6 +103,14 @@ export interface FoodLogItem {
   protein: number;
   carbs: number;
   fats: number;
+  source?: "manual" | "photo" | "barcode" | "ai";
+  photoThumb?: string;
+}
+
+export interface WaterEntry {
+  date: string;
+  ml: number;
+  at: string;
 }
 
 export interface CompletedSet {
