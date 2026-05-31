@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { gritLevel } from "@/lib/calc";
 
 // === Feed ===
@@ -18,7 +19,7 @@ export const getFeed = createServerFn({ method: "GET" })
     const postIds = (posts ?? []).map(p => p.id);
 
     const [{ data: authors }, { data: likes }, { data: myLikes }, { data: commentCounts }] = await Promise.all([
-      supabase.from("profiles").select("id, display_name, username, avatar_url, grit_points").in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]),
+      supabaseAdmin.from("profiles").select("id, display_name, username, avatar_url, grit_points").in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]),
       supabase.from("post_likes").select("post_id").in("post_id", postIds.length ? postIds : ["00000000-0000-0000-0000-000000000000"]),
       supabase.from("post_likes").select("post_id").eq("user_id", userId).in("post_id", postIds.length ? postIds : ["00000000-0000-0000-0000-000000000000"]),
       supabase.from("post_comments").select("post_id").in("post_id", postIds.length ? postIds : ["00000000-0000-0000-0000-000000000000"]),
@@ -105,7 +106,7 @@ export const getComments = createServerFn({ method: "POST" })
       .limit(100);
     if (error) throw new Error(error.message);
     const ids = Array.from(new Set((rows ?? []).map(r => r.user_id)));
-    const { data: authors } = await supabase
+    const { data: authors } = await supabaseAdmin
       .from("profiles").select("id, display_name, username")
       .in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
     const am = new Map((authors ?? []).map(a => [a.id, a]));
@@ -125,8 +126,8 @@ function leagueOf(pts: number): "BRONZE" | "SILVER" | "GOLD" | "DIAMOND" | "ELIT
 export const getLeaderboard = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
-    const { data, error } = await supabase
+    const { supabase: _supabase, userId } = context;
+    const { data, error } = await supabaseAdmin
       .from("profiles")
       .select("id, display_name, username, avatar_url, grit_points")
       .order("grit_points", { ascending: false })
@@ -176,7 +177,7 @@ export const redeemReferral = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const code = data.code.trim().toUpperCase();
-    const { data: owner, error: oErr } = await supabase
+    const { data: owner, error: oErr } = await supabaseAdmin
       .from("profiles").select("id, referral_code").eq("referral_code", code).maybeSingle();
     if (oErr) throw new Error(oErr.message);
     if (!owner) throw new Error("Invalid code");
@@ -189,11 +190,11 @@ export const redeemReferral = createServerFn({ method: "POST" })
     // grant 30d pro to both
     const month = new Date(Date.now() + 30 * 86400_000).toISOString();
     await supabase.from("profiles").update({ pro_until: month, referred_by: owner.id }).eq("id", userId);
-    // extend referrer
-    const { data: rp } = await supabase.from("profiles").select("pro_until").eq("id", owner.id).single();
+    // extend referrer (cross-user update requires admin client)
+    const { data: rp } = await supabaseAdmin.from("profiles").select("pro_until").eq("id", owner.id).single();
     const base = rp?.pro_until && new Date(rp.pro_until) > new Date() ? new Date(rp.pro_until) : new Date();
     const newDate = new Date(base.getTime() + 30 * 86400_000).toISOString();
-    await supabase.from("profiles").update({ pro_until: newDate }).eq("id", owner.id);
+    await supabaseAdmin.from("profiles").update({ pro_until: newDate }).eq("id", owner.id);
     return { ok: true };
   });
 
