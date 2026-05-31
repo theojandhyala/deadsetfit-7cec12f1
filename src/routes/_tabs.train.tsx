@@ -7,7 +7,7 @@ import { VideoModal } from "@/components/VideoModal";
 import { RestTimer } from "@/components/RestTimer";
 import { useAppState } from "@/lib/storage";
 import { EXERCISES, getExercise } from "@/lib/exercises";
-import { defaultSchedule, isoDay, todayKey } from "@/lib/calc";
+import { calculateGritScore, defaultSchedule, gritBadge, badgeColor, isoDay, todayKey } from "@/lib/calc";
 import { generateSchedule } from "@/lib/ai.functions";
 import type { DayKey, Schedule, Program } from "@/lib/types";
 
