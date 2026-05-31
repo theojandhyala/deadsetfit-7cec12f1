@@ -66,6 +66,14 @@ function Onboarding() {
           { v: "FULL_GYM", l: "Full Gym" }, { v: "HOME_GYM", l: "Home Gym" }, { v: "BODYWEIGHT", l: "Bodyweight Only" }
         ]} onPick={(v) => next({ equipment: v as Equipment })} />}
         {step === "injuries" && <Injuries onSubmit={(t) => next({ injuries: t })} onSkip={() => next({ injuries: "" })} />}
+        {step === "weakness" && <Choice title="Your biggest weakness?" options={[
+          { v: "STRENGTH", l: "Strength" },
+          { v: "CONSISTENCY", l: "Consistency" },
+          { v: "DIET", l: "Diet" },
+          { v: "RECOVERY", l: "Recovery" },
+        ]} onPick={(v) => next({ weakness: v as Weakness })} />}
+        {step === "username" && <UsernameStep onSubmit={(u) => next({ username: u })} />}
+        {step === "photo" && <PhotoStep onSubmit={(url) => next({ avatarDataUrl: url })} onSkip={() => next({})} />}
       </div>
     </div>
   );
