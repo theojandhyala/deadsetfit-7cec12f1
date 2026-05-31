@@ -25,6 +25,11 @@ const DEFAULT_STATE: AppState = {
 
 const listeners = new Set<() => void>();
 
+let remoteSyncEnabled = false;
+let suppressNextPush = false;
+let pushTimer: ReturnType<typeof setTimeout> | null = null;
+let pushSaver: ((json: string) => Promise<void>) | null = null;
+
 function read(): AppState {
   if (typeof window === "undefined") return DEFAULT_STATE;
   try {
@@ -40,6 +45,14 @@ function write(state: AppState) {
   if (typeof window === "undefined") return;
   localStorage.setItem(KEY, JSON.stringify(state));
   listeners.forEach((l) => l());
+  if (remoteSyncEnabled && pushSaver) {
+    if (suppressNextPush) { suppressNextPush = false; return; }
+    if (pushTimer) clearTimeout(pushTimer);
+    const saver = pushSaver;
+    pushTimer = setTimeout(() => {
+      saver(JSON.stringify(state)).catch((e) => console.warn("state sync failed", e));
+    }, 1200);
+  }
 }
 
 export function getState(): AppState {
@@ -49,6 +62,30 @@ export function getState(): AppState {
 export function setState(updater: (s: AppState) => AppState) {
   const next = updater(read());
   write(next);
+}
+
+/** Replace local state from a remote payload without pushing it back. */
+export function hydrateFromRemote(remote: Partial<AppState>) {
+  suppressNextPush = true;
+  const merged = { ...DEFAULT_STATE, ...remote } as AppState;
+  if (typeof window !== "undefined") localStorage.setItem(KEY, JSON.stringify(merged));
+  listeners.forEach((l) => l());
+}
+
+export function clearLocalState() {
+  if (typeof window !== "undefined") localStorage.removeItem(KEY);
+  listeners.forEach((l) => l());
+}
+
+export function enableRemoteSync(saver: (json: string) => Promise<void>) {
+  remoteSyncEnabled = true;
+  pushSaver = saver;
+}
+
+export function disableRemoteSync() {
+  remoteSyncEnabled = false;
+  pushSaver = null;
+  if (pushTimer) { clearTimeout(pushTimer); pushTimer = null; }
 }
 
 function subscribe(l: () => void) {
