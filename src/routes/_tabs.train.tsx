@@ -277,7 +277,7 @@ function TrainPage() {
               return (
                 <div key={id} className="bg-grit-card border border-grit">
                   <button className="w-full grid grid-cols-[96px_1fr] gap-0 text-left"
-                    onClick={() => { setVideoId(ex.videoId); setVideoTitle(ex.name); }}>
+                    onClick={() => setVideoState({ videoId: ex.videoId, title: ex.name, clipStart: ex.clipStart, clipEnd: ex.clipEnd, cue: ex.instruction })}>
                     <div className="relative bg-black" style={{ aspectRatio: "1 / 1" }}>
                       <img src={`https://img.youtube.com/vi/${ex.videoId}/mqdefault.jpg`} alt={ex.name} className="absolute inset-0 w-full h-full object-cover" />
                       <div className="absolute inset-0 flex items-center justify-center bg-black/40">
