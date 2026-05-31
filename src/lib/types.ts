@@ -34,17 +34,43 @@ export interface Exercise {
 export type DayKey = "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN";
 
 export interface DaySchedule {
-  label: string; // e.g. "PUSH — CHEST / SHOULDERS / TRICEPS" or "REST"
+  label: string;
   exerciseIds: string[];
 }
 
 export type Schedule = Record<DayKey, DaySchedule>;
 
+export type SplitType = "PPL" | "UPPER_LOWER" | "BRO" | "FULL_BODY" | "CUSTOM";
+
+export interface ProgramExerciseRef {
+  /** Library exercise UUID */
+  id: string;
+  name: string;
+  equipment: string;
+  primary_muscles: string[];
+  youtube_query: string;
+  sets: number;
+  reps: string;
+}
+
+export interface ProgramDay {
+  label: string;
+  items: ProgramExerciseRef[];
+}
+
+export interface Program {
+  id: string;
+  name: string;
+  splitType: SplitType;
+  days: Record<DayKey, ProgramDay>;
+  createdAt: string;
+}
+
 export interface SetLog {
   exerciseId: string;
   weight: number;
   reps: number;
-  date: string; // ISO
+  date: string;
 }
 
 export interface CheckIn {
@@ -88,5 +114,7 @@ export interface AppState {
   measurements: MeasurementEntry[];
   foodLog: FoodLogItem[];
   mealPlan: MealPlan | null;
-  completedDates: string[]; // ISO yyyy-mm-dd days where workout was completed
+  completedDates: string[];
+  programs: Program[];
+  activeProgramId: string | null;
 }
