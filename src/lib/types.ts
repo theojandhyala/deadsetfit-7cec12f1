@@ -169,6 +169,12 @@ export interface PhysiqueScan {
   };
 }
 
+export interface ChallengeRecord {
+  challengeId: string;
+  value: number; // seconds for time-based, reps for rep-based
+  date: string;
+}
+
 export interface AppState {
   profile: Profile | null;
   schedule: Schedule | null;
@@ -187,4 +193,5 @@ export interface AppState {
   water: WaterEntry[];
   waterTargetMl: number;
   hydrationAlertsEnabled: boolean;
+  challengeRecords?: ChallengeRecord[];
 }
