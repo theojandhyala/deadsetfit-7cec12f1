@@ -18,6 +18,9 @@ const DEFAULT_STATE: AppState = {
   sessions: [],
   activeSessionId: null,
   physiqueScans: [],
+  water: [],
+  waterTargetMl: 3000,
+  hydrationAlertsEnabled: true,
 };
 
 const listeners = new Set<() => void>();

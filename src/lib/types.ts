@@ -103,6 +103,14 @@ export interface FoodLogItem {
   protein: number;
   carbs: number;
   fats: number;
+  source?: "manual" | "photo" | "barcode" | "ai";
+  photoThumb?: string;
+}
+
+export interface WaterEntry {
+  date: string;
+  ml: number;
+  at: string;
 }
 
 export interface CompletedSet {
@@ -167,4 +175,7 @@ export interface AppState {
   sessions: WorkoutSession[];
   activeSessionId: string | null;
   physiqueScans: PhysiqueScan[];
+  water: WaterEntry[];
+  waterTargetMl: number;
+  hydrationAlertsEnabled: boolean;
 }
