@@ -6,7 +6,7 @@ import { GritLogo } from "@/components/GritLogo";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
-  head: () => ({ meta: [{ title: "GRIT — Sign In" }] }),
+  head: () => ({ meta: [{ title: "DEADSET — Sign In" }] }),
   component: AuthPage,
 });
 
