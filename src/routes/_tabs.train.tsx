@@ -166,52 +166,98 @@ function TrainPage() {
 
       {/* Exercises */}
       <div className="px-5 flex flex-col gap-3">
-        {(day?.exerciseIds || []).length === 0 && (
-          <div className="bg-grit-card border border-grit p-8 text-center">
-            <p className="display text-2xl uppercase text-grit font-extrabold">Rest Day</p>
-            <p className="text-sm text-[#8a8a8a] mt-2">Recover. Eat. Sleep.</p>
-          </div>
-        )}
-        {(day?.exerciseIds || []).map((id) => {
-          const ex = getExercise(id);
-          if (!ex) return null;
-          const pr = bestSet(state.logs, id);
-          return (
-            <div key={id} className="bg-grit-card border border-grit">
-              <button className="w-full grid grid-cols-[96px_1fr] gap-0 text-left"
-                onClick={() => { setVideoId(ex.videoId); setVideoTitle(ex.name); }}>
-                <div className="relative bg-black" style={{ aspectRatio: "1 / 1" }}>
-                  <img src={`https://img.youtube.com/vi/${ex.videoId}/mqdefault.jpg`} alt={ex.name} className="absolute inset-0 w-full h-full object-cover" />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                    <Play size={26} className="text-white" />
-                  </div>
-                </div>
-                <div className="p-3">
-                  <div className="display uppercase font-extrabold text-grit text-lg leading-tight">{ex.name}</div>
-                  <div className="text-xs text-[#8a8a8a] mt-1">{ex.sets} × {ex.reps}</div>
-                  <div className="flex gap-2 mt-2">
-                    <span className="text-[10px] px-2 py-0.5 border border-grit uppercase font-bold tracking-wider">{ex.skill}</span>
-                    {pr && <span className="text-[10px] px-2 py-0.5 bg-accent-red text-white uppercase font-bold tracking-wider">PR {pr}KG</span>}
-                  </div>
-                </div>
-              </button>
-              <div className="border-t border-grit">
-                <button onClick={() => setLogFor(id)} className="w-full py-3 label-cap" style={{ color: "#e63222" }}>
-                  <Plus size={14} className="inline mr-1 -mt-0.5" /> Log Set
-                </button>
+        {activeProgram ? (
+          <>
+            {(programDay?.items.length || 0) === 0 && (
+              <div className="bg-grit-card border border-grit p-8 text-center">
+                <p className="display text-2xl uppercase text-grit font-extrabold">Rest Day</p>
+                <p className="text-sm text-[#8a8a8a] mt-2">Recover. Eat. Sleep.</p>
               </div>
-            </div>
-          );
-        })}
-        {(day?.exerciseIds?.length || 0) > 0 && (
-          <button onClick={completeWorkout} className="btn-grit mt-4 mb-2">
-            {state.completedDates.includes(isoDay()) ? "Workout Complete ✓" : "Complete Workout"}
-          </button>
+            )}
+            {programDay?.items.map((it) => {
+              const pr = bestSet(state.logs, it.id);
+              return (
+                <div key={it.id} className="bg-grit-card border border-grit">
+                  <button className="w-full p-3 text-left"
+                    onClick={() => { setVideoQuery(it.youtube_query || it.name); setVideoTitle(it.name); }}>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="display uppercase font-extrabold text-grit text-lg leading-tight">{it.name}</div>
+                      <Play size={18} className="text-accent-red flex-shrink-0" />
+                    </div>
+                    <div className="text-xs text-[#8a8a8a] mt-1">{it.sets} × {it.reps}</div>
+                    <div className="flex gap-2 mt-2 flex-wrap">
+                      <span className="text-[10px] px-2 py-0.5 border border-grit uppercase font-bold tracking-wider">{it.equipment}</span>
+                      {it.primary_muscles.slice(0, 2).map((m) => (
+                        <span key={m} className="text-[10px] px-2 py-0.5 border border-grit uppercase font-bold tracking-wider text-grit-dim">{m}</span>
+                      ))}
+                      {pr && <span className="text-[10px] px-2 py-0.5 bg-accent-red text-white uppercase font-bold tracking-wider">PR {pr}KG</span>}
+                    </div>
+                  </button>
+                  <div className="border-t border-grit">
+                    <button onClick={() => setLogFor({ id: it.id, name: it.name })} className="w-full py-3 label-cap" style={{ color: "#e63222" }}>
+                      <Plus size={14} className="inline mr-1 -mt-0.5" /> Log Set
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+            {(programDay?.items.length || 0) > 0 && (
+              <button onClick={completeWorkout} className="btn-grit mt-4 mb-2">
+                {state.completedDates.includes(isoDay()) ? "Workout Complete ✓" : "Complete Workout"}
+              </button>
+            )}
+          </>
+        ) : (
+          <>
+            {(day?.exerciseIds || []).length === 0 && (
+              <div className="bg-grit-card border border-grit p-8 text-center">
+                <p className="display text-2xl uppercase text-grit font-extrabold">Rest Day</p>
+                <p className="text-sm text-[#8a8a8a] mt-2">Recover. Eat. Sleep.</p>
+              </div>
+            )}
+            {(day?.exerciseIds || []).map((id) => {
+              const ex = getExercise(id);
+              if (!ex) return null;
+              const pr = bestSet(state.logs, id);
+              return (
+                <div key={id} className="bg-grit-card border border-grit">
+                  <button className="w-full grid grid-cols-[96px_1fr] gap-0 text-left"
+                    onClick={() => { setVideoId(ex.videoId); setVideoTitle(ex.name); }}>
+                    <div className="relative bg-black" style={{ aspectRatio: "1 / 1" }}>
+                      <img src={`https://img.youtube.com/vi/${ex.videoId}/mqdefault.jpg`} alt={ex.name} className="absolute inset-0 w-full h-full object-cover" />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                        <Play size={26} className="text-white" />
+                      </div>
+                    </div>
+                    <div className="p-3">
+                      <div className="display uppercase font-extrabold text-grit text-lg leading-tight">{ex.name}</div>
+                      <div className="text-xs text-[#8a8a8a] mt-1">{ex.sets} × {ex.reps}</div>
+                      <div className="flex gap-2 mt-2">
+                        <span className="text-[10px] px-2 py-0.5 border border-grit uppercase font-bold tracking-wider">{ex.skill}</span>
+                        {pr && <span className="text-[10px] px-2 py-0.5 bg-accent-red text-white uppercase font-bold tracking-wider">PR {pr}KG</span>}
+                      </div>
+                    </div>
+                  </button>
+                  <div className="border-t border-grit">
+                    <button onClick={() => setLogFor({ id, name: ex.name })} className="w-full py-3 label-cap" style={{ color: "#e63222" }}>
+                      <Plus size={14} className="inline mr-1 -mt-0.5" /> Log Set
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+            {(day?.exerciseIds?.length || 0) > 0 && (
+              <button onClick={completeWorkout} className="btn-grit mt-4 mb-2">
+                {state.completedDates.includes(isoDay()) ? "Workout Complete ✓" : "Complete Workout"}
+              </button>
+            )}
+          </>
         )}
       </div>
 
       {videoId && <VideoModal videoId={videoId} title={videoTitle} onClose={() => setVideoId(null)} />}
-      {logFor && <LogSetModal exerciseId={logFor} onClose={() => setLogFor(null)} onLogged={(secs) => { setLogFor(null); setResting(secs); }} />}
+      {videoQuery && <VideoModal query={videoQuery} title={videoTitle} onClose={() => setVideoQuery(null)} />}
+      {logFor && <LogSetModal exerciseId={logFor.id} exerciseName={logFor.name} onClose={() => setLogFor(null)} onLogged={(secs) => { setLogFor(null); setResting(secs); }} />}
       {resting !== null && <RestTimer seconds={resting} onDone={() => setResting(null)} />}
     </div>
   );
