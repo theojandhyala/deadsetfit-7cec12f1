@@ -6,8 +6,8 @@ import { GritLogo } from "@/components/GritLogo";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "GRIT — Forge Your Body" },
-      { name: "description", content: "GRIT is your no-nonsense gym companion. Train. Build. Become." },
+      { title: "DEADSET — Forge Your Body" },
+      { name: "description", content: "DEADSET is your no-nonsense gym companion. Train. Build. Become." },
     ],
   }),
   component: Index,
