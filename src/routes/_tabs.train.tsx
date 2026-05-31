@@ -269,11 +269,12 @@ function bestSet(logs: { exerciseId: string; weight: number }[], id: string) {
   return Math.max(...f.map((l) => l.weight));
 }
 
-function LogSetModal({ exerciseId, onClose, onLogged }: { exerciseId: string; onClose: () => void; onLogged: (rest: number) => void }) {
+function LogSetModal({ exerciseId, exerciseName, onClose, onLogged }: { exerciseId: string; exerciseName?: string; onClose: () => void; onLogged: (rest: number) => void }) {
   const [, set] = useAppState();
   const [weight, setWeight] = useState("");
   const [reps, setReps] = useState("");
   const ex = getExercise(exerciseId);
+  const displayName = exerciseName ?? ex?.name ?? "Exercise";
   function save(rest: number) {
     const w = Number(weight); const r = Number(reps);
     if (!r) return;
@@ -284,7 +285,7 @@ function LogSetModal({ exerciseId, onClose, onLogged }: { exerciseId: string; on
     <div className="fixed inset-0 z-[100] flex items-end" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
       <div className="w-full bg-grit-card border-t border-accent-red p-5 max-w-md mx-auto" onClick={(e) => e.stopPropagation()}>
         <p className="label-cap mb-1">Log Set</p>
-        <h3 className="display text-xl uppercase font-extrabold text-grit mb-4">{ex?.name}</h3>
+        <h3 className="display text-xl uppercase font-extrabold text-grit mb-4">{displayName}</h3>
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div>
             <label className="label-cap block mb-1">Weight (kg)</label>
