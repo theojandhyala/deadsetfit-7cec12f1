@@ -129,3 +129,51 @@ function Injuries({ onSubmit, onSkip }: { onSubmit: (s: string) => void; onSkip:
     </>
   );
 }
+
+function UsernameStep({ onSubmit }: { onSubmit: (u: string) => void }) {
+  const [v, setV] = useState("");
+  const clean = v.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20);
+  const valid = clean.length >= 3;
+  return (
+    <>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">Pick a username</h1>
+      <p className="text-sm text-[#8a8a8a] mb-8">Public. Shown on leaderboards and your profile.</p>
+      <div className="flex items-center gap-2 mb-8 border-b-2 border-grit focus-within:border-accent-red">
+        <span className="text-3xl font-display font-extrabold text-grit-dim pb-2">@</span>
+        <input autoFocus value={clean} onChange={(e) => setV(e.target.value)}
+          className="bg-transparent outline-none text-4xl font-display font-extrabold text-grit flex-1 pb-2"
+          placeholder="ironwolf" />
+      </div>
+      <button disabled={!valid} onClick={() => onSubmit(clean)} className="btn-grit mt-auto">Continue</button>
+    </>
+  );
+}
+
+function PhotoStep({ onSubmit, onSkip }: { onSubmit: (url: string) => void; onSkip: () => void }) {
+  const [preview, setPreview] = useState<string | null>(null);
+  const ref = useRef<HTMLInputElement>(null);
+  function pick(file: File) {
+    const reader = new FileReader();
+    reader.onload = () => setPreview(String(reader.result));
+    reader.readAsDataURL(file);
+  }
+  return (
+    <>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">Profile photo</h1>
+      <p className="text-sm text-[#8a8a8a] mb-8">One face. One brand. Optional.</p>
+      <div className="flex justify-center mb-8">
+        <button onClick={() => ref.current?.click()}
+          className="w-40 h-40 rounded-full border-4 border-accent-red overflow-hidden bg-grit-card flex items-center justify-center">
+          {preview ? <img src={preview} alt="" className="w-full h-full object-cover" />
+            : <span className="label-cap">Tap to upload</span>}
+        </button>
+        <input ref={ref} type="file" accept="image/*" className="hidden"
+          onChange={(e) => e.target.files?.[0] && pick(e.target.files[0])} />
+      </div>
+      <div className="mt-auto flex flex-col gap-3">
+        <button disabled={!preview} onClick={() => preview && onSubmit(preview)} className="btn-grit">Finish Setup</button>
+        <button onClick={onSkip} className="btn-ghost">Skip</button>
+      </div>
+    </>
+  );
+}
