@@ -24,7 +24,7 @@ export const lookupBarcode = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => BarcodeInput.parse(d))
   .handler(async ({ data }) => {
     const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${data.barcode}.json`, {
-      headers: { "User-Agent": "GRIT-App/1.0" },
+      headers: { "User-Agent": "DEADSET-App/1.0" },
     });
     if (!res.ok) throw new Error("Lookup failed");
     const json = (await res.json()) as {

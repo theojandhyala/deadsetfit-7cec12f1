@@ -9,7 +9,7 @@ import {
 import { GritLogo } from "@/components/GritLogo";
 
 export const Route = createFileRoute("/_tabs/profile")({
-  head: () => ({ meta: [{ title: "GRIT — Profile" }] }),
+  head: () => ({ meta: [{ title: "DEADSET — Profile" }] }),
   component: ProfilePage,
 });
 
@@ -60,7 +60,7 @@ function ProfilePage() {
   }
 
   function reset() {
-    if (!confirm("Reset all your GRIT data?")) return;
+    if (!confirm("Reset all your DEADSET data?")) return;
     localStorage.removeItem("grit_app_state_v1");
     navigate({ to: "/onboarding", replace: true });
   }
@@ -100,16 +100,16 @@ function ProfilePage() {
               </p>
             )}
             <div className="inline-flex items-center gap-1.5 px-2 py-0.5 mt-1" style={{ background: badgeC + "22", border: `1px solid ${badgeC}` }}>
-              {badge === "GRIT GOD" && <Crown size={11} style={{ color: badgeC }} />}
+              {badge === "DEADSET GOD" && <Crown size={11} style={{ color: badgeC }} />}
               <span className="label-cap text-[10px]" style={{ color: badgeC }}>{badge}</span>
             </div>
           </div>
         </div>
 
-        {/* GRIT Score — huge */}
+        {/* DEADSET Score — huge */}
         <div className="bg-grit-card border border-grit p-5 mb-3">
           <div className="flex items-center justify-between mb-1">
-            <p className="label-cap">GRIT Score · LIVE</p>
+            <p className="label-cap">DEADSET Score · LIVE</p>
             <button className="flex items-center gap-1 text-[10px] label-cap text-accent-red"><UserPlus size={11}/> FOLLOW</button>
           </div>
           <p className="display font-extrabold leading-none text-accent-red" style={{ fontSize: "5rem" }}>
@@ -225,11 +225,11 @@ function ProfilePage() {
         </div>
       </section>
 
-      {/* GRIT Pro */}
+      {/* DEADSET Pro */}
       <section className="px-5 mb-6">
         <div className="border border-accent-red p-5 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #1a1a1a 0%, #2a0d0a 100%)" }}>
           <Crown size={20} className="text-accent-red mb-2" />
-          <p className="display text-2xl font-extrabold uppercase text-grit">GRIT Pro</p>
+          <p className="display text-2xl font-extrabold uppercase text-grit">DEADSET Pro</p>
           <p className="text-xs text-[#8a8a8a] mt-1 mb-4">AI coach, advanced analytics, custom splits, video form review.</p>
           <button className="btn-grit w-full">Upgrade — $9.99 / mo</button>
         </div>

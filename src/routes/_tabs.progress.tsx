@@ -9,7 +9,7 @@ import { analyzePhysique } from "@/lib/physique.functions";
 import type { PhysiqueScan } from "@/lib/types";
 
 export const Route = createFileRoute("/_tabs/progress")({
-  head: () => ({ meta: [{ title: "GRIT — Progress" }] }),
+  head: () => ({ meta: [{ title: "DEADSET — Progress" }] }),
   component: ProgressPage,
 });
 

@@ -47,7 +47,7 @@ function dayHype(dayKey: DayKey, label: string, isToday: boolean): { eyebrow: st
 
 
 export const Route = createFileRoute("/_tabs/train")({
-  head: () => ({ meta: [{ title: "GRIT — Train" }] }),
+  head: () => ({ meta: [{ title: "DEADSET — Train" }] }),
   component: TrainPage,
 });
 
@@ -116,7 +116,7 @@ function TrainPage() {
         </div>
       </header>
 
-      {/* GRIT Score banner */}
+      {/* DEADSET Score banner */}
       {(() => {
         const score = calculateGritScore(state);
         const badge = gritBadge(score.total);
@@ -125,7 +125,7 @@ function TrainPage() {
           <Link to="/profile" className="block px-5 mb-4">
             <div className="bg-grit-card border border-grit p-4 flex items-center justify-between">
               <div>
-                <p className="label-cap text-[9px]">GRIT Score</p>
+                <p className="label-cap text-[9px]">DEADSET Score</p>
                 <p className="display text-4xl font-extrabold leading-none text-accent-red mt-1">{score.total}</p>
               </div>
               <div className="text-right">

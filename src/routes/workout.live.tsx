@@ -11,7 +11,7 @@ import { ShareCard } from "@/components/ShareCard";
 import type { WorkoutSession, WorkoutSessionExercise, CompletedSet, DayKey } from "@/lib/types";
 
 export const Route = createFileRoute("/workout/live")({
-  head: () => ({ meta: [{ title: "GRIT — Live Workout" }] }),
+  head: () => ({ meta: [{ title: "DEADSET — Live Workout" }] }),
   component: LiveWorkoutPage,
 });
 

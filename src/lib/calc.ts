@@ -82,10 +82,10 @@ export function calculateStreak(completedDates: string[]) {
   return streak;
 }
 
-// === GRIT Badge tiers (by GRIT Score 0–1000) ===
-export type GritBadge = "RAW" | "ROOKIE" | "GRINDER" | "BEAST" | "ELITE" | "GRIT GOD";
+// === DEADSET Badge tiers (by DEADSET Score 0–1000) ===
+export type GritBadge = "RAW" | "ROOKIE" | "GRINDER" | "BEAST" | "ELITE" | "DEADSET GOD";
 export function gritBadge(score: number): GritBadge {
-  if (score >= 1000) return "GRIT GOD";
+  if (score >= 1000) return "DEADSET GOD";
   if (score >= 750) return "ELITE";
   if (score >= 500) return "BEAST";
   if (score >= 250) return "GRINDER";
@@ -98,7 +98,7 @@ export type GritLevel = GritBadge;
 
 export function badgeColor(b: GritBadge): string {
   switch (b) {
-    case "GRIT GOD": return "#e63222";
+    case "DEADSET GOD": return "#e63222";
     case "ELITE": return "#a78bfa";
     case "BEAST": return "#fbbf24";
     case "GRINDER": return "#22c55e";
@@ -131,7 +131,7 @@ export function maxRepsFor(logs: SetLog[], exerciseId: string) {
   return filtered.reduce((m, l) => Math.max(m, l.reps), 0);
 }
 
-// === GRIT Score ===
+// === DEADSET Score ===
 // 0–1000 composite. Computed from local logs.
 //   • Workout streak × 15
 //   • PRs this week × 25

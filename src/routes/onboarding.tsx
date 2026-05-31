@@ -6,7 +6,7 @@ import { defaultSchedule } from "@/lib/calc";
 import type { Equipment, Experience, Gender, Goal, Profile, Weakness } from "@/lib/types";
 
 export const Route = createFileRoute("/onboarding")({
-  head: () => ({ meta: [{ title: "GRIT — Onboarding" }] }),
+  head: () => ({ meta: [{ title: "DEADSET — Onboarding" }] }),
   component: Onboarding,
 });
 
