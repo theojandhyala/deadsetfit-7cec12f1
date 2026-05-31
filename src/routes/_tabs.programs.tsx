@@ -4,7 +4,7 @@ import type { DayKey, Program, SplitType } from "@/lib/types";
 import { Plus, Check, Trash2, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/_tabs/programs")({
-  head: () => ({ meta: [{ title: "GRIT — Programs" }] }),
+  head: () => ({ meta: [{ title: "DEADSET — Programs" }] }),
   component: ProgramsPage,
 });
 

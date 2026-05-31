@@ -16,9 +16,17 @@ export const Route = createFileRoute("/")({
 function Index() {
   const navigate = useNavigate();
   useEffect(() => {
-    const s = getState();
-    if (s.profile) navigate({ to: "/train", replace: true });
-    else navigate({ to: "/onboarding", replace: true });
+    let cancelled = false;
+    (async () => {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled) return;
+      if (!session) { navigate({ to: "/auth", replace: true }); return; }
+      const s = getState();
+      if (s.profile) navigate({ to: "/train", replace: true });
+      else navigate({ to: "/onboarding", replace: true });
+    })();
+    return () => { cancelled = true; };
   }, [navigate]);
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-grit">

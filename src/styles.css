@@ -137,4 +137,53 @@
     outline: none;
   }
   .input-grit:focus { border-color: #e63222; }
+
+  /* === Futuristic / game-feel utilities === */
+  .text-grit-dim { color: #8a8a8a; }
+  .neon-card {
+    background: linear-gradient(155deg, #141414 0%, #0c0c0c 100%);
+    border: 1px solid #2a2a2a;
+    position: relative;
+    overflow: hidden;
+  }
+  .neon-card::before {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(600px circle at 0% 0%, rgba(230,50,34,0.10), transparent 40%),
+      linear-gradient(transparent 95%, rgba(230,50,34,0.06) 100%);
+    pointer-events: none;
+  }
+  .glow-red { box-shadow: 0 0 24px rgba(230,50,34,0.25), inset 0 0 0 1px rgba(230,50,34,0.35); }
+  .text-glow-red { text-shadow: 0 0 18px rgba(230,50,34,0.55), 0 0 2px rgba(230,50,34,0.9); }
+  .grid-bg {
+    background-image:
+      linear-gradient(rgba(230,50,34,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(230,50,34,0.05) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  .xp-bar {
+    position: relative;
+    height: 8px;
+    background: #0e0e0e;
+    border: 1px solid #2a2a2a;
+    overflow: hidden;
+  }
+  .xp-bar > .fill {
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, #e63222 0%, #ff7a3d 100%);
+    box-shadow: 0 0 14px rgba(230,50,34,0.7);
+  }
+  .xp-bar > .fill::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.45) 50%, transparent 100%);
+    transform: translateX(-100%);
+    animation: shimmer 2.4s linear infinite;
+  }
+  @keyframes shimmer { 100% { transform: translateX(100%); } }
+  @keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(230,50,34,0.6), 0 0 22px rgba(230,50,34,0.25); }
+    50%      { box-shadow: 0 0 0 6px rgba(230,50,34,0), 0 0 32px rgba(230,50,34,0.45); }
+  }
+  .pulse-red { animation: pulseGlow 2.2s ease-in-out infinite; }
 }

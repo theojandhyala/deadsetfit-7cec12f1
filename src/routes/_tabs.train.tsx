@@ -47,7 +47,7 @@ function dayHype(dayKey: DayKey, label: string, isToday: boolean): { eyebrow: st
 
 
 export const Route = createFileRoute("/_tabs/train")({
-  head: () => ({ meta: [{ title: "GRIT — Train" }] }),
+  head: () => ({ meta: [{ title: "DEADSET — Train" }] }),
   component: TrainPage,
 });
 
@@ -116,23 +116,44 @@ function TrainPage() {
         </div>
       </header>
 
-      {/* GRIT Score banner */}
+      {/* DEADSET Power Level banner — futuristic XP card */}
       {(() => {
         const score = calculateGritScore(state);
         const badge = gritBadge(score.total);
         const c = badgeColor(badge);
+        const tiers: { name: string; min: number }[] = [
+          { name: "RAW", min: 0 }, { name: "ROOKIE", min: 100 }, { name: "GRINDER", min: 250 },
+          { name: "BEAST", min: 500 }, { name: "ELITE", min: 750 }, { name: "DEADSET GOD", min: 1000 },
+        ];
+        const curIdx = Math.max(0, tiers.findIndex((t) => t.name === badge));
+        const nextTier = tiers[curIdx + 1];
+        const pct = nextTier
+          ? ((score.total - tiers[curIdx].min) / (nextTier.min - tiers[curIdx].min)) * 100
+          : 100;
+        const toNext = nextTier ? nextTier.min - score.total : 0;
         return (
           <Link to="/profile" className="block px-5 mb-4">
-            <div className="bg-grit-card border border-grit p-4 flex items-center justify-between">
-              <div>
-                <p className="label-cap text-[9px]">GRIT Score</p>
-                <p className="display text-4xl font-extrabold leading-none text-accent-red mt-1">{score.total}</p>
-              </div>
-              <div className="text-right">
-                <span className="label-cap text-[10px] px-2 py-0.5" style={{ background: c + "22", border: `1px solid ${c}`, color: c }}>{badge}</span>
-                <div className="mt-2 w-32 h-1 bg-[#1a1a1a]">
-                  <div className="h-full bg-accent-red" style={{ width: `${(score.total / 1000) * 100}%` }} />
+            <div className="neon-card grid-bg p-4 pulse-red">
+              <div className="flex items-end justify-between">
+                <div>
+                  <p className="label-cap text-[9px]">POWER LEVEL · LIVE</p>
+                  <p className="display text-5xl font-extrabold leading-none text-accent-red text-glow-red mt-1">{score.total}</p>
                 </div>
+                <div className="text-right">
+                  <span className="label-cap text-[10px] px-2 py-0.5" style={{ background: c + "22", border: `1px solid ${c}`, color: c }}>{badge}</span>
+                  {nextTier && (
+                    <p className="label-cap text-[9px] mt-2 text-grit-dim">
+                      <span className="text-accent-red">{toNext}</span> XP → {nextTier.name}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="xp-bar mt-3"><div className="fill" style={{ width: `${Math.min(100, Math.max(2, pct))}%` }} /></div>
+              <div className="flex justify-between mt-1.5 px-0.5">
+                {tiers.map((t) => (
+                  <span key={t.name} className="text-[9px] tracking-wider"
+                    style={{ color: score.total >= t.min ? "#e63222" : "#3a3a3a", fontWeight: 700 }}>●</span>
+                ))}
               </div>
             </div>
           </Link>

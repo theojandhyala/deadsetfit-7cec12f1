@@ -24,7 +24,7 @@ export function ShareCard({ session, onClose }: { session: WorkoutSession; onClo
 
     ctx.fillStyle = "#f5f5f0";
     ctx.font = "900 88px Impact, 'Arial Black', sans-serif";
-    ctx.fillText("GRIT", 70, 150);
+    ctx.fillText("DEADSET", 70, 150);
     ctx.font = "700 28px Arial, sans-serif";
     ctx.fillStyle = "#8a8a8a";
     ctx.fillText("FORGE YOUR BODY", 70, 195);
@@ -80,7 +80,7 @@ export function ShareCard({ session, onClose }: { session: WorkoutSession; onClo
       const blob = await (await fetch(dataUrl)).blob();
       const file = new File([blob], "grit-session.png", { type: "image/png" });
       if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: "GRIT", text: "Just crushed a session." });
+        await navigator.share({ files: [file], title: "DEADSET", text: "Just crushed a session." });
         return;
       }
     } catch { /* fallthrough */ }

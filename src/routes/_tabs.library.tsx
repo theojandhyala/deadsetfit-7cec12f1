@@ -13,7 +13,7 @@ import { VideoModal } from "@/components/VideoModal";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_tabs/library")({
-  head: () => ({ meta: [{ title: "GRIT — Library" }] }),
+  head: () => ({ meta: [{ title: "DEADSET — Library" }] }),
   component: LibraryPage,
 });
 

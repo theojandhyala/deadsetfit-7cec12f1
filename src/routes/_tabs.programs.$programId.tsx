@@ -10,7 +10,7 @@ import type { DayKey, Program, ProgramExerciseRef } from "@/lib/types";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_tabs/programs/$programId")({
-  head: () => ({ meta: [{ title: "GRIT — Builder" }] }),
+  head: () => ({ meta: [{ title: "DEADSET — Builder" }] }),
   component: BuilderPage,
 });
 

@@ -1,12 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GritLogo } from "@/components/GritLogo";
 import { setState } from "@/lib/storage";
 import { defaultSchedule } from "@/lib/calc";
 import type { Equipment, Experience, Gender, Goal, Profile, Weakness } from "@/lib/types";
 
 export const Route = createFileRoute("/onboarding")({
-  head: () => ({ meta: [{ title: "GRIT — Onboarding" }] }),
+  head: () => ({ meta: [{ title: "DEADSET — Onboarding" }] }),
   component: Onboarding,
 });
 
@@ -21,6 +21,14 @@ function Onboarding() {
   const [idx, setIdx] = useState(0);
   const [draft, setDraft] = useState<Partial<Profile>>({});
   const step = ORDER[idx];
+
+  useEffect(() => {
+    (async () => {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) navigate({ to: "/auth", replace: true });
+    })();
+  }, [navigate]);
 
   function next(patch: Partial<Profile>) {
     const merged = { ...draft, ...patch };

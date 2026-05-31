@@ -10,7 +10,7 @@ import {
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_tabs/squad")({
-  head: () => ({ meta: [{ title: "GRIT — Squad" }] }),
+  head: () => ({ meta: [{ title: "DEADSET — Squad" }] }),
   component: SquadPage,
 });
 
@@ -117,7 +117,7 @@ function Feed({ userId }: { userId: string }) {
 
   async function share(p: FeedPost) {
     const url = window.location.href;
-    if (navigator.share) try { await navigator.share({ title: "GRIT", text: p.content, url }); return; } catch { /* user cancelled */ }
+    if (navigator.share) try { await navigator.share({ title: "DEADSET", text: p.content, url }); return; } catch { /* user cancelled */ }
     await navigator.clipboard.writeText(url);
     toast.success("Link copied");
   }
@@ -265,7 +265,7 @@ function League({ userId }: { userId: string }) {
           <div className="flex-1">
             <p className="label-cap" style={{ color: leagueColor(data.me.league) }}>{data.me.league} LEAGUE</p>
             <p className="display font-extrabold text-grit text-3xl leading-none">#{data.me.rank || "—"}</p>
-            <p className="text-xs text-[#8a8a8a]">{data.me.grit_points} GRIT pts</p>
+            <p className="text-xs text-[#8a8a8a]">{data.me.grit_points} DS pts</p>
           </div>
         </div>
       )}
@@ -352,7 +352,7 @@ function Invite() {
     <div className="px-5 pb-6 space-y-4">
       {/* Pro status */}
       <div className="bg-grit-card border border-grit p-5">
-        <p className="label-cap text-accent-red mb-1">GRIT PRO</p>
+        <p className="label-cap text-accent-red mb-1">DEADSET PRO</p>
         {info.proUntil && new Date(info.proUntil) > new Date() ? (
           <>
             <p className="display font-extrabold text-grit text-3xl leading-none">ACTIVE</p>

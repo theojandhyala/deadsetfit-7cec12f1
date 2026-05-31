@@ -9,7 +9,7 @@ import { analyzeFoodPhoto, lookupBarcode, weeklyNutritionReport } from "@/lib/di
 import type { Meal, MealPlan, FoodLogItem } from "@/lib/types";
 
 export const Route = createFileRoute("/_tabs/diet")({
-  head: () => ({ meta: [{ title: "GRIT — Diet" }] }),
+  head: () => ({ meta: [{ title: "DEADSET — Diet" }] }),
   component: DietPage,
 });
 
