@@ -26,7 +26,7 @@ function Onboarding() {
     const merged = { ...draft, ...patch };
     setDraft(merged);
     if (idx === ORDER.length - 1) {
-      const p = merged as Profile;
+      const p = { ...merged, startingWeightKg: merged.startingWeightKg ?? merged.weightKg } as Profile;
       setState((s) => ({ ...s, profile: p, schedule: defaultSchedule(p) }));
       navigate({ to: "/train", replace: true });
     } else {
