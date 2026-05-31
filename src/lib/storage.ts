@@ -1,27 +1,8 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import type { AppState } from "./types";
+import { DEFAULT_STATE } from "./default-state";
 
 const KEY = "grit_app_state_v1";
-
-const DEFAULT_STATE: AppState = {
-  profile: null,
-  schedule: null,
-  logs: [],
-  checkIns: [],
-  weights: [],
-  measurements: [],
-  foodLog: [],
-  mealPlan: null,
-  completedDates: [],
-  programs: [],
-  activeProgramId: null,
-  sessions: [],
-  activeSessionId: null,
-  physiqueScans: [],
-  water: [],
-  waterTargetMl: 3000,
-  hydrationAlertsEnabled: true,
-};
 
 const listeners = new Set<() => void>();
 
