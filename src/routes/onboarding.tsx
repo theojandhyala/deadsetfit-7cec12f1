@@ -1,9 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import { GritLogo } from "@/components/GritLogo";
 import { setState } from "@/lib/storage";
 import { defaultSchedule } from "@/lib/calc";
+import { saveProfile } from "@/lib/profile.functions";
 import type { Equipment, Experience, Gender, Goal, Profile, Weakness } from "@/lib/types";
+
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "DEADSET — Onboarding" }] }),
