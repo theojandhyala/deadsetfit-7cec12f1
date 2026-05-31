@@ -122,14 +122,6 @@ function AuthPage() {
           {mode === "signup" ? "Have an account? Sign In" : "New here? Create Account"}
         </button>
 
-        <button
-          type="button"
-          onClick={() => navigate({ to: "/train" })}
-          className="w-full mt-3 text-[10px] label-cap"
-          style={{ color: "#666" }}
-        >
-          Skip — Continue Offline
-        </button>
       </div>
     </div>
   );
