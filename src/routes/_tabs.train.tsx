@@ -1,13 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Loader2, Play, Plus, Sparkles, ListPlus, Flame } from "lucide-react";
+import { Loader2, Play, Plus, Sparkles, ListPlus, Flame, Trophy } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { GritLogo } from "@/components/GritLogo";
 import { VideoModal } from "@/components/VideoModal";
 import { RestTimer } from "@/components/RestTimer";
+import { Reminders } from "@/components/Reminders";
+import { DailyQuests } from "@/components/DailyQuests";
 import { useAppState } from "@/lib/storage";
 import { EXERCISES, getExercise } from "@/lib/exercises";
-import { defaultSchedule, isoDay, todayKey } from "@/lib/calc";
+import { calculateGritScore, defaultSchedule, gritBadge, badgeColor, isoDay, todayKey } from "@/lib/calc";
 import { generateSchedule } from "@/lib/ai.functions";
 import type { DayKey, Schedule, Program } from "@/lib/types";
 
