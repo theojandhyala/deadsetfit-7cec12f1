@@ -54,9 +54,15 @@ export const Route = createFileRoute("/_tabs/train")({
 function TrainPage() {
   const [state, set] = useAppState();
   const [selectedDay, setSelectedDay] = useState<DayKey>(todayKey());
-  const [videoId, setVideoId] = useState<string | null>(null);
-  const [videoQuery, setVideoQuery] = useState<string | null>(null);
-  const [videoTitle, setVideoTitle] = useState("");
+  const [videoState, setVideoState] = useState<{
+    videoId?: string;
+    query?: string;
+    title: string;
+    clipStart?: number;
+    clipEnd?: number;
+    cue?: string;
+  } | null>(null);
+
   const [logFor, setLogFor] = useState<{ id: string; name: string } | null>(null);
   const [resting, setResting] = useState<number | null>(null);
   const [editMode, setEditMode] = useState(false);
