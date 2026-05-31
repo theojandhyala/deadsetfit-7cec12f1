@@ -1,12 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import { Flame, LogOut, Crown, UserPlus, Pencil } from "lucide-react";
 import { useAppState } from "@/lib/storage";
 import {
   calculateStreak, calculateGritScore, gritBadge, badgeColor,
   bestSetFor, maxRepsFor,
 } from "@/lib/calc";
+import { saveProfile } from "@/lib/profile.functions";
 import { GritLogo } from "@/components/GritLogo";
+
 
 export const Route = createFileRoute("/_tabs/profile")({
   head: () => ({ meta: [{ title: "DEADSET — Profile" }] }),
