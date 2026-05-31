@@ -35,7 +35,7 @@ export interface Exercise {
   videoId: string;
   /** Start time in seconds for action clip (defaults to 5) */
   clipStart?: number;
-  /** End time in seconds for action clip (defaults to clipStart + 12) */
+  /** End time in seconds for action clip (defaults to clipStart + 6) */
   clipEnd?: number;
   instruction: string;
 }
