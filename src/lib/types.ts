@@ -105,6 +105,37 @@ export interface FoodLogItem {
   fats: number;
 }
 
+export interface CompletedSet {
+  weight: number;
+  reps: number;
+  rpe?: number;
+  isPR?: boolean;
+}
+
+export interface WorkoutSessionExercise {
+  exerciseId: string;
+  name: string;
+  primary_muscles: string[];
+  targetSets: number;
+  targetReps: string;
+  sets: CompletedSet[];
+}
+
+export interface WorkoutSession {
+  id: string;
+  date: string;
+  dayKey: DayKey;
+  label: string;
+  programId: string | null;
+  startedAt: string;
+  endedAt?: string;
+  exercises: WorkoutSessionExercise[];
+  totalVolume: number;
+  prCount: number;
+  pumpScore?: number;
+  pumpNote?: string;
+}
+
 export interface AppState {
   profile: Profile | null;
   schedule: Schedule | null;
@@ -117,4 +148,6 @@ export interface AppState {
   completedDates: string[];
   programs: Program[];
   activeProgramId: string | null;
+  sessions: WorkoutSession[];
+  activeSessionId: string | null;
 }

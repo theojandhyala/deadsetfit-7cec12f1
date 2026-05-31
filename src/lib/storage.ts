@@ -15,6 +15,8 @@ const DEFAULT_STATE: AppState = {
   completedDates: [],
   programs: [],
   activeProgramId: null,
+  sessions: [],
+  activeSessionId: null,
 };
 
 const listeners = new Set<() => void>();
