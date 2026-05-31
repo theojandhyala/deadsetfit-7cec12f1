@@ -136,6 +136,22 @@ export interface WorkoutSession {
   pumpNote?: string;
 }
 
+export interface PhysiqueScan {
+  id: string;
+  date: string;
+  photoDataUrl: string;
+  analysis: {
+    bodyFatEstimate: number;
+    muscleScore: number;
+    symmetryScore: number;
+    leanMassNote: string;
+    strengths: string[];
+    weaknesses: string[];
+    focus: string[];
+    verdict: string;
+  };
+}
+
 export interface AppState {
   profile: Profile | null;
   schedule: Schedule | null;
@@ -150,4 +166,5 @@ export interface AppState {
   activeProgramId: string | null;
   sessions: WorkoutSession[];
   activeSessionId: string | null;
+  physiqueScans: PhysiqueScan[];
 }
