@@ -164,6 +164,9 @@ function TrainPage() {
         );
       })()}
 
+      <DailyQuests />
+
+
       {activeProgram && (
         <div className="px-5 mb-3">
           <Link
