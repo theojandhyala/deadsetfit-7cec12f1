@@ -30,7 +30,7 @@ function ProgramsPage() {
       createdAt: new Date().toISOString(),
       days: Object.fromEntries(
         DAYS.map((d) => [d, { label: template.days[d], items: [] }]),
-      ) as Program["days"],
+      ) as unknown as Program["days"],
     };
     set((s) => ({ ...s, programs: [...s.programs, program], activeProgramId: s.activeProgramId ?? id }));
   }
