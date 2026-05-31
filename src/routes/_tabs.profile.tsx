@@ -28,6 +28,7 @@ const PR_LIFTS: Array<{ id: string; label: string; kind: "1RM" | "REPS" }> = [
 function ProfilePage() {
   const [state, set] = useAppState();
   const navigate = useNavigate();
+  const persist = useServerFn(saveProfile);
   const p = state.profile;
   const fileRef = useRef<HTMLInputElement>(null);
   const [editing, setEditing] = useState(false);
@@ -36,6 +37,8 @@ function ProfilePage() {
   const [w, setW] = useState(String(p?.weightKg ?? ""));
   const [h, setH] = useState(String(p?.heightCm ?? ""));
   const [username, setUsername] = useState(p?.username || "");
+  const [savingProfile, setSavingProfile] = useState(false);
+
 
   if (!p) return null;
   const streak = calculateStreak(state.completedDates);
