@@ -13,6 +13,38 @@ import type { DayKey, Schedule, Program } from "@/lib/types";
 
 const DAY_KEYS: DayKey[] = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
 const DAY_SHORT: Record<DayKey, string> = { MON:"Mon",TUE:"Tue",WED:"Wed",THU:"Thu",FRI:"Fri",SAT:"Sat",SUN:"Sun" };
+const DAY_FULL: Record<DayKey, string> = { MON:"Monday",TUE:"Tuesday",WED:"Wednesday",THU:"Thursday",FRI:"Friday",SAT:"Saturday",SUN:"Sunday" };
+
+function dayHype(dayKey: DayKey, label: string, isToday: boolean): { eyebrow: string; line: string } {
+  const focus = (label || "REST").split(" — ")[0];
+  const isRest = focus === "REST" || !focus;
+  const dayName = DAY_FULL[dayKey].toUpperCase();
+  if (isRest) {
+    return {
+      eyebrow: isToday ? `IT'S ${dayName} · REST DAY` : `${dayName} · REST`,
+      line: isToday ? "Recover hard. Eat. Sleep. Come back stronger." : "Scheduled recovery day.",
+    };
+  }
+  const hype: Record<string, string> = {
+    CHEST: "Time to build that armor. Press heavy, control the descent.",
+    BACK: "Pull like you mean it. Width, thickness, no half reps.",
+    LEGS: "No skipping. Drive through the floor and earn the size.",
+    SHOULDERS: "Capped delts day. Press overhead, own every rep.",
+    ARMS: "Pump city. Slow eccentrics, full squeeze.",
+    CORE: "Brace, breathe, burn. Bulletproof the midsection.",
+    PUSH: "Chest, shoulders, triceps — push everything away from you.",
+    PULL: "Back and biceps — pull the weight, pull yourself up.",
+    UPPER: "Upper body grind. Hit every angle.",
+    LOWER: "Quads, hams, glutes. Earn the staircase tomorrow.",
+    FULL: "Full body assault. Compound lifts, big effort.",
+  };
+  const line = hype[focus] ?? "Lock in. Hit every set with intent.";
+  return {
+    eyebrow: isToday ? `IT'S ${dayName} · TODAY'S MISSION` : `${dayName} · ON DECK`,
+    line,
+  };
+}
+
 
 export const Route = createFileRoute("/_tabs/train")({
   head: () => ({ meta: [{ title: "GRIT — Train" }] }),
@@ -22,9 +54,15 @@ export const Route = createFileRoute("/_tabs/train")({
 function TrainPage() {
   const [state, set] = useAppState();
   const [selectedDay, setSelectedDay] = useState<DayKey>(todayKey());
-  const [videoId, setVideoId] = useState<string | null>(null);
-  const [videoQuery, setVideoQuery] = useState<string | null>(null);
-  const [videoTitle, setVideoTitle] = useState("");
+  const [videoState, setVideoState] = useState<{
+    videoId?: string;
+    query?: string;
+    title: string;
+    clipStart?: number;
+    clipEnd?: number;
+    cue?: string;
+  } | null>(null);
+
   const [logFor, setLogFor] = useState<{ id: string; name: string } | null>(null);
   const [resting, setResting] = useState<number | null>(null);
   const [editMode, setEditMode] = useState(false);
@@ -114,12 +152,20 @@ function TrainPage() {
       </div>
 
       {/* Today header */}
-      <div className="px-5 mb-5">
-        <p className="label-cap">{selectedDay === todayKey() ? "Today" : DAY_SHORT[selectedDay]}</p>
-        <h1 className="display text-3xl font-extrabold uppercase text-grit leading-tight mt-1">
-          {(activeProgram ? programDay?.label : day?.label) || "REST"}
-        </h1>
-      </div>
+      {(() => {
+        const rawLabel = (activeProgram ? programDay?.label : day?.label) || "REST";
+        const hype = dayHype(selectedDay, rawLabel, selectedDay === todayKey());
+        return (
+          <div className="px-5 mb-5">
+            <p className="label-cap text-accent-red">{hype.eyebrow}</p>
+            <h1 className="display text-3xl font-extrabold uppercase text-grit leading-tight mt-1">
+              {rawLabel}
+            </h1>
+            <p className="text-sm text-grit-dim mt-2 leading-snug">{hype.line}</p>
+          </div>
+        );
+      })()}
+
 
       {/* START WORKOUT CTA */}
       {((activeProgram ? (programDay?.items.length || 0) : (day?.exerciseIds?.length || 0)) > 0) && selectedDay === todayKey() && (
@@ -188,7 +234,7 @@ function TrainPage() {
               return (
                 <div key={it.id} className="bg-grit-card border border-grit">
                   <button className="w-full p-3 text-left"
-                    onClick={() => { setVideoQuery(it.youtube_query || it.name); setVideoTitle(it.name); }}>
+                    onClick={() => setVideoState({ query: it.youtube_query || it.name, title: it.name })}>
                     <div className="flex items-center justify-between gap-2">
                       <div className="display uppercase font-extrabold text-grit text-lg leading-tight">{it.name}</div>
                       <Play size={18} className="text-accent-red flex-shrink-0" />
@@ -231,7 +277,7 @@ function TrainPage() {
               return (
                 <div key={id} className="bg-grit-card border border-grit">
                   <button className="w-full grid grid-cols-[96px_1fr] gap-0 text-left"
-                    onClick={() => { setVideoId(ex.videoId); setVideoTitle(ex.name); }}>
+                    onClick={() => setVideoState({ videoId: ex.videoId, title: ex.name, clipStart: ex.clipStart, clipEnd: ex.clipEnd, cue: ex.instruction })}>
                     <div className="relative bg-black" style={{ aspectRatio: "1 / 1" }}>
                       <img src={`https://img.youtube.com/vi/${ex.videoId}/mqdefault.jpg`} alt={ex.name} className="absolute inset-0 w-full h-full object-cover" />
                       <div className="absolute inset-0 flex items-center justify-center bg-black/40">
@@ -264,8 +310,18 @@ function TrainPage() {
         )}
       </div>
 
-      {videoId && <VideoModal videoId={videoId} title={videoTitle} onClose={() => setVideoId(null)} />}
-      {videoQuery && <VideoModal query={videoQuery} title={videoTitle} onClose={() => setVideoQuery(null)} />}
+      {videoState && (
+        <VideoModal
+          videoId={videoState.videoId}
+          query={videoState.query}
+          title={videoState.title}
+          clipStart={videoState.clipStart}
+          clipEnd={videoState.clipEnd}
+          cue={videoState.cue}
+          onClose={() => setVideoState(null)}
+        />
+      )}
+
       {logFor && <LogSetModal exerciseId={logFor.id} exerciseName={logFor.name} onClose={() => setLogFor(null)} onLogged={(secs) => { setLogFor(null); setResting(secs); }} />}
       {resting !== null && <RestTimer seconds={resting} onDone={() => setResting(null)} />}
     </div>

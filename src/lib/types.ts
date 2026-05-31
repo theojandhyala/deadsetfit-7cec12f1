@@ -28,6 +28,10 @@ export interface Exercise {
   sets: number;
   reps: string;
   videoId: string;
+  /** Start time in seconds for action clip (defaults to 5) */
+  clipStart?: number;
+  /** End time in seconds for action clip (defaults to clipStart + 12) */
+  clipEnd?: number;
   instruction: string;
 }
 
