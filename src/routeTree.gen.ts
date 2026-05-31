@@ -9,38 +9,113 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as TabsRouteImport } from './routes/_tabs'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TabsTrainRouteImport } from './routes/_tabs.train'
+import { Route as TabsProgressRouteImport } from './routes/_tabs.progress'
+import { Route as TabsProfileRouteImport } from './routes/_tabs.profile'
+import { Route as TabsDietRouteImport } from './routes/_tabs.diet'
 
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TabsRoute = TabsRouteImport.update({
+  id: '/_tabs',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TabsTrainRoute = TabsTrainRouteImport.update({
+  id: '/train',
+  path: '/train',
+  getParentRoute: () => TabsRoute,
+} as any)
+const TabsProgressRoute = TabsProgressRouteImport.update({
+  id: '/progress',
+  path: '/progress',
+  getParentRoute: () => TabsRoute,
+} as any)
+const TabsProfileRoute = TabsProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => TabsRoute,
+} as any)
+const TabsDietRoute = TabsDietRouteImport.update({
+  id: '/diet',
+  path: '/diet',
+  getParentRoute: () => TabsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/onboarding': typeof OnboardingRoute
+  '/diet': typeof TabsDietRoute
+  '/profile': typeof TabsProfileRoute
+  '/progress': typeof TabsProgressRoute
+  '/train': typeof TabsTrainRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/onboarding': typeof OnboardingRoute
+  '/diet': typeof TabsDietRoute
+  '/profile': typeof TabsProfileRoute
+  '/progress': typeof TabsProgressRoute
+  '/train': typeof TabsTrainRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_tabs': typeof TabsRouteWithChildren
+  '/onboarding': typeof OnboardingRoute
+  '/_tabs/diet': typeof TabsDietRoute
+  '/_tabs/profile': typeof TabsProfileRoute
+  '/_tabs/progress': typeof TabsProgressRoute
+  '/_tabs/train': typeof TabsTrainRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/onboarding' | '/diet' | '/profile' | '/progress' | '/train'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/onboarding' | '/diet' | '/profile' | '/progress' | '/train'
+  id:
+    | '__root__'
+    | '/'
+    | '/_tabs'
+    | '/onboarding'
+    | '/_tabs/diet'
+    | '/_tabs/profile'
+    | '/_tabs/progress'
+    | '/_tabs/train'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  TabsRoute: typeof TabsRouteWithChildren
+  OnboardingRoute: typeof OnboardingRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_tabs': {
+      id: '/_tabs'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof TabsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +123,58 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_tabs/train': {
+      id: '/_tabs/train'
+      path: '/train'
+      fullPath: '/train'
+      preLoaderRoute: typeof TabsTrainRouteImport
+      parentRoute: typeof TabsRoute
+    }
+    '/_tabs/progress': {
+      id: '/_tabs/progress'
+      path: '/progress'
+      fullPath: '/progress'
+      preLoaderRoute: typeof TabsProgressRouteImport
+      parentRoute: typeof TabsRoute
+    }
+    '/_tabs/profile': {
+      id: '/_tabs/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof TabsProfileRouteImport
+      parentRoute: typeof TabsRoute
+    }
+    '/_tabs/diet': {
+      id: '/_tabs/diet'
+      path: '/diet'
+      fullPath: '/diet'
+      preLoaderRoute: typeof TabsDietRouteImport
+      parentRoute: typeof TabsRoute
+    }
   }
 }
 
+interface TabsRouteChildren {
+  TabsDietRoute: typeof TabsDietRoute
+  TabsProfileRoute: typeof TabsProfileRoute
+  TabsProgressRoute: typeof TabsProgressRoute
+  TabsTrainRoute: typeof TabsTrainRoute
+}
+
+const TabsRouteChildren: TabsRouteChildren = {
+  TabsDietRoute: TabsDietRoute,
+  TabsProfileRoute: TabsProfileRoute,
+  TabsProgressRoute: TabsProgressRoute,
+  TabsTrainRoute: TabsTrainRoute,
+}
+
+const TabsRouteWithChildren = TabsRoute._addFileChildren(TabsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  TabsRoute: TabsRouteWithChildren,
+  OnboardingRoute: OnboardingRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
