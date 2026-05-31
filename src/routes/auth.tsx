@@ -43,12 +43,8 @@ function AuthPage() {
           options: { emailRedirectTo: window.location.origin },
         });
         if (error) throw error;
-        if (data.session) {
-          toast.success("Welcome to DEADSET");
-          navigate({ to: "/onboarding", replace: true });
-        } else {
-          toast.success("Account created. Check your email to confirm.");
-        }
+        toast.success("Welcome to DEADSET");
+        navigate({ to: "/onboarding", replace: true });
       } else {
         let email = identifier.trim();
         if (!email.includes("@")) {
