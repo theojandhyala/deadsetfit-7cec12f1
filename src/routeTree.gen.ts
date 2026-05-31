@@ -13,6 +13,7 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as TabsRouteImport } from './routes/_tabs'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as WorkoutLiveRouteImport } from './routes/workout.live'
 import { Route as TabsTrainRouteImport } from './routes/_tabs.train'
 import { Route as TabsProgressRouteImport } from './routes/_tabs.progress'
 import { Route as TabsProgramsRouteImport } from './routes/_tabs.programs'
@@ -38,6 +39,11 @@ const TabsRoute = TabsRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkoutLiveRoute = WorkoutLiveRouteImport.update({
+  id: '/workout/live',
+  path: '/workout/live',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TabsTrainRoute = TabsTrainRouteImport.update({
@@ -86,6 +92,7 @@ export interface FileRoutesByFullPath {
   '/programs': typeof TabsProgramsRouteWithChildren
   '/progress': typeof TabsProgressRoute
   '/train': typeof TabsTrainRoute
+  '/workout/live': typeof WorkoutLiveRoute
   '/programs/$programId': typeof TabsProgramsProgramIdRoute
 }
 export interface FileRoutesByTo {
@@ -98,6 +105,7 @@ export interface FileRoutesByTo {
   '/programs': typeof TabsProgramsRouteWithChildren
   '/progress': typeof TabsProgressRoute
   '/train': typeof TabsTrainRoute
+  '/workout/live': typeof WorkoutLiveRoute
   '/programs/$programId': typeof TabsProgramsProgramIdRoute
 }
 export interface FileRoutesById {
@@ -112,6 +120,7 @@ export interface FileRoutesById {
   '/_tabs/programs': typeof TabsProgramsRouteWithChildren
   '/_tabs/progress': typeof TabsProgressRoute
   '/_tabs/train': typeof TabsTrainRoute
+  '/workout/live': typeof WorkoutLiveRoute
   '/_tabs/programs/$programId': typeof TabsProgramsProgramIdRoute
 }
 export interface FileRouteTypes {
@@ -126,6 +135,7 @@ export interface FileRouteTypes {
     | '/programs'
     | '/progress'
     | '/train'
+    | '/workout/live'
     | '/programs/$programId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -138,6 +148,7 @@ export interface FileRouteTypes {
     | '/programs'
     | '/progress'
     | '/train'
+    | '/workout/live'
     | '/programs/$programId'
   id:
     | '__root__'
@@ -151,6 +162,7 @@ export interface FileRouteTypes {
     | '/_tabs/programs'
     | '/_tabs/progress'
     | '/_tabs/train'
+    | '/workout/live'
     | '/_tabs/programs/$programId'
   fileRoutesById: FileRoutesById
 }
@@ -159,6 +171,7 @@ export interface RootRouteChildren {
   TabsRoute: typeof TabsRouteWithChildren
   AuthRoute: typeof AuthRoute
   OnboardingRoute: typeof OnboardingRoute
+  WorkoutLiveRoute: typeof WorkoutLiveRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -189,6 +202,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workout/live': {
+      id: '/workout/live'
+      path: '/workout/live'
+      fullPath: '/workout/live'
+      preLoaderRoute: typeof WorkoutLiveRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_tabs/train': {
@@ -280,7 +300,18 @@ const rootRouteChildren: RootRouteChildren = {
   TabsRoute: TabsRouteWithChildren,
   AuthRoute: AuthRoute,
   OnboardingRoute: OnboardingRoute,
+  WorkoutLiveRoute: WorkoutLiveRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

@@ -1,0 +1,428 @@
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { X, Check, Plus, Minus, Play, Loader2, Trophy, Share2, Flame } from "lucide-react";
+import { useAppState } from "@/lib/storage";
+import { getExercise } from "@/lib/exercises";
+import { defaultSchedule, isoDay, todayKey } from "@/lib/calc";
+import { scorePump } from "@/lib/session.functions";
+import { VideoModal } from "@/components/VideoModal";
+import { ShareCard } from "@/components/ShareCard";
+import type { WorkoutSession, WorkoutSessionExercise, CompletedSet, DayKey } from "@/lib/types";
+
+export const Route = createFileRoute("/workout/live")({
+  head: () => ({ meta: [{ title: "GRIT — Live Workout" }] }),
+  component: LiveWorkoutPage,
+});
+
+function buildSession(state: ReturnType<typeof useAppState>[0], dayKey: DayKey): WorkoutSession | null {
+  const active = state.programs.find((p) => p.id === state.activeProgramId);
+  const id = crypto.randomUUID();
+  const base = {
+    id,
+    date: isoDay(),
+    dayKey,
+    programId: active?.id ?? null,
+    startedAt: new Date().toISOString(),
+    totalVolume: 0,
+    prCount: 0,
+  };
+  if (active) {
+    const d = active.days[dayKey];
+    if (!d || d.items.length === 0) return null;
+    return {
+      ...base,
+      label: d.label,
+      exercises: d.items.map<WorkoutSessionExercise>((it) => ({
+        exerciseId: it.id,
+        name: it.name,
+        primary_muscles: it.primary_muscles,
+        targetSets: it.sets,
+        targetReps: it.reps,
+        sets: [],
+      })),
+    };
+  }
+  const sched = state.schedule ?? (state.profile ? defaultSchedule(state.profile) : null);
+  const d = sched?.[dayKey];
+  if (!d || d.exerciseIds.length === 0) return null;
+  return {
+    ...base,
+    label: d.label,
+    exercises: d.exerciseIds.map<WorkoutSessionExercise>((eid) => {
+      const ex = getExercise(eid);
+      return {
+        exerciseId: eid,
+        name: ex?.name ?? eid,
+        primary_muscles: ex?.muscleGroup ? [ex.muscleGroup] : [],
+        targetSets: ex?.sets ?? 3,
+        targetReps: ex?.reps ?? "8-12",
+        sets: [],
+      };
+    }),
+  };
+}
+
+function LiveWorkoutPage() {
+  const [state, set] = useAppState();
+  const nav = useNavigate();
+  const score = useServerFn(scorePump);
+
+  useEffect(() => {
+    if (state.activeSessionId) return;
+    const s = buildSession(state, todayKey());
+    if (!s) return;
+    set((st) => ({ ...st, sessions: [...st.sessions, s], activeSessionId: s.id }));
+  }, [state.activeSessionId]);
+
+  const session = state.sessions.find((s) => s.id === state.activeSessionId);
+
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [restLeft, setRestLeft] = useState(0);
+  const [videoQuery, setVideoQuery] = useState<string | null>(null);
+  const [videoTitle, setVideoTitle] = useState("");
+  const [scoring, setScoring] = useState(false);
+  const [finished, setFinished] = useState(false);
+  const [share, setShare] = useState(false);
+
+  useEffect(() => {
+    if (restLeft <= 0) return;
+    const t = setTimeout(() => setRestLeft((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [restLeft]);
+
+  const allLogs = state.logs;
+
+  const totals = useMemo(() => {
+    if (!session) return { vol: 0, sets: 0, prs: 0 };
+    let vol = 0, sets = 0, prs = 0;
+    session.exercises.forEach((e) => {
+      e.sets.forEach((s) => {
+        vol += s.weight * s.reps;
+        sets += 1;
+        if (s.isPR) prs += 1;
+      });
+    });
+    return { vol, sets, prs };
+  }, [session]);
+
+  if (!session) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center">
+        <p className="display text-2xl uppercase font-extrabold text-grit mb-2">Rest Day</p>
+        <p className="text-sm text-[#8a8a8a] mb-6">Nothing scheduled. Add exercises or pick a program.</p>
+        <Link to="/train" className="btn-grit">Back</Link>
+      </div>
+    );
+  }
+
+  const current = session.exercises[activeIdx];
+  const totalEx = session.exercises.length;
+  const progress = Math.min(100, Math.round((totals.sets / Math.max(1, session.exercises.reduce((a, e) => a + e.targetSets, 0))) * 100));
+
+  function updateSession(fn: (s: WorkoutSession) => WorkoutSession) {
+    set((st) => ({
+      ...st,
+      sessions: st.sessions.map((s) => (s.id === session!.id ? fn(s) : s)),
+    }));
+  }
+
+  function logSet(weight: number, reps: number) {
+    if (!reps) return;
+    const prevBest = Math.max(
+      0,
+      ...allLogs.filter((l) => l.exerciseId === current.exerciseId).map((l) => l.weight),
+      ...session!.exercises[activeIdx].sets.map((s) => s.weight)
+    );
+    const isPR = weight > prevBest && weight > 0;
+    const set: CompletedSet = { weight, reps, isPR };
+    updateSession((sess) => {
+      const exercises = sess.exercises.map((e, i) => (i === activeIdx ? { ...e, sets: [...e.sets, set] } : e));
+      const totalVolume = exercises.reduce((a, e) => a + e.sets.reduce((b, s) => b + s.weight * s.reps, 0), 0);
+      const prCount = exercises.reduce((a, e) => a + e.sets.filter((s) => s.isPR).length, 0);
+      return { ...sess, exercises, totalVolume, prCount };
+    });
+    setRestLeft(90);
+  }
+
+  function removeLastSet() {
+    updateSession((sess) => {
+      const exercises = sess.exercises.map((e, i) => (i === activeIdx ? { ...e, sets: e.sets.slice(0, -1) } : e));
+      const totalVolume = exercises.reduce((a, e) => a + e.sets.reduce((b, s) => b + s.weight * s.reps, 0), 0);
+      const prCount = exercises.reduce((a, e) => a + e.sets.filter((s) => s.isPR).length, 0);
+      return { ...sess, exercises, totalVolume, prCount };
+    });
+  }
+
+  async function finishWorkout() {
+    setScoring(true);
+    const durationMin = Math.max(1, Math.round((Date.now() - new Date(session!.startedAt).getTime()) / 60000));
+    let pump: { score: number; note: string } | null = null;
+    try {
+      pump = await score({ data: {
+        label: session!.label,
+        totalVolume: Math.round(totals.vol),
+        prCount: totals.prs,
+        sets: totals.sets,
+        durationMin,
+        exercises: session!.exercises.filter((e) => e.sets.length > 0).slice(0, 20).map((e) => {
+          const top = e.sets.reduce((a, b) => (b.weight > a.weight ? b : a), e.sets[0]);
+          return { name: e.name, sets: e.sets.length, topWeight: top.weight, topReps: top.reps };
+        }),
+      }});
+    } catch { /* score is optional */ }
+
+    const day = isoDay();
+    set((st) => {
+      const sessions = st.sessions.map((s) => s.id === session!.id ? {
+        ...s,
+        endedAt: new Date().toISOString(),
+        pumpScore: pump?.score,
+        pumpNote: pump?.note,
+      } : s);
+      const newLogs = [...st.logs];
+      session!.exercises.forEach((e) => e.sets.forEach((s) => {
+        newLogs.push({ exerciseId: e.exerciseId, weight: s.weight, reps: s.reps, date: new Date().toISOString() });
+      }));
+      return {
+        ...st,
+        sessions,
+        logs: newLogs,
+        activeSessionId: null,
+        completedDates: st.completedDates.includes(day) ? st.completedDates : [...st.completedDates, day],
+      };
+    });
+    setScoring(false);
+    setFinished(true);
+  }
+
+  function discardWorkout() {
+    if (!confirm("Discard this workout?")) return;
+    set((st) => ({
+      ...st,
+      sessions: st.sessions.filter((s) => s.id !== session!.id),
+      activeSessionId: null,
+    }));
+    nav({ to: "/train" });
+  }
+
+  if (finished) {
+    const finalSession = state.sessions.find((s) => s.id === session.id) ?? session;
+    return (
+      <FinishedScreen
+        session={finalSession}
+        onClose={() => nav({ to: "/train" })}
+        onShare={() => setShare(true)}
+        share={share}
+        onCloseShare={() => setShare(false)}
+      />
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col" style={{ background: "#0a0a0a", paddingTop: "env(safe-area-inset-top)" }}>
+      <div className="flex items-center justify-between px-4 pt-3 pb-2">
+        <button onClick={discardWorkout} className="text-grit-dim"><X size={22} /></button>
+        <div className="text-center">
+          <p className="label-cap text-[10px] text-accent-red">LIVE</p>
+          <p className="display text-sm uppercase font-extrabold text-grit truncate max-w-[60vw]">{session.label}</p>
+        </div>
+        <Timer startedAt={session.startedAt} />
+      </div>
+
+      <div className="h-1 bg-[#1a1a1a]">
+        <div className="h-full bg-accent-red transition-all" style={{ width: `${progress}%` }} />
+      </div>
+
+      <div className="grid grid-cols-3 border-b border-grit bg-grit-card">
+        <Stat label="VOLUME" value={`${Math.round(totals.vol)}kg`} />
+        <Stat label="SETS" value={`${totals.sets}`} />
+        <Stat label="PRS" value={`${totals.prs}`} accent={totals.prs > 0} />
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto px-4 py-3 border-b border-grit">
+        {session.exercises.map((e, i) => {
+          const done = e.sets.length >= e.targetSets;
+          const active = i === activeIdx;
+          return (
+            <button key={i} onClick={() => setActiveIdx(i)}
+              className="flex-shrink-0 px-3 py-1.5 border text-xs font-bold uppercase tracking-wider"
+              style={{
+                borderColor: active ? "#e63222" : done ? "#3a8a3a" : "#262626",
+                color: active ? "#e63222" : done ? "#7acc7a" : "#8a8a8a",
+                background: active ? "#1a0606" : "transparent",
+              }}>
+              {done && <Check size={10} className="inline mr-1 -mt-0.5" />}
+              {i + 1}. {e.name.slice(0, 18)}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex-1 px-5 py-4 overflow-auto">
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <div>
+            <p className="label-cap text-grit-dim text-[10px]">EXERCISE {activeIdx + 1}/{totalEx}</p>
+            <h1 className="display text-2xl uppercase font-extrabold text-grit leading-tight">{current.name}</h1>
+            <p className="text-xs text-[#8a8a8a] mt-1">{current.targetSets} × {current.targetReps}</p>
+          </div>
+          <button onClick={() => { setVideoQuery(current.name + " form"); setVideoTitle(current.name); }}
+            className="flex-shrink-0 w-12 h-12 border border-accent-red flex items-center justify-center">
+            <Play size={20} className="text-accent-red" />
+          </button>
+        </div>
+
+        <div className="mt-4 flex flex-col gap-2">
+          {current.sets.map((s, i) => (
+            <div key={i} className="grid grid-cols-[40px_1fr_1fr_auto] items-center gap-3 bg-grit-card border border-grit px-3 py-2.5">
+              <div className="label-cap text-grit-dim">SET {i + 1}</div>
+              <div><span className="display text-xl font-extrabold text-grit">{s.weight}</span><span className="text-xs text-[#8a8a8a] ml-1">kg</span></div>
+              <div><span className="display text-xl font-extrabold text-grit">{s.reps}</span><span className="text-xs text-[#8a8a8a] ml-1">reps</span></div>
+              {s.isPR ? <Trophy size={16} className="text-accent-red" /> : <Check size={16} className="text-[#3a8a3a]" />}
+            </div>
+          ))}
+          {current.sets.length === 0 && (
+            <p className="text-xs text-[#8a8a8a] uppercase tracking-wider">No sets logged. Use the keypad below.</p>
+          )}
+        </div>
+
+        <SetEntry onLog={logSet} prev={current.sets[current.sets.length - 1]}
+                  prevBestWeight={Math.max(0, ...allLogs.filter((l) => l.exerciseId === current.exerciseId).map((l) => l.weight))} />
+
+        {current.sets.length > 0 && (
+          <button onClick={removeLastSet} className="mt-3 label-cap text-grit-dim text-xs flex items-center mx-auto">
+            <Minus size={12} className="mr-1" /> Remove last set
+          </button>
+        )}
+      </div>
+
+      {restLeft > 0 && (
+        <div className="sticky bottom-0 mx-4 mb-4 bg-grit-card border-2 border-accent-red p-3 flex items-center justify-between">
+          <div>
+            <p className="label-cap text-accent-red text-[10px]">RESTING</p>
+            <p className="display text-3xl font-extrabold text-grit">{restLeft}s</p>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => setRestLeft((s) => s + 15)} className="btn-ghost"><Plus size={14} className="mr-1" />15s</button>
+            <button onClick={() => setRestLeft(0)} className="btn-grit">Skip</button>
+          </div>
+        </div>
+      )}
+
+      <div className="border-t border-grit p-4 grid grid-cols-2 gap-3">
+        <button
+          onClick={() => setActiveIdx((i) => Math.min(totalEx - 1, i + 1))}
+          disabled={activeIdx >= totalEx - 1}
+          className="btn-ghost disabled:opacity-40">
+          Next Exercise
+        </button>
+        <button onClick={finishWorkout} disabled={scoring || totals.sets === 0} className="btn-grit">
+          {scoring ? <Loader2 className="animate-spin mr-2" size={16} /> : <Flame size={16} className="mr-2" />}
+          Finish
+        </button>
+      </div>
+
+      {videoQuery && <VideoModal query={videoQuery} title={videoTitle} onClose={() => setVideoQuery(null)} />}
+    </div>
+  );
+}
+
+function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div className="text-center py-3 border-r border-grit last:border-r-0">
+      <p className="label-cap text-[10px] text-grit-dim">{label}</p>
+      <p className="display text-xl font-extrabold" style={{ color: accent ? "#e63222" : "#f5f5f0" }}>{value}</p>
+    </div>
+  );
+}
+
+function Timer({ startedAt }: { startedAt: string }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
+  const secs = Math.max(0, Math.floor((now - new Date(startedAt).getTime()) / 1000));
+  const mm = String(Math.floor(secs / 60)).padStart(2, "0");
+  const ss = String(secs % 60).padStart(2, "0");
+  return <div className="text-right"><p className="label-cap text-[10px] text-grit-dim">ELAPSED</p><p className="display text-sm font-extrabold text-grit tabular-nums">{mm}:{ss}</p></div>;
+}
+
+function SetEntry({ onLog, prev, prevBestWeight }: { onLog: (w: number, r: number) => void; prev?: CompletedSet; prevBestWeight: number }) {
+  const [w, setW] = useState<string>(prev ? String(prev.weight) : "");
+  const [r, setR] = useState<string>(prev ? String(prev.reps) : "");
+  useEffect(() => { if (prev) { setW(String(prev.weight)); setR(String(prev.reps)); } }, [prev]);
+  const wn = Number(w) || 0;
+  const willBePR = wn > prevBestWeight && wn > 0;
+  return (
+    <div className="mt-5 bg-grit-card border border-grit p-4">
+      <div className="grid grid-cols-2 gap-3 mb-3">
+        <div>
+          <label className="label-cap block mb-1">Weight (kg)</label>
+          <div className="flex items-center">
+            <button onClick={() => setW(String(Math.max(0, (Number(w) || 0) - 2.5)))} className="w-10 h-12 border border-grit text-grit">−</button>
+            <input inputMode="decimal" value={w} onChange={(e) => setW(e.target.value)} className="input-grit text-center flex-1 mx-0 border-l-0 border-r-0" />
+            <button onClick={() => setW(String((Number(w) || 0) + 2.5))} className="w-10 h-12 border border-grit text-grit">+</button>
+          </div>
+        </div>
+        <div>
+          <label className="label-cap block mb-1">Reps</label>
+          <div className="flex items-center">
+            <button onClick={() => setR(String(Math.max(0, (Number(r) || 0) - 1)))} className="w-10 h-12 border border-grit text-grit">−</button>
+            <input inputMode="numeric" value={r} onChange={(e) => setR(e.target.value)} className="input-grit text-center flex-1 mx-0 border-l-0 border-r-0" />
+            <button onClick={() => setR(String((Number(r) || 0) + 1))} className="w-10 h-12 border border-grit text-grit">+</button>
+          </div>
+        </div>
+      </div>
+      <button onClick={() => { onLog(Number(w) || 0, Number(r) || 0); }}
+        disabled={!Number(r)}
+        className="btn-grit w-full disabled:opacity-40">
+        {willBePR && <Trophy size={14} className="mr-2" />}
+        Log Set {willBePR ? "— PR!" : ""}
+      </button>
+    </div>
+  );
+}
+
+function FinishedScreen({ session, onClose, onShare, share, onCloseShare }: { session: WorkoutSession; onClose: () => void; onShare: () => void; share: boolean; onCloseShare: () => void }) {
+  const totalSets = session.exercises.reduce((s, e) => s + e.sets.length, 0);
+  const durationMin = Math.max(1, Math.round(((session.endedAt ? new Date(session.endedAt).getTime() : Date.now()) - new Date(session.startedAt).getTime()) / 60000));
+  return (
+    <div className="min-h-screen flex flex-col" style={{ background: "#0a0a0a", paddingTop: "env(safe-area-inset-top)" }}>
+      <div className="flex-1 px-6 pt-10 pb-6 flex flex-col">
+        <p className="label-cap text-accent-red">SESSION COMPLETE</p>
+        <h1 className="display text-5xl font-extrabold uppercase text-grit leading-none mt-2">{session.label.split(" — ")[0]}</h1>
+
+        {session.pumpScore != null && (
+          <div className="mt-8 border-2 border-accent-red p-5 bg-grit-card">
+            <p className="label-cap text-accent-red text-[10px]">PUMP SCORE</p>
+            <div className="flex items-end gap-3 mt-1">
+              <p className="display text-[88px] leading-none font-extrabold text-grit">{session.pumpScore}</p>
+              <p className="text-xs text-grit-dim pb-3">/ 100</p>
+            </div>
+            {session.pumpNote && <p className="display text-sm uppercase font-bold text-grit mt-2">"{session.pumpNote}"</p>}
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-3 mt-6">
+          <BigStat label="VOLUME" value={`${Math.round(session.totalVolume).toLocaleString()}kg`} />
+          <BigStat label="DURATION" value={`${durationMin}min`} />
+          <BigStat label="SETS" value={String(totalSets)} />
+          <BigStat label="PRS" value={String(session.prCount)} accent={session.prCount > 0} />
+        </div>
+
+        <div className="mt-auto pt-6 grid grid-cols-2 gap-3">
+          <button onClick={onClose} className="btn-ghost">Done</button>
+          <button onClick={onShare} className="btn-grit"><Share2 size={16} className="mr-2" />Share</button>
+        </div>
+      </div>
+      {share && <ShareCard session={session} onClose={onCloseShare} />}
+    </div>
+  );
+}
+
+function BigStat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div className="bg-grit-card border border-grit p-4">
+      <p className="label-cap text-[10px] text-grit-dim">{label}</p>
+      <p className="display text-3xl font-extrabold mt-1" style={{ color: accent ? "#e63222" : "#f5f5f0" }}>{value}</p>
+    </div>
+  );
+}
