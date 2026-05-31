@@ -18,13 +18,13 @@ export const getFeed = createServerFn({ method: "GET" })
     const postIds = (posts ?? []).map(p => p.id);
 
     const [{ data: authors }, { data: likes }, { data: myLikes }, { data: commentCounts }] = await Promise.all([
-      supabase.from("profiles").select("id, display_name, username, avatar_url, level").in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]),
+      supabase.from("profiles").select("id, display_name, username, avatar_url, grit_points").in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]),
       supabase.from("post_likes").select("post_id").in("post_id", postIds.length ? postIds : ["00000000-0000-0000-0000-000000000000"]),
       supabase.from("post_likes").select("post_id").eq("user_id", userId).in("post_id", postIds.length ? postIds : ["00000000-0000-0000-0000-000000000000"]),
       supabase.from("post_comments").select("post_id").in("post_id", postIds.length ? postIds : ["00000000-0000-0000-0000-000000000000"]),
     ]);
 
-    const authorMap = new Map((authors ?? []).map(a => [a.id, a]));
+    const authorMap = new Map((authors ?? []).map(a => [a.id, { ...a, level: gritLevel(a.grit_points ?? 0) }]));
     const likeCount = new Map<string, number>();
     (likes ?? []).forEach(l => likeCount.set(l.post_id, (likeCount.get(l.post_id) ?? 0) + 1));
     const mine = new Set((myLikes ?? []).map(l => l.post_id));
@@ -33,7 +33,7 @@ export const getFeed = createServerFn({ method: "GET" })
 
     return (posts ?? []).map(p => ({
       ...p,
-      author: authorMap.get(p.user_id) ?? { id: p.user_id, display_name: "Athlete", username: null, avatar_url: null, level: "ROOKIE" },
+      author: authorMap.get(p.user_id) ?? { id: p.user_id, display_name: "Athlete", username: null, avatar_url: null, grit_points: 0, level: "BEGINNER" as const },
       likeCount: likeCount.get(p.id) ?? 0,
       commentCount: cmCount.get(p.id) ?? 0,
       liked: mine.has(p.id),
