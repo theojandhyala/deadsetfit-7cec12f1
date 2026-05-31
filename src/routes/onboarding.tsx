@@ -3,11 +3,11 @@ import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { GritLogo } from "@/components/GritLogo";
-import { setState } from "@/lib/storage";
+import { getState, setState, waitForRemoteState } from "@/lib/storage";
 import { defaultSchedule } from "@/lib/calc";
-import { saveProfile } from "@/lib/profile.functions";
+import { getMyProfile, saveProfile } from "@/lib/profile.functions";
+import { profileFromAccount } from "@/lib/account-restore";
 import type { Equipment, Experience, Gender, Goal, Profile, Weakness } from "@/lib/types";
-
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "DEADSET — Onboarding" }] }),
@@ -15,31 +15,83 @@ export const Route = createFileRoute("/onboarding")({
 });
 
 type Step =
-  | "goal" | "experience" | "age" | "weight" | "height" | "gender"
-  | "days" | "equipment" | "injuries" | "weakness" | "username" | "photo";
+  | "goal"
+  | "experience"
+  | "age"
+  | "weight"
+  | "height"
+  | "gender"
+  | "days"
+  | "equipment"
+  | "injuries"
+  | "weakness"
+  | "username"
+  | "photo";
 
-const ORDER: Step[] = ["goal","experience","age","weight","height","gender","days","equipment","injuries","weakness","username","photo"];
+const ORDER: Step[] = [
+  "goal",
+  "experience",
+  "age",
+  "weight",
+  "height",
+  "gender",
+  "days",
+  "equipment",
+  "injuries",
+  "weakness",
+  "username",
+  "photo",
+];
 
 function Onboarding() {
   const navigate = useNavigate();
   const [idx, setIdx] = useState(0);
   const [draft, setDraft] = useState<Partial<Profile>>({});
   const save = useServerFn(saveProfile);
+  const getProfile = useServerFn(getMyProfile);
   const step = ORDER[idx];
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       const { supabase } = await import("@/integrations/supabase/client");
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) navigate({ to: "/auth", replace: true });
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (cancelled) return;
+      if (!session) {
+        navigate({ to: "/auth", replace: true });
+        return;
+      }
+      await waitForRemoteState(session.user.id);
+      if (cancelled) return;
+      if (getState().profile) {
+        navigate({ to: "/train", replace: true });
+        return;
+      }
+      const accountProfile = profileFromAccount(await getProfile().catch(() => null));
+      if (accountProfile) {
+        setState((current) => ({
+          ...current,
+          profile: accountProfile,
+          schedule: current.schedule ?? defaultSchedule(accountProfile),
+        }));
+        navigate({ to: "/train", replace: true });
+      }
     })();
-  }, [navigate]);
+    return () => {
+      cancelled = true;
+    };
+  }, [getProfile, navigate]);
 
   function next(patch: Partial<Profile>) {
     const merged = { ...draft, ...patch };
     setDraft(merged);
     if (idx === ORDER.length - 1) {
-      const p = { ...merged, startingWeightKg: merged.startingWeightKg ?? merged.weightKg } as Profile;
+      const p = {
+        ...merged,
+        startingWeightKg: merged.startingWeightKg ?? merged.weightKg,
+      } as Profile;
       setState((s) => ({ ...s, profile: p, schedule: defaultSchedule(p) }));
       save({
         data: {
@@ -67,60 +119,156 @@ function Onboarding() {
     }
   }
 
-
   return (
-    <div className="min-h-screen bg-grit flex flex-col" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+    <div
+      className="min-h-screen bg-grit flex flex-col"
+      style={{ paddingTop: "env(safe-area-inset-top)" }}
+    >
       <div className="px-6 pt-10 pb-6 flex items-center justify-between">
         <GritLogo className="text-3xl" />
-        <span className="label-cap">{idx + 1} / {ORDER.length}</span>
+        <span className="label-cap">
+          {idx + 1} / {ORDER.length}
+        </span>
       </div>
       <div className="px-6">
         <div className="h-1 bg-grit-card">
-          <div className="h-1 bg-accent-red transition-all" style={{ width: `${((idx + 1) / ORDER.length) * 100}%` }} />
+          <div
+            className="h-1 bg-accent-red transition-all"
+            style={{ width: `${((idx + 1) / ORDER.length) * 100}%` }}
+          />
         </div>
       </div>
       <div className="flex-1 px-6 pt-10 pb-10 flex flex-col">
-        {step === "goal" && <Choice title="What's your goal?" options={[
-          { v: "BULK", l: "Bulk" }, { v: "CUT", l: "Cut" },
-          { v: "MAINTAIN", l: "Maintain" }, { v: "ATHLETIC", l: "Athletic Performance" }
-        ]} onPick={(v) => next({ goal: v as Goal })} />}
-        {step === "experience" && <Choice title="Experience level" options={[
-          { v: "BEGINNER", l: "Beginner" }, { v: "INTERMEDIATE", l: "Intermediate" }, { v: "ADVANCED", l: "Advanced" }
-        ]} onPick={(v) => next({ experience: v as Experience })} />}
-        {step === "age" && <Numeric title="Your age" suffix="yrs" min={13} max={90} onSubmit={(n) => next({ age: n })} />}
-        {step === "weight" && <Numeric title="Your weight" suffix="kg" min={30} max={250} onSubmit={(n) => next({ weightKg: n })} />}
-        {step === "height" && <Numeric title="Your height" suffix="cm" min={120} max={230} onSubmit={(n) => next({ heightCm: n })} />}
-        {step === "gender" && <Choice title="Gender" options={[
-          { v: "MALE", l: "Male" }, { v: "FEMALE", l: "Female" }, { v: "OTHER", l: "Other" }
-        ]} onPick={(v) => next({ gender: v as Gender })} />}
-        {step === "days" && <Choice title="Days per week you can train" options={[
-          { v: "3", l: "3 days" }, { v: "4", l: "4 days" }, { v: "5", l: "5 days" }, { v: "6", l: "6 days" }
-        ]} onPick={(v) => next({ daysPerWeek: Number(v) as 3|4|5|6 })} />}
-        {step === "equipment" && <Choice title="Equipment access" options={[
-          { v: "FULL_GYM", l: "Full Gym" }, { v: "HOME_GYM", l: "Home Gym" }, { v: "BODYWEIGHT", l: "Bodyweight Only" }
-        ]} onPick={(v) => next({ equipment: v as Equipment })} />}
-        {step === "injuries" && <Injuries onSubmit={(t) => next({ injuries: t })} onSkip={() => next({ injuries: "" })} />}
-        {step === "weakness" && <Choice title="Your biggest weakness?" options={[
-          { v: "STRENGTH", l: "Strength" },
-          { v: "CONSISTENCY", l: "Consistency" },
-          { v: "DIET", l: "Diet" },
-          { v: "RECOVERY", l: "Recovery" },
-        ]} onPick={(v) => next({ weakness: v as Weakness })} />}
+        {step === "goal" && (
+          <Choice
+            title="What's your goal?"
+            options={[
+              { v: "BULK", l: "Bulk" },
+              { v: "CUT", l: "Cut" },
+              { v: "MAINTAIN", l: "Maintain" },
+              { v: "ATHLETIC", l: "Athletic Performance" },
+            ]}
+            onPick={(v) => next({ goal: v as Goal })}
+          />
+        )}
+        {step === "experience" && (
+          <Choice
+            title="Experience level"
+            options={[
+              { v: "BEGINNER", l: "Beginner" },
+              { v: "INTERMEDIATE", l: "Intermediate" },
+              { v: "ADVANCED", l: "Advanced" },
+            ]}
+            onPick={(v) => next({ experience: v as Experience })}
+          />
+        )}
+        {step === "age" && (
+          <Numeric
+            title="Your age"
+            suffix="yrs"
+            min={13}
+            max={90}
+            onSubmit={(n) => next({ age: n })}
+          />
+        )}
+        {step === "weight" && (
+          <Numeric
+            title="Your weight"
+            suffix="kg"
+            min={30}
+            max={250}
+            onSubmit={(n) => next({ weightKg: n })}
+          />
+        )}
+        {step === "height" && (
+          <Numeric
+            title="Your height"
+            suffix="cm"
+            min={120}
+            max={230}
+            onSubmit={(n) => next({ heightCm: n })}
+          />
+        )}
+        {step === "gender" && (
+          <Choice
+            title="Gender"
+            options={[
+              { v: "MALE", l: "Male" },
+              { v: "FEMALE", l: "Female" },
+              { v: "OTHER", l: "Other" },
+            ]}
+            onPick={(v) => next({ gender: v as Gender })}
+          />
+        )}
+        {step === "days" && (
+          <Choice
+            title="Days per week you can train"
+            options={[
+              { v: "3", l: "3 days" },
+              { v: "4", l: "4 days" },
+              { v: "5", l: "5 days" },
+              { v: "6", l: "6 days" },
+            ]}
+            onPick={(v) => next({ daysPerWeek: Number(v) as 3 | 4 | 5 | 6 })}
+          />
+        )}
+        {step === "equipment" && (
+          <Choice
+            title="Equipment access"
+            options={[
+              { v: "FULL_GYM", l: "Full Gym" },
+              { v: "HOME_GYM", l: "Home Gym" },
+              { v: "BODYWEIGHT", l: "Bodyweight Only" },
+            ]}
+            onPick={(v) => next({ equipment: v as Equipment })}
+          />
+        )}
+        {step === "injuries" && (
+          <Injuries onSubmit={(t) => next({ injuries: t })} onSkip={() => next({ injuries: "" })} />
+        )}
+        {step === "weakness" && (
+          <Choice
+            title="Your biggest weakness?"
+            options={[
+              { v: "STRENGTH", l: "Strength" },
+              { v: "CONSISTENCY", l: "Consistency" },
+              { v: "DIET", l: "Diet" },
+              { v: "RECOVERY", l: "Recovery" },
+            ]}
+            onPick={(v) => next({ weakness: v as Weakness })}
+          />
+        )}
         {step === "username" && <UsernameStep onSubmit={(u) => next({ username: u })} />}
-        {step === "photo" && <PhotoStep onSubmit={(url) => next({ avatarDataUrl: url })} onSkip={() => next({})} />}
+        {step === "photo" && (
+          <PhotoStep onSubmit={(url) => next({ avatarDataUrl: url })} onSkip={() => next({})} />
+        )}
       </div>
     </div>
   );
 }
 
-function Choice({ title, options, onPick }: { title: string; options: { v: string; l: string }[]; onPick: (v: string) => void }) {
+function Choice({
+  title,
+  options,
+  onPick,
+}: {
+  title: string;
+  options: { v: string; l: string }[];
+  onPick: (v: string) => void;
+}) {
   return (
     <>
       <h1 className="display text-3xl font-extrabold uppercase text-grit mb-8">{title}</h1>
       <div className="flex flex-col gap-3">
         {options.map((o) => (
-          <button key={o.v} onClick={() => onPick(o.v)} className="bg-grit-card border border-grit p-5 text-left hover:border-accent-red transition-colors">
-            <span className="display text-lg uppercase tracking-wide font-bold text-grit">{o.l}</span>
+          <button
+            key={o.v}
+            onClick={() => onPick(o.v)}
+            className="bg-grit-card border border-grit p-5 text-left hover:border-accent-red transition-colors"
+          >
+            <span className="display text-lg uppercase tracking-wide font-bold text-grit">
+              {o.l}
+            </span>
           </button>
         ))}
       </div>
@@ -128,7 +276,19 @@ function Choice({ title, options, onPick }: { title: string; options: { v: strin
   );
 }
 
-function Numeric({ title, suffix, min, max, onSubmit }: { title: string; suffix: string; min: number; max: number; onSubmit: (n: number) => void }) {
+function Numeric({
+  title,
+  suffix,
+  min,
+  max,
+  onSubmit,
+}: {
+  title: string;
+  suffix: string;
+  min: number;
+  max: number;
+  onSubmit: (n: number) => void;
+}) {
   const [v, setV] = useState("");
   const n = Number(v);
   const valid = v !== "" && n >= min && n <= max;
@@ -137,14 +297,19 @@ function Numeric({ title, suffix, min, max, onSubmit }: { title: string; suffix:
       <h1 className="display text-3xl font-extrabold uppercase text-grit mb-8">{title}</h1>
       <div className="flex items-end gap-3 mb-8">
         <input
-          autoFocus inputMode="numeric" type="number"
-          value={v} onChange={(e) => setV(e.target.value)}
+          autoFocus
+          inputMode="numeric"
+          type="number"
+          value={v}
+          onChange={(e) => setV(e.target.value)}
           className="bg-transparent border-b-2 border-grit focus:border-accent-red outline-none text-6xl font-display font-extrabold text-grit w-40 pb-2"
           placeholder="0"
         />
         <span className="label-cap text-lg pb-3">{suffix}</span>
       </div>
-      <button disabled={!valid} onClick={() => onSubmit(n)} className="btn-grit mt-auto">Continue</button>
+      <button disabled={!valid} onClick={() => onSubmit(n)} className="btn-grit mt-auto">
+        Continue
+      </button>
     </>
   );
 }
@@ -153,12 +318,24 @@ function Injuries({ onSubmit, onSkip }: { onSubmit: (s: string) => void; onSkip:
   const [v, setV] = useState("");
   return (
     <>
-      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">Injuries or limits?</h1>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">
+        Injuries or limits?
+      </h1>
       <p className="text-sm text-[#8a8a8a] mb-8">Optional. Skip if none.</p>
-      <textarea value={v} onChange={(e) => setV(e.target.value)} rows={5} className="input-grit mb-4" placeholder="e.g. lower back tweak, bad knee..." />
+      <textarea
+        value={v}
+        onChange={(e) => setV(e.target.value)}
+        rows={5}
+        className="input-grit mb-4"
+        placeholder="e.g. lower back tweak, bad knee..."
+      />
       <div className="mt-auto flex flex-col gap-3">
-        <button onClick={() => onSubmit(v)} className="btn-grit">Finish Setup</button>
-        <button onClick={onSkip} className="btn-ghost">Skip</button>
+        <button onClick={() => onSubmit(v)} className="btn-grit">
+          Finish Setup
+        </button>
+        <button onClick={onSkip} className="btn-ghost">
+          Skip
+        </button>
       </div>
     </>
   );
@@ -166,7 +343,10 @@ function Injuries({ onSubmit, onSkip }: { onSubmit: (s: string) => void; onSkip:
 
 function UsernameStep({ onSubmit }: { onSubmit: (u: string) => void }) {
   const [v, setV] = useState("");
-  const clean = v.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20);
+  const clean = v
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, "")
+    .slice(0, 20);
   const valid = clean.length >= 3;
   return (
     <>
@@ -174,11 +354,17 @@ function UsernameStep({ onSubmit }: { onSubmit: (u: string) => void }) {
       <p className="text-sm text-[#8a8a8a] mb-8">Public. Shown on leaderboards and your profile.</p>
       <div className="flex items-center gap-2 mb-8 border-b-2 border-grit focus-within:border-accent-red">
         <span className="text-3xl font-display font-extrabold text-grit-dim pb-2">@</span>
-        <input autoFocus value={clean} onChange={(e) => setV(e.target.value)}
+        <input
+          autoFocus
+          value={clean}
+          onChange={(e) => setV(e.target.value)}
           className="bg-transparent outline-none text-4xl font-display font-extrabold text-grit flex-1 pb-2"
-          placeholder="ironwolf" />
+          placeholder="ironwolf"
+        />
       </div>
-      <button disabled={!valid} onClick={() => onSubmit(clean)} className="btn-grit mt-auto">Continue</button>
+      <button disabled={!valid} onClick={() => onSubmit(clean)} className="btn-grit mt-auto">
+        Continue
+      </button>
     </>
   );
 }
@@ -196,17 +382,35 @@ function PhotoStep({ onSubmit, onSkip }: { onSubmit: (url: string) => void; onSk
       <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">Profile photo</h1>
       <p className="text-sm text-[#8a8a8a] mb-8">One face. One brand. Optional.</p>
       <div className="flex justify-center mb-8">
-        <button onClick={() => ref.current?.click()}
-          className="w-40 h-40 rounded-full border-4 border-accent-red overflow-hidden bg-grit-card flex items-center justify-center">
-          {preview ? <img src={preview} alt="" className="w-full h-full object-cover" />
-            : <span className="label-cap">Tap to upload</span>}
+        <button
+          onClick={() => ref.current?.click()}
+          className="w-40 h-40 rounded-full border-4 border-accent-red overflow-hidden bg-grit-card flex items-center justify-center"
+        >
+          {preview ? (
+            <img src={preview} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <span className="label-cap">Tap to upload</span>
+          )}
         </button>
-        <input ref={ref} type="file" accept="image/*" className="hidden"
-          onChange={(e) => e.target.files?.[0] && pick(e.target.files[0])} />
+        <input
+          ref={ref}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => e.target.files?.[0] && pick(e.target.files[0])}
+        />
       </div>
       <div className="mt-auto flex flex-col gap-3">
-        <button disabled={!preview} onClick={() => preview && onSubmit(preview)} className="btn-grit">Finish Setup</button>
-        <button onClick={onSkip} className="btn-ghost">Skip</button>
+        <button
+          disabled={!preview}
+          onClick={() => preview && onSubmit(preview)}
+          className="btn-grit"
+        >
+          Finish Setup
+        </button>
+        <button onClick={onSkip} className="btn-ghost">
+          Skip
+        </button>
       </div>
     </>
   );

@@ -2,8 +2,14 @@ import { useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  enableRemoteSync, disableRemoteSync, hydrateFromRemote,
-  clearLocalState, getState,
+  enableRemoteSync,
+  disableRemoteSync,
+  hydrateFromRemote,
+  clearLocalState,
+  getState,
+  beginRemoteStateLoad,
+  finishRemoteStateLoad,
+  clearRemoteStateStatus,
 } from "@/lib/storage";
 import { loadUserState, saveUserState } from "@/lib/user-state.functions";
 
@@ -20,12 +26,17 @@ export function StateSync() {
     let cancelled = false;
     let activeUserId: string | null = null;
 
-    async function pull() {
+    async function pull(userId: string) {
+      beginRemoteStateLoad(userId);
       try {
         const res = await load();
         if (cancelled) return;
         if (res?.data) {
-          try { hydrateFromRemote(JSON.parse(res.data)); } catch { /* ignore */ }
+          try {
+            hydrateFromRemote(JSON.parse(res.data));
+          } catch {
+            /* ignore */
+          }
         } else {
           // First sign-in on this account: push whatever's local so it isn't lost.
           const local = getState();
@@ -33,16 +44,20 @@ export function StateSync() {
             await save({ data: { data: JSON.stringify(local) } }).catch(() => {});
           }
         }
-        enableRemoteSync(async (json) => { await save({ data: { data: json } }); });
+        enableRemoteSync(async (json) => {
+          await save({ data: { data: json } });
+        });
       } catch (e) {
         console.warn("state pull failed", e);
+      } finally {
+        if (!cancelled) finishRemoteStateLoad(userId);
       }
     }
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user?.id) {
         activeUserId = session.user.id;
-        pull();
+        pull(session.user.id);
       }
     });
 
@@ -51,14 +66,16 @@ export function StateSync() {
       if (event === "SIGNED_OUT" || !uid) {
         disableRemoteSync();
         clearLocalState();
+        clearRemoteStateStatus();
         activeUserId = null;
         return;
       }
       if (uid !== activeUserId) {
         activeUserId = uid;
         disableRemoteSync();
+        beginRemoteStateLoad(uid);
         clearLocalState();
-        pull();
+        pull(uid);
       }
     });
 
