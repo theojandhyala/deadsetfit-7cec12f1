@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
-import { Camera, Trophy, Loader2, Sparkles, Flame, X } from "lucide-react";
+import { Camera, Trophy, Loader2, Sparkles, Flame, X, Trash2 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useAppState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
@@ -80,6 +80,22 @@ function ProgressPage() {
       date: isoDay(), chest: +chest || 0, waist: +waist || 0, arms: +arms || 0, legs: +legs || 0,
     }]}));
     setChest(""); setWaist(""); setArms(""); setLegs("");
+  }
+  function deleteScan(id: string) {
+    if (!confirm("Delete this scan? This can't be undone.")) return;
+    set((s) => ({ ...s, physiqueScans: s.physiqueScans.filter((p) => p.id !== id) }));
+    setViewScan(null);
+  }
+  function deleteWeight(date: string) {
+    set((s) => ({ ...s, weights: s.weights.filter((w) => w.date !== date) }));
+  }
+  function deleteMeasurement(date: string) {
+    set((s) => ({ ...s, measurements: s.measurements.filter((m) => m.date !== date) }));
+  }
+  function deleteCheckIn(date: string) {
+    if (!confirm("Delete this photo?")) return;
+    set((s) => ({ ...s, checkIns: s.checkIns.filter((c) => c.date !== date) }));
+    setCompare((c) => c.filter((d) => d !== date));
   }
 
   // PRs across both new sessions and legacy logs
@@ -193,9 +209,18 @@ function ProgressPage() {
         {state.physiqueScans.length > 1 && (
           <div className="grid grid-cols-4 gap-1 mt-3">
             {state.physiqueScans.slice().reverse().slice(0, 8).map((p) => (
-              <button key={p.id} onClick={() => setViewScan(p)} className="border border-grit">
-                <img src={p.photoDataUrl} alt="" className="w-full aspect-[3/4] object-cover" />
-              </button>
+              <div key={p.id} className="relative border border-grit group">
+                <button onClick={() => setViewScan(p)} className="block w-full">
+                  <img src={p.photoDataUrl} alt="" className="w-full aspect-[3/4] object-cover" />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); deleteScan(p.id); }}
+                  aria-label="Delete scan"
+                  className="absolute top-1 right-1 bg-black/80 border border-accent-red text-accent-red p-1 hover:bg-accent-red hover:text-black"
+                >
+                  <Trash2 size={11} />
+                </button>
+              </div>
             ))}
           </div>
         )}
@@ -251,6 +276,22 @@ function ProgressPage() {
             <button onClick={logWeight} className="btn-grit">Log</button>
           </div>
           <WeightChart entries={state.weights} />
+          {state.weights.length > 0 && (
+            <div className="mt-3 border-t border-grit pt-3 max-h-40 overflow-y-auto">
+              <p className="label-cap text-[10px] mb-1">History</p>
+              {state.weights.slice().reverse().map((w) => (
+                <div key={w.date} className="flex items-center justify-between py-1 text-xs">
+                  <span className="text-grit-dim">{w.date}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="font-bold text-grit">{w.weight} kg</span>
+                    <button onClick={() => deleteWeight(w.date)} className="text-grit-dim hover:text-accent-red" aria-label="Delete entry">
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -263,9 +304,29 @@ function ProgressPage() {
           <Input label="Arms" v={arms} set={setArms} />
           <Input label="Legs" v={legs} set={setLegs} />
           <button onClick={logMeasurements} className="btn-grit col-span-2">Save</button>
+          {state.measurements.length >= 2 && (
+            <div className="col-span-2 mt-2">
+              <MeasurementsChart entries={state.measurements} />
+              <div className="flex gap-3 justify-center mt-2 text-[10px] label-cap">
+                <span className="flex items-center gap-1"><i className="w-2 h-2 inline-block" style={{ background: "#e63222" }} />Chest</span>
+                <span className="flex items-center gap-1"><i className="w-2 h-2 inline-block" style={{ background: "#f5f5f0" }} />Waist</span>
+                <span className="flex items-center gap-1"><i className="w-2 h-2 inline-block" style={{ background: "#7acc7a" }} />Arms</span>
+                <span className="flex items-center gap-1"><i className="w-2 h-2 inline-block" style={{ background: "#7aa3cc" }} />Legs</span>
+              </div>
+            </div>
+          )}
           {state.measurements.length > 0 && (
-            <div className="col-span-2 mt-2 text-xs text-[#8a8a8a]">
-              Last: {state.measurements[state.measurements.length - 1].date} — C{state.measurements[state.measurements.length - 1].chest} W{state.measurements[state.measurements.length - 1].waist} A{state.measurements[state.measurements.length - 1].arms} L{state.measurements[state.measurements.length - 1].legs}
+            <div className="col-span-2 mt-2 border-t border-grit pt-2 max-h-40 overflow-y-auto">
+              <p className="label-cap text-[10px] mb-1">History</p>
+              {state.measurements.slice().reverse().map((m) => (
+                <div key={m.date} className="flex items-center justify-between py-1 text-[11px]">
+                  <span className="text-grit-dim">{m.date}</span>
+                  <span className="text-grit">C{m.chest} W{m.waist} A{m.arms} L{m.legs}</span>
+                  <button onClick={() => deleteMeasurement(m.date)} className="text-grit-dim hover:text-accent-red" aria-label="Delete entry">
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -292,15 +353,24 @@ function ProgressPage() {
         )}
         {state.checkIns.length > 0 && (
           <>
-            <p className="label-cap mt-3 mb-2 text-[10px]">Tap two to compare</p>
+            <p className="label-cap mt-3 mb-2 text-[10px]">Tap to compare · long-press × to delete</p>
             <div className="grid grid-cols-3 gap-1">
               {state.checkIns.slice().reverse().map((c) => {
                 const sel = compare.includes(c.date);
                 return (
-                  <button key={c.date} onClick={() => togglePhoto(c.date)} className="relative border" style={{ borderColor: sel ? "#e63222" : "#262626" }}>
-                    <img src={c.photoDataUrl} alt="" className="w-full aspect-[3/4] object-cover" />
-                    <span className="absolute bottom-0 inset-x-0 text-[9px] text-center label-cap py-0.5" style={{ background: "rgba(0,0,0,0.7)" }}>{c.date.slice(5, 10)}</span>
-                  </button>
+                  <div key={c.date} className="relative">
+                    <button onClick={() => togglePhoto(c.date)} className="relative border block w-full" style={{ borderColor: sel ? "#e63222" : "#262626" }}>
+                      <img src={c.photoDataUrl} alt="" className="w-full aspect-[3/4] object-cover" />
+                      <span className="absolute bottom-0 inset-x-0 text-[9px] text-center label-cap py-0.5" style={{ background: "rgba(0,0,0,0.7)" }}>{c.date.slice(5, 10)}</span>
+                    </button>
+                    <button
+                      onClick={() => deleteCheckIn(c.date)}
+                      aria-label="Delete photo"
+                      className="absolute top-1 right-1 bg-black/80 border border-accent-red text-accent-red p-1 hover:bg-accent-red hover:text-black"
+                    >
+                      <Trash2 size={10} />
+                    </button>
+                  </div>
                 );
               })}
             </div>
@@ -322,7 +392,7 @@ function ProgressPage() {
         </div>
       </section>
 
-      {viewScan && <ScanModal scan={viewScan} onClose={() => setViewScan(null)} />}
+      {viewScan && <ScanModal scan={viewScan} onClose={() => setViewScan(null)} onDelete={() => deleteScan(viewScan.id)} />}
     </div>
   );
 }
@@ -431,7 +501,7 @@ function Input({ label, v, set }: { label: string; v: string; set: (s: string) =
   );
 }
 
-function ScanModal({ scan, onClose }: { scan: PhysiqueScan; onClose: () => void }) {
+function ScanModal({ scan, onClose, onDelete }: { scan: PhysiqueScan; onClose: () => void; onDelete: () => void }) {
   const a = scan.analysis;
   return (
     <div className="fixed inset-0 z-[200] bg-black/90 overflow-auto" onClick={onClose}>
@@ -456,10 +526,38 @@ function ScanModal({ scan, onClose }: { scan: PhysiqueScan; onClose: () => void 
           <Block title="FOCUS NEXT" items={a.focus} color="#f5f5f0" />
         </div>
         {a.leanMassNote && (
-          <p className="text-xs text-grit-dim uppercase tracking-wider mb-6">{a.leanMassNote}</p>
+          <p className="text-xs text-grit-dim uppercase tracking-wider mb-4">{a.leanMassNote}</p>
         )}
+        <button onClick={onDelete} className="w-full border border-accent-red text-accent-red py-2 label-cap text-xs flex items-center justify-center gap-2 hover:bg-accent-red hover:text-black mb-6">
+          <Trash2 size={14} /> Delete Scan
+        </button>
       </div>
     </div>
+  );
+}
+
+function MeasurementsChart({ entries }: { entries: { date: string; chest: number; waist: number; arms: number; legs: number }[] }) {
+  const w = 300, h = 110, pad = 8;
+  const keys: { k: "chest" | "waist" | "arms" | "legs"; color: string }[] = [
+    { k: "chest", color: "#e63222" },
+    { k: "waist", color: "#f5f5f0" },
+    { k: "arms", color: "#7acc7a" },
+    { k: "legs", color: "#7aa3cc" },
+  ];
+  const all = entries.flatMap((e) => keys.map((k) => e[k.k])).filter((v) => v > 0);
+  const min = Math.min(...all), max = Math.max(...all);
+  const range = max - min || 1;
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-28">
+      {keys.map(({ k, color }) => {
+        const pts = entries.map((e, i) => {
+          const x = pad + (i * (w - pad * 2)) / Math.max(1, entries.length - 1);
+          const y = h - pad - ((e[k] - min) / range) * (h - pad * 2);
+          return `${x},${y}`;
+        }).join(" ");
+        return <polyline key={k} points={pts} fill="none" stroke={color} strokeWidth="1.5" />;
+      })}
+    </svg>
   );
 }
 

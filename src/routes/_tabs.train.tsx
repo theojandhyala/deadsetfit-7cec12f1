@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { GritLogo } from "@/components/GritLogo";
 import { VideoModal } from "@/components/VideoModal";
 import { RestTimer } from "@/components/RestTimer";
+import { Reminders } from "@/components/Reminders";
 import { useAppState } from "@/lib/storage";
 import { EXERCISES, getExercise } from "@/lib/exercises";
 import { calculateGritScore, defaultSchedule, gritBadge, badgeColor, isoDay, todayKey } from "@/lib/calc";
@@ -115,6 +116,8 @@ function TrainPage() {
           </button>
         </div>
       </header>
+
+      <Reminders />
 
       {/* DEADSET Power Level banner — futuristic XP card */}
       {(() => {
