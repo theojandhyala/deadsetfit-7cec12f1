@@ -209,9 +209,18 @@ function ProgressPage() {
         {state.physiqueScans.length > 1 && (
           <div className="grid grid-cols-4 gap-1 mt-3">
             {state.physiqueScans.slice().reverse().slice(0, 8).map((p) => (
-              <button key={p.id} onClick={() => setViewScan(p)} className="border border-grit">
-                <img src={p.photoDataUrl} alt="" className="w-full aspect-[3/4] object-cover" />
-              </button>
+              <div key={p.id} className="relative border border-grit group">
+                <button onClick={() => setViewScan(p)} className="block w-full">
+                  <img src={p.photoDataUrl} alt="" className="w-full aspect-[3/4] object-cover" />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); deleteScan(p.id); }}
+                  aria-label="Delete scan"
+                  className="absolute top-1 right-1 bg-black/80 border border-accent-red text-accent-red p-1 hover:bg-accent-red hover:text-black"
+                >
+                  <Trash2 size={11} />
+                </button>
+              </div>
             ))}
           </div>
         )}
