@@ -31,9 +31,10 @@ const ListInput = z.object({
 });
 
 export const listExercises = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => ListInput.parse(d))
-  .handler(async ({ data }) => {
-    let q = supabaseAdmin.from("exercises").select("*").order("name").limit(data.limit);
+  .handler(async ({ data, context }) => {
+    let q = context.supabase.from("exercises").select("*").order("name").limit(data.limit);
     if (data.category) q = q.eq("category", data.category);
     if (data.equipment) q = q.eq("equipment", data.equipment);
     if (data.difficulty) q = q.eq("difficulty", data.difficulty);
@@ -44,13 +45,15 @@ export const listExercises = createServerFn({ method: "POST" })
     return { exercises: (rows ?? []) as LibraryExercise[] };
   });
 
-export const countExercises = createServerFn({ method: "GET" }).handler(async () => {
-  const { count, error } = await supabaseAdmin
-    .from("exercises")
-    .select("*", { count: "exact", head: true });
-  if (error) throw new Error(error.message);
-  return { count: count ?? 0 };
-});
+export const countExercises = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { count, error } = await context.supabase
+      .from("exercises")
+      .select("*", { count: "exact", head: true });
+    if (error) throw new Error(error.message);
+    return { count: count ?? 0 };
+  });
 
 const slug = (s: string) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);

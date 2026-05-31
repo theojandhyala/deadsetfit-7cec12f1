@@ -23,6 +23,7 @@ export const analyzeFoodPhoto = createServerFn({ method: "POST" })
 const BarcodeInput = z.object({ barcode: z.string().regex(/^[0-9]{6,14}$/) });
 
 export const lookupBarcode = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => BarcodeInput.parse(d))
   .handler(async ({ data }) => {
     const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${data.barcode}.json`, {
