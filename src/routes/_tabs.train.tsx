@@ -146,12 +146,20 @@ function TrainPage() {
       </div>
 
       {/* Today header */}
-      <div className="px-5 mb-5">
-        <p className="label-cap">{selectedDay === todayKey() ? "Today" : DAY_SHORT[selectedDay]}</p>
-        <h1 className="display text-3xl font-extrabold uppercase text-grit leading-tight mt-1">
-          {(activeProgram ? programDay?.label : day?.label) || "REST"}
-        </h1>
-      </div>
+      {(() => {
+        const rawLabel = (activeProgram ? programDay?.label : day?.label) || "REST";
+        const hype = dayHype(selectedDay, rawLabel, selectedDay === todayKey());
+        return (
+          <div className="px-5 mb-5">
+            <p className="label-cap text-accent-red">{hype.eyebrow}</p>
+            <h1 className="display text-3xl font-extrabold uppercase text-grit leading-tight mt-1">
+              {rawLabel}
+            </h1>
+            <p className="text-sm text-grit-dim mt-2 leading-snug">{hype.line}</p>
+          </div>
+        );
+      })()}
+
 
       {/* START WORKOUT CTA */}
       {((activeProgram ? (programDay?.items.length || 0) : (day?.exerciseIds?.length || 0)) > 0) && selectedDay === todayKey() && (
