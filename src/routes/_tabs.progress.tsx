@@ -276,6 +276,22 @@ function ProgressPage() {
             <button onClick={logWeight} className="btn-grit">Log</button>
           </div>
           <WeightChart entries={state.weights} />
+          {state.weights.length > 0 && (
+            <div className="mt-3 border-t border-grit pt-3 max-h-40 overflow-y-auto">
+              <p className="label-cap text-[10px] mb-1">History</p>
+              {state.weights.slice().reverse().map((w) => (
+                <div key={w.date} className="flex items-center justify-between py-1 text-xs">
+                  <span className="text-grit-dim">{w.date}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="font-bold text-grit">{w.weight} kg</span>
+                    <button onClick={() => deleteWeight(w.date)} className="text-grit-dim hover:text-accent-red" aria-label="Delete entry">
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -288,9 +304,29 @@ function ProgressPage() {
           <Input label="Arms" v={arms} set={setArms} />
           <Input label="Legs" v={legs} set={setLegs} />
           <button onClick={logMeasurements} className="btn-grit col-span-2">Save</button>
+          {state.measurements.length >= 2 && (
+            <div className="col-span-2 mt-2">
+              <MeasurementsChart entries={state.measurements} />
+              <div className="flex gap-3 justify-center mt-2 text-[10px] label-cap">
+                <span className="flex items-center gap-1"><i className="w-2 h-2 inline-block" style={{ background: "#e63222" }} />Chest</span>
+                <span className="flex items-center gap-1"><i className="w-2 h-2 inline-block" style={{ background: "#f5f5f0" }} />Waist</span>
+                <span className="flex items-center gap-1"><i className="w-2 h-2 inline-block" style={{ background: "#7acc7a" }} />Arms</span>
+                <span className="flex items-center gap-1"><i className="w-2 h-2 inline-block" style={{ background: "#7aa3cc" }} />Legs</span>
+              </div>
+            </div>
+          )}
           {state.measurements.length > 0 && (
-            <div className="col-span-2 mt-2 text-xs text-[#8a8a8a]">
-              Last: {state.measurements[state.measurements.length - 1].date} — C{state.measurements[state.measurements.length - 1].chest} W{state.measurements[state.measurements.length - 1].waist} A{state.measurements[state.measurements.length - 1].arms} L{state.measurements[state.measurements.length - 1].legs}
+            <div className="col-span-2 mt-2 border-t border-grit pt-2 max-h-40 overflow-y-auto">
+              <p className="label-cap text-[10px] mb-1">History</p>
+              {state.measurements.slice().reverse().map((m) => (
+                <div key={m.date} className="flex items-center justify-between py-1 text-[11px]">
+                  <span className="text-grit-dim">{m.date}</span>
+                  <span className="text-grit">C{m.chest} W{m.waist} A{m.arms} L{m.legs}</span>
+                  <button onClick={() => deleteMeasurement(m.date)} className="text-grit-dim hover:text-accent-red" aria-label="Delete entry">
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -317,15 +353,24 @@ function ProgressPage() {
         )}
         {state.checkIns.length > 0 && (
           <>
-            <p className="label-cap mt-3 mb-2 text-[10px]">Tap two to compare</p>
+            <p className="label-cap mt-3 mb-2 text-[10px]">Tap to compare · long-press × to delete</p>
             <div className="grid grid-cols-3 gap-1">
               {state.checkIns.slice().reverse().map((c) => {
                 const sel = compare.includes(c.date);
                 return (
-                  <button key={c.date} onClick={() => togglePhoto(c.date)} className="relative border" style={{ borderColor: sel ? "#e63222" : "#262626" }}>
-                    <img src={c.photoDataUrl} alt="" className="w-full aspect-[3/4] object-cover" />
-                    <span className="absolute bottom-0 inset-x-0 text-[9px] text-center label-cap py-0.5" style={{ background: "rgba(0,0,0,0.7)" }}>{c.date.slice(5, 10)}</span>
-                  </button>
+                  <div key={c.date} className="relative">
+                    <button onClick={() => togglePhoto(c.date)} className="relative border block w-full" style={{ borderColor: sel ? "#e63222" : "#262626" }}>
+                      <img src={c.photoDataUrl} alt="" className="w-full aspect-[3/4] object-cover" />
+                      <span className="absolute bottom-0 inset-x-0 text-[9px] text-center label-cap py-0.5" style={{ background: "rgba(0,0,0,0.7)" }}>{c.date.slice(5, 10)}</span>
+                    </button>
+                    <button
+                      onClick={() => deleteCheckIn(c.date)}
+                      aria-label="Delete photo"
+                      className="absolute top-1 right-1 bg-black/80 border border-accent-red text-accent-red p-1 hover:bg-accent-red hover:text-black"
+                    >
+                      <Trash2 size={10} />
+                    </button>
+                  </div>
                 );
               })}
             </div>
