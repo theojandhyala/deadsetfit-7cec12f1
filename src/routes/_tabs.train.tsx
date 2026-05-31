@@ -30,8 +30,6 @@ function TrainPage() {
   const [editMode, setEditMode] = useState(false);
   const [genLoading, setGenLoading] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
-  const [genLoading, setGenLoading] = useState(false);
-  const [genError, setGenError] = useState<string | null>(null);
 
   const generate = useServerFn(generateSchedule);
   const activeProgram: Program | undefined = state.programs.find((p) => p.id === state.activeProgramId);
