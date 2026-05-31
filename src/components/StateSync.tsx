@@ -3,7 +3,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import {
   enableRemoteSync, disableRemoteSync, hydrateFromRemote,
-  clearLocalState, getState,
+  clearLocalState, getState, beginRemoteStateLoad,
+  finishRemoteStateLoad, clearRemoteStateStatus,
 } from "@/lib/storage";
 import { loadUserState, saveUserState } from "@/lib/user-state.functions";
 
@@ -20,7 +21,8 @@ export function StateSync() {
     let cancelled = false;
     let activeUserId: string | null = null;
 
-    async function pull() {
+    async function pull(userId: string) {
+      beginRemoteStateLoad(userId);
       try {
         const res = await load();
         if (cancelled) return;
@@ -36,13 +38,15 @@ export function StateSync() {
         enableRemoteSync(async (json) => { await save({ data: { data: json } }); });
       } catch (e) {
         console.warn("state pull failed", e);
+      } finally {
+        if (!cancelled) finishRemoteStateLoad(userId);
       }
     }
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user?.id) {
         activeUserId = session.user.id;
-        pull();
+        pull(session.user.id);
       }
     });
 
@@ -51,14 +55,16 @@ export function StateSync() {
       if (event === "SIGNED_OUT" || !uid) {
         disableRemoteSync();
         clearLocalState();
+        clearRemoteStateStatus();
         activeUserId = null;
         return;
       }
       if (uid !== activeUserId) {
         activeUserId = uid;
         disableRemoteSync();
+        beginRemoteStateLoad(uid);
         clearLocalState();
-        pull();
+        pull(uid);
       }
     });
 
