@@ -19,7 +19,7 @@ function AuthPage() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const resolveUsername = useServerFn(resolveUsernameToEmail);
+  const usernameSignIn = useServerFn(signInWithUsername);
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((_e, session) => {
