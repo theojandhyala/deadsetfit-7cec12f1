@@ -87,14 +87,17 @@ function AuthPage() {
 
         <form onSubmit={submit} className="space-y-3">
           <input
-            type="email"
+            type="text"
             required
-            placeholder="EMAIL"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            autoCapitalize="none"
+            autoCorrect="off"
+            placeholder={mode === "signup" ? "EMAIL" : "EMAIL OR USERNAME"}
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
             className="w-full px-3 py-3 text-sm uppercase tracking-wider"
             style={{ background: "#0a0a0a", color: "#f5f5f0", border: "1px solid #2a2a2a" }}
           />
+
           <input
             type="password"
             required
