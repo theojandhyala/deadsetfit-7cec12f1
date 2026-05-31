@@ -310,8 +310,18 @@ function TrainPage() {
         )}
       </div>
 
-      {videoId && <VideoModal videoId={videoId} title={videoTitle} onClose={() => setVideoId(null)} />}
-      {videoQuery && <VideoModal query={videoQuery} title={videoTitle} onClose={() => setVideoQuery(null)} />}
+      {videoState && (
+        <VideoModal
+          videoId={videoState.videoId}
+          query={videoState.query}
+          title={videoState.title}
+          clipStart={videoState.clipStart}
+          clipEnd={videoState.clipEnd}
+          cue={videoState.cue}
+          onClose={() => setVideoState(null)}
+        />
+      )}
+
       {logFor && <LogSetModal exerciseId={logFor.id} exerciseName={logFor.name} onClose={() => setLogFor(null)} onLogged={(secs) => { setLogFor(null); setResting(secs); }} />}
       {resting !== null && <RestTimer seconds={resting} onDone={() => setResting(null)} />}
     </div>
