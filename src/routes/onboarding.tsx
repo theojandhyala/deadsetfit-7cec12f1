@@ -1,10 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { Check, Zap } from "lucide-react";
 import { GritLogo } from "@/components/GritLogo";
 import { getState, setState, waitForRemoteState } from "@/lib/storage";
 import { defaultSchedule } from "@/lib/calc";
+import { getExercise } from "@/lib/exercises";
 import { getMyProfile, saveProfile } from "@/lib/profile.functions";
 import { profileFromAccount } from "@/lib/account-restore";
 import type { Equipment, Experience, Gender, Goal, Profile, Weakness } from "@/lib/types";
@@ -16,13 +18,14 @@ export const Route = createFileRoute("/onboarding")({
 
 type Step =
   | "goal"
+  | "days"
+  | "equipment"
+  | "schedule"
   | "experience"
   | "age"
   | "weight"
   | "height"
   | "gender"
-  | "days"
-  | "equipment"
   | "injuries"
   | "weakness"
   | "username"
@@ -30,13 +33,14 @@ type Step =
 
 const ORDER: Step[] = [
   "goal",
+  "days",
+  "equipment",
+  "schedule",
   "experience",
   "age",
   "weight",
   "height",
   "gender",
-  "days",
-  "equipment",
   "injuries",
   "weakness",
   "username",
