@@ -227,6 +227,9 @@ function Onboarding() {
             onPick={(v) => next({ equipment: v as Equipment })}
           />
         )}
+        {step === "schedule" && (
+          <SchedulePreview draft={draft} onContinue={() => next({})} />
+        )}
         {step === "injuries" && (
           <Injuries onSubmit={(t) => next({ injuries: t })} onSkip={() => next({ injuries: "" })} />
         )}
