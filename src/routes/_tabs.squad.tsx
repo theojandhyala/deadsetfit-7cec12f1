@@ -7,6 +7,7 @@ import {
   getFeed, createPost, toggleLike, addComment, getComments,
   getLeaderboard, getMyReferralInfo, redeemReferral, updateMyProfile,
 } from "@/lib/social.functions";
+import { RankShareCard } from "@/components/RankShareCard";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_tabs/squad")({
@@ -249,6 +250,7 @@ function CommentsPanel({ postId, onPosted }: { postId: string; onPosted: () => v
 function League({ userId }: { userId: string }) {
   const _get = useServerFn(getLeaderboard);
   const [data, setData] = useState<Awaited<ReturnType<typeof getLeaderboard>> | null>(null);
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => { _get().then(setData).catch(() => toast.error("Leaderboard failed")); }, []);
 
@@ -267,7 +269,24 @@ function League({ userId }: { userId: string }) {
             <p className="display font-extrabold text-grit text-3xl leading-none">#{data.me.rank || "—"}</p>
             <p className="text-xs text-[#8a8a8a]">{data.me.grit_points} DS pts</p>
           </div>
+          <button
+            onClick={() => setSharing(true)}
+            className="btn-grit px-3 py-2 text-xs flex items-center gap-1.5"
+            aria-label="Share rank"
+          >
+            <Share2 size={12} /> SHARE
+          </button>
         </div>
+      )}
+      {sharing && data.me && (
+        <RankShareCard
+          rank={data.me.rank || 0}
+          league={data.me.league}
+          points={data.me.grit_points ?? 0}
+          displayName={data.me.display_name || "Athlete"}
+          username={data.me.username}
+          onClose={() => setSharing(false)}
+        />
       )}
 
       <div className="bg-grit-card border border-grit">
