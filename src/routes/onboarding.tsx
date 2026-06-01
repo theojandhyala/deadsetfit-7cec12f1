@@ -422,3 +422,74 @@ function PhotoStep({ onSubmit, onSkip }: { onSubmit: (url: string) => void; onSk
     </>
   );
 }
+
+function SchedulePreview({
+  draft,
+  onContinue,
+}: {
+  draft: Partial<Profile>;
+  onContinue: () => void;
+}) {
+  // Build a schedule from the 3 basics; rest of profile is irrelevant to defaultSchedule.
+  const stub = useMemo(
+    () =>
+      ({
+        goal: draft.goal ?? "MAINTAIN",
+        daysPerWeek: draft.daysPerWeek ?? 4,
+        equipment: draft.equipment ?? "FULL_GYM",
+      }) as Profile,
+    [draft.goal, draft.daysPerWeek, draft.equipment],
+  );
+  const schedule = useMemo(() => defaultSchedule(stub), [stub]);
+
+  const DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] as const;
+
+  return (
+    <>
+      <p className="label-cap text-accent-red mb-2 flex items-center gap-1.5">
+        <Zap size={12} /> YOUR WEEK
+      </p>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-1">
+        Schedule locked in
+      </h1>
+      <p className="text-sm text-[#8a8a8a] mb-6">
+        {draft.daysPerWeek} days · {(draft.equipment ?? "").replace("_", " ").toLowerCase()} · tuned for{" "}
+        {(draft.goal ?? "").toLowerCase()}. Tweak anytime in Programs.
+      </p>
+      <div className="flex flex-col gap-1.5 mb-6">
+        {DAYS.map((d) => {
+          const day = schedule[d];
+          const isRest = !day.exerciseIds.length;
+          return (
+            <div
+              key={d}
+              className="bg-grit-card border border-grit p-3 flex items-start gap-3"
+              style={{ borderColor: isRest ? "#262626" : "#3a1410" }}
+            >
+              <span className="label-cap text-[10px] w-10 pt-0.5 text-grit-dim">{d}</span>
+              <div className="flex-1 min-w-0">
+                <p
+                  className="display text-xs uppercase font-extrabold leading-tight"
+                  style={{ color: isRest ? "#8a8a8a" : "#f5f5f0" }}
+                >
+                  {day.label}
+                </p>
+                {!isRest && (
+                  <p className="text-[10px] text-grit-dim mt-1 truncate">
+                    {day.exerciseIds
+                      .map((id) => getExercise(id)?.name ?? id)
+                      .join(" · ")}
+                  </p>
+                )}
+              </div>
+              {!isRest && <Check size={14} className="text-accent-red flex-shrink-0 mt-1" />}
+            </div>
+          );
+        })}
+      </div>
+      <button onClick={onContinue} className="btn-grit mt-auto">
+        Lock it in — finish profile
+      </button>
+    </>
+  );
+}
