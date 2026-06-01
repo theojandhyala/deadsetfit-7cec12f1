@@ -7,6 +7,7 @@ import {
   getFeed, createPost, toggleLike, addComment, getComments,
   getLeaderboard, getMyReferralInfo, redeemReferral, updateMyProfile,
 } from "@/lib/social.functions";
+import { RankShareCard } from "@/components/RankShareCard";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_tabs/squad")({
