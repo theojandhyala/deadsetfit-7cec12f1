@@ -2,7 +2,6 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { getState, setState, waitForRemoteState } from "@/lib/storage";
-import { GritLogo } from "@/components/GritLogo";
 import { getMyProfile } from "@/lib/profile.functions";
 import { profileFromAccount } from "@/lib/account-restore";
 import { defaultSchedule } from "@/lib/calc";
