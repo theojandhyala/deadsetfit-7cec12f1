@@ -10,7 +10,7 @@ import {
 import { saveProfile } from "@/lib/profile.functions";
 import { FifaCard } from "@/components/FifaCard";
 import {
-  PR_CATALOG, computeFifaStats, buildPublicStats, formatPRValue,
+  PR_CATALOG, computeFifaStats, buildPublicStats, buildHeadlinePRs, formatPRValue,
   type PRDef,
 } from "@/lib/fifa-stats";
 
