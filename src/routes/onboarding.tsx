@@ -107,7 +107,8 @@ function Onboarding() {
         ...merged,
         startingWeightKg: merged.startingWeightKg ?? merged.weightKg,
       } as Profile;
-      setState((s) => ({ ...s, profile: p, schedule: defaultSchedule(p) }));
+      const sched = mode === "BUILD" ? emptySchedule() : defaultSchedule(p);
+      setState((s) => ({ ...s, profile: p, schedule: sched }));
       save({
         data: {
           username: p.username,
