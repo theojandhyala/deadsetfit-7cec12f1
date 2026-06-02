@@ -176,6 +176,24 @@ function DietPage() {
   const supps = supplementsFor(profile?.goal);
   const waterPct = Math.min(1, waterToday / Math.max(state.waterTargetMl, 1));
 
+  // BMI + per-meal breakdown
+  const bmi = profile ? profile.weightKg / Math.pow(profile.heightCm / 100, 2) : 0;
+  const bmiBand =
+    bmi < 18.5 ? "UNDER" :
+    bmi < 25 ? "HEALTHY" :
+    bmi < 30 ? "OVER" : "OBESE";
+  const goalCue =
+    profile?.goal === "CUT" ? "Calorie deficit — lean out" :
+    profile?.goal === "BULK" ? "Calorie surplus — build mass" :
+    profile?.goal === "ATHLETIC" ? "Slight surplus — fuel performance" :
+    "Maintenance — hold weight";
+  const perMeal = {
+    cal: Math.round(calories / 4),
+    p: Math.round(macros.protein / 4),
+    c: Math.round(macros.carbs / 4),
+    f: Math.round(macros.fats / 4),
+  };
+
   return (
     <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
       <header className="px-5 pt-6 pb-2">
@@ -183,6 +201,48 @@ function DietPage() {
         <div className="display text-6xl font-extrabold text-grit leading-none mt-1">{calories}<span className="text-2xl text-[#8a8a8a] ml-2">KCAL</span></div>
         <p className="text-xs text-[#8a8a8a] mt-1">{totals.c} eaten · {Math.max(0, calories - totals.c)} remaining</p>
       </header>
+
+      {/* BMI + per-meal breakdown */}
+      {profile && (
+        <div className="px-5 mt-3">
+          <div className="bg-grit-card border border-grit p-4">
+            <div className="flex items-baseline justify-between mb-3">
+              <div>
+                <p className="label-cap text-[10px] text-[#8a8a8a]">Your numbers</p>
+                <p className="text-xs text-grit mt-1">
+                  BMI <span className="display font-extrabold text-grit">{bmi.toFixed(1)}</span>
+                  <span className="text-[#8a8a8a] ml-1.5">({bmiBand})</span>
+                  <span className="text-[#8a8a8a] mx-1.5">·</span>
+                  {profile.weightKg}kg · {profile.heightCm}cm
+                </p>
+                <p className="text-[10px] text-accent-red label-cap mt-1">{goalCue}</p>
+              </div>
+            </div>
+            <p className="label-cap text-[10px] text-[#8a8a8a] mb-2">Eat per meal (× 4 meals)</p>
+            <div className="grid grid-cols-4 gap-2 text-center">
+              <div className="border border-grit p-2">
+                <p className="display font-extrabold text-grit text-base leading-none">{perMeal.cal}</p>
+                <p className="label-cap text-[9px] text-[#8a8a8a] mt-1">KCAL</p>
+              </div>
+              <div className="border border-grit p-2">
+                <p className="display font-extrabold leading-none" style={{ color: "#e63222" }}>{perMeal.p}g</p>
+                <p className="label-cap text-[9px] text-[#8a8a8a] mt-1">PROTEIN</p>
+              </div>
+              <div className="border border-grit p-2">
+                <p className="display font-extrabold leading-none" style={{ color: "#fbbf24" }}>{perMeal.c}g</p>
+                <p className="label-cap text-[9px] text-[#8a8a8a] mt-1">CARBS</p>
+              </div>
+              <div className="border border-grit p-2">
+                <p className="display font-extrabold leading-none" style={{ color: "#22c55e" }}>{perMeal.f}g</p>
+                <p className="label-cap text-[9px] text-[#8a8a8a] mt-1">FATS</p>
+              </div>
+            </div>
+            <p className="text-[10px] text-[#8a8a8a] mt-2 leading-snug">
+              Aim for ~<span className="text-grit">{Math.round(profile.weightKg * (profile.goal === "CUT" ? 2.4 : profile.goal === "ATHLETIC" ? 2.2 : 2.0))}g protein/day</span> ({(profile.goal === "CUT" ? 2.4 : profile.goal === "ATHLETIC" ? 2.2 : 2.0).toFixed(1)}g per kg bodyweight) and <span className="text-grit">{state.waterTargetMl}ml water</span>.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Macro ring */}
       <div className="px-5 mt-4 mb-4">
