@@ -205,27 +205,6 @@ function TrainPage() {
 
       <DailyQuests />
 
-      {/* Challenges entry */}
-      <div className="px-5 mb-4">
-        <Link
-          to="/challenges"
-          className="block bg-grit-card border border-accent-red p-3 hover:brightness-110 transition-all relative overflow-hidden grid-bg"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 flex items-center justify-center bg-accent-red text-white flex-shrink-0">
-              <Trophy size={20} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="label-cap text-[9px] text-accent-red">CHALLENGES</p>
-              <p className="display text-lg font-extrabold uppercase text-grit leading-tight">
-                Daily Challenge
-              </p>
-              <p className="text-[11px] text-grit-dim">5-min plank, max push-ups, dead hangs & more</p>
-            </div>
-            <span className="text-accent-red text-xl">→</span>
-          </div>
-        </Link>
-      </div>
 
 
 
