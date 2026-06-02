@@ -10,6 +10,7 @@ import { getExercise } from "@/lib/exercises";
 import { getMyProfile, saveProfile } from "@/lib/profile.functions";
 import { profileFromAccount } from "@/lib/account-restore";
 import type { Equipment, Experience, Gender, Goal, Profile, Weakness } from "@/lib/types";
+import { buildPublicStats } from "@/lib/fifa-stats";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "DEADSET — Onboarding" }] }),
