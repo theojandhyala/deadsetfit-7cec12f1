@@ -62,6 +62,7 @@ function TabsLayout() {
       className="min-h-screen bg-grit"
       style={{ paddingBottom: "calc(70px + env(safe-area-inset-bottom))" }}
     >
+      <TopBar />
       <Outlet />
       <BottomNav />
     </div>
