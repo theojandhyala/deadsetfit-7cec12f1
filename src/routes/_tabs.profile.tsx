@@ -10,7 +10,7 @@ import {
 import { saveProfile } from "@/lib/profile.functions";
 import { FifaCard } from "@/components/FifaCard";
 import {
-  PR_CATALOG, computeFifaStats, buildPublicStats, formatPRValue,
+  PR_CATALOG, computeFifaStats, buildPublicStats, buildHeadlinePRs, formatPRValue,
   type PRDef,
 } from "@/lib/fifa-stats";
 
@@ -157,7 +157,8 @@ function ProfilePage() {
           avatarUrl={p.avatarDataUrl}
           badge={badge}
           badgeColor={badgeC}
-          stats={fifa}
+          overall={fifa.overall}
+          prs={buildHeadlinePRs(state)}
           weightKg={p.weightKg}
           heightCm={p.heightCm}
           goal={p.goal}

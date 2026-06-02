@@ -194,11 +194,30 @@ export function computeFifaStats(state: AppState): FifaStats {
   return { STR, PWR, END, HYP, CON, DIE, overall };
 }
 
+/** The 6 headline lifts shown on the FIFA card. */
+export const HEADLINE_PRS: Array<{ id: string; short: string; unit: string }> = [
+  { id: "bench-press", short: "BENCH", unit: "kg" },
+  { id: "squat",       short: "SQUAT", unit: "kg" },
+  { id: "deadlift",    short: "DEAD",  unit: "kg" },
+  { id: "ohp",         short: "OHP",   unit: "kg" },
+  { id: "pull-ups",    short: "PULL",  unit: "reps" },
+  { id: "push-ups",    short: "PUSH",  unit: "reps" },
+];
+
+export interface HeadlinePR { id: string; label: string; value: number; unit: string }
+
+export function buildHeadlinePRs(state: AppState): HeadlinePR[] {
+  return HEADLINE_PRS.map(({ id, short, unit }) => {
+    const def = PR_CATALOG.find(d => d.id === id)!;
+    return { id, label: short, value: getPRValue(state, def), unit };
+  });
+}
+
 /** A compact, shareable payload to write to profiles.public_stats. */
 export interface PublicStats {
   overall: number;
   STR: number; PWR: number; END: number; HYP: number; CON: number; DIE: number;
-  topPRs: Array<{ id: string; label: string; value: number; unit: string }>;
+  topPRs: HeadlinePR[];
   goal?: string;
   experience?: string;
   weightKg?: number;
@@ -207,20 +226,10 @@ export interface PublicStats {
 
 export function buildPublicStats(state: AppState): PublicStats {
   const stats = computeFifaStats(state);
-  // Top PRs — the headline 6
-  const headlineIds = ["bench-press", "squat", "deadlift", "ohp", "pull-ups", "push-ups"];
-  const topPRs = headlineIds
-    .map(id => {
-      const def = PR_CATALOG.find(d => d.id === id)!;
-      const v = getPRValue(state, def);
-      if (!v) return null;
-      return { id, label: def.label, value: v, unit: def.kind === "1RM" ? "kg" : def.kind === "REPS" ? "reps" : "sec" };
-    })
-    .filter((x): x is { id: string; label: string; value: number; unit: string } => !!x);
   return {
     overall: stats.overall,
     STR: stats.STR, PWR: stats.PWR, END: stats.END, HYP: stats.HYP, CON: stats.CON, DIE: stats.DIE,
-    topPRs,
+    topPRs: buildHeadlinePRs(state),
     goal: state.profile?.goal,
     experience: state.profile?.experience,
     weightKg: state.profile?.weightKg,
