@@ -11,6 +11,13 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import faviconAsset from "@/assets/deadset-logo.png.asset.json";
+import icon16 from "@/assets/icon-16.png.asset.json";
+import icon32 from "@/assets/icon-32.png.asset.json";
+import icon76 from "@/assets/icon-76.png.asset.json";
+import icon120 from "@/assets/icon-120.png.asset.json";
+import icon152 from "@/assets/icon-152.png.asset.json";
+import icon167 from "@/assets/icon-167.png.asset.json";
+import icon180 from "@/assets/icon-180.png.asset.json";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { StateSync } from "../components/StateSync";
 
