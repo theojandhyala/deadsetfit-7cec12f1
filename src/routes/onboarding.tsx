@@ -513,3 +513,53 @@ function SchedulePreview({
     </>
   );
 }
+
+function emptySchedule(): import("@/lib/types").Schedule {
+  const days = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] as const;
+  const out = {} as Record<string, { label: string; exerciseIds: string[] }>;
+  days.forEach((d) => {
+    out[d] = { label: "REST", exerciseIds: [] };
+  });
+  return out as import("@/lib/types").Schedule;
+}
+
+function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
+  return (
+    <>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">
+        How do you want to start?
+      </h1>
+      <p className="text-sm text-[#8a8a8a] mb-8">
+        Pick one. You can change everything later.
+      </p>
+      <div className="flex flex-col gap-3">
+        <button
+          onClick={() => onPick("GENERATE")}
+          className="bg-grit-card border-2 border-accent-red p-6 text-left hover:bg-[#1a0a08] transition-colors"
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <Zap size={14} className="text-accent-red" />
+            <span className="label-cap text-accent-red">RECOMMENDED</span>
+          </div>
+          <span className="display text-2xl uppercase tracking-wide font-extrabold text-grit block">
+            Generate Schedule
+          </span>
+          <p className="text-xs text-[#8a8a8a] mt-1">
+            Answer 3 questions. We build your week.
+          </p>
+        </button>
+        <button
+          onClick={() => onPick("BUILD")}
+          className="bg-grit-card border border-grit p-6 text-left hover:border-accent-red transition-colors"
+        >
+          <span className="display text-2xl uppercase tracking-wide font-extrabold text-grit block">
+            Build Your Own
+          </span>
+          <p className="text-xs text-[#8a8a8a] mt-1">
+            Start blank. Add your own splits and lifts.
+          </p>
+        </button>
+      </div>
+    </>
+  );
+}
