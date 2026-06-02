@@ -527,15 +527,17 @@ function AthleteRow({ a, busy, onToggle }: {
 }) {
   return (
     <div className="bg-grit-card border border-grit p-3 mb-2 flex items-center gap-3">
-      <div className="w-10 h-10 bg-[#1a1a1a] border border-grit flex items-center justify-center display font-extrabold text-grit overflow-hidden">
-        {a.avatar_url ? <img src={a.avatar_url} alt="" className="w-full h-full object-cover" /> : (a.display_name || a.username || "A")[0]}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-bold text-grit text-sm truncate">{a.display_name || a.username || "Athlete"}</p>
-        <p className="text-[10px] text-[#8a8a8a] label-cap truncate">
-          {a.username ? `@${a.username} · ` : ""}{a.level}{a.grit_points ? ` · ${a.grit_points} DS` : ""}
-        </p>
-      </div>
+      <Link to="/athlete/$id" params={{ id: a.id }} className="flex items-center gap-3 flex-1 min-w-0">
+        <div className="w-10 h-10 bg-[#1a1a1a] border border-grit flex items-center justify-center display font-extrabold text-grit overflow-hidden">
+          {a.avatar_url ? <img src={a.avatar_url} alt="" className="w-full h-full object-cover" /> : (a.display_name || a.username || "A")[0]}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-grit text-sm truncate">{a.display_name || a.username || "Athlete"}</p>
+          <p className="text-[10px] text-[#8a8a8a] label-cap truncate">
+            {a.username ? `@${a.username} · ` : ""}{a.level}{a.grit_points ? ` · ${a.grit_points} DS` : ""}
+          </p>
+        </div>
+      </Link>
       <button
         onClick={onToggle}
         disabled={busy}
