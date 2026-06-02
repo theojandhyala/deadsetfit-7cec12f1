@@ -196,6 +196,7 @@ export type Database = {
           level: string
           onboarded: boolean
           pro_until: string | null
+          public_stats: Json
           referral_code: string | null
           referred_by: string | null
           updated_at: string
@@ -224,6 +225,7 @@ export type Database = {
           level?: string
           onboarded?: boolean
           pro_until?: string | null
+          public_stats?: Json
           referral_code?: string | null
           referred_by?: string | null
           updated_at?: string
@@ -252,6 +254,7 @@ export type Database = {
           level?: string
           onboarded?: boolean
           pro_until?: string | null
+          public_stats?: Json
           referral_code?: string | null
           referred_by?: string | null
           updated_at?: string
@@ -346,24 +349,30 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           display_name: string | null
+          grit_points: number | null
           id: string | null
           level: string | null
+          public_stats: Json | null
           username: string | null
         }
         Insert: {
           avatar_url?: string | null
           bio?: string | null
           display_name?: string | null
+          grit_points?: number | null
           id?: string | null
           level?: string | null
+          public_stats?: Json | null
           username?: string | null
         }
         Update: {
           avatar_url?: string | null
           bio?: string | null
           display_name?: string | null
+          grit_points?: number | null
           id?: string | null
           level?: string | null
+          public_stats?: Json | null
           username?: string | null
         }
         Relationships: []

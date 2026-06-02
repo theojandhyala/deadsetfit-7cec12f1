@@ -18,4 +18,5 @@ export const DEFAULT_STATE: AppState = {
   water: [],
   waterTargetMl: 3000,
   hydrationAlertsEnabled: true,
+  manualPRs: {},
 };

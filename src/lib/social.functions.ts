@@ -224,6 +224,35 @@ export const getMyFollowStats = createServerFn({ method: "GET" })
     return { following: following ?? 0, followers: followers ?? 0 };
   });
 
+// === Athlete public card (for /athlete/$id) ===
+const AthleteInput = z.object({ userId: z.string().uuid() });
+export const getAthleteCard = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => AthleteInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: row, error } = await supabaseAdmin
+      .from("public_profiles")
+      .select("id, username, display_name, avatar_url, bio, grit_points, public_stats")
+      .eq("id", data.userId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) throw new Error("Athlete not found");
+    const [{ data: follow }, { count: followers }, { count: following }] = await Promise.all([
+      supabase.from("follows").select("follower_id").eq("follower_id", userId).eq("following_id", data.userId).maybeSingle(),
+      supabase.from("follows").select("*", { count: "exact", head: true }).eq("following_id", data.userId),
+      supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", data.userId),
+    ]);
+    return {
+      ...row,
+      level: gritLevel(row.grit_points ?? 0),
+      following: !!follow,
+      followerCount: followers ?? 0,
+      followingCount: following ?? 0,
+      isMe: userId === data.userId,
+    };
+  });
+
 // === Referrals ===
 export const getMyReferralInfo = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

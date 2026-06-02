@@ -194,4 +194,5 @@ export interface AppState {
   waterTargetMl: number;
   hydrationAlertsEnabled: boolean;
   challengeRecords?: ChallengeRecord[];
+  manualPRs?: Record<string, { value: number; reps?: number; date: string }>;
 }
