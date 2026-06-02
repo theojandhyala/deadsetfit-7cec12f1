@@ -178,7 +178,7 @@ function TrainPage() {
             <div className="flex-1 min-w-0">
               <p className="label-cap text-[9px] text-accent-red">CHALLENGES</p>
               <p className="display text-lg font-extrabold uppercase text-grit leading-tight">
-                Beat the Boss
+                Daily Challenge
               </p>
               <p className="text-[11px] text-grit-dim">5-min plank, max push-ups, dead hangs & more</p>
             </div>
