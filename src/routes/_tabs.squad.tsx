@@ -294,8 +294,13 @@ function League({ userId }: { userId: string }) {
       <div className="bg-grit-card border border-grit">
         {data.top.length === 0 && <p className="p-5 text-sm text-[#8a8a8a] text-center">No athletes yet.</p>}
         {data.top.slice(0, 50).map(p => (
-          <div key={p.id} className="flex items-center gap-3 px-4 py-3 border-b border-grit last:border-b-0"
-            style={{ background: p.id === userId ? "rgba(230,50,34,0.08)" : undefined }}>
+          <Link
+            key={p.id}
+            to="/athlete/$id"
+            params={{ id: p.id }}
+            className="flex items-center gap-3 px-4 py-3 border-b border-grit last:border-b-0 hover:bg-[#1a1a1a]"
+            style={{ background: p.id === userId ? "rgba(230,50,34,0.08)" : undefined }}
+          >
             <div className="display font-extrabold text-grit text-lg w-7 text-center">
               {p.rank === 1 ? "🥇" : p.rank === 2 ? "🥈" : p.rank === 3 ? "🥉" : p.rank}
             </div>
@@ -306,7 +311,7 @@ function League({ userId }: { userId: string }) {
               </p>
             </div>
             <span className="display font-extrabold text-accent-red text-base">{p.grit_points}</span>
-          </div>
+          </Link>
         ))}
       </div>
     </div>
