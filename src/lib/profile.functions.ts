@@ -18,6 +18,7 @@ const ProfileSchema = z.object({
   bio: z.string().max(500).optional(),
   avatar_url: z.string().max(2_000_000).optional(),
   onboarded: z.boolean().optional(),
+  public_stats: z.record(z.string(), z.any()).optional(),
 });
 
 export const saveProfile = createServerFn({ method: "POST" })
