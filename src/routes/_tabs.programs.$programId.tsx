@@ -112,6 +112,28 @@ function BuilderPage() {
       return { ...p, days: { ...p.days, [day]: { ...p.days[day], items: [...p.days[day].items, toRef(ex)] } } };
     });
   }
+  function addCustomExercise(name: string) {
+    const clean = name.trim().slice(0, 60);
+    if (clean.length < 2) {
+      toast.error("Name must be at least 2 characters");
+      return;
+    }
+    const ref: ProgramExerciseRef = {
+      id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: clean,
+      equipment: "CUSTOM",
+      primary_muscles: [],
+      youtube_query: clean,
+      sets: 3,
+      reps: "8-12",
+    };
+    update((p) => ({
+      ...p,
+      days: { ...p.days, [day]: { ...p.days[day], items: [...p.days[day].items, ref] } },
+    }));
+    toast.success(`Added "${clean}"`);
+    setSearch("");
+  }
   function removeItem(id: string) {
     update((p) => ({ ...p, days: { ...p.days, [day]: { ...p.days[day], items: p.days[day].items.filter((i) => i.id !== id) } } }));
   }
