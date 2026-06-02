@@ -59,9 +59,11 @@ function orderFor(mode: Mode | null): Step[] {
 function Onboarding() {
   const navigate = useNavigate();
   const [idx, setIdx] = useState(0);
+  const [mode, setMode] = useState<Mode | null>(null);
   const [draft, setDraft] = useState<Partial<Profile>>({});
   const save = useServerFn(saveProfile);
   const getProfile = useServerFn(getMyProfile);
+  const ORDER = useMemo(() => orderFor(mode), [mode]);
   const step = ORDER[idx];
 
   useEffect(() => {
