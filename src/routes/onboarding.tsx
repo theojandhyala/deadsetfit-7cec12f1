@@ -112,6 +112,7 @@ function Onboarding() {
       } as Profile;
       const sched = mode === "BUILD" ? emptySchedule() : defaultSchedule(p);
       setState((s) => ({ ...s, profile: p, schedule: sched }));
+      const publicStats = buildPublicStats(getState());
       save({
         data: {
           username: p.username,
@@ -125,6 +126,7 @@ function Onboarding() {
           days_per_week: p.daysPerWeek,
           equipment: p.equipment,
           avatar_url: p.avatarDataUrl,
+          public_stats: publicStats,
           onboarded: true,
         },
       })
