@@ -20,6 +20,7 @@ import icon167 from "@/assets/icon-167.png.asset.json";
 import icon180 from "@/assets/icon-180.png.asset.json";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { StateSync } from "../components/StateSync";
+import { UsernameGate } from "../components/UsernameGate";
 
 
 
