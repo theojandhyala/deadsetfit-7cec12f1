@@ -137,9 +137,9 @@ function ProfilePage() {
 
   return (
     <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
-      <header className="px-5 pt-6 pb-4 flex items-center justify-between">
+      <header className="px-5 pt-6 pb-4 flex items-start justify-between">
         <p className="label-cap">YOUR CARD</p>
-        <button onClick={() => editing ? save() : setEditing(true)} disabled={savingProfile} className="label-cap text-accent-red disabled:opacity-50">
+        <button onClick={() => editing ? save() : setEditing(true)} disabled={savingProfile} className="label-cap text-accent-red disabled:opacity-50 mt-1">
           {editing ? (savingProfile ? "..." : "Save") : "Edit"}
         </button>
       </header>
