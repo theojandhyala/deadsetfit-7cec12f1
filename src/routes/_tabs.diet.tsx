@@ -350,7 +350,7 @@ function DietPage() {
       </section>
 
       {/* Food log */}
-      <section className="px-5 mb-6">
+      <section id="food-log-section" className="px-5 mb-6">
         <p className="label-cap mb-2">Food Log</p>
         <div className="bg-grit-card border border-grit p-4">
           {/* Quick input row */}
