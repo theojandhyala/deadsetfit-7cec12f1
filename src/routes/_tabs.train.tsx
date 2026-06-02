@@ -260,24 +260,6 @@ function TrainPage() {
       })()}
 
 
-      {/* START WORKOUT CTA */}
-      {((activeProgram ? (programDay?.items.length || 0) : (day?.exerciseIds?.length || 0)) > 0) && selectedDay === todayKey() && (
-        <div className="px-5 mb-4">
-          <Link to="/workout/live" className="btn-grit w-full text-base py-4 flex items-center justify-center">
-            <Flame size={18} className="mr-2" /> Start Workout
-          </Link>
-        </div>
-      )}
-
-      {!activeProgram && (
-        <div className="px-5 mb-5 flex gap-2">
-          <button onClick={handleGenerate} disabled={genLoading} className="btn-grit flex-1">
-            {genLoading ? <Loader2 className="animate-spin mr-2" size={16} /> : <Sparkles size={16} className="mr-2" />}
-            Generate Schedule
-          </button>
-        </div>
-      )}
-      {genError && <p className="px-5 mb-3 text-sm text-accent-red">{genError}</p>}
 
       {/* Edit mode: assign muscle group per day */}
       {editMode && (
