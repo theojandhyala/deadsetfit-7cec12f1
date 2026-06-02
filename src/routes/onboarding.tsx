@@ -267,6 +267,7 @@ function Onboarding() {
             onPick={(v) => next({ weakness: v as Weakness })}
           />
         )}
+        {step === "prs" && <PRStep onContinue={() => next({})} />}
         {step === "username" && <UsernameStep onSubmit={(u) => next({ username: u })} />}
         {step === "photo" && (
           <PhotoStep onSubmit={(url) => next({ avatarDataUrl: url })} onSkip={() => next({})} />
