@@ -29,6 +29,7 @@ type Step =
   | "gender"
   | "injuries"
   | "weakness"
+  | "prs"
   | "username"
   | "photo";
 
@@ -51,6 +52,7 @@ function orderFor(mode: Mode | null): Step[] {
     "gender",
     "injuries",
     "weakness",
+    "prs",
     "username",
     "photo",
   ];
