@@ -175,13 +175,13 @@ export const searchAthletes = createServerFn({ method: "POST" })
       .neq("id", userId)
       .limit(20);
     if (error) throw new Error(error.message);
-    const ids = (rows ?? []).map(r => r.id);
+    const ids = (rows ?? []).map(r => r.id).filter((x): x is string => !!x);
     const { data: follows } = await supabase
       .from("follows").select("following_id")
       .eq("follower_id", userId)
       .in("following_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
     const followingSet = new Set((follows ?? []).map(f => f.following_id));
-    return (rows ?? []).map(r => ({ ...r, following: followingSet.has(r.id) }));
+    return (rows ?? []).filter(r => r.id).map(r => ({ ...r, id: r.id as string, following: followingSet.has(r.id as string) }));
   });
 
 // === Suggested athletes (top of leaderboard, not already followed) ===
