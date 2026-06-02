@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /auth
+Disallow: /onboarding
+Disallow: /workout/
+Disallow: /api/
+
+Sitemap: https://deadsetfit.org/sitemap.xml
