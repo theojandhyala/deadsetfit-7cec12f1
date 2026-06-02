@@ -155,6 +155,14 @@ function Onboarding() {
         </div>
       </div>
       <div className="flex-1 px-6 pt-10 pb-10 flex flex-col">
+        {step === "mode" && (
+          <ModeStep
+            onPick={(m) => {
+              setMode(m);
+              setIdx(1);
+            }}
+          />
+        )}
         {step === "goal" && (
           <Choice
             title="What's your goal?"
