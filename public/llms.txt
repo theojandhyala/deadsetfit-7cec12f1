@@ -1,0 +1,8 @@
+# DEADSET
+
+> DEADSET is a no-nonsense gym companion app. Train. Build. Become. Track PRs, follow programs, log workouts, and forge your physique with friends.
+
+DEADSET turns lifting into a game. Log your top lifts (bench, squat, deadlift, OHP, pull-ups, push-ups), follow guided programs, earn Grit points and ranks, and compare FIFA-style athlete cards with your squad.
+
+## Pages
+- [Home](/): DEADSET — Forge Your Body. Overview and sign-in entry.
