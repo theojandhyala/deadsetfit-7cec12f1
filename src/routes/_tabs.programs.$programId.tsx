@@ -315,6 +315,23 @@ function BuilderPage() {
               />
             </div>
             <div className="overflow-y-auto flex-1 -mx-1 px-1">
+              {search.trim().length >= 2 && (
+                <button
+                  onClick={() => addCustomExercise(search)}
+                  className="w-full text-left px-3 py-2 mb-2 flex items-center justify-between gap-2 border-2 border-dashed"
+                  style={{ background: "#0a0a0a", borderColor: "#e63222" }}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="label-cap text-xs text-accent-red truncate">
+                      + CREATE "{search.trim()}"
+                    </div>
+                    <div className="text-[9px] label-cap text-grit-dim mt-0.5">
+                      Type your own exercise
+                    </div>
+                  </div>
+                  <Plus size={14} className="text-accent-red" />
+                </button>
+              )}
               {allQ.isLoading && <p className="label-cap text-grit-dim text-xs py-4 text-center">Loading library…</p>}
               <ul className="space-y-1.5">
                 {filtered.map((ex) => {
@@ -342,8 +359,8 @@ function BuilderPage() {
                     </li>
                   );
                 })}
-                {filtered.length === 0 && !allQ.isLoading && (
-                  <li className="label-cap text-grit-dim text-xs text-center py-6">No matches</li>
+                {filtered.length === 0 && !allQ.isLoading && search.trim().length < 2 && (
+                  <li className="label-cap text-grit-dim text-xs text-center py-6">Type to search or create</li>
                 )}
               </ul>
             </div>
