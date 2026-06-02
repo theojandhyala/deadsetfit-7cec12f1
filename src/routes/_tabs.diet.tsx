@@ -202,6 +202,36 @@ function DietPage() {
         <p className="text-xs text-[#8a8a8a] mt-1">{totals.c} eaten · {Math.max(0, calories - totals.c)} remaining</p>
       </header>
 
+      {/* ===== QUICK ACTIONS — log a meal fast ===== */}
+      <div className="px-5 mt-3">
+        <p className="label-cap text-[10px] text-[#8a8a8a] mb-2">Log a meal</p>
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={analyzing}
+            className="btn-grit py-3 flex flex-col items-center justify-center gap-1 text-[10px]"
+          >
+            {analyzing ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
+            <span className="label-cap">{analyzing ? "…" : "Scan Photo"}</span>
+          </button>
+          <button
+            onClick={() => setBarcodeOpen(v => !v)}
+            className="btn-ghost py-3 flex flex-col items-center justify-center gap-1 text-[10px]"
+          >
+            <ScanBarcode size={16} />
+            <span className="label-cap">Barcode</span>
+          </button>
+          <button
+            onClick={() => { const el = document.getElementById("food-log-section"); el?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
+            className="btn-ghost py-3 flex flex-col items-center justify-center gap-1 text-[10px]"
+          >
+            <Plus size={16} />
+            <span className="label-cap">Manual</span>
+          </button>
+        </div>
+        {error && <p className="text-xs text-accent-red mt-2">{error}</p>}
+      </div>
+
       {/* BMI + per-meal breakdown */}
       {profile && (
         <div className="px-5 mt-3">
@@ -320,7 +350,7 @@ function DietPage() {
       </section>
 
       {/* Food log */}
-      <section className="px-5 mb-6">
+      <section id="food-log-section" className="px-5 mb-6">
         <p className="label-cap mb-2">Food Log</p>
         <div className="bg-grit-card border border-grit p-4">
           {/* Quick input row */}

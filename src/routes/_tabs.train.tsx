@@ -119,6 +119,46 @@ function TrainPage() {
       </header>
       <Reminders />
 
+      {/* ===== QUICK ACTIONS — everything you need, up top ===== */}
+      {(() => {
+        const today = todayKey();
+        const todaysItems = activeProgram
+          ? (activeProgram.days[today]?.items.length || 0)
+          : (schedule[today]?.exerciseIds?.length || 0);
+        const hasSchedule = !!state.schedule || !!activeProgram;
+        const canStart = todaysItems > 0;
+        return (
+          <div className="px-5 mb-5">
+            <div className="grid grid-cols-1 gap-2">
+              {canStart ? (
+                <Link to="/workout/live" className="btn-grit w-full text-base py-4 flex items-center justify-center">
+                  <Flame size={18} className="mr-2" /> Start Today's Workout
+                </Link>
+              ) : !hasSchedule ? (
+                <button onClick={handleGenerate} disabled={genLoading} className="btn-grit w-full text-base py-4 flex items-center justify-center">
+                  {genLoading ? <Loader2 className="animate-spin mr-2" size={18} /> : <Sparkles size={18} className="mr-2" />}
+                  Generate My Schedule
+                </button>
+              ) : (
+                <div className="bg-grit-card border border-grit p-3 text-center">
+                  <p className="label-cap text-accent-red text-[10px]">REST DAY</p>
+                  <p className="text-xs text-grit-dim mt-1">No exercises today — recover & come back stronger.</p>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-2">
+                <Link to="/programs" className="btn-ghost py-2.5 flex items-center justify-center gap-2 text-xs">
+                  <ListPlus size={14} /> Schedule
+                </Link>
+                <Link to="/challenges" className="btn-ghost py-2.5 flex items-center justify-center gap-2 text-xs">
+                  <Trophy size={14} /> Daily Challenge
+                </Link>
+              </div>
+            </div>
+            {genError && <p className="text-xs text-accent-red mt-2">{genError}</p>}
+          </div>
+        );
+      })()}
+
       {/* DEADSET Power Level banner — futuristic XP card */}
       {(() => {
         const score = calculateGritScore(state);
@@ -165,27 +205,6 @@ function TrainPage() {
 
       <DailyQuests />
 
-      {/* Challenges entry */}
-      <div className="px-5 mb-4">
-        <Link
-          to="/challenges"
-          className="block bg-grit-card border border-accent-red p-3 hover:brightness-110 transition-all relative overflow-hidden grid-bg"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 flex items-center justify-center bg-accent-red text-white flex-shrink-0">
-              <Trophy size={20} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="label-cap text-[9px] text-accent-red">CHALLENGES</p>
-              <p className="display text-lg font-extrabold uppercase text-grit leading-tight">
-                Daily Challenge
-              </p>
-              <p className="text-[11px] text-grit-dim">5-min plank, max push-ups, dead hangs & more</p>
-            </div>
-            <span className="text-accent-red text-xl">→</span>
-          </div>
-        </Link>
-      </div>
 
 
 
@@ -241,24 +260,6 @@ function TrainPage() {
       })()}
 
 
-      {/* START WORKOUT CTA */}
-      {((activeProgram ? (programDay?.items.length || 0) : (day?.exerciseIds?.length || 0)) > 0) && selectedDay === todayKey() && (
-        <div className="px-5 mb-4">
-          <Link to="/workout/live" className="btn-grit w-full text-base py-4 flex items-center justify-center">
-            <Flame size={18} className="mr-2" /> Start Workout
-          </Link>
-        </div>
-      )}
-
-      {!activeProgram && (
-        <div className="px-5 mb-5 flex gap-2">
-          <button onClick={handleGenerate} disabled={genLoading} className="btn-grit flex-1">
-            {genLoading ? <Loader2 className="animate-spin mr-2" size={16} /> : <Sparkles size={16} className="mr-2" />}
-            Generate Schedule
-          </button>
-        </div>
-      )}
-      {genError && <p className="px-5 mb-3 text-sm text-accent-red">{genError}</p>}
 
       {/* Edit mode: assign muscle group per day */}
       {editMode && (
