@@ -58,10 +58,10 @@ function SquadPage() {
         <p className="label-cap">SQUAD</p>
         <h1 className="display text-4xl font-extrabold text-grit leading-none mt-1">THE PACK</h1>
       </header>
-      <div className="px-5 mt-4 flex gap-2 border-b border-grit">
-        {(["FEED", "LEAGUE", "INVITE"] as Tab[]).map(t => (
+      <div className="px-5 mt-4 flex gap-2 border-b border-grit overflow-x-auto">
+        {(["FEED", "FRIENDS", "LEAGUE", "INVITE"] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)}
-            className="label-cap pb-3 pt-1 border-b-2"
+            className="label-cap pb-3 pt-1 border-b-2 whitespace-nowrap"
             style={{ borderColor: tab === t ? "#e63222" : "transparent", color: tab === t ? "#f5f5f0" : "#8a8a8a" }}>
             {t}
           </button>
@@ -69,6 +69,7 @@ function SquadPage() {
       </div>
       <div className="pt-4">
         {tab === "FEED" && <Feed userId={session.userId} />}
+        {tab === "FRIENDS" && <Friends />}
         {tab === "LEAGUE" && <League userId={session.userId} />}
         {tab === "INVITE" && <Invite />}
       </div>
