@@ -1,8 +1,9 @@
-import type { FifaStats, PublicStats } from "@/lib/fifa-stats";
+import type { HeadlinePR } from "@/lib/fifa-stats";
 
 /**
  * FIFA-style athlete card.
  * Used on the user's own profile and on /athlete/$id pages.
+ * The 6 stat tiles show the athlete's headline PRs (Bench, Squat, etc.).
  */
 export function FifaCard({
   name,
@@ -10,7 +11,8 @@ export function FifaCard({
   avatarUrl,
   badge,
   badgeColor: badgeC,
-  stats,
+  overall,
+  prs,
   weightKg,
   heightCm,
   goal,
@@ -22,14 +24,14 @@ export function FifaCard({
   avatarUrl?: string | null;
   badge: string;
   badgeColor: string;
-  stats: FifaStats | PublicStats;
+  overall: number;
+  prs: HeadlinePR[];
   weightKg?: number;
   heightCm?: number;
   goal?: string;
   experience?: string;
   compact?: boolean;
 }) {
-  const overall = stats.overall;
   return (
     <div
       className={"relative border-2 overflow-hidden " + (compact ? "p-3" : "p-5")}
@@ -85,29 +87,28 @@ export function FifaCard({
         </div>
       </div>
 
-      {/* Stat grid — FIFA-style 6 stats */}
+      {/* PR grid — 6 headline lifts */}
       <div className="grid grid-cols-3 gap-2 mt-4">
-        <Stat label="STR" value={stats.STR} color={badgeC} />
-        <Stat label="PWR" value={stats.PWR} color={badgeC} />
-        <Stat label="END" value={stats.END} color={badgeC} />
-        <Stat label="HYP" value={stats.HYP} color={badgeC} />
-        <Stat label="CON" value={stats.CON} color={badgeC} />
-        <Stat label="DIE" value={stats.DIE} color={badgeC} />
+        {prs.map((pr) => (
+          <PRTile key={pr.id} label={pr.label} value={pr.value} unit={pr.unit} color={badgeC} />
+        ))}
       </div>
     </div>
   );
 }
 
-function Stat({ label, value, color }: { label: string; value: number; color: string }) {
+function PRTile({ label, value, unit, color }: { label: string; value: number; unit: string; color: string }) {
+  const hasValue = value > 0;
   return (
-    <div className="flex items-baseline gap-2 border border-[#262626] bg-black/40 px-2 py-1.5">
-      <span
-        className="display font-extrabold tabular-nums leading-none text-xl"
-        style={{ color: value >= 80 ? color : value >= 60 ? "#fbbf24" : value >= 40 ? "#cbd5e1" : "#6b7280" }}
+    <div className="border border-[#262626] bg-black/40 px-2 py-2">
+      <p className="label-cap text-[9px] text-grit-dim leading-none">{label}</p>
+      <p
+        className="display font-extrabold tabular-nums leading-none mt-1.5"
+        style={{ color: hasValue ? color : "#4a4a4a", fontSize: "1.25rem" }}
       >
-        {value || "—"}
-      </span>
-      <span className="label-cap text-[9px] text-grit-dim">{label}</span>
+        {hasValue ? value : "—"}
+        {hasValue && <span className="text-[9px] ml-0.5 text-grit-dim font-normal">{unit}</span>}
+      </p>
     </div>
   );
 }
