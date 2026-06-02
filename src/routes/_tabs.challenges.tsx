@@ -72,7 +72,7 @@ function ChallengesPage() {
         <div className="neon-card grid-bg p-4">
           <p className="label-cap text-[9px]">PROVE IT</p>
           <h1 className="display text-3xl font-extrabold uppercase text-grit leading-tight mt-1">
-            Beat the <span className="text-accent-red text-glow-red">Boss</span>
+            Daily <span className="text-accent-red text-glow-red">Challenge</span>
           </h1>
           <p className="text-sm text-grit-dim mt-2">
             Pick a challenge. Hit the target. Earn XP. Brag forever.
