@@ -157,7 +157,8 @@ function ProfilePage() {
           avatarUrl={p.avatarDataUrl}
           badge={badge}
           badgeColor={badgeC}
-          stats={fifa}
+          overall={fifa.overall}
+          prs={buildHeadlinePRs(state)}
           weightKg={p.weightKg}
           heightCm={p.heightCm}
           goal={p.goal}
