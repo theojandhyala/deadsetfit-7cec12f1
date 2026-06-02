@@ -145,6 +145,7 @@ function RootComponent() {
       <StateSync />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
+      <UsernameGate />
     </QueryClientProvider>
   );
 }
