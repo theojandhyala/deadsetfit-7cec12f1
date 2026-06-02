@@ -17,6 +17,7 @@ export const Route = createFileRoute("/onboarding")({
 });
 
 type Step =
+  | "mode"
   | "goal"
   | "days"
   | "equipment"
@@ -31,28 +32,38 @@ type Step =
   | "username"
   | "photo";
 
-const ORDER: Step[] = [
-  "goal",
-  "days",
-  "equipment",
-  "schedule",
-  "experience",
-  "age",
-  "weight",
-  "height",
-  "gender",
-  "injuries",
-  "weakness",
-  "username",
-  "photo",
-];
+type Mode = "GENERATE" | "BUILD";
+
+function orderFor(mode: Mode | null): Step[] {
+  const base: Step[] = ["mode"];
+  if (!mode) return base;
+  const schedule: Step[] =
+    mode === "GENERATE"
+      ? ["goal", "days", "equipment", "schedule"]
+      : ["goal", "days", "equipment"];
+  return [
+    ...base,
+    ...schedule,
+    "experience",
+    "age",
+    "weight",
+    "height",
+    "gender",
+    "injuries",
+    "weakness",
+    "username",
+    "photo",
+  ];
+}
 
 function Onboarding() {
   const navigate = useNavigate();
   const [idx, setIdx] = useState(0);
+  const [mode, setMode] = useState<Mode | null>(null);
   const [draft, setDraft] = useState<Partial<Profile>>({});
   const save = useServerFn(saveProfile);
   const getProfile = useServerFn(getMyProfile);
+  const ORDER = useMemo(() => orderFor(mode), [mode]);
   const step = ORDER[idx];
 
   useEffect(() => {
@@ -96,7 +107,8 @@ function Onboarding() {
         ...merged,
         startingWeightKg: merged.startingWeightKg ?? merged.weightKg,
       } as Profile;
-      setState((s) => ({ ...s, profile: p, schedule: defaultSchedule(p) }));
+      const sched = mode === "BUILD" ? emptySchedule() : defaultSchedule(p);
+      setState((s) => ({ ...s, profile: p, schedule: sched }));
       save({
         data: {
           username: p.username,
@@ -143,6 +155,14 @@ function Onboarding() {
         </div>
       </div>
       <div className="flex-1 px-6 pt-10 pb-10 flex flex-col">
+        {step === "mode" && (
+          <ModeStep
+            onPick={(m: Mode) => {
+              setMode(m);
+              setIdx(1);
+            }}
+          />
+        )}
         {step === "goal" && (
           <Choice
             title="What's your goal?"
@@ -490,6 +510,56 @@ function SchedulePreview({
       <button onClick={onContinue} className="btn-grit mt-auto">
         Lock it in — finish profile
       </button>
+    </>
+  );
+}
+
+function emptySchedule(): import("@/lib/types").Schedule {
+  const days = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] as const;
+  const out = {} as Record<string, { label: string; exerciseIds: string[] }>;
+  days.forEach((d) => {
+    out[d] = { label: "REST", exerciseIds: [] };
+  });
+  return out as import("@/lib/types").Schedule;
+}
+
+function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
+  return (
+    <>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">
+        How do you want to start?
+      </h1>
+      <p className="text-sm text-[#8a8a8a] mb-8">
+        Pick one. You can change everything later.
+      </p>
+      <div className="flex flex-col gap-3">
+        <button
+          onClick={() => onPick("GENERATE")}
+          className="bg-grit-card border-2 border-accent-red p-6 text-left hover:bg-[#1a0a08] transition-colors"
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <Zap size={14} className="text-accent-red" />
+            <span className="label-cap text-accent-red">RECOMMENDED</span>
+          </div>
+          <span className="display text-2xl uppercase tracking-wide font-extrabold text-grit block">
+            Generate Schedule
+          </span>
+          <p className="text-xs text-[#8a8a8a] mt-1">
+            Answer 3 questions. We build your week.
+          </p>
+        </button>
+        <button
+          onClick={() => onPick("BUILD")}
+          className="bg-grit-card border border-grit p-6 text-left hover:border-accent-red transition-colors"
+        >
+          <span className="display text-2xl uppercase tracking-wide font-extrabold text-grit block">
+            Build Your Own
+          </span>
+          <p className="text-xs text-[#8a8a8a] mt-1">
+            Start blank. Add your own splits and lifts.
+          </p>
+        </button>
+      </div>
     </>
   );
 }
