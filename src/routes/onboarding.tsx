@@ -566,3 +566,62 @@ function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
     </>
   );
 }
+
+const ONBOARDING_PRS: Array<{ id: string; label: string; unit: string; placeholder: string }> = [
+  { id: "bench-press", label: "Bench Press",     unit: "kg",   placeholder: "80"  },
+  { id: "squat",       label: "Back Squat",      unit: "kg",   placeholder: "100" },
+  { id: "deadlift",    label: "Deadlift",        unit: "kg",   placeholder: "120" },
+  { id: "ohp",         label: "Overhead Press",  unit: "kg",   placeholder: "50"  },
+  { id: "pull-ups",    label: "Pull-Ups (max)",  unit: "reps", placeholder: "10"  },
+  { id: "push-ups",    label: "Push-Ups (max)",  unit: "reps", placeholder: "30"  },
+];
+
+function PRStep({ onContinue }: { onContinue: () => void }) {
+  const [vals, setVals] = useState<Record<string, string>>({});
+
+  function commit() {
+    const today = new Date().toISOString().slice(0, 10);
+    const manualPRs: Record<string, { value: number; reps?: number; date: string }> = {};
+    for (const pr of ONBOARDING_PRS) {
+      const n = Number(vals[pr.id]);
+      if (n > 0) {
+        manualPRs[pr.id] = pr.unit === "kg" ? { value: n, reps: 1, date: today } : { value: n, date: today };
+      }
+    }
+    if (Object.keys(manualPRs).length) {
+      setState((s) => ({ ...s, manualPRs: { ...(s.manualPRs ?? {}), ...manualPRs } }));
+    }
+    onContinue();
+  }
+
+  return (
+    <>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">Your PRs</h1>
+      <p className="text-sm text-[#8a8a8a] mb-6">
+        Drop your best lifts. Powers your athlete card. Leave blank to skip.
+      </p>
+      <div className="flex flex-col gap-2 mb-6">
+        {ONBOARDING_PRS.map((pr) => (
+          <div key={pr.id} className="bg-grit-card border border-grit px-3 py-2 flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-grit truncate">{pr.label}</p>
+              <p className="label-cap text-[9px] text-grit-dim">{pr.unit === "kg" ? "1-rep max" : "max reps"}</p>
+            </div>
+            <input
+              value={vals[pr.id] ?? ""}
+              onChange={(e) => setVals((v) => ({ ...v, [pr.id]: e.target.value }))}
+              inputMode="decimal"
+              placeholder={pr.placeholder}
+              className="input-grit w-20 text-right"
+            />
+            <span className="label-cap text-[10px] text-grit-dim w-8">{pr.unit}</span>
+          </div>
+        ))}
+      </div>
+      <div className="mt-auto flex flex-col gap-3">
+        <button onClick={commit} className="btn-grit">Continue</button>
+        <button onClick={onContinue} className="btn-ghost">Skip</button>
+      </div>
+    </>
+  );
+}
