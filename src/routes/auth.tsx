@@ -80,7 +80,10 @@ function AuthPage() {
 
   return (
     <div className="min-h-screen bg-grit flex flex-col items-center justify-center px-6">
-      <GritLogo className="text-5xl mb-1" />
+      <span className="display font-extrabold tracking-wider text-5xl mb-1" style={{ fontStyle: "italic" }}>
+        <span style={{ color: "#f5f5f0" }}>DEAD</span>
+        <span style={{ color: "#e63222" }}>SET</span>
+      </span>
       <p className="label-cap text-grit-dim mb-8">Forge Your Body</p>
 
       <div className="w-full max-w-sm" style={{ background: "#1a1a1a", padding: "24px", border: "1px solid #222" }}>

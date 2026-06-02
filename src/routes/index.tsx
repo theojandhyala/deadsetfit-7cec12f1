@@ -2,7 +2,6 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { getState, setState, waitForRemoteState } from "@/lib/storage";
-import { GritLogo } from "@/components/GritLogo";
 import { getMyProfile } from "@/lib/profile.functions";
 import { profileFromAccount } from "@/lib/account-restore";
 import { defaultSchedule } from "@/lib/calc";
@@ -69,7 +68,10 @@ function Index() {
   }, [getProfile, navigate]);
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-grit">
-      <GritLogo className="text-6xl" />
+      <span className="display font-extrabold tracking-wider text-6xl" style={{ fontStyle: "italic" }}>
+        <span style={{ color: "#f5f5f0" }}>DEAD</span>
+        <span style={{ color: "#e63222" }}>SET</span>
+      </span>
       <p className="mt-3 label-cap text-grit">Forge Your Body</p>
     </div>
   );
