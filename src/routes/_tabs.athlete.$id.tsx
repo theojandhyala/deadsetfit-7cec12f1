@@ -47,16 +47,20 @@ function AthletePage() {
 
   const stats = (card.public_stats as Record<string, unknown>) || {};
   const overall = Number(stats.overall) || 0;
-  const fifaStats = {
-    overall,
-    STR: Number(stats.STR) || 0,
-    PWR: Number(stats.PWR) || 0,
-    END: Number(stats.END) || 0,
-    HYP: Number(stats.HYP) || 0,
-    CON: Number(stats.CON) || 0,
-    DIE: Number(stats.DIE) || 0,
-  };
   const topPRs = (stats.topPRs as Array<{ id: string; label: string; value: number; unit: string }>) || [];
+  // Fallback to empty 6-tile shape if profile hasn't pushed stats yet.
+  const HEADLINE_FALLBACK = [
+    { id: "bench-press", label: "BENCH", unit: "kg" },
+    { id: "squat",       label: "SQUAT", unit: "kg" },
+    { id: "deadlift",    label: "DEAD",  unit: "kg" },
+    { id: "ohp",         label: "OHP",   unit: "kg" },
+    { id: "pull-ups",    label: "PULL",  unit: "reps" },
+    { id: "push-ups",    label: "PUSH",  unit: "reps" },
+  ];
+  const prs = HEADLINE_FALLBACK.map((h) => {
+    const found = topPRs.find((p) => p.id === h.id);
+    return { id: h.id, label: h.label, unit: h.unit, value: found?.value ?? 0 };
+  });
   const badge = gritBadge(overall * 10);
   const badgeC = badgeColor(badge);
 
@@ -76,7 +80,8 @@ function AthletePage() {
           avatarUrl={card.avatar_url}
           badge={badge}
           badgeColor={badgeC}
-          stats={fifaStats}
+          overall={overall}
+          prs={prs}
           weightKg={Number(stats.weightKg) || undefined}
           heightCm={Number(stats.heightCm) || undefined}
           goal={String(stats.goal || "")}
