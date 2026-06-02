@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { BottomNav } from "@/components/BottomNav";
+import { TopBar } from "@/components/TopBar";
 import { getState, setState, waitForRemoteState } from "@/lib/storage";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyProfile } from "@/lib/profile.functions";
