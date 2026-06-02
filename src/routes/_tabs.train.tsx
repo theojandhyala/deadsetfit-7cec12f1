@@ -119,6 +119,46 @@ function TrainPage() {
       </header>
       <Reminders />
 
+      {/* ===== QUICK ACTIONS — everything you need, up top ===== */}
+      {(() => {
+        const today = todayKey();
+        const todaysItems = activeProgram
+          ? (activeProgram.days[today]?.items.length || 0)
+          : (schedule[today]?.exerciseIds?.length || 0);
+        const hasSchedule = !!state.schedule || !!activeProgram;
+        const canStart = todaysItems > 0;
+        return (
+          <div className="px-5 mb-5">
+            <div className="grid grid-cols-1 gap-2">
+              {canStart ? (
+                <Link to="/workout/live" className="btn-grit w-full text-base py-4 flex items-center justify-center">
+                  <Flame size={18} className="mr-2" /> Start Today's Workout
+                </Link>
+              ) : !hasSchedule ? (
+                <button onClick={handleGenerate} disabled={genLoading} className="btn-grit w-full text-base py-4 flex items-center justify-center">
+                  {genLoading ? <Loader2 className="animate-spin mr-2" size={18} /> : <Sparkles size={18} className="mr-2" />}
+                  Generate My Schedule
+                </button>
+              ) : (
+                <div className="bg-grit-card border border-grit p-3 text-center">
+                  <p className="label-cap text-accent-red text-[10px]">REST DAY</p>
+                  <p className="text-xs text-grit-dim mt-1">No exercises today — recover & come back stronger.</p>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-2">
+                <Link to="/programs" className="btn-ghost py-2.5 flex items-center justify-center gap-2 text-xs">
+                  <ListPlus size={14} /> Schedule
+                </Link>
+                <Link to="/challenges" className="btn-ghost py-2.5 flex items-center justify-center gap-2 text-xs">
+                  <Trophy size={14} /> Daily Challenge
+                </Link>
+              </div>
+            </div>
+            {genError && <p className="text-xs text-accent-red mt-2">{genError}</p>}
+          </div>
+        );
+      })()}
+
       {/* DEADSET Power Level banner — futuristic XP card */}
       {(() => {
         const score = calculateGritScore(state);
