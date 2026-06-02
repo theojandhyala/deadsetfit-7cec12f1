@@ -17,6 +17,7 @@ export const Route = createFileRoute("/onboarding")({
 });
 
 type Step =
+  | "mode"
   | "goal"
   | "days"
   | "equipment"
@@ -31,21 +32,29 @@ type Step =
   | "username"
   | "photo";
 
-const ORDER: Step[] = [
-  "goal",
-  "days",
-  "equipment",
-  "schedule",
-  "experience",
-  "age",
-  "weight",
-  "height",
-  "gender",
-  "injuries",
-  "weakness",
-  "username",
-  "photo",
-];
+type Mode = "GENERATE" | "BUILD";
+
+function orderFor(mode: Mode | null): Step[] {
+  const base: Step[] = ["mode"];
+  if (!mode) return base;
+  const schedule: Step[] =
+    mode === "GENERATE"
+      ? ["goal", "days", "equipment", "schedule"]
+      : ["goal", "days", "equipment"];
+  return [
+    ...base,
+    ...schedule,
+    "experience",
+    "age",
+    "weight",
+    "height",
+    "gender",
+    "injuries",
+    "weakness",
+    "username",
+    "photo",
+  ];
+}
 
 function Onboarding() {
   const navigate = useNavigate();
