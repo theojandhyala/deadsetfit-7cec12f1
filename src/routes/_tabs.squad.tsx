@@ -1,11 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Heart, MessageCircle, Trophy, Share2, Loader2, Send, Plus, Gift, Copy, Check, Crown, Users } from "lucide-react";
+import { Heart, MessageCircle, Trophy, Share2, Loader2, Send, Plus, Gift, Copy, Check, Crown, Users, Search, UserPlus, UserCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getFeed, createPost, toggleLike, addComment, getComments,
   getLeaderboard, getMyReferralInfo, redeemReferral, updateMyProfile,
+  searchAthletes, getSuggestedAthletes, toggleFollow, getMyFollowStats,
 } from "@/lib/social.functions";
 import { RankShareCard } from "@/components/RankShareCard";
 import { toast } from "sonner";
@@ -15,7 +16,7 @@ export const Route = createFileRoute("/_tabs/squad")({
   component: SquadPage,
 });
 
-type Tab = "FEED" | "LEAGUE" | "INVITE";
+type Tab = "FEED" | "FRIENDS" | "LEAGUE" | "INVITE";
 
 function SquadPage() {
   const navigate = useNavigate();
@@ -57,10 +58,10 @@ function SquadPage() {
         <p className="label-cap">SQUAD</p>
         <h1 className="display text-4xl font-extrabold text-grit leading-none mt-1">THE PACK</h1>
       </header>
-      <div className="px-5 mt-4 flex gap-2 border-b border-grit">
-        {(["FEED", "LEAGUE", "INVITE"] as Tab[]).map(t => (
+      <div className="px-5 mt-4 flex gap-2 border-b border-grit overflow-x-auto">
+        {(["FEED", "FRIENDS", "LEAGUE", "INVITE"] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)}
-            className="label-cap pb-3 pt-1 border-b-2"
+            className="label-cap pb-3 pt-1 border-b-2 whitespace-nowrap"
             style={{ borderColor: tab === t ? "#e63222" : "transparent", color: tab === t ? "#f5f5f0" : "#8a8a8a" }}>
             {t}
           </button>
@@ -68,6 +69,7 @@ function SquadPage() {
       </div>
       <div className="pt-4">
         {tab === "FEED" && <Feed userId={session.userId} />}
+        {tab === "FRIENDS" && <Friends />}
         {tab === "LEAGUE" && <League userId={session.userId} />}
         {tab === "INVITE" && <Invite />}
       </div>
@@ -420,6 +422,128 @@ function Invite() {
       </div>
 
       <Link to="/profile" className="block text-center label-cap text-[#8a8a8a] mt-6">Manage account →</Link>
+    </div>
+  );
+}
+
+// ============ FRIENDS ============
+type SearchHit = Awaited<ReturnType<typeof searchAthletes>>[number];
+type Suggested = Awaited<ReturnType<typeof getSuggestedAthletes>>[number];
+
+function Friends() {
+  const _search = useServerFn(searchAthletes);
+  const _suggest = useServerFn(getSuggestedAthletes);
+  const _toggle = useServerFn(toggleFollow);
+  const _stats = useServerFn(getMyFollowStats);
+
+  const [q, setQ] = useState("");
+  const [results, setResults] = useState<SearchHit[] | null>(null);
+  const [suggested, setSuggested] = useState<Suggested[] | null>(null);
+  const [stats, setStats] = useState<{ following: number; followers: number } | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    _suggest().then(setSuggested).catch(() => {});
+    _stats().then(setStats).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (q.trim().length < 2) { setResults(null); return; }
+    const id = setTimeout(async () => {
+      try { setResults(await _search({ data: { q: q.trim() } })); }
+      catch (e) { toast.error(e instanceof Error ? e.message : "Search failed"); }
+    }, 250);
+    return () => clearTimeout(id);
+  }, [q]);
+
+  async function follow(id: string, currentlyFollowing: boolean) {
+    setBusy(id);
+    // optimistic
+    setResults(arr => arr?.map(r => r.id === id ? { ...r, following: !currentlyFollowing } : r) ?? null);
+    setSuggested(arr => arr?.filter(r => r.id !== id) ?? null);
+    try {
+      await _toggle({ data: { userId: id } });
+      setStats(s => s ? { ...s, following: s.following + (currentlyFollowing ? -1 : 1) } : s);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+      setResults(arr => arr?.map(r => r.id === id ? { ...r, following: currentlyFollowing } : r) ?? null);
+    } finally { setBusy(null); }
+  }
+
+  return (
+    <div className="px-5 pb-6">
+      {/* stats */}
+      <div className="grid grid-cols-2 gap-2 mb-4">
+        <div className="bg-grit-card border border-grit p-3 text-center">
+          <p className="display font-extrabold text-grit text-2xl leading-none">{stats?.following ?? "—"}</p>
+          <p className="label-cap text-[10px] text-[#8a8a8a] mt-1">Following</p>
+        </div>
+        <div className="bg-grit-card border border-grit p-3 text-center">
+          <p className="display font-extrabold text-grit text-2xl leading-none">{stats?.followers ?? "—"}</p>
+          <p className="label-cap text-[10px] text-[#8a8a8a] mt-1">Followers</p>
+        </div>
+      </div>
+
+      {/* search */}
+      <div className="bg-grit-card border border-grit p-3 mb-4 flex items-center gap-2">
+        <Search size={16} className="text-[#8a8a8a]" />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search by name or @username"
+          className="input-grit flex-1 border-0 bg-transparent"
+          maxLength={40}
+        />
+      </div>
+
+      {results && results.length === 0 && (
+        <p className="text-center text-sm text-[#8a8a8a] py-6">No athletes match "{q}".</p>
+      )}
+
+      {results && results.map(r => (
+        <AthleteRow key={r.id} a={r} busy={busy === r.id} onToggle={() => follow(r.id, r.following)} />
+      ))}
+
+      {!results && (
+        <>
+          <p className="label-cap text-[#8a8a8a] mb-2 mt-2">Suggested rivals</p>
+          {!suggested && <div className="flex justify-center py-6"><Loader2 className="animate-spin text-accent-red" /></div>}
+          {suggested && suggested.length === 0 && (
+            <p className="text-sm text-[#8a8a8a] text-center py-4">No suggestions yet — invite mates to get started.</p>
+          )}
+          {suggested && suggested.map(r => (
+            <AthleteRow key={r.id} a={{ ...r, following: false }} busy={busy === r.id} onToggle={() => follow(r.id, false)} />
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
+function AthleteRow({ a, busy, onToggle }: {
+  a: { id: string; username: string | null; display_name: string | null; avatar_url: string | null; level: string | null; following: boolean; grit_points?: number };
+  busy: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="bg-grit-card border border-grit p-3 mb-2 flex items-center gap-3">
+      <div className="w-10 h-10 bg-[#1a1a1a] border border-grit flex items-center justify-center display font-extrabold text-grit overflow-hidden">
+        {a.avatar_url ? <img src={a.avatar_url} alt="" className="w-full h-full object-cover" /> : (a.display_name || a.username || "A")[0]}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-bold text-grit text-sm truncate">{a.display_name || a.username || "Athlete"}</p>
+        <p className="text-[10px] text-[#8a8a8a] label-cap truncate">
+          {a.username ? `@${a.username} · ` : ""}{a.level}{a.grit_points ? ` · ${a.grit_points} DS` : ""}
+        </p>
+      </div>
+      <button
+        onClick={onToggle}
+        disabled={busy}
+        className={a.following ? "btn-ghost px-3 py-2 text-xs flex items-center gap-1.5" : "btn-grit px-3 py-2 text-xs flex items-center gap-1.5"}
+      >
+        {busy ? <Loader2 size={12} className="animate-spin" /> :
+          a.following ? <><UserCheck size={12} /> FOLLOWING</> : <><UserPlus size={12} /> FOLLOW</>}
+      </button>
     </div>
   );
 }

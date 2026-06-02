@@ -160,6 +160,70 @@ export const toggleFollow = createServerFn({ method: "POST" })
     return { following: true };
   });
 
+// === Search athletes (for adding friends) ===
+const SearchInput = z.object({ q: z.string().trim().min(1).max(40) });
+export const searchAthletes = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => SearchInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const q = data.q.replace(/[%_]/g, "");
+    const { data: rows, error } = await supabaseAdmin
+      .from("public_profiles")
+      .select("id, username, display_name, avatar_url, level")
+      .or(`username.ilike.%${q}%,display_name.ilike.%${q}%`)
+      .neq("id", userId)
+      .limit(20);
+    if (error) throw new Error(error.message);
+    const ids = (rows ?? []).map(r => r.id).filter((x): x is string => !!x);
+    const { data: follows } = await supabase
+      .from("follows").select("following_id")
+      .eq("follower_id", userId)
+      .in("following_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
+    const followingSet = new Set((follows ?? []).map(f => f.following_id));
+    return (rows ?? []).filter(r => r.id).map(r => ({ ...r, id: r.id as string, following: followingSet.has(r.id as string) }));
+  });
+
+// === Suggested athletes (top of leaderboard, not already followed) ===
+export const getSuggestedAthletes = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { data: follows } = await supabase
+      .from("follows").select("following_id").eq("follower_id", userId);
+    const followingSet = new Set((follows ?? []).map(f => f.following_id));
+    const { data: rows } = await supabaseAdmin
+      .from("profiles")
+      .select("id, username, display_name, avatar_url, grit_points")
+      .neq("id", userId)
+      .order("grit_points", { ascending: false })
+      .limit(30);
+    return (rows ?? [])
+      .filter(r => !followingSet.has(r.id))
+      .slice(0, 10)
+      .map(r => ({
+        id: r.id,
+        username: r.username,
+        display_name: r.display_name,
+        avatar_url: r.avatar_url,
+        level: gritLevel(r.grit_points ?? 0),
+        grit_points: r.grit_points ?? 0,
+        following: false,
+      }));
+  });
+
+// === My follow counts ===
+export const getMyFollowStats = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const [{ count: following }, { count: followers }] = await Promise.all([
+      supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", userId),
+      supabase.from("follows").select("*", { count: "exact", head: true }).eq("following_id", userId),
+    ]);
+    return { following: following ?? 0, followers: followers ?? 0 };
+  });
+
 // === Referrals ===
 export const getMyReferralInfo = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
