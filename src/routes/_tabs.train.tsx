@@ -75,6 +75,8 @@ function TrainPage() {
   const schedule: Schedule = state.schedule ?? (state.profile ? defaultSchedule(state.profile) : ({} as Schedule));
   const day = schedule[selectedDay];
   const programDay = activeProgram?.days[selectedDay];
+  const score = calculateGritScore(state);
+  const streak = calculateStreak(state.completedDates);
 
   async function handleGenerate() {
     if (!state.profile) return;
