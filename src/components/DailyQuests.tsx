@@ -99,40 +99,6 @@ export function DailyQuests() {
 
   return (
     <div className="px-5 mb-4">
-      {/* Streak flame + daily XP header */}
-      <div className="neon-card grid-bg p-3 mb-2">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div
-              className="w-11 h-11 flex items-center justify-center border border-accent-red"
-              style={{
-                background: streak > 0 ? "radial-gradient(circle, rgba(230,50,34,0.35), transparent 70%)" : "transparent",
-                animation: streak > 0 ? "pulseGlow 2.4s ease-in-out infinite" : undefined,
-              }}
-            >
-              <Flame size={22} className="text-accent-red" />
-            </div>
-            <div>
-              <p className="label-cap text-[9px]">STREAK</p>
-              <p className="display text-2xl font-extrabold leading-none text-grit">
-                {streak}<span className="text-accent-red text-sm ml-1">DAY{streak === 1 ? "" : "S"}</span>
-              </p>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="label-cap text-[9px] flex items-center justify-end gap-1">
-              <Zap size={10} className="text-accent-red" /> TODAY'S XP
-            </p>
-            <p className="display text-2xl font-extrabold leading-none text-accent-red text-glow-red">
-              +{earned}<span className="text-grit-dim text-xs ml-1">/{total}</span>
-            </p>
-          </div>
-        </div>
-        <div className="xp-bar mt-2.5">
-          <div className="fill" style={{ width: `${Math.max(2, pct)}%` }} />
-        </div>
-      </div>
-
       {/* Quest list */}
       <div className="bg-grit-card border border-grit">
         <button
