@@ -426,6 +426,128 @@ function Invite() {
   );
 }
 
+// ============ FRIENDS ============
+type SearchHit = Awaited<ReturnType<typeof searchAthletes>>[number];
+type Suggested = Awaited<ReturnType<typeof getSuggestedAthletes>>[number];
+
+function Friends() {
+  const _search = useServerFn(searchAthletes);
+  const _suggest = useServerFn(getSuggestedAthletes);
+  const _toggle = useServerFn(toggleFollow);
+  const _stats = useServerFn(getMyFollowStats);
+
+  const [q, setQ] = useState("");
+  const [results, setResults] = useState<SearchHit[] | null>(null);
+  const [suggested, setSuggested] = useState<Suggested[] | null>(null);
+  const [stats, setStats] = useState<{ following: number; followers: number } | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    _suggest().then(setSuggested).catch(() => {});
+    _stats().then(setStats).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (q.trim().length < 2) { setResults(null); return; }
+    const id = setTimeout(async () => {
+      try { setResults(await _search({ data: { q: q.trim() } })); }
+      catch (e) { toast.error(e instanceof Error ? e.message : "Search failed"); }
+    }, 250);
+    return () => clearTimeout(id);
+  }, [q]);
+
+  async function follow(id: string, currentlyFollowing: boolean) {
+    setBusy(id);
+    // optimistic
+    setResults(arr => arr?.map(r => r.id === id ? { ...r, following: !currentlyFollowing } : r) ?? null);
+    setSuggested(arr => arr?.filter(r => r.id !== id) ?? null);
+    try {
+      await _toggle({ data: { userId: id } });
+      setStats(s => s ? { ...s, following: s.following + (currentlyFollowing ? -1 : 1) } : s);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+      setResults(arr => arr?.map(r => r.id === id ? { ...r, following: currentlyFollowing } : r) ?? null);
+    } finally { setBusy(null); }
+  }
+
+  return (
+    <div className="px-5 pb-6">
+      {/* stats */}
+      <div className="grid grid-cols-2 gap-2 mb-4">
+        <div className="bg-grit-card border border-grit p-3 text-center">
+          <p className="display font-extrabold text-grit text-2xl leading-none">{stats?.following ?? "—"}</p>
+          <p className="label-cap text-[10px] text-[#8a8a8a] mt-1">Following</p>
+        </div>
+        <div className="bg-grit-card border border-grit p-3 text-center">
+          <p className="display font-extrabold text-grit text-2xl leading-none">{stats?.followers ?? "—"}</p>
+          <p className="label-cap text-[10px] text-[#8a8a8a] mt-1">Followers</p>
+        </div>
+      </div>
+
+      {/* search */}
+      <div className="bg-grit-card border border-grit p-3 mb-4 flex items-center gap-2">
+        <Search size={16} className="text-[#8a8a8a]" />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search by name or @username"
+          className="input-grit flex-1 border-0 bg-transparent"
+          maxLength={40}
+        />
+      </div>
+
+      {results && results.length === 0 && (
+        <p className="text-center text-sm text-[#8a8a8a] py-6">No athletes match "{q}".</p>
+      )}
+
+      {results && results.map(r => (
+        <AthleteRow key={r.id} a={r} busy={busy === r.id} onToggle={() => follow(r.id, r.following)} />
+      ))}
+
+      {!results && (
+        <>
+          <p className="label-cap text-[#8a8a8a] mb-2 mt-2">Suggested rivals</p>
+          {!suggested && <div className="flex justify-center py-6"><Loader2 className="animate-spin text-accent-red" /></div>}
+          {suggested && suggested.length === 0 && (
+            <p className="text-sm text-[#8a8a8a] text-center py-4">No suggestions yet — invite mates to get started.</p>
+          )}
+          {suggested && suggested.map(r => (
+            <AthleteRow key={r.id} a={{ ...r, following: false }} busy={busy === r.id} onToggle={() => follow(r.id, false)} />
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
+function AthleteRow({ a, busy, onToggle }: {
+  a: { id: string; username: string | null; display_name: string | null; avatar_url: string | null; level: string; following: boolean; grit_points?: number };
+  busy: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="bg-grit-card border border-grit p-3 mb-2 flex items-center gap-3">
+      <div className="w-10 h-10 bg-[#1a1a1a] border border-grit flex items-center justify-center display font-extrabold text-grit overflow-hidden">
+        {a.avatar_url ? <img src={a.avatar_url} alt="" className="w-full h-full object-cover" /> : (a.display_name || a.username || "A")[0]}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-bold text-grit text-sm truncate">{a.display_name || a.username || "Athlete"}</p>
+        <p className="text-[10px] text-[#8a8a8a] label-cap truncate">
+          {a.username ? `@${a.username} · ` : ""}{a.level}{a.grit_points ? ` · ${a.grit_points} DS` : ""}
+        </p>
+      </div>
+      <button
+        onClick={onToggle}
+        disabled={busy}
+        className={a.following ? "btn-ghost px-3 py-2 text-xs flex items-center gap-1.5" : "btn-grit px-3 py-2 text-xs flex items-center gap-1.5"}
+      >
+        {busy ? <Loader2 size={12} className="animate-spin" /> :
+          a.following ? <><UserCheck size={12} /> FOLLOWING</> : <><UserPlus size={12} /> FOLLOW</>}
+      </button>
+    </div>
+  );
+}
+
 function timeAgo(iso: string) {
   const ms = Date.now() - new Date(iso).getTime();
   const s = Math.floor(ms / 1000);
