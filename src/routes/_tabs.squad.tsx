@@ -16,7 +16,7 @@ export const Route = createFileRoute("/_tabs/squad")({
   component: SquadPage,
 });
 
-type Tab = "FEED" | "LEAGUE" | "INVITE";
+type Tab = "FEED" | "FRIENDS" | "LEAGUE" | "INVITE";
 
 function SquadPage() {
   const navigate = useNavigate();
