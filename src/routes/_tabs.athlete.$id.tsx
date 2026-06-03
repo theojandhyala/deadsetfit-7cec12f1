@@ -52,6 +52,40 @@ function AthletePage() {
     } finally { setBusy(false); }
   }
 
+  async function toggleBlock() {
+    if (!card || card.isMe) return;
+    const next = !blocked;
+    const verb = next ? "Block" : "Unblock";
+    if (next && !confirm(`${verb} ${card.username || "this athlete"}? They won't appear in your feed or search.`)) return;
+    setBlocked(next);
+    try {
+      if (next) await _block({ data: { userId: id } });
+      else await _unblock({ data: { userId: id } });
+      toast.success(next ? "Blocked" : "Unblocked");
+      if (next) {
+        setCard({ ...card, following: false });
+      }
+    } catch (e) {
+      setBlocked(!next);
+      toast.error(e instanceof Error ? e.message : "Failed");
+    }
+  }
+
+  async function report() {
+    if (!card || card.isMe) return;
+    const reason = prompt(
+      "Report this athlete. Briefly describe the issue (harassment, spam, fake account, etc.):",
+    );
+    if (!reason || !reason.trim()) return;
+    try {
+      await _report({ data: { userId: id, reason: reason.trim().slice(0, 500) } });
+      toast.success("Report submitted — we review within 24 hours");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't send report");
+    }
+  }
+
+
   if (!card) return <div className="flex items-center justify-center pt-20"><Loader2 className="animate-spin text-accent-red" /></div>;
 
   const stats = (card.public_stats as Record<string, unknown>) || {};
