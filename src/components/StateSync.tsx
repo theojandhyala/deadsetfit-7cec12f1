@@ -12,6 +12,7 @@ import {
   clearRemoteStateStatus,
 } from "@/lib/storage";
 import { loadUserState, saveUserState } from "@/lib/user-state.functions";
+import { withTimeout } from "@/lib/account-restore";
 
 /**
  * Mounts once at the root. On sign-in, pulls the user's saved app state from
@@ -29,7 +30,7 @@ export function StateSync() {
     async function pull(userId: string) {
       beginRemoteStateLoad(userId);
       try {
-        const res = await load();
+        const res = await withTimeout(load(), null);
         if (cancelled) return;
         if (res?.data) {
           try {
@@ -54,7 +55,7 @@ export function StateSync() {
       }
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    withTimeout(supabase.auth.getSession(), { data: { session: null }, error: null }).then(({ data: { session } }) => {
       if (session?.user?.id) {
         activeUserId = session.user.id;
         pull(session.user.id);
