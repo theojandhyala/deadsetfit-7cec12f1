@@ -364,10 +364,10 @@ function Injuries({ onSubmit, onSkip }: { onSubmit: (s: string) => void; onSkip:
       />
       <div className="mt-auto flex flex-col gap-3">
         <button onClick={() => onSubmit(v)} className="btn-grit">
-          Finish Setup
+          Continue
         </button>
         <button onClick={onSkip} className="btn-ghost">
-          Skip
+          Skip — no injuries
         </button>
       </div>
     </>
@@ -435,15 +435,16 @@ function PhotoStep({ onSubmit, onSkip }: { onSubmit: (url: string) => void; onSk
       </div>
       <div className="mt-auto flex flex-col gap-3">
         <button
-          disabled={!preview}
-          onClick={() => preview && onSubmit(preview)}
+          onClick={() => (preview ? onSubmit(preview) : onSkip())}
           className="btn-grit"
         >
           Finish Setup
         </button>
-        <button onClick={onSkip} className="btn-ghost">
-          Skip
-        </button>
+        {preview && (
+          <button onClick={onSkip} className="btn-ghost">
+            Skip photo
+          </button>
+        )}
       </div>
     </>
   );
@@ -570,13 +571,13 @@ function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
   );
 }
 
-const ONBOARDING_PRS: Array<{ id: string; label: string; unit: string; placeholder: string }> = [
-  { id: "bench-press", label: "Bench Press",     unit: "kg",   placeholder: "80"  },
-  { id: "squat",       label: "Back Squat",      unit: "kg",   placeholder: "100" },
-  { id: "deadlift",    label: "Deadlift",        unit: "kg",   placeholder: "120" },
-  { id: "ohp",         label: "Overhead Press",  unit: "kg",   placeholder: "50"  },
-  { id: "pull-ups",    label: "Pull-Ups (max)",  unit: "reps", placeholder: "10"  },
-  { id: "push-ups",    label: "Push-Ups (max)",  unit: "reps", placeholder: "30"  },
+const ONBOARDING_PRS: Array<{ id: string; label: string; unit: string; placeholder: string; desc: string }> = [
+  { id: "bench-press", label: "Bench Press",     unit: "kg",   placeholder: "80",  desc: "Flat barbell bench press. Bar to mid-chest, drive straight up." },
+  { id: "squat",       label: "Back Squat",      unit: "kg",   placeholder: "100", desc: "Barbell on upper back. Break at hips & knees, depth at parallel." },
+  { id: "deadlift",    label: "Deadlift",        unit: "kg",   placeholder: "120", desc: "Conventional barbell deadlift from the floor. Lock out hips at top." },
+  { id: "ohp",         label: "Overhead Press",  unit: "kg",   placeholder: "50",  desc: "Standing strict barbell press. No leg drive, bar finishes overhead." },
+  { id: "pull-ups",    label: "Pull-Ups (max)",  unit: "reps", placeholder: "10",  desc: "Strict bodyweight pull-ups, full hang to chin over bar. Max in one set." },
+  { id: "push-ups",    label: "Push-Ups (max)",  unit: "reps", placeholder: "30",  desc: "Strict push-ups, chest to floor, full lockout. Max unbroken." },
 ];
 
 function PRStep({ onContinue }: { onContinue: () => void }) {
@@ -605,19 +606,22 @@ function PRStep({ onContinue }: { onContinue: () => void }) {
       </p>
       <div className="flex flex-col gap-2 mb-6">
         {ONBOARDING_PRS.map((pr) => (
-          <div key={pr.id} className="bg-grit-card border border-grit px-3 py-2 flex items-center gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-grit truncate">{pr.label}</p>
-              <p className="label-cap text-[9px] text-grit-dim">{pr.unit === "kg" ? "1-rep max" : "max reps"}</p>
+          <div key={pr.id} className="bg-grit-card border border-grit px-3 py-2.5">
+            <div className="flex items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-grit truncate">{pr.label}</p>
+                <p className="label-cap text-[9px] text-grit-dim">{pr.unit === "kg" ? "1-rep max" : "max reps"}</p>
+              </div>
+              <input
+                value={vals[pr.id] ?? ""}
+                onChange={(e) => setVals((v) => ({ ...v, [pr.id]: e.target.value }))}
+                inputMode="decimal"
+                placeholder={pr.placeholder}
+                className="input-grit w-20 text-right"
+              />
+              <span className="label-cap text-[10px] text-grit-dim w-8">{pr.unit}</span>
             </div>
-            <input
-              value={vals[pr.id] ?? ""}
-              onChange={(e) => setVals((v) => ({ ...v, [pr.id]: e.target.value }))}
-              inputMode="decimal"
-              placeholder={pr.placeholder}
-              className="input-grit w-20 text-right"
-            />
-            <span className="label-cap text-[10px] text-grit-dim w-8">{pr.unit}</span>
+            <p className="text-[11px] text-[#8a8a8a] mt-1.5 leading-snug">{pr.desc}</p>
           </div>
         ))}
       </div>
