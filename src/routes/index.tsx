@@ -50,7 +50,7 @@ function Index() {
       if (cancelled) return;
       let s = getState();
       if (!s.profile) {
-        const accountProfile = profileFromAccount(await getProfile().catch(() => null));
+        const accountProfile = profileFromAccount(await withTimeout(getProfile().catch(() => null), null));
         if (accountProfile) {
           setState((current) => ({
             ...current,
