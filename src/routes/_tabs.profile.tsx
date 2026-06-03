@@ -123,8 +123,24 @@ function ProfilePage() {
     toast.success("PR saved");
   }
 
+  async function logout() {
+    toast.loading("Saving your data…", { id: "logout" });
+    try {
+      // Push any unsaved local state to the server BEFORE auth is dropped.
+      if (p) {
+        await persist({ data: { public_stats: buildPublicStats(state) } }).catch(() => {});
+      }
+      await flushRemoteState();
+    } finally {
+      toast.dismiss("logout");
+    }
+    await supabase.auth.signOut();
+    toast.success("Signed out — your data is saved");
+    navigate({ to: "/auth", replace: true });
+  }
+
   function reset() {
-    if (!confirm("Reset all your DEADSET data?")) return;
+    if (!confirm("Reset all your DEADSET data on this device? Your account stays signed in.")) return;
     localStorage.removeItem("grit_app_state_v1");
     navigate({ to: "/onboarding", replace: true });
   }
