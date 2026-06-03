@@ -571,13 +571,13 @@ function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
   );
 }
 
-const ONBOARDING_PRS: Array<{ id: string; label: string; unit: string; placeholder: string }> = [
-  { id: "bench-press", label: "Bench Press",     unit: "kg",   placeholder: "80"  },
-  { id: "squat",       label: "Back Squat",      unit: "kg",   placeholder: "100" },
-  { id: "deadlift",    label: "Deadlift",        unit: "kg",   placeholder: "120" },
-  { id: "ohp",         label: "Overhead Press",  unit: "kg",   placeholder: "50"  },
-  { id: "pull-ups",    label: "Pull-Ups (max)",  unit: "reps", placeholder: "10"  },
-  { id: "push-ups",    label: "Push-Ups (max)",  unit: "reps", placeholder: "30"  },
+const ONBOARDING_PRS: Array<{ id: string; label: string; unit: string; placeholder: string; desc: string }> = [
+  { id: "bench-press", label: "Bench Press",     unit: "kg",   placeholder: "80",  desc: "Flat barbell bench press. Bar to mid-chest, drive straight up." },
+  { id: "squat",       label: "Back Squat",      unit: "kg",   placeholder: "100", desc: "Barbell on upper back. Break at hips & knees, depth at parallel." },
+  { id: "deadlift",    label: "Deadlift",        unit: "kg",   placeholder: "120", desc: "Conventional barbell deadlift from the floor. Lock out hips at top." },
+  { id: "ohp",         label: "Overhead Press",  unit: "kg",   placeholder: "50",  desc: "Standing strict barbell press. No leg drive, bar finishes overhead." },
+  { id: "pull-ups",    label: "Pull-Ups (max)",  unit: "reps", placeholder: "10",  desc: "Strict bodyweight pull-ups, full hang to chin over bar. Max in one set." },
+  { id: "push-ups",    label: "Push-Ups (max)",  unit: "reps", placeholder: "30",  desc: "Strict push-ups, chest to floor, full lockout. Max unbroken." },
 ];
 
 function PRStep({ onContinue }: { onContinue: () => void }) {
