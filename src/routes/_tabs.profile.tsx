@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Flame, LogOut, Crown, Pencil, Trophy, Plus, X } from "lucide-react";
-import { useAppState } from "@/lib/storage";
+import { useAppState, flushRemoteState } from "@/lib/storage";
+import { supabase } from "@/integrations/supabase/client";
 import {
   calculateStreak, calculateGritScore, gritBadge, badgeColor,
 } from "@/lib/calc";
