@@ -19,6 +19,24 @@ const experiences = new Set<Experience>(["BEGINNER", "INTERMEDIATE", "ADVANCED"]
 const genders = new Set<Gender>(["MALE", "FEMALE", "OTHER"]);
 const equipment = new Set<Equipment>(["FULL_GYM", "HOME_GYM", "BODYWEIGHT"]);
 
+export async function withTimeout<T>(
+  promise: PromiseLike<T>,
+  fallback: T,
+  timeoutMs = 3500,
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((resolve) => {
+        timeoutId = setTimeout(() => resolve(fallback), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
 export function profileFromAccount(row: AccountProfile | null | undefined): Profile | null {
   if (!row?.onboarded) return null;
 
