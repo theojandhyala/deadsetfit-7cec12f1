@@ -1,19 +1,21 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Flame, LogOut, Crown, Pencil, Trophy, Plus, X } from "lucide-react";
+import { Flame, LogOut, Crown, Pencil, Trophy, Plus, X, Trash2 } from "lucide-react";
 import { useAppState, flushRemoteState } from "@/lib/storage";
 import { supabase } from "@/integrations/supabase/client";
 import {
   calculateStreak, calculateGritScore, gritBadge, badgeColor,
 } from "@/lib/calc";
 import { saveProfile } from "@/lib/profile.functions";
+import { deleteMyAccount } from "@/lib/account.functions";
 import { FifaCard } from "@/components/FifaCard";
 import {
   PR_CATALOG, computeFifaStats, buildPublicStats, buildHeadlinePRs, formatPRValue,
   type PRDef,
 } from "@/lib/fifa-stats";
+
 
 export const Route = createFileRoute("/_tabs/profile")({
   head: () => ({ meta: [{ title: "DEADSET — Profile" }] }),
