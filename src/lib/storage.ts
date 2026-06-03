@@ -112,6 +112,20 @@ export function enableRemoteSync(saver: (json: string) => Promise<void>) {
   pushSaver = saver;
 }
 
+/** Force-flush any pending push immediately and also push current state. */
+export async function flushRemoteState() {
+  if (!remoteSyncEnabled || !pushSaver) return;
+  if (pushTimer) {
+    clearTimeout(pushTimer);
+    pushTimer = null;
+  }
+  try {
+    await pushSaver(JSON.stringify(read()));
+  } catch (e) {
+    console.warn("flushRemoteState failed", e);
+  }
+}
+
 export function disableRemoteSync() {
   remoteSyncEnabled = false;
   pushSaver = null;
