@@ -1,11 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Loader2, UserPlus, UserCheck, Trophy } from "lucide-react";
+import { ArrowLeft, Loader2, UserPlus, UserCheck, Trophy, Flag, Ban } from "lucide-react";
 import { toast } from "sonner";
 import { getAthleteCard, toggleFollow } from "@/lib/social.functions";
+import { blockUser, unblockUser, isBlocked, reportContent } from "@/lib/account.functions";
 import { FifaCard } from "@/components/FifaCard";
 import { gritBadge, badgeColor } from "@/lib/calc";
+
 
 export const Route = createFileRoute("/_tabs/athlete/$id")({
   head: () => ({ meta: [{ title: "DEADSET — Athlete" }] }),
@@ -19,8 +21,13 @@ function AthletePage() {
   const navigate = useNavigate();
   const _get = useServerFn(getAthleteCard);
   const _toggle = useServerFn(toggleFollow);
+  const _block = useServerFn(blockUser);
+  const _unblock = useServerFn(unblockUser);
+  const _isBlocked = useServerFn(isBlocked);
+  const _report = useServerFn(reportContent);
   const [card, setCard] = useState<Card | null>(null);
   const [busy, setBusy] = useState(false);
+  const [blocked, setBlocked] = useState(false);
 
   useEffect(() => {
     _get({ data: { userId: id } })
@@ -29,7 +36,9 @@ function AthletePage() {
         toast.error(e instanceof Error ? e.message : "Failed");
         navigate({ to: "/squad" });
       });
+    _isBlocked({ data: { userId: id } }).then((r) => setBlocked(r.blocked)).catch(() => {});
   }, [id]);
+
 
   async function follow() {
     if (!card || card.isMe) return;
@@ -42,6 +51,40 @@ function AthletePage() {
       setCard({ ...card, following: !next, followerCount: card.followerCount });
     } finally { setBusy(false); }
   }
+
+  async function toggleBlock() {
+    if (!card || card.isMe) return;
+    const next = !blocked;
+    const verb = next ? "Block" : "Unblock";
+    if (next && !confirm(`${verb} ${card.username || "this athlete"}? They won't appear in your feed or search.`)) return;
+    setBlocked(next);
+    try {
+      if (next) await _block({ data: { userId: id } });
+      else await _unblock({ data: { userId: id } });
+      toast.success(next ? "Blocked" : "Unblocked");
+      if (next) {
+        setCard({ ...card, following: false });
+      }
+    } catch (e) {
+      setBlocked(!next);
+      toast.error(e instanceof Error ? e.message : "Failed");
+    }
+  }
+
+  async function report() {
+    if (!card || card.isMe) return;
+    const reason = prompt(
+      "Report this athlete. Briefly describe the issue (harassment, spam, fake account, etc.):",
+    );
+    if (!reason || !reason.trim()) return;
+    try {
+      await _report({ data: { userId: id, reason: reason.trim().slice(0, 500) } });
+      toast.success("Report submitted — we review within 24 hours");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't send report");
+    }
+  }
+
 
   if (!card) return <div className="flex items-center justify-center pt-20"><Loader2 className="animate-spin text-accent-red" /></div>;
 
@@ -105,8 +148,27 @@ function AthletePage() {
             {busy ? <Loader2 size={14} className="animate-spin" /> :
               card.following ? <><UserCheck size={14} /> FOLLOWING</> : <><UserPlus size={14} /> FOLLOW</>}
           </button>
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={report}
+              className="flex-1 py-2.5 text-xs label-cap inline-flex items-center justify-center gap-1.5 border border-grit text-grit-dim hover:text-grit transition-colors"
+            >
+              <Flag size={12} /> Report
+            </button>
+            <button
+              onClick={toggleBlock}
+              className={`flex-1 py-2.5 text-xs label-cap inline-flex items-center justify-center gap-1.5 border transition-colors ${
+                blocked
+                  ? "border-accent-red text-accent-red"
+                  : "border-grit text-grit-dim hover:text-grit"
+              }`}
+            >
+              <Ban size={12} /> {blocked ? "Unblock" : "Block"}
+            </button>
+          </div>
         </section>
       )}
+
 
       {/* Headline PRs */}
       <section className="px-5 mb-5">

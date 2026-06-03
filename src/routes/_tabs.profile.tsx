@@ -1,19 +1,21 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Flame, LogOut, Crown, Pencil, Trophy, Plus, X } from "lucide-react";
+import { Flame, LogOut, Crown, Pencil, Trophy, Plus, X, Trash2 } from "lucide-react";
 import { useAppState, flushRemoteState } from "@/lib/storage";
 import { supabase } from "@/integrations/supabase/client";
 import {
   calculateStreak, calculateGritScore, gritBadge, badgeColor,
 } from "@/lib/calc";
 import { saveProfile } from "@/lib/profile.functions";
+import { deleteMyAccount } from "@/lib/account.functions";
 import { FifaCard } from "@/components/FifaCard";
 import {
   PR_CATALOG, computeFifaStats, buildPublicStats, buildHeadlinePRs, formatPRValue,
   type PRDef,
 } from "@/lib/fifa-stats";
+
 
 export const Route = createFileRoute("/_tabs/profile")({
   head: () => ({ meta: [{ title: "DEADSET — Profile" }] }),
@@ -24,6 +26,7 @@ function ProfilePage() {
   const [state, set] = useAppState();
   const navigate = useNavigate();
   const persist = useServerFn(saveProfile);
+  const deleteAcct = useServerFn(deleteMyAccount);
   const p = state.profile;
   const fileRef = useRef<HTMLInputElement>(null);
   const [editing, setEditing] = useState(false);
@@ -144,6 +147,30 @@ function ProfilePage() {
     localStorage.removeItem("grit_app_state_v1");
     navigate({ to: "/onboarding", replace: true });
   }
+
+  async function deleteAccount() {
+    const ok = confirm(
+      "PERMANENTLY DELETE your DEADSET account?\n\n" +
+      "This erases your profile, posts, comments, follows, PRs and training history. " +
+      "It cannot be undone.",
+    );
+    if (!ok) return;
+    const confirm2 = prompt('Type "DELETE" to confirm:');
+    if (confirm2 !== "DELETE") {
+      toast.error("Cancelled — confirmation did not match");
+      return;
+    }
+    try {
+      await deleteAcct({});
+      try { localStorage.removeItem("grit_app_state_v1"); } catch { /* ignore */ }
+      await supabase.auth.signOut();
+      toast.success("Account deleted");
+      navigate({ to: "/auth", replace: true });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't delete account");
+    }
+  }
+
 
   // Group PRs by category for the editor
   const grouped = PR_CATALOG.reduce<Record<string, PRDef[]>>((acc, d) => {
@@ -292,12 +319,27 @@ function ProfilePage() {
         </div>
       </section>
 
-      <section className="px-5 mb-10 flex flex-col gap-2">
+      <section className="px-5 mb-6 flex flex-col gap-2">
         <button onClick={logout} className="btn-grit w-full inline-flex items-center justify-center">
           <LogOut size={14} className="mr-2" /> Log Out (saves your data)
         </button>
         <button onClick={reset} className="btn-ghost w-full">Reset This Device</button>
+        <button
+          onClick={deleteAccount}
+          className="w-full mt-2 py-3 label-cap text-sm inline-flex items-center justify-center border border-accent-red text-accent-red hover:bg-accent-red/10 transition-colors"
+        >
+          <Trash2 size={14} className="mr-2" /> Delete My Account
+        </button>
       </section>
+
+      <section className="px-5 pb-10 flex justify-center gap-4 label-cap text-[10px] text-grit-dim">
+        <Link to="/privacy">Privacy</Link>
+        <span>·</span>
+        <Link to="/terms">Terms</Link>
+        <span>·</span>
+        <Link to="/disclaimer">Disclaimer</Link>
+      </section>
+
     </div>
   );
 }

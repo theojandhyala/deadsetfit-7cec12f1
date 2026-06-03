@@ -9,12 +9,28 @@ export const getFeed = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const { data: posts, error } = await supabase
+
+    // Hide posts authored by users this user has blocked or who have blocked them.
+    const { data: blocks } = await supabase
+      .from("user_blocks")
+      .select("blocker_id, blocked_id")
+      .or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`);
+    const hidden = new Set<string>();
+    (blocks ?? []).forEach((b) => {
+      hidden.add(b.blocker_id === userId ? b.blocked_id : b.blocker_id);
+    });
+
+    let query = supabase
       .from("posts")
       .select("id, user_id, kind, content, image_url, metadata, created_at")
       .order("created_at", { ascending: false })
       .limit(50);
+    if (hidden.size > 0) {
+      query = query.not("user_id", "in", `(${Array.from(hidden).join(",")})`);
+    }
+    const { data: posts, error } = await query;
     if (error) throw new Error(error.message);
+
     const ids = Array.from(new Set((posts ?? []).map(p => p.user_id)));
     const postIds = (posts ?? []).map(p => p.id);
 
@@ -168,6 +184,11 @@ export const searchAthletes = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const q = data.q.replace(/[%_]/g, "");
+    const { data: blocks } = await supabase
+      .from("user_blocks").select("blocker_id, blocked_id")
+      .or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`);
+    const hidden = new Set<string>();
+    (blocks ?? []).forEach((b) => hidden.add(b.blocker_id === userId ? b.blocked_id : b.blocker_id));
     const { data: rows, error } = await supabaseAdmin
       .from("public_profiles")
       .select("id, username, display_name, avatar_url, level")
@@ -175,14 +196,16 @@ export const searchAthletes = createServerFn({ method: "POST" })
       .neq("id", userId)
       .limit(20);
     if (error) throw new Error(error.message);
-    const ids = (rows ?? []).map(r => r.id).filter((x): x is string => !!x);
+    const filtered = (rows ?? []).filter(r => r.id && !hidden.has(r.id as string));
+    const ids = filtered.map(r => r.id).filter((x): x is string => !!x);
     const { data: follows } = await supabase
       .from("follows").select("following_id")
       .eq("follower_id", userId)
       .in("following_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
     const followingSet = new Set((follows ?? []).map(f => f.following_id));
-    return (rows ?? []).filter(r => r.id).map(r => ({ ...r, id: r.id as string, following: followingSet.has(r.id as string) }));
+    return filtered.map(r => ({ ...r, id: r.id as string, following: followingSet.has(r.id as string) }));
   });
+
 
 // === Suggested athletes (top of leaderboard, not already followed) ===
 export const getSuggestedAthletes = createServerFn({ method: "GET" })
