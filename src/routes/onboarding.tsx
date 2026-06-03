@@ -606,19 +606,22 @@ function PRStep({ onContinue }: { onContinue: () => void }) {
       </p>
       <div className="flex flex-col gap-2 mb-6">
         {ONBOARDING_PRS.map((pr) => (
-          <div key={pr.id} className="bg-grit-card border border-grit px-3 py-2 flex items-center gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-grit truncate">{pr.label}</p>
-              <p className="label-cap text-[9px] text-grit-dim">{pr.unit === "kg" ? "1-rep max" : "max reps"}</p>
+          <div key={pr.id} className="bg-grit-card border border-grit px-3 py-2.5">
+            <div className="flex items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-grit truncate">{pr.label}</p>
+                <p className="label-cap text-[9px] text-grit-dim">{pr.unit === "kg" ? "1-rep max" : "max reps"}</p>
+              </div>
+              <input
+                value={vals[pr.id] ?? ""}
+                onChange={(e) => setVals((v) => ({ ...v, [pr.id]: e.target.value }))}
+                inputMode="decimal"
+                placeholder={pr.placeholder}
+                className="input-grit w-20 text-right"
+              />
+              <span className="label-cap text-[10px] text-grit-dim w-8">{pr.unit}</span>
             </div>
-            <input
-              value={vals[pr.id] ?? ""}
-              onChange={(e) => setVals((v) => ({ ...v, [pr.id]: e.target.value }))}
-              inputMode="decimal"
-              placeholder={pr.placeholder}
-              className="input-grit w-20 text-right"
-            />
-            <span className="label-cap text-[10px] text-grit-dim w-8">{pr.unit}</span>
+            <p className="text-[11px] text-[#8a8a8a] mt-1.5 leading-snug">{pr.desc}</p>
           </div>
         ))}
       </div>
