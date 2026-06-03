@@ -33,7 +33,7 @@ function TabsLayout() {
       if (cancelled) return;
       let state = getState();
       if (!state.profile) {
-        const accountProfile = profileFromAccount(await getProfile().catch(() => null));
+        const accountProfile = profileFromAccount(await withTimeout(getProfile().catch(() => null), null));
         if (accountProfile) {
           setState((current) => ({
             ...current,
