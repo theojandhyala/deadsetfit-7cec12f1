@@ -435,15 +435,16 @@ function PhotoStep({ onSubmit, onSkip }: { onSubmit: (url: string) => void; onSk
       </div>
       <div className="mt-auto flex flex-col gap-3">
         <button
-          disabled={!preview}
-          onClick={() => preview && onSubmit(preview)}
+          onClick={() => (preview ? onSubmit(preview) : onSkip())}
           className="btn-grit"
         >
           Finish Setup
         </button>
-        <button onClick={onSkip} className="btn-ghost">
-          Skip
-        </button>
+        {preview && (
+          <button onClick={onSkip} className="btn-ghost">
+            Skip photo
+          </button>
+        )}
       </div>
     </>
   );
