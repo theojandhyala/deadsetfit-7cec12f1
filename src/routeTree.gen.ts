@@ -9,7 +9,10 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as DisclaimerRouteImport } from './routes/disclaimer'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as TabsRouteImport } from './routes/_tabs'
 import { Route as IndexRouteImport } from './routes/index'
@@ -25,9 +28,24 @@ import { Route as TabsChallengesRouteImport } from './routes/_tabs.challenges'
 import { Route as TabsProgramsProgramIdRouteImport } from './routes/_tabs.programs.$programId'
 import { Route as TabsAthleteIdRouteImport } from './routes/_tabs.athlete.$id'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DisclaimerRoute = DisclaimerRouteImport.update({
+  id: '/disclaimer',
+  path: '/disclaimer',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -103,7 +121,10 @@ const TabsAthleteIdRoute = TabsAthleteIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/disclaimer': typeof DisclaimerRoute
   '/onboarding': typeof OnboardingRoute
+  '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
   '/challenges': typeof TabsChallengesRoute
   '/diet': typeof TabsDietRoute
   '/library': typeof TabsLibraryRoute
@@ -119,7 +140,10 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/disclaimer': typeof DisclaimerRoute
   '/onboarding': typeof OnboardingRoute
+  '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
   '/challenges': typeof TabsChallengesRoute
   '/diet': typeof TabsDietRoute
   '/library': typeof TabsLibraryRoute
@@ -137,7 +161,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_tabs': typeof TabsRouteWithChildren
   '/auth': typeof AuthRoute
+  '/disclaimer': typeof DisclaimerRoute
   '/onboarding': typeof OnboardingRoute
+  '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
   '/_tabs/challenges': typeof TabsChallengesRoute
   '/_tabs/diet': typeof TabsDietRoute
   '/_tabs/library': typeof TabsLibraryRoute
@@ -155,7 +182,10 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/disclaimer'
     | '/onboarding'
+    | '/privacy'
+    | '/terms'
     | '/challenges'
     | '/diet'
     | '/library'
@@ -171,7 +201,10 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/disclaimer'
     | '/onboarding'
+    | '/privacy'
+    | '/terms'
     | '/challenges'
     | '/diet'
     | '/library'
@@ -188,7 +221,10 @@ export interface FileRouteTypes {
     | '/'
     | '/_tabs'
     | '/auth'
+    | '/disclaimer'
     | '/onboarding'
+    | '/privacy'
+    | '/terms'
     | '/_tabs/challenges'
     | '/_tabs/diet'
     | '/_tabs/library'
@@ -206,17 +242,41 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   TabsRoute: typeof TabsRouteWithChildren
   AuthRoute: typeof AuthRoute
+  DisclaimerRoute: typeof DisclaimerRoute
   OnboardingRoute: typeof OnboardingRoute
+  PrivacyRoute: typeof PrivacyRoute
+  TermsRoute: typeof TermsRoute
   WorkoutLiveRoute: typeof WorkoutLiveRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/onboarding': {
       id: '/onboarding'
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/disclaimer': {
+      id: '/disclaimer'
+      path: '/disclaimer'
+      fullPath: '/disclaimer'
+      preLoaderRoute: typeof DisclaimerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -362,7 +422,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   TabsRoute: TabsRouteWithChildren,
   AuthRoute: AuthRoute,
+  DisclaimerRoute: DisclaimerRoute,
   OnboardingRoute: OnboardingRoute,
+  PrivacyRoute: PrivacyRoute,
+  TermsRoute: TermsRoute,
   WorkoutLiveRoute: WorkoutLiveRoute,
 }
 export const routeTree = rootRouteImport

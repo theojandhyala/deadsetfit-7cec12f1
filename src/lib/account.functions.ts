@@ -29,28 +29,36 @@ export const deleteMyAccount = createServerFn({ method: "POST" })
       "referrals",
       "profiles",
     ];
+    const admin = supabaseAdmin as unknown as {
+      from: (t: string) => {
+        delete: () => {
+          eq: (c: string, v: string) => Promise<unknown>;
+          or: (filter: string) => Promise<unknown>;
+        };
+      };
+    };
     for (const t of tables) {
       try {
-        // For follows / blocks / reports / referrals the user can be on either side.
         if (t === "follows") {
-          await supabaseAdmin.from(t).delete().or(`follower_id.eq.${userId},following_id.eq.${userId}`);
+          await admin.from(t).delete().or(`follower_id.eq.${userId},following_id.eq.${userId}`);
         } else if (t === "user_blocks") {
-          await supabaseAdmin.from(t).delete().or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`);
+          await admin.from(t).delete().or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`);
         } else if (t === "user_reports") {
-          await supabaseAdmin.from(t).delete().or(`reporter_id.eq.${userId},reported_user_id.eq.${userId}`);
+          await admin.from(t).delete().or(`reporter_id.eq.${userId},reported_user_id.eq.${userId}`);
         } else if (t === "referrals") {
-          await supabaseAdmin.from(t).delete().or(`referrer_id.eq.${userId},referred_id.eq.${userId}`);
+          await admin.from(t).delete().or(`referrer_id.eq.${userId},referred_id.eq.${userId}`);
         } else if (t === "profiles") {
-          await supabaseAdmin.from(t).delete().eq("id", userId);
+          await admin.from(t).delete().eq("id", userId);
         } else if (t === "user_roles") {
-          await supabaseAdmin.from(t).delete().eq("user_id", userId);
+          await admin.from(t).delete().eq("user_id", userId);
         } else {
-          await supabaseAdmin.from(t).delete().eq("user_id", userId);
+          await admin.from(t).delete().eq("user_id", userId);
         }
       } catch {
         // Ignore — best-effort.
       }
     }
+
 
     const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
     if (error) throw new Error(error.message);
