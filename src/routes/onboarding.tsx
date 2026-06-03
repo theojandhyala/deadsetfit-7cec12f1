@@ -8,7 +8,7 @@ import { getState, setState, waitForRemoteState } from "@/lib/storage";
 import { defaultSchedule } from "@/lib/calc";
 import { getExercise } from "@/lib/exercises";
 import { getMyProfile, saveProfile } from "@/lib/profile.functions";
-import { profileFromAccount } from "@/lib/account-restore";
+import { profileFromAccount, withTimeout } from "@/lib/account-restore";
 import type { Equipment, Experience, Gender, Goal, Profile, Weakness } from "@/lib/types";
 import { buildPublicStats } from "@/lib/fifa-stats";
 
@@ -73,21 +73,22 @@ function Onboarding() {
     let cancelled = false;
     (async () => {
       const { supabase } = await import("@/integrations/supabase/client");
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const { data: { session } } = await withTimeout(
+        supabase.auth.getSession(),
+        { data: { session: null }, error: null },
+      );
       if (cancelled) return;
       if (!session) {
         navigate({ to: "/auth", replace: true });
         return;
       }
-      await waitForRemoteState(session.user.id);
+      await withTimeout(waitForRemoteState(session.user.id), undefined);
       if (cancelled) return;
       if (getState().profile) {
         navigate({ to: "/train", replace: true });
         return;
       }
-      const accountProfile = profileFromAccount(await getProfile().catch(() => null));
+      const accountProfile = profileFromAccount(await withTimeout(getProfile().catch(() => null), null));
       if (accountProfile) {
         setState((current) => ({
           ...current,
