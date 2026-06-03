@@ -148,6 +148,30 @@ function ProfilePage() {
     navigate({ to: "/onboarding", replace: true });
   }
 
+  async function deleteAccount() {
+    const ok = confirm(
+      "PERMANENTLY DELETE your DEADSET account?\n\n" +
+      "This erases your profile, posts, comments, follows, PRs and training history. " +
+      "It cannot be undone.",
+    );
+    if (!ok) return;
+    const confirm2 = prompt('Type "DELETE" to confirm:');
+    if (confirm2 !== "DELETE") {
+      toast.error("Cancelled — confirmation did not match");
+      return;
+    }
+    try {
+      await deleteAcct({});
+      try { localStorage.removeItem("grit_app_state_v1"); } catch { /* ignore */ }
+      await supabase.auth.signOut();
+      toast.success("Account deleted");
+      navigate({ to: "/auth", replace: true });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't delete account");
+    }
+  }
+
+
   // Group PRs by category for the editor
   const grouped = PR_CATALOG.reduce<Record<string, PRDef[]>>((acc, d) => {
     (acc[d.category] ??= []).push(d);
