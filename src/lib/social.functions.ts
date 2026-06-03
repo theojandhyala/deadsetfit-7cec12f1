@@ -261,10 +261,13 @@ export const getAthleteCard = createServerFn({ method: "POST" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!row) throw new Error("Athlete not found");
-    const [{ data: follow }, { count: followers }, { count: following }] = await Promise.all([
+    const [{ data: follow }, { count: followers }, { count: following }, meRow] = await Promise.all([
       supabase.from("follows").select("follower_id").eq("follower_id", userId).eq("following_id", data.userId).maybeSingle(),
       supabase.from("follows").select("*", { count: "exact", head: true }).eq("following_id", data.userId),
       supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", data.userId),
+      userId === data.userId
+        ? Promise.resolve(null)
+        : supabaseAdmin.from("public_profiles").select("public_stats, grit_points").eq("id", userId).maybeSingle(),
     ]);
     return {
       ...row,
@@ -273,6 +276,8 @@ export const getAthleteCard = createServerFn({ method: "POST" })
       followerCount: followers ?? 0,
       followingCount: following ?? 0,
       isMe: userId === data.userId,
+      my_public_stats: meRow?.data?.public_stats ?? null,
+      my_grit_points: meRow?.data?.grit_points ?? null,
     };
   });
 
