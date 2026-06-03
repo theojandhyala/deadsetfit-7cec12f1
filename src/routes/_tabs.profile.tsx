@@ -319,12 +319,27 @@ function ProfilePage() {
         </div>
       </section>
 
-      <section className="px-5 mb-10 flex flex-col gap-2">
+      <section className="px-5 mb-6 flex flex-col gap-2">
         <button onClick={logout} className="btn-grit w-full inline-flex items-center justify-center">
           <LogOut size={14} className="mr-2" /> Log Out (saves your data)
         </button>
         <button onClick={reset} className="btn-ghost w-full">Reset This Device</button>
+        <button
+          onClick={deleteAccount}
+          className="w-full mt-2 py-3 label-cap text-sm inline-flex items-center justify-center border border-accent-red text-accent-red hover:bg-accent-red/10 transition-colors"
+        >
+          <Trash2 size={14} className="mr-2" /> Delete My Account
+        </button>
       </section>
+
+      <section className="px-5 pb-10 flex justify-center gap-4 label-cap text-[10px] text-grit-dim">
+        <Link to="/privacy">Privacy</Link>
+        <span>·</span>
+        <Link to="/terms">Terms</Link>
+        <span>·</span>
+        <Link to="/disclaimer">Disclaimer</Link>
+      </section>
+
     </div>
   );
 }
