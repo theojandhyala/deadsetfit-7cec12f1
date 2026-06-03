@@ -20,10 +20,10 @@ function TabsLayout() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data: { session } } = await withTimeout(
-        supabase.auth.getSession(),
-        { data: { session: null }, error: null },
-      );
+      // getSession() is a local localStorage read — don't time it out.
+      // Timing it out and falling back to null was bouncing signed-in users
+      // back to /auth on slow page loads.
+      const { data: { session } } = await supabase.auth.getSession();
       if (cancelled) return;
       if (!session) {
         navigate({ to: "/auth", replace: true });
