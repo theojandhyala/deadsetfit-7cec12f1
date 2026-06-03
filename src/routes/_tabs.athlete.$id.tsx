@@ -1,11 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Loader2, UserPlus, UserCheck, Trophy } from "lucide-react";
+import { ArrowLeft, Loader2, UserPlus, UserCheck, Trophy, Flag, Ban } from "lucide-react";
 import { toast } from "sonner";
 import { getAthleteCard, toggleFollow } from "@/lib/social.functions";
+import { blockUser, unblockUser, isBlocked, reportContent } from "@/lib/account.functions";
 import { FifaCard } from "@/components/FifaCard";
 import { gritBadge, badgeColor } from "@/lib/calc";
+
 
 export const Route = createFileRoute("/_tabs/athlete/$id")({
   head: () => ({ meta: [{ title: "DEADSET — Athlete" }] }),
