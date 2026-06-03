@@ -170,14 +170,14 @@ function AthletePage() {
       )}
 
 
-      {/* Headline PRs */}
+      {/* Headline PRs + head-to-head vs you */}
       <section className="px-5 mb-5">
         <p className="label-cap mb-2 flex items-center gap-2"><Trophy size={12} className="text-accent-red" /> Personal Records</p>
         {topPRs.length === 0 ? (
           <div className="bg-grit-card border border-grit p-5 text-center text-sm text-grit-dim">
             No PRs shared yet.
           </div>
-        ) : (
+        ) : card.isMe ? (
           <div className="grid grid-cols-2 gap-2">
             {topPRs.map((pr) => (
               <div key={pr.id} className="bg-grit-card border border-grit p-3">
@@ -188,6 +188,12 @@ function AthletePage() {
               </div>
             ))}
           </div>
+        ) : (
+          <PRHeadToHead
+            them={topPRs}
+            mine={((card.my_public_stats as Record<string, unknown> | null)?.topPRs as Array<{ id: string; label: string; value: number; unit: string }>) || []}
+            themName={card.username || card.display_name || "them"}
+          />
         )}
       </section>
 
