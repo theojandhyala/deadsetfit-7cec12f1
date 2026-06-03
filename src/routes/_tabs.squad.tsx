@@ -1,12 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Heart, MessageCircle, Trophy, Share2, Loader2, Send, Plus, Gift, Copy, Check, Crown, Users, Search, UserPlus, UserCheck } from "lucide-react";
+import { Heart, MessageCircle, Trophy, Share2, Loader2, Send, Plus, Gift, Copy, Check, Crown, Users, Search, UserPlus, UserCheck, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getFeed, createPost, toggleLike, addComment, getComments,
   getLeaderboard, getMyReferralInfo, redeemReferral, updateMyProfile,
   searchAthletes, getSuggestedAthletes, toggleFollow, getMyFollowStats,
+  updateMyLocation, getMyLocation, getNearbyAthletes,
 } from "@/lib/social.functions";
 import { RankShareCard } from "@/components/RankShareCard";
 import { toast } from "sonner";
@@ -440,16 +441,26 @@ function Friends() {
   const _suggest = useServerFn(getSuggestedAthletes);
   const _toggle = useServerFn(toggleFollow);
   const _stats = useServerFn(getMyFollowStats);
+  const _nearby = useServerFn(getNearbyAthletes);
+  const _getLoc = useServerFn(getMyLocation);
+  const _setLoc = useServerFn(updateMyLocation);
 
   const [q, setQ] = useState("");
   const [results, setResults] = useState<SearchHit[] | null>(null);
   const [suggested, setSuggested] = useState<Suggested[] | null>(null);
   const [stats, setStats] = useState<{ following: number; followers: number } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [nearby, setNearby] = useState<Awaited<ReturnType<typeof getNearbyAthletes>> | null>(null);
+  const [myLoc, setMyLoc] = useState<{ city: string | null; country: string | null } | null>(null);
+  const [locBusy, setLocBusy] = useState(false);
+  const [cityInput, setCityInput] = useState("");
+  const [countryInput, setCountryInput] = useState("");
 
   useEffect(() => {
     _suggest().then(setSuggested).catch(() => {});
     _stats().then(setStats).catch(() => {});
+    _getLoc().then((l) => { setMyLoc({ city: l.city, country: l.country }); setCityInput(l.city ?? ""); setCountryInput(l.country ?? ""); }).catch(() => {});
+    _nearby().then(setNearby).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -463,16 +474,49 @@ function Friends() {
 
   async function follow(id: string, currentlyFollowing: boolean) {
     setBusy(id);
-    // optimistic
     setResults(arr => arr?.map(r => r.id === id ? { ...r, following: !currentlyFollowing } : r) ?? null);
     setSuggested(arr => arr?.filter(r => r.id !== id) ?? null);
+    setNearby(n => n ? { ...n, athletes: n.athletes.map(a => a.id === id ? { ...a, following: !currentlyFollowing } : a) } : n);
     try {
       await _toggle({ data: { userId: id } });
       setStats(s => s ? { ...s, following: s.following + (currentlyFollowing ? -1 : 1) } : s);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
-      setResults(arr => arr?.map(r => r.id === id ? { ...r, following: currentlyFollowing } : r) ?? null);
     } finally { setBusy(null); }
+  }
+
+  async function useGPS() {
+    if (!navigator.geolocation) { toast.error("Geolocation not supported"); return; }
+    setLocBusy(true);
+    try {
+      const pos = await new Promise<GeolocationPosition>((res, rej) =>
+        navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 })
+      );
+      const r = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${pos.coords.latitude}&longitude=${pos.coords.longitude}&localityLanguage=en`);
+      const j = await r.json();
+      const city = j.city || j.locality || j.principalSubdivision || "";
+      const country = j.countryName || "";
+      if (!city || !country) throw new Error("Couldn't resolve city");
+      setCityInput(city); setCountryInput(country);
+      await _setLoc({ data: { city, country, region: j.principalSubdivision || null } });
+      toast.success(`Set to ${city}, ${country}`);
+      setMyLoc({ city, country });
+      setNearby(await _nearby());
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Location denied");
+    } finally { setLocBusy(false); }
+  }
+
+  async function saveCity() {
+    if (!cityInput.trim() || !countryInput.trim()) { toast.error("City and country required"); return; }
+    setLocBusy(true);
+    try {
+      await _setLoc({ data: { city: cityInput.trim(), country: countryInput.trim(), region: null } });
+      setMyLoc({ city: cityInput.trim(), country: countryInput.trim() });
+      toast.success("Saved");
+      setNearby(await _nearby());
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+    finally { setLocBusy(false); }
   }
 
   return (
@@ -488,6 +532,40 @@ function Friends() {
           <p className="label-cap text-[10px] text-[#8a8a8a] mt-1">Followers</p>
         </div>
       </div>
+
+      {/* Location card */}
+      <div className="bg-grit-card border border-grit p-4 mb-4">
+        <p className="label-cap mb-2 flex items-center gap-2"><MapPin size={12} className="text-accent-red" /> Your city</p>
+        {myLoc?.city ? (
+          <p className="text-sm text-grit mb-3"><span className="font-bold">{myLoc.city}</span>{myLoc.country ? `, ${myLoc.country}` : ""}</p>
+        ) : (
+          <p className="text-xs text-[#8a8a8a] mb-3">Add your city to find lifters near you. City only — never exact location.</p>
+        )}
+        <div className="flex gap-2 mb-2">
+          <input value={cityInput} onChange={(e) => setCityInput(e.target.value)} placeholder="City" className="input-grit flex-1" maxLength={80} />
+          <input value={countryInput} onChange={(e) => setCountryInput(e.target.value)} placeholder="Country" className="input-grit w-28" maxLength={80} />
+        </div>
+        <div className="flex gap-2">
+          <button onClick={saveCity} disabled={locBusy} className="btn-grit flex-1 py-2 text-xs">{locBusy ? <Loader2 size={12} className="animate-spin" /> : "Save"}</button>
+          <button onClick={useGPS} disabled={locBusy} className="btn-ghost px-3 py-2 text-xs flex items-center gap-1.5"><MapPin size={12} /> Use GPS</button>
+        </div>
+      </div>
+
+      {/* Nearby */}
+      {nearby?.myCity && (
+        <>
+          <p className="label-cap text-[#8a8a8a] mb-2 flex items-center gap-1"><MapPin size={10} /> In {nearby.myCity}</p>
+          {nearby.athletes.length === 0 ? (
+            <p className="bg-grit-card border border-grit p-4 text-xs text-[#8a8a8a] text-center mb-4">No one else here yet — invite a gym mate.</p>
+          ) : (
+            <div className="mb-4">
+              {nearby.athletes.map(a => (
+                <AthleteRow key={a.id} a={a} busy={busy === a.id} onToggle={() => follow(a.id, a.following)} />
+              ))}
+            </div>
+          )}
+        </>
+      )}
 
       {/* search */}
       <div className="bg-grit-card border border-grit p-3 mb-4 flex items-center gap-2">
@@ -526,7 +604,7 @@ function Friends() {
 }
 
 function AthleteRow({ a, busy, onToggle }: {
-  a: { id: string; username: string | null; display_name: string | null; avatar_url: string | null; level: string | null; following: boolean; grit_points?: number };
+  a: { id: string; username: string | null; display_name: string | null; avatar_url: string | null; level: string | null; following: boolean; grit_points?: number | null };
   busy: boolean;
   onToggle: () => void;
 }) {

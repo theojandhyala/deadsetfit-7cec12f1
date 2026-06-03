@@ -336,3 +336,71 @@ export const updateMyProfile = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
+
+// === Location: update my city ===
+const LocationInput = z.object({
+  city: z.string().trim().min(1).max(80),
+  region: z.string().trim().max(80).optional().nullable(),
+  country: z.string().trim().min(1).max(80),
+});
+export const updateMyLocation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => LocationInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { error } = await supabase.from("profiles").update({
+      city: data.city,
+      region: data.region ?? null,
+      country: data.country,
+      location_updated_at: new Date().toISOString(),
+    }).eq("id", userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const getMyLocation = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { data } = await supabase
+      .from("profiles")
+      .select("city, region, country")
+      .eq("id", userId)
+      .maybeSingle();
+    return { city: data?.city ?? null, region: data?.region ?? null, country: data?.country ?? null };
+  });
+
+// === Nearby athletes (same city, then same country) ===
+export const getNearbyAthletes = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { data: me } = await supabaseAdmin
+      .from("profiles").select("city, country").eq("id", userId).maybeSingle();
+    if (!me?.city || !me?.country) {
+      return { athletes: [] as Array<{ id: string; username: string | null; display_name: string | null; avatar_url: string | null; level: string | null; grit_points: number | null; city: string | null; country: string | null; following: boolean }>, myCity: null as string | null, myCountry: null as string | null };
+    }
+    const { data: blocks } = await supabase
+      .from("user_blocks").select("blocker_id, blocked_id")
+      .or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`);
+    const hidden = new Set<string>();
+    (blocks ?? []).forEach((b) => hidden.add(b.blocker_id === userId ? b.blocked_id : b.blocker_id));
+
+    const { data: same } = await supabaseAdmin
+      .from("public_profiles")
+      .select("id, username, display_name, avatar_url, level, grit_points, city, country")
+      .ilike("city", me.city)
+      .ilike("country", me.country)
+      .neq("id", userId)
+      .limit(30);
+    const ids = (same ?? []).map(r => r.id).filter((x): x is string => !!x);
+    const { data: follows } = await supabase
+      .from("follows").select("following_id")
+      .eq("follower_id", userId)
+      .in("following_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
+    const fset = new Set((follows ?? []).map(f => f.following_id));
+    const athletes = (same ?? [])
+      .filter(r => r.id && !hidden.has(r.id as string))
+      .map(r => ({ ...r, id: r.id as string, following: fset.has(r.id as string) }));
+    return { athletes, myCity: me.city, myCountry: me.country };
+  });
