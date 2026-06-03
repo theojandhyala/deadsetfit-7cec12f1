@@ -364,10 +364,10 @@ function Injuries({ onSubmit, onSkip }: { onSubmit: (s: string) => void; onSkip:
       />
       <div className="mt-auto flex flex-col gap-3">
         <button onClick={() => onSubmit(v)} className="btn-grit">
-          Finish Setup
+          Continue
         </button>
         <button onClick={onSkip} className="btn-ghost">
-          Skip
+          Skip — no injuries
         </button>
       </div>
     </>
