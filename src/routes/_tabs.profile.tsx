@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Flame, LogOut, Crown, Pencil, Trophy, Plus, X } from "lucide-react";
-import { useAppState } from "@/lib/storage";
+import { useAppState, flushRemoteState } from "@/lib/storage";
+import { supabase } from "@/integrations/supabase/client";
 import {
   calculateStreak, calculateGritScore, gritBadge, badgeColor,
 } from "@/lib/calc";
@@ -122,8 +123,24 @@ function ProfilePage() {
     toast.success("PR saved");
   }
 
+  async function logout() {
+    toast.loading("Saving your data…", { id: "logout" });
+    try {
+      // Push any unsaved local state to the server BEFORE auth is dropped.
+      if (p) {
+        await persist({ data: { public_stats: buildPublicStats(state) } }).catch(() => {});
+      }
+      await flushRemoteState();
+    } finally {
+      toast.dismiss("logout");
+    }
+    await supabase.auth.signOut();
+    toast.success("Signed out — your data is saved");
+    navigate({ to: "/auth", replace: true });
+  }
+
   function reset() {
-    if (!confirm("Reset all your DEADSET data?")) return;
+    if (!confirm("Reset all your DEADSET data on this device? Your account stays signed in.")) return;
     localStorage.removeItem("grit_app_state_v1");
     navigate({ to: "/onboarding", replace: true });
   }
@@ -275,8 +292,11 @@ function ProfilePage() {
         </div>
       </section>
 
-      <section className="px-5 mb-10">
-        <button onClick={reset} className="btn-ghost w-full"><LogOut size={14} className="mr-2" /> Reset All Data</button>
+      <section className="px-5 mb-10 flex flex-col gap-2">
+        <button onClick={logout} className="btn-grit w-full inline-flex items-center justify-center">
+          <LogOut size={14} className="mr-2" /> Log Out (saves your data)
+        </button>
+        <button onClick={reset} className="btn-ghost w-full">Reset This Device</button>
       </section>
     </div>
   );
