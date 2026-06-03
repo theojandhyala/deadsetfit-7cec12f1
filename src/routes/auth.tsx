@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { signInWithUsername } from "@/lib/profile.functions";
+import { withTimeout } from "@/lib/account-restore";
 import { toast } from "sonner";
 
 
@@ -25,7 +26,7 @@ function AuthPage() {
     const { data } = supabase.auth.onAuthStateChange((_e, session) => {
       if (session) navigate({ to: "/train", replace: true });
     });
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    withTimeout(supabase.auth.getSession(), { data: { session: null }, error: null }).then(({ data: { session } }) => {
       if (session) navigate({ to: "/train", replace: true });
     });
     return () => data.subscription.unsubscribe();

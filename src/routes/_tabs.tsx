@@ -6,7 +6,7 @@ import { TopBar } from "@/components/TopBar";
 import { getState, setState, waitForRemoteState } from "@/lib/storage";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyProfile } from "@/lib/profile.functions";
-import { profileFromAccount } from "@/lib/account-restore";
+import { profileFromAccount, withTimeout } from "@/lib/account-restore";
 import { defaultSchedule } from "@/lib/calc";
 
 export const Route = createFileRoute("/_tabs")({
@@ -20,19 +20,20 @@ function TabsLayout() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const { data: { session } } = await withTimeout(
+        supabase.auth.getSession(),
+        { data: { session: null }, error: null },
+      );
       if (cancelled) return;
       if (!session) {
         navigate({ to: "/auth", replace: true });
         return;
       }
-      await waitForRemoteState(session.user.id);
+      await withTimeout(waitForRemoteState(session.user.id), undefined);
       if (cancelled) return;
       let state = getState();
       if (!state.profile) {
-        const accountProfile = profileFromAccount(await getProfile().catch(() => null));
+        const accountProfile = profileFromAccount(await withTimeout(getProfile().catch(() => null), null));
         if (accountProfile) {
           setState((current) => ({
             ...current,
