@@ -305,13 +305,14 @@ function PRRow({
 
   if (!isEditing) {
     return (
-      <button onClick={onStart} className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-[#1a1a1a] transition-colors">
+      <button onClick={onStart} className="w-full flex items-start justify-between px-4 py-3 text-left hover:bg-[#1a1a1a] transition-colors gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-grit truncate">{def.label}</p>
-          <p className="text-[10px] text-grit-dim label-cap">{def.kind === "1RM" ? "1-rep max" : def.kind === "REPS" ? "max reps" : "best time"}</p>
+          <p className="text-sm font-bold text-grit">{def.label}</p>
+          <p className="text-[10px] text-grit-dim label-cap mt-0.5">{def.kind === "1RM" ? "1-rep max" : def.kind === "REPS" ? "max reps" : "best time"}</p>
+          <p className="text-[11px] text-[#8a8a8a] mt-1 leading-snug">{def.desc}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="display font-extrabold text-grit text-base">{display}</span>
+        <div className="flex items-center gap-2 pt-0.5">
+          <span className="display font-extrabold text-grit text-base whitespace-nowrap">{display}</span>
           {!pr && <Plus size={14} className="text-accent-red" />}
         </div>
       </button>
