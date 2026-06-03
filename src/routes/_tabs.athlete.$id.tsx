@@ -170,14 +170,14 @@ function AthletePage() {
       )}
 
 
-      {/* Headline PRs */}
+      {/* Headline PRs + head-to-head vs you */}
       <section className="px-5 mb-5">
         <p className="label-cap mb-2 flex items-center gap-2"><Trophy size={12} className="text-accent-red" /> Personal Records</p>
         {topPRs.length === 0 ? (
           <div className="bg-grit-card border border-grit p-5 text-center text-sm text-grit-dim">
             No PRs shared yet.
           </div>
-        ) : (
+        ) : card.isMe ? (
           <div className="grid grid-cols-2 gap-2">
             {topPRs.map((pr) => (
               <div key={pr.id} className="bg-grit-card border border-grit p-3">
@@ -188,6 +188,12 @@ function AthletePage() {
               </div>
             ))}
           </div>
+        ) : (
+          <PRHeadToHead
+            them={topPRs}
+            mine={((card.my_public_stats as Record<string, unknown> | null)?.topPRs as Array<{ id: string; label: string; value: number; unit: string }>) || []}
+            themName={card.username || card.display_name || "them"}
+          />
         )}
       </section>
 
@@ -209,6 +215,56 @@ function Tile({ label, v }: { label: string; v: number }) {
     <div className="bg-grit-card border border-grit p-3 text-center">
       <p className="display font-extrabold text-grit text-xl leading-none">{v}</p>
       <p className="label-cap text-[10px] text-grit-dim mt-1">{label}</p>
+    </div>
+  );
+}
+
+type PR = { id: string; label: string; value: number; unit: string };
+function PRHeadToHead({ them, mine, themName }: { them: PR[]; mine: PR[]; themName: string }) {
+  const mineById = new Map(mine.map((p) => [p.id, p]));
+  let myWins = 0;
+  let theirWins = 0;
+  const rows = them.map((t) => {
+    const m = mineById.get(t.id);
+    const myV = m?.value ?? 0;
+    const theirV = t.value;
+    const diff = myV - theirV;
+    if (diff > 0) myWins++;
+    else if (diff < 0) theirWins++;
+    return { ...t, myV, theirV, diff };
+  });
+  return (
+    <div className="bg-grit-card border border-grit p-3">
+      <div className="grid grid-cols-3 text-center mb-2 pb-2 border-b border-grit">
+        <div>
+          <p className="display font-extrabold text-grit text-xl leading-none">{myWins}</p>
+          <p className="label-cap text-[9px] text-grit-dim mt-1">YOU</p>
+        </div>
+        <div>
+          <p className="display font-extrabold text-accent-red text-xs leading-none mt-1.5">VS</p>
+        </div>
+        <div>
+          <p className="display font-extrabold text-grit text-xl leading-none">{theirWins}</p>
+          <p className="label-cap text-[9px] text-grit-dim mt-1 truncate">{themName.toUpperCase()}</p>
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        {rows.map((r) => {
+          const youWin = r.diff > 0;
+          const tie = r.diff === 0;
+          return (
+            <div key={r.id} className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-sm">
+              <p className={`text-right font-bold ${youWin ? "text-accent-red" : "text-grit-dim"}`}>
+                {r.myV}<span className="text-[10px] ml-1 text-grit-dim">{r.unit}</span>
+              </p>
+              <p className="label-cap text-[9px] text-grit-dim px-1.5">{r.label}</p>
+              <p className={`text-left font-bold ${!youWin && !tie ? "text-accent-red" : "text-grit-dim"}`}>
+                {r.theirV}<span className="text-[10px] ml-1 text-grit-dim">{r.unit}</span>
+              </p>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

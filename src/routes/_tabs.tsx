@@ -20,10 +20,10 @@ function TabsLayout() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data: { session } } = await withTimeout(
-        supabase.auth.getSession(),
-        { data: { session: null }, error: null },
-      );
+      // getSession() is a local localStorage read — don't time it out.
+      // Timing it out and falling back to null was bouncing signed-in users
+      // back to /auth on slow page loads.
+      const { data: { session } } = await supabase.auth.getSession();
       if (cancelled) return;
       if (!session) {
         navigate({ to: "/auth", replace: true });
@@ -49,8 +49,11 @@ function TabsLayout() {
       }
       setReady(true);
     })();
-    const { data } = supabase.auth.onAuthStateChange((_e, s) => {
-      if (!s) navigate({ to: "/auth", replace: true });
+    const { data } = supabase.auth.onAuthStateChange((event, s) => {
+      // Only kick to /auth on an EXPLICIT sign-out. INITIAL_SESSION can fire
+      // with session=null briefly on hard refresh before localStorage hydrates,
+      // which would otherwise bounce a signed-in user back to the login screen.
+      if (event === "SIGNED_OUT" && !s) navigate({ to: "/auth", replace: true });
     });
     return () => {
       cancelled = true;
