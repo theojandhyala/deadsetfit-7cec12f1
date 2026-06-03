@@ -21,8 +21,13 @@ function AthletePage() {
   const navigate = useNavigate();
   const _get = useServerFn(getAthleteCard);
   const _toggle = useServerFn(toggleFollow);
+  const _block = useServerFn(blockUser);
+  const _unblock = useServerFn(unblockUser);
+  const _isBlocked = useServerFn(isBlocked);
+  const _report = useServerFn(reportContent);
   const [card, setCard] = useState<Card | null>(null);
   const [busy, setBusy] = useState(false);
+  const [blocked, setBlocked] = useState(false);
 
   useEffect(() => {
     _get({ data: { userId: id } })
@@ -31,7 +36,9 @@ function AthletePage() {
         toast.error(e instanceof Error ? e.message : "Failed");
         navigate({ to: "/squad" });
       });
+    _isBlocked({ data: { userId: id } }).then((r) => setBlocked(r.blocked)).catch(() => {});
   }, [id]);
+
 
   async function follow() {
     if (!card || card.isMe) return;
