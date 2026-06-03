@@ -10,43 +10,45 @@ export interface PRDef {
   category: "PUSH" | "PULL" | "LEGS" | "OLY" | "BODY" | "CARDIO" | "CORE";
   /** Used as weight category in FIFA strength math (1RM lifts only). */
   weightWeight?: number; // contribution weight (default 1)
+  /** Plain-English description of the lift so users know what it is. */
+  desc: string;
 }
 
 export const PR_CATALOG: PRDef[] = [
   // Big 4
-  { id: "bench-press",      label: "Bench Press",        kind: "1RM",  category: "PUSH",   weightWeight: 1.2 },
-  { id: "squat",            label: "Back Squat",         kind: "1RM",  category: "LEGS",   weightWeight: 1.5 },
-  { id: "deadlift",         label: "Deadlift",           kind: "1RM",  category: "PULL",   weightWeight: 1.7 },
-  { id: "ohp",              label: "Overhead Press",     kind: "1RM",  category: "PUSH",   weightWeight: 1.0 },
+  { id: "bench-press",      label: "Bench Press",        kind: "1RM",  category: "PUSH",   weightWeight: 1.2, desc: "Flat barbell bench press. Bar to mid-chest, drive straight up." },
+  { id: "squat",            label: "Back Squat",         kind: "1RM",  category: "LEGS",   weightWeight: 1.5, desc: "Barbell on upper back. Break at hips & knees, depth at parallel." },
+  { id: "deadlift",         label: "Deadlift",           kind: "1RM",  category: "PULL",   weightWeight: 1.7, desc: "Conventional barbell deadlift from the floor. Lock out hips at top." },
+  { id: "ohp",              label: "Overhead Press",     kind: "1RM",  category: "PUSH",   weightWeight: 1.0, desc: "Standing strict barbell press. No leg drive, bar finishes overhead." },
   // Push variations
-  { id: "incline-bench",    label: "Incline Bench",      kind: "1RM",  category: "PUSH",   weightWeight: 1.0 },
-  { id: "db-bench",         label: "DB Bench (per hand)",kind: "1RM",  category: "PUSH",   weightWeight: 0.8 },
-  { id: "weighted-dip",     label: "Weighted Dip",       kind: "1RM",  category: "PUSH",   weightWeight: 0.8 },
+  { id: "incline-bench",    label: "Incline Bench",      kind: "1RM",  category: "PUSH",   weightWeight: 1.0, desc: "Barbell bench press on a 30–45° incline bench." },
+  { id: "db-bench",         label: "DB Bench (per hand)",kind: "1RM",  category: "PUSH",   weightWeight: 0.8, desc: "Flat dumbbell bench press. Record weight per hand." },
+  { id: "weighted-dip",     label: "Weighted Dip",       kind: "1RM",  category: "PUSH",   weightWeight: 0.8, desc: "Parallel-bar dip with weight belt. Total added weight (not bodyweight)." },
   // Pull variations
-  { id: "weighted-pullup",  label: "Weighted Pull-Up",   kind: "1RM",  category: "PULL",   weightWeight: 1.1 },
-  { id: "barbell-row",      label: "Barbell Row",        kind: "1RM",  category: "PULL",   weightWeight: 1.0 },
-  { id: "pendlay-row",      label: "Pendlay Row",        kind: "1RM",  category: "PULL",   weightWeight: 1.0 },
+  { id: "weighted-pullup",  label: "Weighted Pull-Up",   kind: "1RM",  category: "PULL",   weightWeight: 1.1, desc: "Strict pull-up with weight belt. Record added weight only." },
+  { id: "barbell-row",      label: "Barbell Row",        kind: "1RM",  category: "PULL",   weightWeight: 1.0, desc: "Bent-over barbell row, torso ~45°, pull to lower chest." },
+  { id: "pendlay-row",      label: "Pendlay Row",        kind: "1RM",  category: "PULL",   weightWeight: 1.0, desc: "Barbell row from a dead stop on floor each rep, torso parallel." },
   // Legs
-  { id: "front-squat",      label: "Front Squat",        kind: "1RM",  category: "LEGS",   weightWeight: 1.2 },
-  { id: "rdl",              label: "Romanian Deadlift",  kind: "1RM",  category: "LEGS",   weightWeight: 1.3 },
-  { id: "hip-thrust",       label: "Hip Thrust",         kind: "1RM",  category: "LEGS",   weightWeight: 1.2 },
-  { id: "leg-press",        label: "Leg Press",          kind: "1RM",  category: "LEGS",   weightWeight: 0.7 },
+  { id: "front-squat",      label: "Front Squat",        kind: "1RM",  category: "LEGS",   weightWeight: 1.2, desc: "Barbell racked on front delts, elbows high. Squat upright." },
+  { id: "rdl",              label: "Romanian Deadlift",  kind: "1RM",  category: "LEGS",   weightWeight: 1.3, desc: "Stiff-legged hip hinge with barbell, hamstring stretch, no floor touch." },
+  { id: "hip-thrust",       label: "Hip Thrust",         kind: "1RM",  category: "LEGS",   weightWeight: 1.2, desc: "Upper back on bench, barbell over hips, drive hips up & squeeze glutes." },
+  { id: "leg-press",        label: "Leg Press",          kind: "1RM",  category: "LEGS",   weightWeight: 0.7, desc: "Plate-loaded leg press. Record total weight on the sled." },
   // Olympic
-  { id: "power-clean",      label: "Power Clean",        kind: "1RM",  category: "OLY",    weightWeight: 1.3 },
-  { id: "clean-jerk",       label: "Clean & Jerk",       kind: "1RM",  category: "OLY",    weightWeight: 1.4 },
-  { id: "snatch",           label: "Snatch",             kind: "1RM",  category: "OLY",    weightWeight: 1.4 },
+  { id: "power-clean",      label: "Power Clean",        kind: "1RM",  category: "OLY",    weightWeight: 1.3, desc: "Pull barbell from floor & catch on front delts in a partial squat." },
+  { id: "clean-jerk",       label: "Clean & Jerk",       kind: "1RM",  category: "OLY",    weightWeight: 1.4, desc: "Full clean to front rack, then jerk overhead with split or push." },
+  { id: "snatch",           label: "Snatch",             kind: "1RM",  category: "OLY",    weightWeight: 1.4, desc: "Pull barbell from floor to overhead in one motion with wide grip." },
   // Bodyweight reps
-  { id: "pull-ups",         label: "Pull-Ups (max reps)",kind: "REPS", category: "BODY" },
-  { id: "push-ups",         label: "Push-Ups (max reps)",kind: "REPS", category: "BODY" },
-  { id: "dips",             label: "Dips (max reps)",    kind: "REPS", category: "BODY" },
-  { id: "muscle-up",        label: "Muscle-Ups",         kind: "REPS", category: "BODY" },
+  { id: "pull-ups",         label: "Pull-Ups (max reps)",kind: "REPS", category: "BODY",   desc: "Strict bodyweight pull-ups, full hang to chin over bar. Max in one set." },
+  { id: "push-ups",         label: "Push-Ups (max reps)",kind: "REPS", category: "BODY",   desc: "Strict push-ups, chest to floor, full lockout. Max unbroken." },
+  { id: "dips",             label: "Dips (max reps)",    kind: "REPS", category: "BODY",   desc: "Bodyweight parallel-bar dips, full range, max unbroken." },
+  { id: "muscle-up",        label: "Muscle-Ups",         kind: "REPS", category: "BODY",   desc: "Strict bar muscle-ups: pull-up that transitions to a dip above the bar." },
   // Core
-  { id: "plank",            label: "Plank Hold (sec)",   kind: "TIME", category: "CORE" },
-  { id: "hanging-leg-raise",label: "Hanging Leg Raise",  kind: "REPS", category: "CORE" },
+  { id: "plank",            label: "Plank Hold (sec)",   kind: "TIME", category: "CORE",   desc: "Forearm plank, body straight, brace abs & glutes. Record max seconds." },
+  { id: "hanging-leg-raise",label: "Hanging Leg Raise",  kind: "REPS", category: "CORE",   desc: "Hang from bar, raise straight legs to 90°, controlled. Max reps." },
   // Cardio
-  { id: "mile-run",         label: "1 Mile Run (sec)",   kind: "TIME", category: "CARDIO" },
-  { id: "5k-run",           label: "5K Run (sec)",       kind: "TIME", category: "CARDIO" },
-  { id: "row-2k",           label: "2K Row (sec)",       kind: "TIME", category: "CARDIO" },
+  { id: "mile-run",         label: "1 Mile Run (sec)",   kind: "TIME", category: "CARDIO", desc: "1 mile (1.6 km) run for time. Record total seconds." },
+  { id: "5k-run",           label: "5K Run (sec)",       kind: "TIME", category: "CARDIO", desc: "5 km run for time. Record total seconds (e.g. 24:00 = 1440)." },
+  { id: "row-2k",           label: "2K Row (sec)",       kind: "TIME", category: "CARDIO", desc: "Concept2 / rower 2000m for time. Record total seconds." },
 ];
 
 export interface ManualPR {
