@@ -604,7 +604,7 @@ function Friends() {
 }
 
 function AthleteRow({ a, busy, onToggle }: {
-  a: { id: string; username: string | null; display_name: string | null; avatar_url: string | null; level: string | null; following: boolean; grit_points?: number };
+  a: { id: string; username: string | null; display_name: string | null; avatar_url: string | null; level: string | null; following: boolean; grit_points?: number | null };
   busy: boolean;
   onToggle: () => void;
 }) {
