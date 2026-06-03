@@ -469,7 +469,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "premium"
       equipment_type: "FULL_GYM" | "HOME_GYM" | "DUMBBELLS_ONLY" | "BODYWEIGHT"
       experience_level: "BEGINNER" | "INTERMEDIATE" | "ADVANCED"
       gender_type: "MALE" | "FEMALE" | "OTHER"
@@ -601,7 +601,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "premium"],
       equipment_type: ["FULL_GYM", "HOME_GYM", "DUMBBELLS_ONLY", "BODYWEIGHT"],
       experience_level: ["BEGINNER", "INTERMEDIATE", "ADVANCED"],
       gender_type: ["MALE", "FEMALE", "OTHER"],
