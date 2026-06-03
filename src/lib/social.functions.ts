@@ -378,7 +378,7 @@ export const getNearbyAthletes = createServerFn({ method: "GET" })
     const { data: me } = await supabaseAdmin
       .from("profiles").select("city, country").eq("id", userId).maybeSingle();
     if (!me?.city || !me?.country) {
-      return { athletes: [], myCity: null as string | null, myCountry: null as string | null };
+      return { athletes: [] as Array<{ id: string; username: string | null; display_name: string | null; avatar_url: string | null; level: string | null; grit_points: number | null; city: string | null; country: string | null; following: boolean }>, myCity: null as string | null, myCountry: null as string | null };
     }
     const { data: blocks } = await supabase
       .from("user_blocks").select("blocker_id, blocked_id")
