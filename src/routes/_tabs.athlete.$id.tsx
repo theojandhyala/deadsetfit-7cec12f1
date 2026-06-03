@@ -148,8 +148,27 @@ function AthletePage() {
             {busy ? <Loader2 size={14} className="animate-spin" /> :
               card.following ? <><UserCheck size={14} /> FOLLOWING</> : <><UserPlus size={14} /> FOLLOW</>}
           </button>
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={report}
+              className="flex-1 py-2.5 text-xs label-cap inline-flex items-center justify-center gap-1.5 border border-grit text-grit-dim hover:text-grit transition-colors"
+            >
+              <Flag size={12} /> Report
+            </button>
+            <button
+              onClick={toggleBlock}
+              className={`flex-1 py-2.5 text-xs label-cap inline-flex items-center justify-center gap-1.5 border transition-colors ${
+                blocked
+                  ? "border-accent-red text-accent-red"
+                  : "border-grit text-grit-dim hover:text-grit"
+              }`}
+            >
+              <Ban size={12} /> {blocked ? "Unblock" : "Block"}
+            </button>
+          </div>
         </section>
       )}
+
 
       {/* Headline PRs */}
       <section className="px-5 mb-5">
