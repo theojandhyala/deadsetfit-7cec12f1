@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { signInWithUsername } from "@/lib/profile.functions";
-import { withTimeout } from "@/lib/account-restore";
+
 import { toast } from "sonner";
 
 
