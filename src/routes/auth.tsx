@@ -26,9 +26,11 @@ export function AuthPage() {
     const { data } = supabase.auth.onAuthStateChange((_e, session) => {
       if (session) navigate({ to: "/train", replace: true });
     });
-    withTimeout(supabase.auth.getSession(), { data: { session: null }, error: null }).then(({ data: { session } }) => {
+    // getSession() reads localStorage; don't timeout — falling back to null
+    // was blocking returning users from auto-redirecting into the app.
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) navigate({ to: "/train", replace: true });
-    });
+    }).catch(() => {});
     return () => data.subscription.unsubscribe();
   }, [navigate]);
 
