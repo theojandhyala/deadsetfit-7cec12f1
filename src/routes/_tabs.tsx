@@ -16,11 +16,12 @@ export const Route = createFileRoute("/_tabs")({
 function TabsLayout() {
   const navigate = useNavigate();
   const getProfile = useServerFn(getMyProfile);
-  const [ready, setReady] = useState(false);
-  // Keep refs to navigate/getProfile so the bootstrap effect runs ONCE.
-  // Unstable refs from useNavigate / useServerFn were causing the effect to
-  // re-run, the cleanup to set cancelled=true, and setReady never to fire —
-  // leaving the user stuck on a black loading screen after sign-in.
+  // Start ready=true if local state already has a profile — render INSTANTLY
+  // on hot refresh / navigation; remote sync continues in the background.
+  const [ready, setReady] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !!getState().profile;
+  });
   const navRef = useRef(navigate);
   const getProfileRef = useRef(getProfile);
   navRef.current = navigate;
@@ -41,10 +42,15 @@ function TabsLayout() {
           navRef.current({ to: "/auth", replace: true });
           return;
         }
-        await withTimeout(waitForRemoteState(session.user.id), undefined, 2500);
-        let state = getState();
-        if (!state.profile) {
-          const row = await withTimeout(getProfileRef.current().catch(() => null), null, 3000);
+        // Already rendering? Don't block — let the remote sync hydrate in bg.
+        if (getState().profile) return;
+
+        // No local profile: fetch from server fast, in parallel with remote state.
+        const [, row] = await Promise.all([
+          withTimeout(waitForRemoteState(session.user.id), undefined, 1500),
+          withTimeout(getProfileRef.current().catch(() => null), null, 2000),
+        ]);
+        if (!getState().profile) {
           const accountProfile = profileFromAccount(row);
           if (accountProfile) {
             setState((current) => ({
@@ -52,10 +58,9 @@ function TabsLayout() {
               profile: accountProfile,
               schedule: current.schedule ?? defaultSchedule(accountProfile),
             }));
-            state = getState();
           }
         }
-        if (!state.profile) {
+        if (!getState().profile) {
           navRef.current({ to: "/onboarding", replace: true });
           return;
         }
@@ -66,8 +71,7 @@ function TabsLayout() {
       }
     })();
 
-    // Hard safety net: never leave the user on the loading screen for >5s.
-    const safety = setTimeout(finish, 5000);
+    const safety = setTimeout(finish, 3000);
 
     const { data } = supabase.auth.onAuthStateChange((event, s) => {
       if (event === "SIGNED_OUT" && !s) navRef.current({ to: "/auth", replace: true });
