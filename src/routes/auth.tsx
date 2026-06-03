@@ -67,16 +67,17 @@ function AuthPage() {
   }
 
 
-  async function google() {
+  async function oauth(provider: "google" | "apple") {
     setBusy(true);
     try {
-      const res = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+      const res = await lovable.auth.signInWithOAuth(provider, { redirect_uri: window.location.origin });
       if (res.error) throw res.error;
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Google sign-in failed");
+      toast.error(err instanceof Error ? err.message : `${provider} sign-in failed`);
       setBusy(false);
     }
   }
+
 
   return (
     <div className="min-h-screen bg-grit flex flex-col items-center justify-center px-6">
