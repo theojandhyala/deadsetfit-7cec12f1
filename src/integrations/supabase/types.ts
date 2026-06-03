@@ -181,6 +181,8 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           checkin_streak: number
+          city: string | null
+          country: string | null
           created_at: string
           days_per_week: number
           diet_streak: number
@@ -194,11 +196,13 @@ export type Database = {
           height_cm: number
           id: string
           level: string
+          location_updated_at: string | null
           onboarded: boolean
           pro_until: string | null
           public_stats: Json
           referral_code: string | null
           referred_by: string | null
+          region: string | null
           updated_at: string
           username: string | null
           weight_kg: number
@@ -210,6 +214,8 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           checkin_streak?: number
+          city?: string | null
+          country?: string | null
           created_at?: string
           days_per_week?: number
           diet_streak?: number
@@ -223,11 +229,13 @@ export type Database = {
           height_cm?: number
           id: string
           level?: string
+          location_updated_at?: string | null
           onboarded?: boolean
           pro_until?: string | null
           public_stats?: Json
           referral_code?: string | null
           referred_by?: string | null
+          region?: string | null
           updated_at?: string
           username?: string | null
           weight_kg?: number
@@ -239,6 +247,8 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           checkin_streak?: number
+          city?: string | null
+          country?: string | null
           created_at?: string
           days_per_week?: number
           diet_streak?: number
@@ -252,11 +262,13 @@ export type Database = {
           height_cm?: number
           id?: string
           level?: string
+          location_updated_at?: string | null
           onboarded?: boolean
           pro_until?: string | null
           public_stats?: Json
           referral_code?: string | null
           referred_by?: string | null
+          region?: string | null
           updated_at?: string
           username?: string | null
           weight_kg?: number
@@ -407,31 +419,40 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
+          city: string | null
+          country: string | null
           display_name: string | null
           grit_points: number | null
           id: string | null
           level: string | null
           public_stats: Json | null
+          region: string | null
           username: string | null
         }
         Insert: {
           avatar_url?: string | null
           bio?: string | null
+          city?: string | null
+          country?: string | null
           display_name?: string | null
           grit_points?: number | null
           id?: string | null
           level?: string | null
           public_stats?: Json | null
+          region?: string | null
           username?: string | null
         }
         Update: {
           avatar_url?: string | null
           bio?: string | null
+          city?: string | null
+          country?: string | null
           display_name?: string | null
           grit_points?: number | null
           id?: string | null
           level?: string | null
           public_stats?: Json | null
+          region?: string | null
           username?: string | null
         }
         Relationships: []
