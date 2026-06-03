@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { getState, setState, waitForRemoteState } from "@/lib/storage";
 import { getMyProfile } from "@/lib/profile.functions";
-import { profileFromAccount } from "@/lib/account-restore";
+import { profileFromAccount, withTimeout } from "@/lib/account-restore";
 import { defaultSchedule } from "@/lib/calc";
 
 export const Route = createFileRoute("/")({
@@ -37,15 +37,16 @@ function Index() {
     let cancelled = false;
     (async () => {
       const { supabase } = await import("@/integrations/supabase/client");
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const { data: { session } } = await withTimeout(
+        supabase.auth.getSession(),
+        { data: { session: null }, error: null },
+      );
       if (cancelled) return;
       if (!session) {
         navigate({ to: "/auth", replace: true });
         return;
       }
-      await waitForRemoteState(session.user.id);
+      await withTimeout(waitForRemoteState(session.user.id), undefined);
       if (cancelled) return;
       let s = getState();
       if (!s.profile) {
