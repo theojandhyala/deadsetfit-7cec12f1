@@ -1,12 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Heart, MessageCircle, Trophy, Share2, Loader2, Send, Plus, Gift, Copy, Check, Crown, Users, Search, UserPlus, UserCheck } from "lucide-react";
+import { Heart, MessageCircle, Trophy, Share2, Loader2, Send, Plus, Gift, Copy, Check, Crown, Users, Search, UserPlus, UserCheck, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getFeed, createPost, toggleLike, addComment, getComments,
   getLeaderboard, getMyReferralInfo, redeemReferral, updateMyProfile,
   searchAthletes, getSuggestedAthletes, toggleFollow, getMyFollowStats,
+  updateMyLocation, getMyLocation, getNearbyAthletes,
 } from "@/lib/social.functions";
 import { RankShareCard } from "@/components/RankShareCard";
 import { toast } from "sonner";
