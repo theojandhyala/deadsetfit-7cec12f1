@@ -9,12 +9,28 @@ export const getFeed = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const { data: posts, error } = await supabase
+
+    // Hide posts authored by users this user has blocked or who have blocked them.
+    const { data: blocks } = await supabase
+      .from("user_blocks")
+      .select("blocker_id, blocked_id")
+      .or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`);
+    const hidden = new Set<string>();
+    (blocks ?? []).forEach((b) => {
+      hidden.add(b.blocker_id === userId ? b.blocked_id : b.blocker_id);
+    });
+
+    let query = supabase
       .from("posts")
       .select("id, user_id, kind, content, image_url, metadata, created_at")
       .order("created_at", { ascending: false })
       .limit(50);
+    if (hidden.size > 0) {
+      query = query.not("user_id", "in", `(${Array.from(hidden).join(",")})`);
+    }
+    const { data: posts, error } = await query;
     if (error) throw new Error(error.message);
+
     const ids = Array.from(new Set((posts ?? []).map(p => p.user_id)));
     const postIds = (posts ?? []).map(p => p.id);
 
