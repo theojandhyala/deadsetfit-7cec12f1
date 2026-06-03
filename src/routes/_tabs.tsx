@@ -49,8 +49,11 @@ function TabsLayout() {
       }
       setReady(true);
     })();
-    const { data } = supabase.auth.onAuthStateChange((_e, s) => {
-      if (!s) navigate({ to: "/auth", replace: true });
+    const { data } = supabase.auth.onAuthStateChange((event, s) => {
+      // Only kick to /auth on an EXPLICIT sign-out. INITIAL_SESSION can fire
+      // with session=null briefly on hard refresh before localStorage hydrates,
+      // which would otherwise bounce a signed-in user back to the login screen.
+      if (event === "SIGNED_OUT" && !s) navigate({ to: "/auth", replace: true });
     });
     return () => {
       cancelled = true;
