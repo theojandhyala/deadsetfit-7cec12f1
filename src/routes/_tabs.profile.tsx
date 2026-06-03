@@ -292,8 +292,11 @@ function ProfilePage() {
         </div>
       </section>
 
-      <section className="px-5 mb-10">
-        <button onClick={reset} className="btn-ghost w-full"><LogOut size={14} className="mr-2" /> Reset All Data</button>
+      <section className="px-5 mb-10 flex flex-col gap-2">
+        <button onClick={logout} className="btn-grit w-full inline-flex items-center justify-center">
+          <LogOut size={14} className="mr-2" /> Log Out (saves your data)
+        </button>
+        <button onClick={reset} className="btn-ghost w-full">Reset This Device</button>
       </section>
     </div>
   );
