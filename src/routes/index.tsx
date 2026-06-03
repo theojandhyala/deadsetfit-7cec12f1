@@ -1,10 +1,5 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { useServerFn } from "@tanstack/react-start";
-import { getState, setState, waitForRemoteState } from "@/lib/storage";
-import { getMyProfile } from "@/lib/profile.functions";
-import { profileFromAccount, withTimeout } from "@/lib/account-restore";
-import { defaultSchedule } from "@/lib/calc";
+import { createFileRoute } from "@tanstack/react-router";
+import { AuthPage } from "./auth";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -31,49 +26,5 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const navigate = useNavigate();
-  const getProfile = useServerFn(getMyProfile);
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const { supabase } = await import("@/integrations/supabase/client");
-      const { data: { session } } = await withTimeout(
-        supabase.auth.getSession(),
-        { data: { session: null }, error: null },
-      );
-      if (cancelled) return;
-      if (!session) {
-        navigate({ to: "/auth", replace: true });
-        return;
-      }
-      await withTimeout(waitForRemoteState(session.user.id), undefined);
-      if (cancelled) return;
-      let s = getState();
-      if (!s.profile) {
-        const accountProfile = profileFromAccount(await withTimeout(getProfile().catch(() => null), null));
-        if (accountProfile) {
-          setState((current) => ({
-            ...current,
-            profile: accountProfile,
-            schedule: current.schedule ?? defaultSchedule(accountProfile),
-          }));
-          s = getState();
-        }
-      }
-      if (s.profile) navigate({ to: "/train", replace: true });
-      else navigate({ to: "/onboarding", replace: true });
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [getProfile, navigate]);
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-grit">
-      <span className="display font-extrabold tracking-wider text-6xl" style={{ fontStyle: "italic" }}>
-        <span style={{ color: "#f5f5f0" }}>DEAD</span>
-        <span style={{ color: "#e63222" }}>SET</span>
-      </span>
-      <p className="mt-3 label-cap text-grit">Forge Your Body</p>
-    </div>
-  );
+  return <AuthPage />;
 }
