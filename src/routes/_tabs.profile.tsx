@@ -26,6 +26,7 @@ function ProfilePage() {
   const [state, set] = useAppState();
   const navigate = useNavigate();
   const persist = useServerFn(saveProfile);
+  const deleteAcct = useServerFn(deleteMyAccount);
   const p = state.profile;
   const fileRef = useRef<HTMLInputElement>(null);
   const [editing, setEditing] = useState(false);
