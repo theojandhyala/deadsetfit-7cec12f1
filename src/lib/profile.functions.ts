@@ -75,15 +75,16 @@ export const signInWithUsername = createServerFn({ method: "POST" })
     }).parse(input),
   )
   .handler(async ({ data }) => {
+    const fail = { ok: false as const, error: "Invalid username or password" };
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("id")
       .ilike("username", data.username)
       .maybeSingle();
-    if (!profile) throw new Error("Invalid username or password");
+    if (!profile) return fail;
 
     const { data: userRes, error: lookupErr } = await supabaseAdmin.auth.admin.getUserById(profile.id);
-    if (lookupErr || !userRes?.user?.email) throw new Error("Invalid username or password");
+    if (lookupErr || !userRes?.user?.email) return fail;
 
     const anon = createClient(
       process.env.SUPABASE_URL!,
@@ -94,9 +95,10 @@ export const signInWithUsername = createServerFn({ method: "POST" })
       email: userRes.user.email,
       password: data.password,
     });
-    if (error || !signIn.session) throw new Error("Invalid username or password");
+    if (error || !signIn.session) return fail;
 
     return {
+      ok: true as const,
       access_token: signIn.session.access_token,
       refresh_token: signIn.session.refresh_token,
     };
