@@ -21,6 +21,7 @@ import icon180 from "@/assets/icon-180.png.asset.json";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { StateSync } from "../components/StateSync";
 import { UsernameGate } from "../components/UsernameGate";
+import { Toaster } from "../components/ui/sonner";
 
 
 
@@ -160,6 +161,7 @@ function RootComponent() {
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <UsernameGate />
+      <Toaster />
     </QueryClientProvider>
   );
 }
