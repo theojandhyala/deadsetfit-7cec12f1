@@ -12,14 +12,14 @@ import {
 import { RankShareCard } from "@/components/RankShareCard";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_tabs/squad")({
-  head: () => ({ meta: [{ title: "DEADSET — Squad" }] }),
-  component: SquadPage,
+export const Route = createFileRoute("/_tabs/friends")({
+  head: () => ({ meta: [{ title: "DEADSET — Friends" }] }),
+  component: FriendsPage,
 });
 
 type Tab = "FEED" | "FRIENDS" | "LEAGUE" | "INVITE";
 
-function SquadPage() {
+function FriendsPage() {
   const navigate = useNavigate();
   const [session, setSession] = useState<{ userId: string } | null | "loading">("loading");
   const [tab, setTab] = useState<Tab>("FEED");
@@ -42,8 +42,8 @@ function SquadPage() {
     return (
       <div style={{ paddingTop: "env(safe-area-inset-top)" }} className="px-6 pt-10">
         <header className="mb-8">
-          <p className="label-cap">SQUAD</p>
-          <h1 className="display text-5xl font-extrabold text-grit leading-none mt-1">FIND YOUR<br/>PACK.</h1>
+          <p className="label-cap">FRIENDS</p>
+          <h1 className="display text-5xl font-extrabold text-grit leading-none mt-1">FIND YOUR<br/>FRIENDS.</h1>
         </header>
         <div className="bg-grit-card border border-grit p-6">
           <p className="text-sm text-[#8a8a8a] mb-4">Sign in to share lifts, climb leagues and invite mates.</p>
@@ -56,8 +56,8 @@ function SquadPage() {
   return (
     <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
       <header className="px-5 pt-6 pb-2">
-        <p className="label-cap">SQUAD</p>
-        <h1 className="display text-4xl font-extrabold text-grit leading-none mt-1">THE PACK</h1>
+        <p className="label-cap">FRIENDS</p>
+        <h1 className="display text-4xl font-extrabold text-grit leading-none mt-1">YOUR CREW</h1>
       </header>
       <div className="px-5 mt-4 flex gap-2 border-b border-grit overflow-x-auto">
         {(["FEED", "FRIENDS", "LEAGUE", "INVITE"] as Tab[]).map(t => (

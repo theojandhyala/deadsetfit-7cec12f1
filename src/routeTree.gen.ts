@@ -18,11 +18,11 @@ import { Route as TabsRouteImport } from './routes/_tabs'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkoutLiveRouteImport } from './routes/workout.live'
 import { Route as TabsTrainRouteImport } from './routes/_tabs.train'
-import { Route as TabsSquadRouteImport } from './routes/_tabs.squad'
 import { Route as TabsProgressRouteImport } from './routes/_tabs.progress'
 import { Route as TabsProgramsRouteImport } from './routes/_tabs.programs'
 import { Route as TabsProfileRouteImport } from './routes/_tabs.profile'
 import { Route as TabsLibraryRouteImport } from './routes/_tabs.library'
+import { Route as TabsFriendsRouteImport } from './routes/_tabs.friends'
 import { Route as TabsDietRouteImport } from './routes/_tabs.diet'
 import { Route as TabsChallengesRouteImport } from './routes/_tabs.challenges'
 import { Route as TabsProgramsProgramIdRouteImport } from './routes/_tabs.programs.$programId'
@@ -72,11 +72,6 @@ const TabsTrainRoute = TabsTrainRouteImport.update({
   path: '/train',
   getParentRoute: () => TabsRoute,
 } as any)
-const TabsSquadRoute = TabsSquadRouteImport.update({
-  id: '/squad',
-  path: '/squad',
-  getParentRoute: () => TabsRoute,
-} as any)
 const TabsProgressRoute = TabsProgressRouteImport.update({
   id: '/progress',
   path: '/progress',
@@ -95,6 +90,11 @@ const TabsProfileRoute = TabsProfileRouteImport.update({
 const TabsLibraryRoute = TabsLibraryRouteImport.update({
   id: '/library',
   path: '/library',
+  getParentRoute: () => TabsRoute,
+} as any)
+const TabsFriendsRoute = TabsFriendsRouteImport.update({
+  id: '/friends',
+  path: '/friends',
   getParentRoute: () => TabsRoute,
 } as any)
 const TabsDietRoute = TabsDietRouteImport.update({
@@ -127,11 +127,11 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/challenges': typeof TabsChallengesRoute
   '/diet': typeof TabsDietRoute
+  '/friends': typeof TabsFriendsRoute
   '/library': typeof TabsLibraryRoute
   '/profile': typeof TabsProfileRoute
   '/programs': typeof TabsProgramsRouteWithChildren
   '/progress': typeof TabsProgressRoute
-  '/squad': typeof TabsSquadRoute
   '/train': typeof TabsTrainRoute
   '/workout/live': typeof WorkoutLiveRoute
   '/athlete/$id': typeof TabsAthleteIdRoute
@@ -146,11 +146,11 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/challenges': typeof TabsChallengesRoute
   '/diet': typeof TabsDietRoute
+  '/friends': typeof TabsFriendsRoute
   '/library': typeof TabsLibraryRoute
   '/profile': typeof TabsProfileRoute
   '/programs': typeof TabsProgramsRouteWithChildren
   '/progress': typeof TabsProgressRoute
-  '/squad': typeof TabsSquadRoute
   '/train': typeof TabsTrainRoute
   '/workout/live': typeof WorkoutLiveRoute
   '/athlete/$id': typeof TabsAthleteIdRoute
@@ -167,11 +167,11 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/_tabs/challenges': typeof TabsChallengesRoute
   '/_tabs/diet': typeof TabsDietRoute
+  '/_tabs/friends': typeof TabsFriendsRoute
   '/_tabs/library': typeof TabsLibraryRoute
   '/_tabs/profile': typeof TabsProfileRoute
   '/_tabs/programs': typeof TabsProgramsRouteWithChildren
   '/_tabs/progress': typeof TabsProgressRoute
-  '/_tabs/squad': typeof TabsSquadRoute
   '/_tabs/train': typeof TabsTrainRoute
   '/workout/live': typeof WorkoutLiveRoute
   '/_tabs/athlete/$id': typeof TabsAthleteIdRoute
@@ -188,11 +188,11 @@ export interface FileRouteTypes {
     | '/terms'
     | '/challenges'
     | '/diet'
+    | '/friends'
     | '/library'
     | '/profile'
     | '/programs'
     | '/progress'
-    | '/squad'
     | '/train'
     | '/workout/live'
     | '/athlete/$id'
@@ -207,11 +207,11 @@ export interface FileRouteTypes {
     | '/terms'
     | '/challenges'
     | '/diet'
+    | '/friends'
     | '/library'
     | '/profile'
     | '/programs'
     | '/progress'
-    | '/squad'
     | '/train'
     | '/workout/live'
     | '/athlete/$id'
@@ -227,11 +227,11 @@ export interface FileRouteTypes {
     | '/terms'
     | '/_tabs/challenges'
     | '/_tabs/diet'
+    | '/_tabs/friends'
     | '/_tabs/library'
     | '/_tabs/profile'
     | '/_tabs/programs'
     | '/_tabs/progress'
-    | '/_tabs/squad'
     | '/_tabs/train'
     | '/workout/live'
     | '/_tabs/athlete/$id'
@@ -314,13 +314,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TabsTrainRouteImport
       parentRoute: typeof TabsRoute
     }
-    '/_tabs/squad': {
-      id: '/_tabs/squad'
-      path: '/squad'
-      fullPath: '/squad'
-      preLoaderRoute: typeof TabsSquadRouteImport
-      parentRoute: typeof TabsRoute
-    }
     '/_tabs/progress': {
       id: '/_tabs/progress'
       path: '/progress'
@@ -347,6 +340,13 @@ declare module '@tanstack/react-router' {
       path: '/library'
       fullPath: '/library'
       preLoaderRoute: typeof TabsLibraryRouteImport
+      parentRoute: typeof TabsRoute
+    }
+    '/_tabs/friends': {
+      id: '/_tabs/friends'
+      path: '/friends'
+      fullPath: '/friends'
+      preLoaderRoute: typeof TabsFriendsRouteImport
       parentRoute: typeof TabsRoute
     }
     '/_tabs/diet': {
@@ -395,11 +395,11 @@ const TabsProgramsRouteWithChildren = TabsProgramsRoute._addFileChildren(
 interface TabsRouteChildren {
   TabsChallengesRoute: typeof TabsChallengesRoute
   TabsDietRoute: typeof TabsDietRoute
+  TabsFriendsRoute: typeof TabsFriendsRoute
   TabsLibraryRoute: typeof TabsLibraryRoute
   TabsProfileRoute: typeof TabsProfileRoute
   TabsProgramsRoute: typeof TabsProgramsRouteWithChildren
   TabsProgressRoute: typeof TabsProgressRoute
-  TabsSquadRoute: typeof TabsSquadRoute
   TabsTrainRoute: typeof TabsTrainRoute
   TabsAthleteIdRoute: typeof TabsAthleteIdRoute
 }
@@ -407,11 +407,11 @@ interface TabsRouteChildren {
 const TabsRouteChildren: TabsRouteChildren = {
   TabsChallengesRoute: TabsChallengesRoute,
   TabsDietRoute: TabsDietRoute,
+  TabsFriendsRoute: TabsFriendsRoute,
   TabsLibraryRoute: TabsLibraryRoute,
   TabsProfileRoute: TabsProfileRoute,
   TabsProgramsRoute: TabsProgramsRouteWithChildren,
   TabsProgressRoute: TabsProgressRoute,
-  TabsSquadRoute: TabsSquadRoute,
   TabsTrainRoute: TabsTrainRoute,
   TabsAthleteIdRoute: TabsAthleteIdRoute,
 }
@@ -431,3 +431,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

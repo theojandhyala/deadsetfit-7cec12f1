@@ -34,7 +34,7 @@ function AthletePage() {
       .then(setCard)
       .catch((e) => {
         toast.error(e instanceof Error ? e.message : "Failed");
-        navigate({ to: "/squad" });
+        navigate({ to: "/friends" });
       });
     _isBlocked({ data: { userId: id } }).then((r) => setBlocked(r.blocked)).catch(() => {});
   }, [id]);
@@ -110,7 +110,7 @@ function AthletePage() {
   return (
     <div style={{ paddingTop: "env(safe-area-inset-top)" }} className="pb-10">
       <header className="px-5 pt-4 pb-2 flex items-center gap-3">
-        <button onClick={() => navigate({ to: "/squad" })} aria-label="Back" className="p-1.5 -ml-1.5">
+        <button onClick={() => navigate({ to: "/friends" })} aria-label="Back" className="p-1.5 -ml-1.5">
           <ArrowLeft size={20} className="text-grit" />
         </button>
         <p className="label-cap">ATHLETE</p>
@@ -204,7 +204,7 @@ function AthletePage() {
       )}
 
       <div className="px-5 mt-6">
-        <Link to="/squad" className="block text-center label-cap text-grit-dim">← Back to Squad</Link>
+        <Link to="/friends" className="block text-center label-cap text-grit-dim">← Back to Friends</Link>
       </div>
     </div>
   );

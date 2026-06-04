@@ -8,7 +8,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "DEADSET is a no-nonsense gym companion. Track bench, squat, deadlift PRs, follow programs, earn Grit, and forge your physique with your squad.",
+          "DEADSET is a no-nonsense gym companion. Track bench, squat, deadlift PRs, follow programs, earn Grit, and forge your physique with your friends.",
       },
       { property: "og:title", content: "DEADSET — Forge Your Body" },
       { property: "og:description", content: "Track PRs, follow programs, log workouts. Train. Build. Become." },

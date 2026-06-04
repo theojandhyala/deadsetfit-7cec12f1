@@ -4,7 +4,7 @@ import { Dumbbell, LineChart, Apple, User, Users } from "lucide-react";
 const tabs = [
   { to: "/train", label: "Train", Icon: Dumbbell },
   { to: "/progress", label: "Progress", Icon: LineChart },
-  { to: "/squad", label: "Squad", Icon: Users },
+  { to: "/friends", label: "Friends", Icon: Users },
   { to: "/diet", label: "Diet", Icon: Apple },
   { to: "/profile", label: "Profile", Icon: User },
 ] as const;
