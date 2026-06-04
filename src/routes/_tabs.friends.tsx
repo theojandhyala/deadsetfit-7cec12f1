@@ -12,7 +12,7 @@ import {
 import { RankShareCard } from "@/components/RankShareCard";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_tabs/squad")({
+export const Route = createFileRoute("/_tabs/friends")({
   head: () => ({ meta: [{ title: "DEADSET — Squad" }] }),
   component: SquadPage,
 });
