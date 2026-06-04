@@ -15,10 +15,10 @@ export async function chatJSON<T = unknown>(opts: {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Lovable-API-Key": key,
+      Authorization: `Bearer ${key}`,
     },
     body: JSON.stringify({
-      model: opts.model ?? "google/gemini-3-flash-preview",
+      model: opts.model ?? "google/gemini-2.5-flash",
       messages: [
         { role: "system", content: opts.system },
         { role: "user", content: opts.user },
@@ -26,6 +26,7 @@ export async function chatJSON<T = unknown>(opts: {
       response_format: { type: "json_object" },
     }),
   });
+
 
   if (!res.ok) {
     const text = await res.text();
