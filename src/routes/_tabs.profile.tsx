@@ -345,85 +345,49 @@ function ProfilePage() {
 }
 
 function PRRow({
-  def, display, pr, isEditing, onStart, onCancel, onSave,
+  def, display, pr, onSave,
 }: {
   def: PRDef;
   display: string;
   pr?: { value: number; reps?: number };
-  isEditing: boolean;
-  onStart: () => void;
-  onCancel: () => void;
+  isEditing?: boolean;
+  onStart?: () => void;
+  onCancel?: () => void;
   onSave: (value: number, reps?: number) => void;
 }) {
   const [val, setVal] = useState(String(pr?.value ?? ""));
-  const [reps, setReps] = useState(String(pr?.reps ?? 1));
-
-  useEffect(() => {
-    if (isEditing) {
-      setVal(String(pr?.value ?? ""));
-      setReps(String(pr?.reps ?? 1));
-    }
-  }, [isEditing, pr]);
-
-  if (!isEditing) {
-    return (
-      <button onClick={onStart} className="w-full flex items-start justify-between px-4 py-3 text-left hover:bg-[#1a1a1a] transition-colors gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-grit">{def.label}</p>
-          <p className="text-[10px] text-grit-dim label-cap mt-0.5">{def.kind === "1RM" ? "1-rep max" : def.kind === "REPS" ? "max reps" : "best time"}</p>
-          <p className="text-[11px] text-[#8a8a8a] mt-1 leading-snug">{def.desc}</p>
-        </div>
-        <div className="flex items-center gap-2 pt-0.5">
-          <span className="display font-extrabold text-grit text-base whitespace-nowrap">{display}</span>
-          {!pr && <Plus size={14} className="text-accent-red" />}
-        </div>
-      </button>
-    );
-  }
+  useEffect(() => { setVal(String(pr?.value ?? "")); }, [pr?.value]);
 
   const unit = def.kind === "1RM" ? "kg" : def.kind === "REPS" ? "reps" : "sec";
+
+  function commit() {
+    const n = Number(val);
+    const current = pr?.value ?? 0;
+    if (val.trim() === "" && pr) { onSave(0); return; }
+    if (!Number.isFinite(n) || n === current) return;
+    onSave(n, def.kind === "1RM" ? (pr?.reps ?? 1) : undefined);
+  }
+
   return (
-    <div className="px-4 py-3 bg-[#0f0f0f]">
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-sm font-bold text-grit">{def.label}</p>
-        <button onClick={onCancel} className="text-grit-dim"><X size={14} /></button>
-      </div>
-      <div className="flex gap-2 items-end">
-        <div className="flex-1">
-          <label className="label-cap text-[9px] text-grit-dim">{def.kind === "TIME" ? "seconds" : unit}</label>
-          <input
-            value={val}
-            onChange={(e) => setVal(e.target.value)}
-            inputMode="decimal"
-            placeholder={def.kind === "1RM" ? "100" : def.kind === "REPS" ? "15" : "420"}
-            className="input-grit w-full text-right"
-            autoFocus
-          />
-        </div>
-        {def.kind === "1RM" && (
-          <div className="w-20">
-            <label className="label-cap text-[9px] text-grit-dim">× reps</label>
-            <input
-              value={reps}
-              onChange={(e) => setReps(e.target.value)}
-              inputMode="numeric"
-              placeholder="1"
-              className="input-grit w-full text-right"
-            />
-          </div>
+    <div className="flex items-center justify-between px-4 py-2.5 gap-3">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-bold text-grit truncate">{def.label}</p>
+        {display && display !== "—" && pr && (
+          <p className="text-[10px] text-grit-dim mt-0.5">Best: {display}</p>
         )}
-        <button
-          onClick={() => onSave(Number(val) || 0, def.kind === "1RM" ? (Number(reps) || 1) : undefined)}
-          className="btn-grit px-4 py-2 text-xs"
-        >
-          Save
-        </button>
       </div>
-      {pr && (
-        <button onClick={() => onSave(0)} className="mt-2 text-[10px] text-grit-dim underline">
-          Remove PR
-        </button>
-      )}
+      <div className="flex items-center gap-1.5">
+        <input
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+          inputMode="decimal"
+          placeholder="—"
+          className="input-grit w-20 text-right py-1.5"
+        />
+        <span className="label-cap text-[10px] text-grit-dim w-8">{unit}</span>
+      </div>
     </div>
   );
 }
