@@ -91,10 +91,13 @@ function DietPage() {
   }
 
   function removeFood(idx: number) {
-    set((s) => ({ ...s, foodLog: s.foodLog.filter((_, i) => {
-      const todayItems = s.foodLog.map((f, j) => f.date === today ? j : -1).filter(j => j >= 0);
-      return i !== todayItems[idx];
-    }) }));
+    const day = isoDay();
+    set((s) => {
+      const todayIndices = s.foodLog.reduce<number[]>((acc, f, i) => { if (f.date === day) acc.push(i); return acc; }, []);
+      const targetIndex = todayIndices[idx];
+      if (targetIndex === undefined) return s;
+      return { ...s, foodLog: s.foodLog.filter((_, i) => i !== targetIndex) };
+    });
   }
 
   async function onPhotoSelected(e: React.ChangeEvent<HTMLInputElement>) {
