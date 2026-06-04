@@ -58,7 +58,8 @@ export async function chatVisionJSON<T = unknown>(opts: {
 
   const res = await fetch(`${BASE}/chat/completions`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "Lovable-API-Key": key },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+
     body: JSON.stringify({
       model: opts.model ?? "google/gemini-2.5-flash",
       messages: [
