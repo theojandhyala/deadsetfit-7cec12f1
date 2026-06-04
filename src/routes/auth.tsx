@@ -55,6 +55,7 @@ export function AuthPage() {
           if (error) throw error;
         } else {
           const tokens = await usernameSignIn({ data: { username: id.replace(/^@/, ""), password } });
+          if (!tokens.ok) throw new Error(tokens.error);
           const { error } = await supabase.auth.setSession({
             access_token: tokens.access_token,
             refresh_token: tokens.refresh_token,
