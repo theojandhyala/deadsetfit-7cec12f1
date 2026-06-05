@@ -18,6 +18,39 @@ const SPLIT_TEMPLATES: { type: SplitType; name: string; days: Record<DayKey, str
   { type: "CUSTOM", name: "CUSTOM (BLANK)", days: { MON: "REST", TUE: "REST", WED: "REST", THU: "REST", FRI: "REST", SAT: "REST", SUN: "REST" } },
 ];
 
+const FEATURED_PROGRAMS: { name: string; tagline: string; level: string; days: Record<DayKey, string> }[] = [
+  {
+    name: "5/3/1 BBB",
+    tagline: "Wendler's classic strength builder",
+    level: "INTERMEDIATE",
+    days: { MON: "OHP DAY", TUE: "DEADLIFT DAY", WED: "REST", THU: "BENCH DAY", FRI: "SQUAT DAY", SAT: "REST", SUN: "REST" },
+  },
+  {
+    name: "STRONGLIFTS 5x5",
+    tagline: "Linear progression for beginners",
+    level: "BEGINNER",
+    days: { MON: "WORKOUT A", TUE: "REST", WED: "WORKOUT B", THU: "REST", FRI: "WORKOUT A", SAT: "REST", SUN: "REST" },
+  },
+  {
+    name: "PHUL",
+    tagline: "Power Hypertrophy Upper Lower",
+    level: "INTERMEDIATE",
+    days: { MON: "UPPER POWER", TUE: "LOWER POWER", WED: "REST", THU: "UPPER HYPER", FRI: "LOWER HYPER", SAT: "REST", SUN: "REST" },
+  },
+  {
+    name: "ARNOLD SPLIT",
+    tagline: "6-day high volume bodybuilding",
+    level: "ADVANCED",
+    days: { MON: "CHEST/BACK", TUE: "SHOULDERS/ARMS", WED: "LEGS", THU: "CHEST/BACK", FRI: "SHOULDERS/ARMS", SAT: "LEGS", SUN: "REST" },
+  },
+  {
+    name: "nSUNS 5/3/1",
+    tagline: "High-frequency strength variant",
+    level: "ADVANCED",
+    days: { MON: "BENCH/OHP", TUE: "SQUAT/DEADLIFT", WED: "OHP/BENCH", THU: "REST", FRI: "BENCH/CLOSE GRIP", SAT: "DEADLIFT/FRONT SQUAT", SUN: "REST" },
+  },
+];
+
 function ProgramsPage() {
   const [state, set] = useAppState();
 
@@ -30,6 +63,20 @@ function ProgramsPage() {
       createdAt: new Date().toISOString(),
       days: Object.fromEntries(
         DAYS.map((d) => [d, { label: template.days[d], items: [] }]),
+      ) as unknown as Program["days"],
+    };
+    set((s) => ({ ...s, programs: [...s.programs, program], activeProgramId: s.activeProgramId ?? id }));
+  }
+
+  function createFeatured(p: (typeof FEATURED_PROGRAMS)[number]) {
+    const id = crypto.randomUUID();
+    const program: Program = {
+      id,
+      name: p.name,
+      splitType: "CUSTOM",
+      createdAt: new Date().toISOString(),
+      days: Object.fromEntries(
+        DAYS.map((d) => [d, { label: p.days[d], items: [] }]),
       ) as unknown as Program["days"],
     };
     set((s) => ({ ...s, programs: [...s.programs, program], activeProgramId: s.activeProgramId ?? id }));
@@ -97,6 +144,27 @@ function ProgramsPage() {
             </li>
           );
         })}
+      </ul>
+
+      <p className="label-cap text-grit-dim text-xs mb-2">★ Featured programs</p>
+      <ul className="space-y-2 mb-6">
+        {FEATURED_PROGRAMS.map((p) => (
+          <li key={p.name}>
+            <button
+              onClick={() => createFeatured(p)}
+              className="w-full bg-grit-card border border-grit p-4 flex items-center justify-between text-left"
+            >
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="display uppercase font-extrabold text-grit text-base truncate">{p.name}</span>
+                  <span className="text-[9px] px-1.5 py-0.5 border border-grit text-grit-dim label-cap">{p.level}</span>
+                </div>
+                <div className="text-xs text-grit-dim truncate">{p.tagline}</div>
+              </div>
+              <Plus size={18} className="text-accent-red shrink-0" />
+            </button>
+          </li>
+        ))}
       </ul>
 
       <p className="label-cap text-grit-dim text-xs mb-2">+ New from template</p>
