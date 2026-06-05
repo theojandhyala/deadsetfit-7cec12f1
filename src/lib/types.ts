@@ -127,6 +127,7 @@ export interface CompletedSet {
   reps: number;
   rpe?: number;
   isPR?: boolean;
+  isAmrap?: boolean;
 }
 
 export interface WorkoutSessionExercise {

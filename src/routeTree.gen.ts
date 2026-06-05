@@ -26,6 +26,7 @@ import { Route as TabsFriendsRouteImport } from './routes/_tabs.friends'
 import { Route as TabsDietRouteImport } from './routes/_tabs.diet'
 import { Route as TabsChallengesRouteImport } from './routes/_tabs.challenges'
 import { Route as TabsProgramsProgramIdRouteImport } from './routes/_tabs.programs.$programId'
+import { Route as TabsLiftExerciseIdRouteImport } from './routes/_tabs.lift.$exerciseId'
 import { Route as TabsAthleteIdRouteImport } from './routes/_tabs.athlete.$id'
 
 const TermsRoute = TermsRouteImport.update({
@@ -112,6 +113,11 @@ const TabsProgramsProgramIdRoute = TabsProgramsProgramIdRouteImport.update({
   path: '/$programId',
   getParentRoute: () => TabsProgramsRoute,
 } as any)
+const TabsLiftExerciseIdRoute = TabsLiftExerciseIdRouteImport.update({
+  id: '/lift/$exerciseId',
+  path: '/lift/$exerciseId',
+  getParentRoute: () => TabsRoute,
+} as any)
 const TabsAthleteIdRoute = TabsAthleteIdRouteImport.update({
   id: '/athlete/$id',
   path: '/athlete/$id',
@@ -135,6 +141,7 @@ export interface FileRoutesByFullPath {
   '/train': typeof TabsTrainRoute
   '/workout/live': typeof WorkoutLiveRoute
   '/athlete/$id': typeof TabsAthleteIdRoute
+  '/lift/$exerciseId': typeof TabsLiftExerciseIdRoute
   '/programs/$programId': typeof TabsProgramsProgramIdRoute
 }
 export interface FileRoutesByTo {
@@ -154,6 +161,7 @@ export interface FileRoutesByTo {
   '/train': typeof TabsTrainRoute
   '/workout/live': typeof WorkoutLiveRoute
   '/athlete/$id': typeof TabsAthleteIdRoute
+  '/lift/$exerciseId': typeof TabsLiftExerciseIdRoute
   '/programs/$programId': typeof TabsProgramsProgramIdRoute
 }
 export interface FileRoutesById {
@@ -175,6 +183,7 @@ export interface FileRoutesById {
   '/_tabs/train': typeof TabsTrainRoute
   '/workout/live': typeof WorkoutLiveRoute
   '/_tabs/athlete/$id': typeof TabsAthleteIdRoute
+  '/_tabs/lift/$exerciseId': typeof TabsLiftExerciseIdRoute
   '/_tabs/programs/$programId': typeof TabsProgramsProgramIdRoute
 }
 export interface FileRouteTypes {
@@ -196,6 +205,7 @@ export interface FileRouteTypes {
     | '/train'
     | '/workout/live'
     | '/athlete/$id'
+    | '/lift/$exerciseId'
     | '/programs/$programId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -215,6 +225,7 @@ export interface FileRouteTypes {
     | '/train'
     | '/workout/live'
     | '/athlete/$id'
+    | '/lift/$exerciseId'
     | '/programs/$programId'
   id:
     | '__root__'
@@ -235,6 +246,7 @@ export interface FileRouteTypes {
     | '/_tabs/train'
     | '/workout/live'
     | '/_tabs/athlete/$id'
+    | '/_tabs/lift/$exerciseId'
     | '/_tabs/programs/$programId'
   fileRoutesById: FileRoutesById
 }
@@ -370,6 +382,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TabsProgramsProgramIdRouteImport
       parentRoute: typeof TabsProgramsRoute
     }
+    '/_tabs/lift/$exerciseId': {
+      id: '/_tabs/lift/$exerciseId'
+      path: '/lift/$exerciseId'
+      fullPath: '/lift/$exerciseId'
+      preLoaderRoute: typeof TabsLiftExerciseIdRouteImport
+      parentRoute: typeof TabsRoute
+    }
     '/_tabs/athlete/$id': {
       id: '/_tabs/athlete/$id'
       path: '/athlete/$id'
@@ -402,6 +421,7 @@ interface TabsRouteChildren {
   TabsProgressRoute: typeof TabsProgressRoute
   TabsTrainRoute: typeof TabsTrainRoute
   TabsAthleteIdRoute: typeof TabsAthleteIdRoute
+  TabsLiftExerciseIdRoute: typeof TabsLiftExerciseIdRoute
 }
 
 const TabsRouteChildren: TabsRouteChildren = {
@@ -414,6 +434,7 @@ const TabsRouteChildren: TabsRouteChildren = {
   TabsProgressRoute: TabsProgressRoute,
   TabsTrainRoute: TabsTrainRoute,
   TabsAthleteIdRoute: TabsAthleteIdRoute,
+  TabsLiftExerciseIdRoute: TabsLiftExerciseIdRoute,
 }
 
 const TabsRouteWithChildren = TabsRoute._addFileChildren(TabsRouteChildren)
