@@ -81,6 +81,7 @@ function LiveWorkoutPage() {
 
   const [activeIdx, setActiveIdx] = useState(0);
   const [restLeft, setRestLeft] = useState(0);
+  const [restPreset, setRestPreset] = useState(90);
   const [videoQuery, setVideoQuery] = useState<string | null>(null);
   const [videoTitle, setVideoTitle] = useState("");
   const [scoring, setScoring] = useState(false);
