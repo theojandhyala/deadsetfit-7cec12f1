@@ -107,12 +107,35 @@ function ChallengesPage() {
           <p className="text-sm text-grit-dim mt-2">
             Pick a challenge. Hit the target. Earn XP. Brag forever.
           </p>
+          <p className="label-cap text-[10px] mt-3 text-accent-red">
+            {beatenCount} / {CHALLENGES.length} BEATEN
+          </p>
         </div>
       </div>
 
+      <div className="px-5 mb-3 flex gap-1.5 overflow-x-auto no-scrollbar">
+        {(["ALL", "EASY", "BEAST", "GOD", "BEATEN"] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`px-3 py-1.5 label-cap text-[10px] border whitespace-nowrap transition-colors ${
+              filter === f ? "bg-accent-red border-accent-red text-white" : "border-grit text-grit-dim"
+            }`}
+          >
+            {f}
+          </button>
+        ))}
+      </div>
+
       <div className="px-5 flex flex-col gap-2.5">
-        {CHALLENGES.map((c) => {
+        {filtered.length === 0 && (
+          <div className="bg-grit-card border border-grit p-6 text-center text-sm text-grit-dim">
+            No challenges in this filter yet.
+          </div>
+        )}
+        {filtered.map((c) => {
           const best = bestRecord(state.challengeRecords, c.id);
+
           const beat = best && best.value >= c.target;
           const tierColor = TIER_COLOR[c.tier];
           const pct = best ? Math.min(100, (best.value / c.target) * 100) : 0;
