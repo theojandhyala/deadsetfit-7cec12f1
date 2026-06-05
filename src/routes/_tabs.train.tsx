@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Loader2, Play, Plus, Sparkles, ListPlus, Flame, Trophy } from "lucide-react";
+import { Loader2, Play, Plus, Sparkles, ListPlus, Flame, Trophy, Heart } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { VideoModal } from "@/components/VideoModal";
 import { RestTimer } from "@/components/RestTimer";
