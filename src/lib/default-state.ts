@@ -19,4 +19,6 @@ export const DEFAULT_STATE: AppState = {
   waterTargetMl: 3000,
   hydrationAlertsEnabled: true,
   manualPRs: {},
+  units: "kg",
+  remindersEnabled: true,
 };
