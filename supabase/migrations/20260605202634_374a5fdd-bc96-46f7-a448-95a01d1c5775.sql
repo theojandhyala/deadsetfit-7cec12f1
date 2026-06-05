@@ -1,0 +1,1 @@
+ALTER TABLE public.post_likes ADD COLUMN IF NOT EXISTS reaction text NOT NULL DEFAULT 'fire' CHECK (reaction IN ('fire','beast','respect','goat'));
