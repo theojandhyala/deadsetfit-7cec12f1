@@ -81,6 +81,7 @@ function LiveWorkoutPage() {
 
   const [activeIdx, setActiveIdx] = useState(0);
   const [restLeft, setRestLeft] = useState(0);
+  const [restPreset, setRestPreset] = useState(90);
   const [videoQuery, setVideoQuery] = useState<string | null>(null);
   const [videoTitle, setVideoTitle] = useState("");
   const [scoring, setScoring] = useState(false);
@@ -147,7 +148,7 @@ function LiveWorkoutPage() {
       const prCount = exercises.reduce((a, e) => a + e.sets.filter((s) => s.isPR).length, 0);
       return { ...sess, exercises, totalVolume, prCount };
     });
-    setRestLeft(90);
+    setRestLeft(restPreset);
     if (isPR) {
       try { navigator.vibrate?.([40, 60, 40]); } catch { /* noop */ }
       setCelebrate({ name: current.name, weight, reps });
@@ -327,6 +328,19 @@ function LiveWorkoutPage() {
             <Minus size={12} className="mr-1" /> Remove last set
           </button>
         )}
+      </div>
+
+      <div className="px-4 pb-2 flex items-center gap-2 flex-wrap">
+        <span className="label-cap text-[10px] text-grit-dim">REST</span>
+        {[60, 90, 120, 180].map((s) => (
+          <button
+            key={s}
+            onClick={() => setRestPreset(s)}
+            className={`px-2 py-1 text-[11px] font-bold border ${restPreset === s ? "bg-accent-red text-grit border-accent-red" : "border-grit text-grit-dim"}`}
+          >
+            {s}s
+          </button>
+        ))}
       </div>
 
       {restLeft > 0 && (
