@@ -196,4 +196,7 @@ export interface AppState {
   hydrationAlertsEnabled: boolean;
   challengeRecords?: ChallengeRecord[];
   manualPRs?: Record<string, { value: number; reps?: number; date: string }>;
+  units?: "kg" | "lb";
+  remindersEnabled?: boolean;
 }
+
