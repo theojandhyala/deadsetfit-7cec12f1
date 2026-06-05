@@ -329,9 +329,13 @@ function ProfilePage() {
       </section>
 
       <section className="px-5 mb-6 flex flex-col gap-2">
+        <Link to="/coach" className="btn-grit w-full inline-flex items-center justify-center">
+          <Sparkles size={14} className="mr-2" /> Ask DEADSET Coach
+        </Link>
         <Link to="/settings" className="btn-ghost w-full inline-flex items-center justify-center">
           <Settings size={14} className="mr-2" /> Settings
         </Link>
+
         <button onClick={logout} className="btn-grit w-full inline-flex items-center justify-center">
           <LogOut size={14} className="mr-2" /> Log Out (saves your data)
         </button>
