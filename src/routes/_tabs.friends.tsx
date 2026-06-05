@@ -170,13 +170,32 @@ function Feed({ userId }: { userId: string }) {
         </button>
       ) : (
         <div className="mb-4 bg-grit-card border border-grit p-4">
+          <div className="flex gap-2 mb-3">
+            {(["text", "pr"] as const).map(k => (
+              <button key={k} onClick={() => setPostKind(k)} className="label-cap px-3 py-1 border"
+                style={{ borderColor: postKind === k ? "#e63222" : "#262626", color: postKind === k ? "#e63222" : "#8a8a8a" }}>
+                {k === "text" ? "POST" : "NEW PR"}
+              </button>
+            ))}
+          </div>
+          {postKind === "pr" && (
+            <div className="grid grid-cols-3 gap-2 mb-2">
+              <input value={prLift} onChange={(e) => setPrLift(e.target.value)} placeholder="Bench" maxLength={20}
+                className="input-grit text-xs col-span-3" />
+              <input value={prWeight} onChange={(e) => setPrWeight(e.target.value)} inputMode="decimal" placeholder="kg"
+                className="input-grit text-xs col-span-2" />
+              <input value={prReps} onChange={(e) => setPrReps(e.target.value)} inputMode="numeric" placeholder="reps"
+                className="input-grit text-xs" />
+            </div>
+          )}
           <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} maxLength={500}
-            placeholder="What did you smash today?" className="input-grit w-full resize-none" />
+            placeholder={postKind === "pr" ? "Say something about the PR (optional)…" : "What did you smash today?"}
+            className="input-grit w-full resize-none" />
           <div className="flex justify-between items-center mt-2">
             <span className="text-xs text-[#8a8a8a]">{text.length}/500</span>
             <div className="flex gap-2">
-              <button onClick={() => { setComposing(false); setText(""); }} className="btn-ghost px-3 py-1.5 text-xs">Cancel</button>
-              <button onClick={publish} disabled={posting || !text.trim()} className="btn-grit px-4 py-1.5 text-xs">
+              <button onClick={() => { setComposing(false); setText(""); setPostKind("text"); }} className="btn-ghost px-3 py-1.5 text-xs">Cancel</button>
+              <button onClick={publish} disabled={posting} className="btn-grit px-4 py-1.5 text-xs">
                 {posting ? <Loader2 size={12} className="animate-spin" /> : "Post"}
               </button>
             </div>
