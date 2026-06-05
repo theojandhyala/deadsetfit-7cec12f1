@@ -12,6 +12,9 @@ import { saveProfile } from "@/lib/profile.functions";
 import { deleteMyAccount } from "@/lib/account.functions";
 import { FifaCard } from "@/components/FifaCard";
 import { QuickLogFAB } from "@/components/QuickLogFAB";
+import { StatsGrid } from "@/components/StatsGrid";
+import { LiftLevels } from "@/components/LiftLevels";
+import { TrophyCase } from "@/components/TrophyCase";
 import {
   PR_CATALOG, computeFifaStats, buildPublicStats, buildHeadlinePRs, formatPRValue,
   type PRDef,
