@@ -68,6 +68,20 @@ function ProgramsPage() {
     set((s) => ({ ...s, programs: [...s.programs, program], activeProgramId: s.activeProgramId ?? id }));
   }
 
+  function createFeatured(p: (typeof FEATURED_PROGRAMS)[number]) {
+    const id = crypto.randomUUID();
+    const program: Program = {
+      id,
+      name: p.name,
+      splitType: "CUSTOM",
+      createdAt: new Date().toISOString(),
+      days: Object.fromEntries(
+        DAYS.map((d) => [d, { label: p.days[d], items: [] }]),
+      ) as unknown as Program["days"],
+    };
+    set((s) => ({ ...s, programs: [...s.programs, program], activeProgramId: s.activeProgramId ?? id }));
+  }
+
   function activate(id: string) {
     set((s) => ({ ...s, activeProgramId: id }));
   }
