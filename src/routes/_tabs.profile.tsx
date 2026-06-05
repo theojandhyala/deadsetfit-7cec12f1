@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Flame, LogOut, Crown, Pencil, Trophy, Plus, X, Trash2, Settings, Sparkles, Heart } from "lucide-react";
+import { Flame, LogOut, Crown, Pencil, Trophy, Trash2, Settings, Sparkles, Heart } from "lucide-react";
 import { useAppState, flushRemoteState } from "@/lib/storage";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -16,7 +16,7 @@ import { StatsGrid } from "@/components/StatsGrid";
 import { LiftLevels } from "@/components/LiftLevels";
 import { TrophyCase } from "@/components/TrophyCase";
 import {
-  PR_CATALOG, computeFifaStats, buildPublicStats, buildHeadlinePRs, formatPRValue,
+  PR_CATALOG, computeFifaStats, buildPublicStats, buildHeadlinePRs,
   type PRDef,
 } from "@/lib/fifa-stats";
 
@@ -40,7 +40,6 @@ function ProfilePage() {
   const [h, setH] = useState(String(p?.heightCm ?? ""));
   const [username, setUsername] = useState(p?.username || "");
   const [savingProfile, setSavingProfile] = useState(false);
-  const [editingPR, setEditingPR] = useState<string | null>(null);
 
   // Auto-push public_stats whenever logs / manualPRs / sessions change.
   useEffect(() => {
@@ -126,7 +125,6 @@ function ProfilePage() {
         },
       }));
     }
-    setEditingPR(null);
     toast.success("PR saved");
   }
 
@@ -175,13 +173,6 @@ function ProfilePage() {
     }
   }
 
-
-  // Group PRs by category for the editor
-  const grouped = PR_CATALOG.reduce<Record<string, PRDef[]>>((acc, d) => {
-    (acc[d.category] ??= []).push(d);
-    return acc;
-  }, {});
-  const categoryOrder: Array<keyof typeof grouped> = ["PUSH", "PULL", "LEGS", "OLY", "BODY", "CORE", "CARDIO"];
 
   return (
     <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
@@ -237,42 +228,25 @@ function ProfilePage() {
       <LiftLevels state={state} />
       <TrophyCase state={state} />
 
-
-      {/* === Personal Records — full editable catalog === */}
+      {/* === Personal Records — flat list === */}
       <section className="px-5 mb-6">
         <div className="flex items-center justify-between mb-2">
           <p className="label-cap flex items-center gap-1.5"><Trophy size={12} className="text-accent-red" /> Personal Records</p>
-          <span className="text-[10px] text-grit-dim">Tap to log</span>
+          <span className="text-[10px] text-grit-dim">Type your best</span>
         </div>
-
-        {categoryOrder.map((cat) => {
-          const items = grouped[cat];
-          if (!items) return null;
-          return (
-            <div key={cat as string} className="mb-4">
-              <p className="label-cap text-[10px] text-grit-dim mb-1.5">{cat}</p>
-              <div className="bg-grit-card border border-grit divide-y divide-[#262626]">
-                {items.map((def) => {
-                  const pr = state.manualPRs?.[def.id];
-                  const display = formatPRValue(def, pr, state.logs);
-                  const isEditing = editingPR === def.id;
-                  return (
-                    <PRRow
-                      key={def.id}
-                      def={def}
-                      display={display}
-                      pr={pr}
-                      isEditing={isEditing}
-                      onStart={() => setEditingPR(def.id)}
-                      onCancel={() => setEditingPR(null)}
-                      onSave={(v, r) => savePR(def, v, r)}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
+        <div className="bg-grit-card border border-grit divide-y divide-[#262626]">
+          {PR_CATALOG.map((def) => {
+            const pr = state.manualPRs?.[def.id];
+            return (
+              <PRRow
+                key={def.id}
+                def={def}
+                pr={pr}
+                onSave={(v, r) => savePR(def, v, r)}
+              />
+            );
+          })}
+        </div>
       </section>
 
       {/* === Athlete Stats === */}
@@ -366,14 +340,10 @@ function ProfilePage() {
 }
 
 function PRRow({
-  def, display, pr, onSave,
+  def, pr, onSave,
 }: {
   def: PRDef;
-  display: string;
   pr?: { value: number; reps?: number };
-  isEditing?: boolean;
-  onStart?: () => void;
-  onCancel?: () => void;
   onSave: (value: number, reps?: number) => void;
 }) {
   const [val, setVal] = useState(String(pr?.value ?? ""));
@@ -391,13 +361,8 @@ function PRRow({
 
   return (
     <div className="flex items-center justify-between px-4 py-2.5 gap-3">
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-bold text-grit truncate">{def.label}</p>
-        {display && display !== "—" && pr && (
-          <p className="text-[10px] text-grit-dim mt-0.5">Best: {display}</p>
-        )}
-      </div>
-      <div className="flex items-center gap-1.5">
+      <p className="text-sm font-bold text-grit truncate">{def.label}</p>
+      <div className="flex items-center gap-1.5 shrink-0">
         <input
           value={val}
           onChange={(e) => setVal(e.target.value)}
