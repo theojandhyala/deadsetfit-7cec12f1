@@ -233,6 +233,11 @@ function ProfilePage() {
         </div>
       </section>
 
+      <StatsGrid state={state} />
+      <LiftLevels state={state} />
+      <TrophyCase state={state} />
+
+
       {/* === Personal Records — full editable catalog === */}
       <section className="px-5 mb-6">
         <div className="flex items-center justify-between mb-2">
