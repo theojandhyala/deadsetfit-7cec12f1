@@ -332,6 +332,9 @@ function ProfilePage() {
         <Link to="/coach" className="btn-grit w-full inline-flex items-center justify-center">
           <Sparkles size={14} className="mr-2" /> Ask DEADSET Coach
         </Link>
+        <Link to="/recovery" className="btn-ghost w-full inline-flex items-center justify-center">
+          <Heart size={14} className="mr-2" /> Recovery & Mobility
+        </Link>
         <Link to="/settings" className="btn-ghost w-full inline-flex items-center justify-center">
           <Settings size={14} className="mr-2" /> Settings
         </Link>
