@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as RecoveryRouteImport } from './routes/recovery'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
@@ -40,6 +41,11 @@ const TermsRoute = TermsRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecoveryRoute = RecoveryRouteImport.update({
+  id: '/recovery',
+  path: '/recovery',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -150,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/leaderboard': typeof LeaderboardRoute
   '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
+  '/recovery': typeof RecoveryRoute
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
   '/challenges': typeof TabsChallengesRoute
@@ -173,6 +180,7 @@ export interface FileRoutesByTo {
   '/leaderboard': typeof LeaderboardRoute
   '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
+  '/recovery': typeof RecoveryRoute
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
   '/challenges': typeof TabsChallengesRoute
@@ -198,6 +206,7 @@ export interface FileRoutesById {
   '/leaderboard': typeof LeaderboardRoute
   '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
+  '/recovery': typeof RecoveryRoute
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
   '/_tabs/challenges': typeof TabsChallengesRoute
@@ -223,6 +232,7 @@ export interface FileRouteTypes {
     | '/leaderboard'
     | '/onboarding'
     | '/privacy'
+    | '/recovery'
     | '/settings'
     | '/terms'
     | '/challenges'
@@ -246,6 +256,7 @@ export interface FileRouteTypes {
     | '/leaderboard'
     | '/onboarding'
     | '/privacy'
+    | '/recovery'
     | '/settings'
     | '/terms'
     | '/challenges'
@@ -270,6 +281,7 @@ export interface FileRouteTypes {
     | '/leaderboard'
     | '/onboarding'
     | '/privacy'
+    | '/recovery'
     | '/settings'
     | '/terms'
     | '/_tabs/challenges'
@@ -295,6 +307,7 @@ export interface RootRouteChildren {
   LeaderboardRoute: typeof LeaderboardRoute
   OnboardingRoute: typeof OnboardingRoute
   PrivacyRoute: typeof PrivacyRoute
+  RecoveryRoute: typeof RecoveryRoute
   SettingsRoute: typeof SettingsRoute
   TermsRoute: typeof TermsRoute
   WorkoutLiveRoute: typeof WorkoutLiveRoute
@@ -314,6 +327,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recovery': {
+      id: '/recovery'
+      path: '/recovery'
+      fullPath: '/recovery'
+      preLoaderRoute: typeof RecoveryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -508,6 +528,7 @@ const rootRouteChildren: RootRouteChildren = {
   LeaderboardRoute: LeaderboardRoute,
   OnboardingRoute: OnboardingRoute,
   PrivacyRoute: PrivacyRoute,
+  RecoveryRoute: RecoveryRoute,
   SettingsRoute: SettingsRoute,
   TermsRoute: TermsRoute,
   WorkoutLiveRoute: WorkoutLiveRoute,
