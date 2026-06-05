@@ -81,22 +81,35 @@ function TrainPage() {
   async function handleGenerate() {
     if (!state.profile) return;
     setGenLoading(true); setGenError(null);
+    const buildFromDefault = (): Schedule => {
+      const base = defaultSchedule(state.profile!);
+      const cleaned: Schedule = {} as Schedule;
+      for (const k of DAY_KEYS) {
+        const d = base[k];
+        cleaned[k] = {
+          label: d?.label || "REST",
+          exerciseIds: (d?.exerciseIds || []).filter((id) => getExercise(id)),
+        };
+      }
+      return cleaned;
+    };
     try {
       const res = await generate({ data: {
         goal: state.profile.goal, experience: state.profile.experience,
         daysPerWeek: state.profile.daysPerWeek, equipment: state.profile.equipment,
       }});
       const cleaned: Schedule = {} as Schedule;
+      let hasAny = false;
       for (const k of DAY_KEYS) {
         const d = res.days?.[k];
-        cleaned[k] = {
-          label: d?.label || "REST",
-          exerciseIds: (d?.exerciseIds || []).filter((id) => getExercise(id)),
-        };
+        const ids = (d?.exerciseIds || []).filter((id) => getExercise(id));
+        if (ids.length) hasAny = true;
+        cleaned[k] = { label: d?.label || "REST", exerciseIds: ids };
       }
-      set((s) => ({ ...s, schedule: cleaned }));
-    } catch (e) {
-      setGenError(e instanceof Error ? e.message : "Failed");
+      set((s) => ({ ...s, schedule: hasAny ? cleaned : buildFromDefault() }));
+    } catch {
+      // Silent fallback so the user never sees an error — build a solid default split.
+      set((s) => ({ ...s, schedule: buildFromDefault() }));
     } finally { setGenLoading(false); }
   }
 
