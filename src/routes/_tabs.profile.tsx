@@ -176,13 +176,6 @@ function ProfilePage() {
   }
 
 
-  // Group PRs by category for the editor
-  const grouped = PR_CATALOG.reduce<Record<string, PRDef[]>>((acc, d) => {
-    (acc[d.category] ??= []).push(d);
-    return acc;
-  }, {});
-  const categoryOrder: Array<keyof typeof grouped> = ["PUSH", "PULL", "LEGS", "OLY", "BODY", "CORE", "CARDIO"];
-
   return (
     <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
       <header className="px-5 pt-6 pb-4 flex items-start justify-between">
@@ -237,42 +230,25 @@ function ProfilePage() {
       <LiftLevels state={state} />
       <TrophyCase state={state} />
 
-
-      {/* === Personal Records — full editable catalog === */}
+      {/* === Personal Records — flat list === */}
       <section className="px-5 mb-6">
         <div className="flex items-center justify-between mb-2">
           <p className="label-cap flex items-center gap-1.5"><Trophy size={12} className="text-accent-red" /> Personal Records</p>
-          <span className="text-[10px] text-grit-dim">Tap to log</span>
+          <span className="text-[10px] text-grit-dim">Type your best</span>
         </div>
-
-        {categoryOrder.map((cat) => {
-          const items = grouped[cat];
-          if (!items) return null;
-          return (
-            <div key={cat as string} className="mb-4">
-              <p className="label-cap text-[10px] text-grit-dim mb-1.5">{cat}</p>
-              <div className="bg-grit-card border border-grit divide-y divide-[#262626]">
-                {items.map((def) => {
-                  const pr = state.manualPRs?.[def.id];
-                  const display = formatPRValue(def, pr, state.logs);
-                  const isEditing = editingPR === def.id;
-                  return (
-                    <PRRow
-                      key={def.id}
-                      def={def}
-                      display={display}
-                      pr={pr}
-                      isEditing={isEditing}
-                      onStart={() => setEditingPR(def.id)}
-                      onCancel={() => setEditingPR(null)}
-                      onSave={(v, r) => savePR(def, v, r)}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
+        <div className="bg-grit-card border border-grit divide-y divide-[#262626]">
+          {PR_CATALOG.map((def) => {
+            const pr = state.manualPRs?.[def.id];
+            return (
+              <PRRow
+                key={def.id}
+                def={def}
+                pr={pr}
+                onSave={(v, r) => savePR(def, v, r)}
+              />
+            );
+          })}
+        </div>
       </section>
 
       {/* === Athlete Stats === */}
