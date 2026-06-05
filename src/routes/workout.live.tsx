@@ -412,12 +412,26 @@ function SetEntry({
   const rn = Number(r) || 0;
   const willBePR = wn > prevBestWeight && wn > 0;
   const e1rm = wn && rn ? estimate1RM(wn, rn) : 0;
+  const suggestedWeight = prev?.weight ?? lastSessionSet?.weight ?? 0;
+  const suggestedReps = prev?.reps ?? lastSessionSet?.reps ?? 0;
+  const progression = suggestedWeight > 0 ? suggestedWeight + 2.5 : 0;
   return (
     <div className="mt-5 bg-grit-card border border-grit p-4">
       {lastSessionSet && (
-        <p className="text-[11px] text-grit-dim mb-2 uppercase tracking-wider">
-          Last time: <span className="text-grit font-bold">{lastSessionSet.weight}kg × {lastSessionSet.reps}</span>
-        </p>
+        <div className="flex items-center justify-between mb-2 gap-2">
+          <p className="text-[11px] text-grit-dim uppercase tracking-wider truncate">
+            Last time: <span className="text-grit font-bold">{lastSessionSet.weight}kg × {lastSessionSet.reps}</span>
+          </p>
+          {progression > 0 && (
+            <button
+              onClick={() => { setW(String(progression)); setR(String(suggestedReps || prev?.reps || 5)); }}
+              className="text-[10px] px-2 py-1 border border-accent-red text-accent-red label-cap whitespace-nowrap flex items-center gap-1"
+              title="Auto-fill suggested next set"
+            >
+              <Zap size={10} /> +2.5kg
+            </button>
+          )}
+        </div>
       )}
       <div className="grid grid-cols-2 gap-3 mb-3">
         <div>
