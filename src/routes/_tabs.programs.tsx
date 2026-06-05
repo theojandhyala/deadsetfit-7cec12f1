@@ -18,6 +18,39 @@ const SPLIT_TEMPLATES: { type: SplitType; name: string; days: Record<DayKey, str
   { type: "CUSTOM", name: "CUSTOM (BLANK)", days: { MON: "REST", TUE: "REST", WED: "REST", THU: "REST", FRI: "REST", SAT: "REST", SUN: "REST" } },
 ];
 
+const FEATURED_PROGRAMS: { name: string; tagline: string; level: string; days: Record<DayKey, string> }[] = [
+  {
+    name: "5/3/1 BBB",
+    tagline: "Wendler's classic strength builder",
+    level: "INTERMEDIATE",
+    days: { MON: "OHP DAY", TUE: "DEADLIFT DAY", WED: "REST", THU: "BENCH DAY", FRI: "SQUAT DAY", SAT: "REST", SUN: "REST" },
+  },
+  {
+    name: "STRONGLIFTS 5x5",
+    tagline: "Linear progression for beginners",
+    level: "BEGINNER",
+    days: { MON: "WORKOUT A", TUE: "REST", WED: "WORKOUT B", THU: "REST", FRI: "WORKOUT A", SAT: "REST", SUN: "REST" },
+  },
+  {
+    name: "PHUL",
+    tagline: "Power Hypertrophy Upper Lower",
+    level: "INTERMEDIATE",
+    days: { MON: "UPPER POWER", TUE: "LOWER POWER", WED: "REST", THU: "UPPER HYPER", FRI: "LOWER HYPER", SAT: "REST", SUN: "REST" },
+  },
+  {
+    name: "ARNOLD SPLIT",
+    tagline: "6-day high volume bodybuilding",
+    level: "ADVANCED",
+    days: { MON: "CHEST/BACK", TUE: "SHOULDERS/ARMS", WED: "LEGS", THU: "CHEST/BACK", FRI: "SHOULDERS/ARMS", SAT: "LEGS", SUN: "REST" },
+  },
+  {
+    name: "nSUNS 5/3/1",
+    tagline: "High-frequency strength variant",
+    level: "ADVANCED",
+    days: { MON: "BENCH/OHP", TUE: "SQUAT/DEADLIFT", WED: "OHP/BENCH", THU: "REST", FRI: "BENCH/CLOSE GRIP", SAT: "DEADLIFT/FRONT SQUAT", SUN: "REST" },
+  },
+];
+
 function ProgramsPage() {
   const [state, set] = useAppState();
 
