@@ -365,6 +365,20 @@ function League({ userId }: { userId: string }) {
         />
       )}
 
+      <Link
+        to="/leaderboard"
+        className="bg-grit-card border border-accent-red mb-3 px-4 py-3 flex items-center gap-3 hover:bg-[#1a1a1a] transition-colors"
+      >
+        <Trophy size={18} className="text-accent-red" />
+        <div className="flex-1">
+          <p className="label-cap text-accent-red text-[11px]">STRENGTH LEADERBOARD</p>
+          <p className="text-xs text-grit-dim">Ranked by Overall · Bench · Squat · Deadlift · Total</p>
+        </div>
+        <span className="label-cap text-grit-dim text-[10px]">VIEW →</span>
+      </Link>
+
+
+
       <div className="bg-grit-card border border-grit">
         {data.top.length === 0 && <p className="p-5 text-sm text-[#8a8a8a] text-center">No athletes yet.</p>}
         {data.top.slice(0, 50).map(p => (
