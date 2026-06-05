@@ -385,6 +385,7 @@ function TrainPage() {
 
       {logFor && <LogSetModal exerciseId={logFor.id} exerciseName={logFor.name} onClose={() => setLogFor(null)} onLogged={(secs) => { setLogFor(null); setResting(secs); }} />}
       {resting !== null && <RestTimer seconds={resting} onDone={() => setResting(null)} />}
+      <QuickLogFAB />
     </div>
   );
 }
