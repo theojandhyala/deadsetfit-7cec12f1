@@ -1,13 +1,15 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { X, Check, Plus, Minus, Play, Loader2, Trophy, Share2, Flame } from "lucide-react";
+import { X, Check, Plus, Minus, Play, Loader2, Trophy, Share2, Flame, Calculator, Zap } from "lucide-react";
 import { useAppState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
-import { defaultSchedule, isoDay, todayKey } from "@/lib/calc";
+import { defaultSchedule, isoDay, todayKey, estimate1RM } from "@/lib/calc";
 import { scorePump } from "@/lib/session.functions";
 import { VideoModal } from "@/components/VideoModal";
 import { ShareCard } from "@/components/ShareCard";
+import { PlateCalculator } from "@/components/PlateCalculator";
+import { PRCelebration } from "@/components/PRCelebration";
 import type { WorkoutSession, WorkoutSessionExercise, CompletedSet, DayKey } from "@/lib/types";
 
 export const Route = createFileRoute("/workout/live")({
