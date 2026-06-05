@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useAppState } from "@/lib/storage";
 import type { DayKey, Program, SplitType } from "@/lib/types";
 import { Plus, Check, Trash2, ChevronRight } from "lucide-react";
