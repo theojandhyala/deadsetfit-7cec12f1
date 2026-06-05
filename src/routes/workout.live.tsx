@@ -132,7 +132,7 @@ function LiveWorkoutPage() {
     }));
   }
 
-  function logSet(weight: number, reps: number) {
+  function logSet(weight: number, reps: number, opts?: { rpe?: number; isAmrap?: boolean }) {
     if (!reps) return;
     const prevBest = Math.max(
       0,
@@ -140,7 +140,7 @@ function LiveWorkoutPage() {
       ...session!.exercises[activeIdx].sets.map((s) => s.weight)
     );
     const isPR = weight > prevBest && weight > 0;
-    const newSet: CompletedSet = { weight, reps, isPR };
+    const newSet: CompletedSet = { weight, reps, isPR, rpe: opts?.rpe, isAmrap: opts?.isAmrap };
     updateSession((sess) => {
       const exercises = sess.exercises.map((e, i) => (i === activeIdx ? { ...e, sets: [...e.sets, newSet] } : e));
       const totalVolume = exercises.reduce((a, e) => a + e.sets.reduce((b, s) => b + s.weight * s.reps, 0), 0);
@@ -148,6 +148,10 @@ function LiveWorkoutPage() {
       return { ...sess, exercises, totalVolume, prCount };
     });
     setRestLeft(90);
+    if (isPR) {
+      try { navigator.vibrate?.([40, 60, 40]); } catch { /* noop */ }
+      setCelebrate({ name: current.name, weight, reps });
+    }
   }
 
   function removeLastSet() {
