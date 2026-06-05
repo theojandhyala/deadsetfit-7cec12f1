@@ -292,7 +292,8 @@ function TrainPage() {
             {(programDay?.items.length || 0) === 0 && (
               <div className="bg-grit-card border border-grit p-8 text-center">
                 <p className="display text-2xl uppercase text-grit font-extrabold">Rest Day</p>
-                <p className="text-sm text-[#8a8a8a] mt-2">Recover. Eat. Sleep.</p>
+                <p className="text-sm text-[#8a8a8a] mt-2 mb-4">Recover. Eat. Sleep.</p>
+                <Link to="/workout/live" className="btn-ghost inline-block">Train another day</Link>
               </div>
             )}
             {programDay?.items.map((it) => {
