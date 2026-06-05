@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Flame, LogOut, Crown, Pencil, Trophy, Plus, X, Trash2, Settings } from "lucide-react";
+import { Flame, LogOut, Crown, Pencil, Trophy, Plus, X, Trash2, Settings, Sparkles } from "lucide-react";
 import { useAppState, flushRemoteState } from "@/lib/storage";
 import { supabase } from "@/integrations/supabase/client";
 import {
