@@ -6,6 +6,8 @@ import { VideoModal } from "@/components/VideoModal";
 import { RestTimer } from "@/components/RestTimer";
 import { Reminders } from "@/components/Reminders";
 import { DailyQuests } from "@/components/DailyQuests";
+import { Big3Card } from "@/components/Big3Card";
+import { QuickLogFAB } from "@/components/QuickLogFAB";
 import { useAppState } from "@/lib/storage";
 import { EXERCISES, getExercise } from "@/lib/exercises";
 import { calculateGritScore, calculateStreak, defaultSchedule, isoDay, todayKey } from "@/lib/calc";
@@ -142,6 +144,10 @@ function TrainPage() {
         </div>
       </header>
       <Reminders />
+
+      <div className="px-5 mb-5"><Big3Card state={state} /></div>
+
+
 
       {/* ===== QUICK ACTIONS — everything you need, up top ===== */}
       {(() => {
@@ -379,6 +385,7 @@ function TrainPage() {
 
       {logFor && <LogSetModal exerciseId={logFor.id} exerciseName={logFor.name} onClose={() => setLogFor(null)} onLogged={(secs) => { setLogFor(null); setResting(secs); }} />}
       {resting !== null && <RestTimer seconds={resting} onDone={() => setResting(null)} />}
+      <QuickLogFAB />
     </div>
   );
 }

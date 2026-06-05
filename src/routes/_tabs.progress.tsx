@@ -7,6 +7,7 @@ import { getExercise } from "@/lib/exercises";
 import { isoDay, calculateStreak } from "@/lib/calc";
 import { analyzePhysique } from "@/lib/physique.functions";
 import type { PhysiqueScan } from "@/lib/types";
+import { QuickLogFAB } from "@/components/QuickLogFAB";
 
 export const Route = createFileRoute("/_tabs/progress")({
   head: () => ({ meta: [{ title: "DEADSET — Progress" }] }),
@@ -393,6 +394,7 @@ function ProgressPage() {
       </section>
 
       {viewScan && <ScanModal scan={viewScan} onClose={() => setViewScan(null)} onDelete={() => deleteScan(viewScan.id)} />}
+      <QuickLogFAB />
     </div>
   );
 }
