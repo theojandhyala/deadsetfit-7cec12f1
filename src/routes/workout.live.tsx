@@ -86,6 +86,9 @@ function LiveWorkoutPage() {
   const [scoring, setScoring] = useState(false);
   const [finished, setFinished] = useState(false);
   const [share, setShare] = useState(false);
+  const [plateOpen, setPlateOpen] = useState(false);
+  const [showRPE, setShowRPE] = useState(false);
+  const [celebrate, setCelebrate] = useState<{ name: string; weight: number; reps: number } | null>(null);
 
   useEffect(() => {
     if (restLeft <= 0) return;
