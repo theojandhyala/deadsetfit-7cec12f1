@@ -36,15 +36,21 @@ export const getFeed = createServerFn({ method: "GET" })
 
     const [{ data: authors }, { data: likes }, { data: myLikes }, { data: commentCounts }] = await Promise.all([
       supabaseAdmin.from("profiles").select("id, display_name, username, avatar_url, grit_points").in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]),
-      supabase.from("post_likes").select("post_id").in("post_id", postIds.length ? postIds : ["00000000-0000-0000-0000-000000000000"]),
-      supabase.from("post_likes").select("post_id").eq("user_id", userId).in("post_id", postIds.length ? postIds : ["00000000-0000-0000-0000-000000000000"]),
+      supabase.from("post_likes").select("post_id, reaction").in("post_id", postIds.length ? postIds : ["00000000-0000-0000-0000-000000000000"]),
+      supabase.from("post_likes").select("post_id, reaction").eq("user_id", userId).in("post_id", postIds.length ? postIds : ["00000000-0000-0000-0000-000000000000"]),
       supabase.from("post_comments").select("post_id").in("post_id", postIds.length ? postIds : ["00000000-0000-0000-0000-000000000000"]),
     ]);
 
     const authorMap = new Map((authors ?? []).map(a => [a.id, { ...a, level: gritLevel(a.grit_points ?? 0) }]));
     const likeCount = new Map<string, number>();
-    (likes ?? []).forEach(l => likeCount.set(l.post_id, (likeCount.get(l.post_id) ?? 0) + 1));
-    const mine = new Set((myLikes ?? []).map(l => l.post_id));
+    const reactionCounts = new Map<string, Record<string, number>>();
+    (likes ?? []).forEach(l => {
+      likeCount.set(l.post_id, (likeCount.get(l.post_id) ?? 0) + 1);
+      const rc = reactionCounts.get(l.post_id) ?? {};
+      rc[l.reaction] = (rc[l.reaction] ?? 0) + 1;
+      reactionCounts.set(l.post_id, rc);
+    });
+    const myReactions = new Map((myLikes ?? []).map(l => [l.post_id, l.reaction]));
     const cmCount = new Map<string, number>();
     (commentCounts ?? []).forEach(c => cmCount.set(c.post_id, (cmCount.get(c.post_id) ?? 0) + 1));
 
@@ -52,8 +58,10 @@ export const getFeed = createServerFn({ method: "GET" })
       ...p,
       author: authorMap.get(p.user_id) ?? { id: p.user_id, display_name: "Athlete", username: null, avatar_url: null, grit_points: 0, level: "BEGINNER" as const },
       likeCount: likeCount.get(p.id) ?? 0,
+      reactions: reactionCounts.get(p.id) ?? {},
+      myReaction: myReactions.get(p.id) ?? null,
       commentCount: cmCount.get(p.id) ?? 0,
-      liked: mine.has(p.id),
+      liked: myReactions.has(p.id),
     }));
   });
 
