@@ -21,17 +21,31 @@ type Challenge = {
 };
 
 const CHALLENGES: Challenge[] = [
-  { id: "plank-5min", name: "5-Minute Plank", tagline: "Brace. Breathe. Don't break.", type: "time", target: 300, xp: 150, tier: "BEAST" },
+  // EASY
   { id: "plank-1min", name: "60-Second Plank", tagline: "The entry test.", type: "time", target: 60, xp: 40, tier: "EASY" },
+  { id: "dead-hang", name: "60s Dead Hang", tagline: "Grip of steel.", type: "time", target: 60, xp: 50, tier: "EASY" },
+  { id: "squats-50", name: "50 Squats Speed Run", tagline: "Beat your clock.", type: "time", target: 90, xp: 50, tier: "EASY" },
+  { id: "pushups-30", name: "30 Push-ups Unbroken", tagline: "No stops. No drops.", type: "reps", target: 30, xp: 40, tier: "EASY" },
+  { id: "situps-50", name: "50 Sit-ups", tagline: "Core check.", type: "reps", target: 50, xp: 40, tier: "EASY" },
+  { id: "jumping-jacks-100", name: "100 Jumping Jacks", tagline: "Cardio warm-up.", type: "time", target: 90, xp: 30, tier: "EASY" },
+  // BEAST
+  { id: "plank-5min", name: "5-Minute Plank", tagline: "Brace. Breathe. Don't break.", type: "time", target: 300, xp: 150, tier: "BEAST" },
   { id: "wall-sit-2min", name: "2-Minute Wall Sit", tagline: "Quads on fire.", type: "time", target: 120, xp: 80, tier: "BEAST" },
   { id: "hollow-hold", name: "90s Hollow Hold", tagline: "Ab killer.", type: "time", target: 90, xp: 70, tier: "BEAST" },
-  { id: "dead-hang", name: "60s Dead Hang", tagline: "Grip of steel.", type: "time", target: 60, xp: 50, tier: "EASY" },
   { id: "pushups-max", name: "Max Push-ups", tagline: "One set. No rest. Go.", type: "reps", target: 50, xp: 60, tier: "BEAST" },
   { id: "pullups-max", name: "Max Pull-ups", tagline: "Strict. No kipping.", type: "reps", target: 15, xp: 80, tier: "BEAST" },
-  { id: "burpees-100", name: "100 Burpees", tagline: "Time attack. Survive.", type: "time", target: 600, xp: 120, tier: "GOD" },
-  { id: "squats-50", name: "50 Squats Speed Run", tagline: "Beat your clock.", type: "time", target: 90, xp: 50, tier: "EASY" },
+  { id: "burpees-50", name: "50 Burpees For Time", tagline: "Lungs vs legs.", type: "time", target: 300, xp: 100, tier: "BEAST" },
+  { id: "lunges-100", name: "100 Walking Lunges", tagline: "Glutes will hate you.", type: "reps", target: 100, xp: 90, tier: "BEAST" },
+  { id: "farmers-90s", name: "90s Farmer's Carry", tagline: "Grip + heart.", type: "time", target: 90, xp: 80, tier: "BEAST" },
+  // GOD
   { id: "plank-10min", name: "10-Minute Plank", tagline: "Legends only.", type: "time", target: 600, xp: 300, tier: "GOD" },
+  { id: "burpees-100", name: "100 Burpees", tagline: "Time attack. Survive.", type: "time", target: 600, xp: 120, tier: "GOD" },
+  { id: "pullups-30", name: "30 Strict Pull-ups", tagline: "Unbroken or bust.", type: "reps", target: 30, xp: 200, tier: "GOD" },
+  { id: "pushups-100", name: "100 Push-ups Unbroken", tagline: "No knee drops.", type: "reps", target: 100, xp: 180, tier: "GOD" },
+  { id: "deadhang-2min", name: "2-Minute Dead Hang", tagline: "Shoulders & soul.", type: "time", target: 120, xp: 150, tier: "GOD" },
+  { id: "murph", name: "Murph (Time)", tagline: "1mi · 100 pull · 200 push · 300 sq · 1mi", type: "time", target: 2700, xp: 500, tier: "GOD" },
 ];
+
 
 const TIER_COLOR: Record<Challenge["tier"], string> = {
   EASY: "#60a5fa",
