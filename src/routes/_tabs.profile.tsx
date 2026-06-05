@@ -125,7 +125,6 @@ function ProfilePage() {
         },
       }));
     }
-    setEditingPR(null);
     toast.success("PR saved");
   }
 
