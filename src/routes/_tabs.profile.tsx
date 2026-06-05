@@ -341,6 +341,7 @@ function ProfilePage() {
         <Link to="/disclaimer">Disclaimer</Link>
       </section>
 
+      <QuickLogFAB />
     </div>
   );
 }
