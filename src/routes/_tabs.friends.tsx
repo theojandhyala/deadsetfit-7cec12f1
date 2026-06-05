@@ -87,9 +87,14 @@ function Feed({ userId }: { userId: string }) {
   const _toggleLike = useServerFn(toggleLike);
   const [posts, setPosts] = useState<FeedPost[] | null>(null);
   const [composing, setComposing] = useState(false);
+  const [postKind, setPostKind] = useState<"text" | "pr">("text");
   const [text, setText] = useState("");
+  const [prLift, setPrLift] = useState("");
+  const [prWeight, setPrWeight] = useState("");
+  const [prReps, setPrReps] = useState("");
   const [posting, setPosting] = useState(false);
   const [openComments, setOpenComments] = useState<string | null>(null);
+  const [pickerFor, setPickerFor] = useState<string | null>(null);
 
   async function load() {
     try {
