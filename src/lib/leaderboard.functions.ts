@@ -44,7 +44,9 @@ export const getLeaderboard = createServerFn({ method: "POST" })
 
     const cat = data.category;
     const enriched: LeaderboardRow[] = (rows ?? [])
+      .filter((r): r is typeof r & { id: string } => typeof r.id === "string")
       .map((r) => {
+
         const stats = (r.public_stats ?? {}) as PublicStats;
         let value = 0;
         let unit = "kg";
