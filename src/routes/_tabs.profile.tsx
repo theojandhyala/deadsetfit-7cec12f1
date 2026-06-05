@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Flame, LogOut, Crown, Pencil, Trophy, Plus, X, Trash2, Settings, Sparkles, Heart } from "lucide-react";
+import { Flame, LogOut, Crown, Pencil, Trophy, Trash2, Settings, Sparkles, Heart } from "lucide-react";
 import { useAppState, flushRemoteState } from "@/lib/storage";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -16,7 +16,7 @@ import { StatsGrid } from "@/components/StatsGrid";
 import { LiftLevels } from "@/components/LiftLevels";
 import { TrophyCase } from "@/components/TrophyCase";
 import {
-  PR_CATALOG, computeFifaStats, buildPublicStats, buildHeadlinePRs, formatPRValue,
+  PR_CATALOG, computeFifaStats, buildPublicStats, buildHeadlinePRs,
   type PRDef,
 } from "@/lib/fifa-stats";
 
