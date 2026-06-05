@@ -107,20 +107,48 @@ function Feed({ userId }: { userId: string }) {
   useEffect(() => { load(); }, []);
 
   async function publish() {
-    if (!text.trim()) return;
     setPosting(true);
     try {
-      await _createPost({ data: { kind: "text", content: text.trim(), metadata: {} } });
-      setText(""); setComposing(false);
+      if (postKind === "pr") {
+        const w = Number(prWeight);
+        if (!prLift.trim() || !w) { toast.error("Lift + weight required"); setPosting(false); return; }
+        await _createPost({
+          data: {
+            kind: "pr",
+            content: text.trim(),
+            metadata: { lift: prLift.trim().toUpperCase(), weight: w, reps: prReps ? Number(prReps) : 1 },
+          },
+        });
+      } else {
+        if (!text.trim()) { setPosting(false); return; }
+        await _createPost({ data: { kind: "text", content: text.trim(), metadata: {} } });
+      }
+      setText(""); setPrLift(""); setPrWeight(""); setPrReps("");
+      setComposing(false); setPostKind("text");
       await load();
     } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
     finally { setPosting(false); }
   }
 
-  async function like(p: FeedPost) {
+  async function react(p: FeedPost, reaction: "fire" | "beast" | "respect" | "goat") {
+    setPickerFor(null);
+    const wasMine = p.myReaction;
+    const sameOff = wasMine === reaction;
     // optimistic
-    setPosts(arr => arr?.map(x => x.id === p.id ? { ...x, liked: !x.liked, likeCount: x.likeCount + (x.liked ? -1 : 1) } : x) ?? null);
-    try { await _toggleLike({ data: { postId: p.id } }); }
+    setPosts(arr => arr?.map(x => {
+      if (x.id !== p.id) return x;
+      const reactions = { ...(x.reactions || {}) };
+      if (wasMine) reactions[wasMine] = Math.max(0, (reactions[wasMine] || 1) - 1);
+      if (!sameOff) reactions[reaction] = (reactions[reaction] || 0) + 1;
+      return {
+        ...x,
+        myReaction: sameOff ? null : reaction,
+        liked: !sameOff,
+        likeCount: x.likeCount + (sameOff ? -1 : wasMine ? 0 : 1),
+        reactions,
+      };
+    }) ?? null);
+    try { await _toggleLike({ data: { postId: p.id, reaction } }); }
     catch { load(); }
   }
 
