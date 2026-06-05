@@ -342,14 +342,10 @@ function ProfilePage() {
 }
 
 function PRRow({
-  def, display, pr, onSave,
+  def, pr, onSave,
 }: {
   def: PRDef;
-  display: string;
   pr?: { value: number; reps?: number };
-  isEditing?: boolean;
-  onStart?: () => void;
-  onCancel?: () => void;
   onSave: (value: number, reps?: number) => void;
 }) {
   const [val, setVal] = useState(String(pr?.value ?? ""));
@@ -367,13 +363,8 @@ function PRRow({
 
   return (
     <div className="flex items-center justify-between px-4 py-2.5 gap-3">
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-bold text-grit truncate">{def.label}</p>
-        {display && display !== "—" && pr && (
-          <p className="text-[10px] text-grit-dim mt-0.5">Best: {display}</p>
-        )}
-      </div>
-      <div className="flex items-center gap-1.5">
+      <p className="text-sm font-bold text-grit truncate">{def.label}</p>
+      <div className="flex items-center gap-1.5 shrink-0">
         <input
           value={val}
           onChange={(e) => setVal(e.target.value)}
