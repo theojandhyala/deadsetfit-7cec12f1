@@ -275,18 +275,32 @@ function LiveWorkoutPage() {
             <h1 className="display text-2xl uppercase font-extrabold text-grit leading-tight">{current.name}</h1>
             <p className="text-xs text-[#8a8a8a] mt-1">{current.targetSets} × {current.targetReps}</p>
           </div>
-          <button onClick={() => { setVideoQuery(current.name + " form"); setVideoTitle(current.name); }}
-            className="flex-shrink-0 w-12 h-12 border border-accent-red flex items-center justify-center">
-            <Play size={20} className="text-accent-red" />
-          </button>
+          <div className="flex flex-shrink-0 gap-2">
+            <Link
+              to="/lift/$exerciseId"
+              params={{ exerciseId: current.exerciseId }}
+              className="w-12 h-12 border border-grit flex items-center justify-center text-grit-dim"
+              aria-label="Lift history"
+            >
+              <Trophy size={18} />
+            </Link>
+            <button onClick={() => { setVideoQuery(current.name + " form"); setVideoTitle(current.name); }}
+              className="w-12 h-12 border border-accent-red flex items-center justify-center">
+              <Play size={20} className="text-accent-red" />
+            </button>
+          </div>
         </div>
 
         <div className="mt-4 flex flex-col gap-2">
           {current.sets.map((s, i) => (
-            <div key={i} className="grid grid-cols-[40px_1fr_1fr_auto] items-center gap-3 bg-grit-card border border-grit px-3 py-2.5">
+            <div key={i} className="grid grid-cols-[40px_1fr_1fr_auto_auto] items-center gap-2 bg-grit-card border border-grit px-3 py-2.5">
               <div className="label-cap text-grit-dim">SET {i + 1}</div>
               <div><span className="display text-xl font-extrabold text-grit">{s.weight}</span><span className="text-xs text-[#8a8a8a] ml-1">kg</span></div>
               <div><span className="display text-xl font-extrabold text-grit">{s.reps}</span><span className="text-xs text-[#8a8a8a] ml-1">reps</span></div>
+              <div className="flex items-center gap-1 text-[10px] text-grit-dim">
+                {s.isAmrap && <span className="px-1 py-0.5 border border-grit-dim text-grit-dim">AMRAP</span>}
+                {s.rpe != null && <span>RPE {s.rpe}</span>}
+              </div>
               {s.isPR ? <Trophy size={16} className="text-accent-red" /> : <Check size={16} className="text-[#3a8a3a]" />}
             </div>
           ))}
@@ -295,8 +309,18 @@ function LiveWorkoutPage() {
           )}
         </div>
 
-        <SetEntry onLog={logSet} prev={current.sets[current.sets.length - 1]}
-                  prevBestWeight={Math.max(0, ...allLogs.filter((l) => l.exerciseId === current.exerciseId).map((l) => l.weight))} />
+        <SetEntry
+          onLog={logSet}
+          prev={current.sets[current.sets.length - 1]}
+          prevBestWeight={Math.max(0, ...allLogs.filter((l) => l.exerciseId === current.exerciseId).map((l) => l.weight))}
+          lastSessionSet={(() => {
+            const prior = allLogs.filter((l) => l.exerciseId === current.exerciseId);
+            return prior.length ? prior[prior.length - 1] : null;
+          })()}
+          showRPE={showRPE}
+          onToggleRPE={() => setShowRPE((v) => !v)}
+          onOpenPlateCalc={() => setPlateOpen(true)}
+        />
 
         {current.sets.length > 0 && (
           <button onClick={removeLastSet} className="mt-3 label-cap text-grit-dim text-xs flex items-center mx-auto">
