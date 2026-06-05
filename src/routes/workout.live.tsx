@@ -148,7 +148,7 @@ function LiveWorkoutPage() {
       const prCount = exercises.reduce((a, e) => a + e.sets.filter((s) => s.isPR).length, 0);
       return { ...sess, exercises, totalVolume, prCount };
     });
-    setRestLeft(90);
+    setRestLeft(restPreset);
     if (isPR) {
       try { navigator.vibrate?.([40, 60, 40]); } catch { /* noop */ }
       setCelebrate({ name: current.name, weight, reps });
