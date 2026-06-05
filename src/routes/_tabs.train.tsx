@@ -147,6 +147,7 @@ function TrainPage() {
       <Reminders />
 
       <div className="px-5 mb-5"><Big3Card state={state} /></div>
+      <div className="px-5 mb-5"><WeeklyRecap state={state} /></div>
 
 
 
