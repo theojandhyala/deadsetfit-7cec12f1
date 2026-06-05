@@ -146,6 +146,27 @@ function ProgramsPage() {
         })}
       </ul>
 
+      <p className="label-cap text-grit-dim text-xs mb-2">★ Featured programs</p>
+      <ul className="space-y-2 mb-6">
+        {FEATURED_PROGRAMS.map((p) => (
+          <li key={p.name}>
+            <button
+              onClick={() => createFeatured(p)}
+              className="w-full bg-grit-card border border-grit p-4 flex items-center justify-between text-left"
+            >
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="display uppercase font-extrabold text-grit text-base truncate">{p.name}</span>
+                  <span className="text-[9px] px-1.5 py-0.5 border border-grit text-grit-dim label-cap">{p.level}</span>
+                </div>
+                <div className="text-xs text-grit-dim truncate">{p.tagline}</div>
+              </div>
+              <Plus size={18} className="text-accent-red shrink-0" />
+            </button>
+          </li>
+        ))}
+      </ul>
+
       <p className="label-cap text-grit-dim text-xs mb-2">+ New from template</p>
       <ul className="space-y-2">
         {SPLIT_TEMPLATES.map((t) => (
