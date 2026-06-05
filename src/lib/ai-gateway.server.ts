@@ -47,6 +47,34 @@ export async function chatJSON<T = unknown>(opts: {
   }
 }
 
+export async function chatText(opts: {
+  model?: string;
+  system: string;
+  messages: { role: "user" | "assistant"; content: string }[];
+}): Promise<string> {
+  const key = process.env.LOVABLE_API_KEY;
+  if (!key) throw new Error("Missing LOVABLE_API_KEY");
+
+  const res = await fetch(`${BASE}/chat/completions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+    body: JSON.stringify({
+      model: opts.model ?? "google/gemini-2.5-flash",
+      messages: [{ role: "system", content: opts.system }, ...opts.messages],
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    if (res.status === 429) throw new Error("Rate limit exceeded. Please retry shortly.");
+    if (res.status === 402) throw new Error("AI credits exhausted. Add credits in Settings → Workspace → Usage.");
+    throw new Error(`AI gateway error ${res.status}: ${text}`);
+  }
+  const data = (await res.json()) as { choices: { message: { content: string } }[] };
+  return data.choices?.[0]?.message?.content ?? "";
+}
+
+
 export async function chatVisionJSON<T = unknown>(opts: {
   model?: string;
   system: string;
