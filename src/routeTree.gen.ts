@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as DisclaimerRouteImport } from './routes/disclaimer'
@@ -32,6 +33,11 @@ import { Route as TabsAthleteIdRouteImport } from './routes/_tabs.athlete.$id'
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -130,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/disclaimer': typeof DisclaimerRoute
   '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
+  '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
   '/challenges': typeof TabsChallengesRoute
   '/diet': typeof TabsDietRoute
@@ -150,6 +157,7 @@ export interface FileRoutesByTo {
   '/disclaimer': typeof DisclaimerRoute
   '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
+  '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
   '/challenges': typeof TabsChallengesRoute
   '/diet': typeof TabsDietRoute
@@ -172,6 +180,7 @@ export interface FileRoutesById {
   '/disclaimer': typeof DisclaimerRoute
   '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
+  '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
   '/_tabs/challenges': typeof TabsChallengesRoute
   '/_tabs/diet': typeof TabsDietRoute
@@ -194,6 +203,7 @@ export interface FileRouteTypes {
     | '/disclaimer'
     | '/onboarding'
     | '/privacy'
+    | '/settings'
     | '/terms'
     | '/challenges'
     | '/diet'
@@ -214,6 +224,7 @@ export interface FileRouteTypes {
     | '/disclaimer'
     | '/onboarding'
     | '/privacy'
+    | '/settings'
     | '/terms'
     | '/challenges'
     | '/diet'
@@ -235,6 +246,7 @@ export interface FileRouteTypes {
     | '/disclaimer'
     | '/onboarding'
     | '/privacy'
+    | '/settings'
     | '/terms'
     | '/_tabs/challenges'
     | '/_tabs/diet'
@@ -257,6 +269,7 @@ export interface RootRouteChildren {
   DisclaimerRoute: typeof DisclaimerRoute
   OnboardingRoute: typeof OnboardingRoute
   PrivacyRoute: typeof PrivacyRoute
+  SettingsRoute: typeof SettingsRoute
   TermsRoute: typeof TermsRoute
   WorkoutLiveRoute: typeof WorkoutLiveRoute
 }
@@ -268,6 +281,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -446,6 +466,7 @@ const rootRouteChildren: RootRouteChildren = {
   DisclaimerRoute: DisclaimerRoute,
   OnboardingRoute: OnboardingRoute,
   PrivacyRoute: PrivacyRoute,
+  SettingsRoute: SettingsRoute,
   TermsRoute: TermsRoute,
   WorkoutLiveRoute: WorkoutLiveRoute,
 }
