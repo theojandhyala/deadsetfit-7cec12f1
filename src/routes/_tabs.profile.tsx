@@ -329,10 +329,14 @@ function ProfilePage() {
       </section>
 
       <section className="px-5 mb-6 flex flex-col gap-2">
+        <Link to="/settings" className="btn-ghost w-full inline-flex items-center justify-center">
+          <Settings size={14} className="mr-2" /> Settings
+        </Link>
         <button onClick={logout} className="btn-grit w-full inline-flex items-center justify-center">
           <LogOut size={14} className="mr-2" /> Log Out (saves your data)
         </button>
         <button onClick={reset} className="btn-ghost w-full">Reset This Device</button>
+
         <button
           onClick={deleteAccount}
           className="w-full mt-2 py-3 label-cap text-sm inline-flex items-center justify-center border border-accent-red text-accent-red hover:bg-accent-red/10 transition-colors"
