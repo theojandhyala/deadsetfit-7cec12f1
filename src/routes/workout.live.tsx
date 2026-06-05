@@ -10,7 +10,7 @@ import { VideoModal } from "@/components/VideoModal";
 import { ShareCard } from "@/components/ShareCard";
 import { PlateCalculator } from "@/components/PlateCalculator";
 import { PRCelebration } from "@/components/PRCelebration";
-import type { WorkoutSession, WorkoutSessionExercise, CompletedSet, DayKey } from "@/lib/types";
+import type { WorkoutSession, WorkoutSessionExercise, CompletedSet, DayKey, SetLog } from "@/lib/types";
 
 export const Route = createFileRoute("/workout/live")({
   head: () => ({ meta: [{ title: "DEADSET — Live Workout" }] }),
@@ -356,6 +356,20 @@ function LiveWorkoutPage() {
       </div>
 
       {videoQuery && <VideoModal query={videoQuery} title={videoTitle} onClose={() => setVideoQuery(null)} />}
+      {plateOpen && (
+        <PlateCalculator
+          initialWeight={Number((document.getElementById("liveWeightInput") as HTMLInputElement | null)?.value) || 60}
+          onClose={() => setPlateOpen(false)}
+        />
+      )}
+      {celebrate && (
+        <PRCelebration
+          exerciseName={celebrate.name}
+          weight={celebrate.weight}
+          reps={celebrate.reps}
+          onClose={() => setCelebrate(null)}
+        />
+      )}
     </div>
   );
 }
@@ -378,20 +392,44 @@ function Timer({ startedAt }: { startedAt: string }) {
   return <div className="text-right"><p className="label-cap text-[10px] text-grit-dim">ELAPSED</p><p className="display text-sm font-extrabold text-grit tabular-nums">{mm}:{ss}</p></div>;
 }
 
-function SetEntry({ onLog, prev, prevBestWeight }: { onLog: (w: number, r: number) => void; prev?: CompletedSet; prevBestWeight: number }) {
+function SetEntry({
+  onLog, prev, prevBestWeight, lastSessionSet, showRPE, onToggleRPE, onOpenPlateCalc,
+}: {
+  onLog: (w: number, r: number, opts?: { rpe?: number; isAmrap?: boolean }) => void;
+  prev?: CompletedSet;
+  prevBestWeight: number;
+  lastSessionSet: SetLog | null;
+  showRPE: boolean;
+  onToggleRPE: () => void;
+  onOpenPlateCalc: () => void;
+}) {
   const [w, setW] = useState<string>(prev ? String(prev.weight) : "");
   const [r, setR] = useState<string>(prev ? String(prev.reps) : "");
+  const [rpe, setRpe] = useState<string>("");
+  const [amrap, setAmrap] = useState(false);
   useEffect(() => { if (prev) { setW(String(prev.weight)); setR(String(prev.reps)); } }, [prev]);
   const wn = Number(w) || 0;
+  const rn = Number(r) || 0;
   const willBePR = wn > prevBestWeight && wn > 0;
+  const e1rm = wn && rn ? estimate1RM(wn, rn) : 0;
   return (
     <div className="mt-5 bg-grit-card border border-grit p-4">
+      {lastSessionSet && (
+        <p className="text-[11px] text-grit-dim mb-2 uppercase tracking-wider">
+          Last time: <span className="text-grit font-bold">{lastSessionSet.weight}kg × {lastSessionSet.reps}</span>
+        </p>
+      )}
       <div className="grid grid-cols-2 gap-3 mb-3">
         <div>
-          <label className="label-cap block mb-1">Weight (kg)</label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="label-cap">Weight (kg)</label>
+            <button onClick={onOpenPlateCalc} className="label-cap text-accent-red flex items-center text-[10px]">
+              <Calculator size={11} className="mr-1" />Plates
+            </button>
+          </div>
           <div className="flex items-center">
             <button onClick={() => setW(String(Math.max(0, (Number(w) || 0) - 2.5)))} className="w-10 h-12 border border-grit text-grit">−</button>
-            <input inputMode="decimal" value={w} onChange={(e) => setW(e.target.value)} className="input-grit text-center flex-1 mx-0 border-l-0 border-r-0" />
+            <input id="liveWeightInput" inputMode="decimal" value={w} onChange={(e) => setW(e.target.value)} className="input-grit text-center flex-1 mx-0 border-l-0 border-r-0" />
             <button onClick={() => setW(String((Number(w) || 0) + 2.5))} className="w-10 h-12 border border-grit text-grit">+</button>
           </div>
         </div>
@@ -404,9 +442,60 @@ function SetEntry({ onLog, prev, prevBestWeight }: { onLog: (w: number, r: numbe
           </div>
         </div>
       </div>
-      <button onClick={() => { onLog(Number(w) || 0, Number(r) || 0); }}
-        disabled={!Number(r)}
-        className="btn-grit w-full disabled:opacity-40">
+
+      <div className="flex items-center justify-between mb-3 text-[11px]">
+        <button
+          onClick={() => setAmrap((v) => !v)}
+          className="px-2 py-1 border tracking-widest uppercase font-bold"
+          style={{
+            borderColor: amrap ? "#e63222" : "#262626",
+            color: amrap ? "#e63222" : "#8a8a8a",
+            background: amrap ? "#1a0606" : "transparent",
+          }}
+        >
+          AMRAP
+        </button>
+        <button onClick={onToggleRPE} className="label-cap text-grit-dim">
+          {showRPE ? "Hide RPE" : "+ RPE"}
+        </button>
+        {e1rm > 0 && (
+          <span className="text-grit-dim">e1RM <span className="text-grit font-bold">{e1rm}kg</span></span>
+        )}
+      </div>
+
+      {showRPE && (
+        <div className="mb-3">
+          <label className="label-cap block mb-1">RPE (1–10)</label>
+          <div className="flex gap-1">
+            {[6, 7, 7.5, 8, 8.5, 9, 9.5, 10].map((v) => (
+              <button
+                key={v}
+                onClick={() => setRpe(String(v))}
+                className="flex-1 py-2 text-xs font-bold border"
+                style={{
+                  borderColor: rpe === String(v) ? "#e63222" : "#262626",
+                  color: rpe === String(v) ? "#e63222" : "#8a8a8a",
+                  background: rpe === String(v) ? "#1a0606" : "transparent",
+                }}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={() => {
+          onLog(wn, rn, {
+            rpe: rpe ? Number(rpe) : undefined,
+            isAmrap: amrap || undefined,
+          });
+          if (amrap) setAmrap(false);
+        }}
+        disabled={!rn}
+        className="btn-grit w-full disabled:opacity-40"
+      >
         {willBePR && <Trophy size={14} className="mr-2" />}
         Log Set {willBePR ? "— PR!" : ""}
       </button>
