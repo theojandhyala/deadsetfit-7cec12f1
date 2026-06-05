@@ -68,6 +68,22 @@ function fmtTime(s: number) {
 function ChallengesPage() {
   const [state] = useAppState();
   const [active, setActive] = useState<Challenge | null>(null);
+  const [filter, setFilter] = useState<"ALL" | "EASY" | "BEAST" | "GOD" | "BEATEN">("ALL");
+
+  const filtered = CHALLENGES.filter((c) => {
+    if (filter === "ALL") return true;
+    if (filter === "BEATEN") {
+      const b = bestRecord(state.challengeRecords, c.id);
+      return b && b.value >= c.target;
+    }
+    return c.tier === filter;
+  });
+
+  const beatenCount = CHALLENGES.filter((c) => {
+    const b = bestRecord(state.challengeRecords, c.id);
+    return b && b.value >= c.target;
+  }).length;
+
 
   return (
     <div style={{ paddingTop: "env(safe-area-inset-top)" }} className="pb-6">
