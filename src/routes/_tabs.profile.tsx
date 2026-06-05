@@ -40,7 +40,6 @@ function ProfilePage() {
   const [h, setH] = useState(String(p?.heightCm ?? ""));
   const [username, setUsername] = useState(p?.username || "");
   const [savingProfile, setSavingProfile] = useState(false);
-  const [editingPR, setEditingPR] = useState<string | null>(null);
 
   // Auto-push public_stats whenever logs / manualPRs / sessions change.
   useEffect(() => {
