@@ -394,6 +394,7 @@ function ProgressPage() {
       </section>
 
       {viewScan && <ScanModal scan={viewScan} onClose={() => setViewScan(null)} onDelete={() => deleteScan(viewScan.id)} />}
+      <QuickLogFAB />
     </div>
   );
 }
