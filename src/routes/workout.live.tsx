@@ -330,6 +330,19 @@ function LiveWorkoutPage() {
         )}
       </div>
 
+      <div className="px-4 pb-2 flex items-center gap-2 flex-wrap">
+        <span className="label-cap text-[10px] text-grit-dim">REST</span>
+        {[60, 90, 120, 180].map((s) => (
+          <button
+            key={s}
+            onClick={() => setRestPreset(s)}
+            className={`px-2 py-1 text-[11px] font-bold border ${restPreset === s ? "bg-accent-red text-grit border-accent-red" : "border-grit text-grit-dim"}`}
+          >
+            {s}s
+          </button>
+        ))}
+      </div>
+
       {restLeft > 0 && (
         <div className="sticky bottom-0 mx-4 mb-4 bg-grit-card border-2 border-accent-red p-3 flex items-center justify-between">
           <div>
