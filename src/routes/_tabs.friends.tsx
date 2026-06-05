@@ -238,11 +238,22 @@ function Feed({ userId }: { userId: string }) {
               </div>
             </div>
           )}
-          <footer className="flex items-center gap-5 text-[#8a8a8a]">
-            <button onClick={() => like(p)} className="flex items-center gap-1.5 text-xs">
-              <Heart size={16} fill={p.liked ? "#e63222" : "none"} color={p.liked ? "#e63222" : "currentColor"} />
-              {p.likeCount}
+          <footer className="flex items-center gap-3 text-[#8a8a8a] relative">
+            <button onClick={() => setPickerFor(pickerFor === p.id ? null : p.id)} className="flex items-center gap-1.5 text-xs">
+              <span className="text-base leading-none">{reactionEmoji(p.myReaction)}</span>
+              <span>{p.likeCount}</span>
             </button>
+            {pickerFor === p.id && (
+              <div className="absolute -top-12 left-0 bg-grit-card border border-accent-red px-2 py-1.5 flex gap-2 z-10 shadow-lg">
+                {(["fire","beast","respect","goat"] as const).map(r => (
+                  <button key={r} onClick={() => react(p, r)}
+                    className="text-xl leading-none hover:scale-125 transition-transform"
+                    style={{ opacity: p.myReaction === r ? 1 : 0.85 }}>
+                    {reactionEmoji(r)}
+                  </button>
+                ))}
+              </div>
+            )}
             <button onClick={() => setOpenComments(openComments === p.id ? null : p.id)} className="flex items-center gap-1.5 text-xs">
               <MessageCircle size={16} /> {p.commentCount}
             </button>
@@ -255,6 +266,16 @@ function Feed({ userId }: { userId: string }) {
       ))}
     </div>
   );
+}
+
+function reactionEmoji(r: string | null) {
+  switch (r) {
+    case "fire": return "🔥";
+    case "beast": return "💪";
+    case "respect": return "🙌";
+    case "goat": return "🐐";
+    default: return "🔥";
+  }
 }
 
 function CommentsPanel({ postId, onPosted }: { postId: string; onPosted: () => void }) {
