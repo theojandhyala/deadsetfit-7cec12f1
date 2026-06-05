@@ -53,6 +53,7 @@ const FEATURED_PROGRAMS: { name: string; tagline: string; level: string; days: R
 
 function ProgramsPage() {
   const [state, set] = useAppState();
+  const nav = useNavigate();
 
   function create(template: (typeof SPLIT_TEMPLATES)[number]) {
     const id = crypto.randomUUID();
@@ -65,7 +66,8 @@ function ProgramsPage() {
         DAYS.map((d) => [d, { label: template.days[d], items: [] }]),
       ) as unknown as Program["days"],
     };
-    set((s) => ({ ...s, programs: [...s.programs, program], activeProgramId: s.activeProgramId ?? id }));
+    set((s) => ({ ...s, programs: [...s.programs, program], activeProgramId: id }));
+    nav({ to: "/programs/$programId", params: { programId: id } });
   }
 
   function createFeatured(p: (typeof FEATURED_PROGRAMS)[number]) {
@@ -79,7 +81,8 @@ function ProgramsPage() {
         DAYS.map((d) => [d, { label: p.days[d], items: [] }]),
       ) as unknown as Program["days"],
     };
-    set((s) => ({ ...s, programs: [...s.programs, program], activeProgramId: s.activeProgramId ?? id }));
+    set((s) => ({ ...s, programs: [...s.programs, program], activeProgramId: id }));
+    nav({ to: "/programs/$programId", params: { programId: id } });
   }
 
   function activate(id: string) {
