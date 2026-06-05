@@ -177,12 +177,15 @@ function TrainPage() {
                   <p className="text-xs text-grit-dim mt-1">No exercises today — recover & come back stronger.</p>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <Link to="/programs" className="btn-ghost py-2.5 flex items-center justify-center gap-2 text-xs">
                   <ListPlus size={14} /> Schedule
                 </Link>
                 <Link to="/challenges" className="btn-ghost py-2.5 flex items-center justify-center gap-2 text-xs">
-                  <Trophy size={14} /> Daily Challenge
+                  <Trophy size={14} /> Challenge
+                </Link>
+                <Link to="/recovery" className="btn-ghost py-2.5 flex items-center justify-center gap-2 text-xs">
+                  <Heart size={14} /> Recovery
                 </Link>
               </div>
             </div>
