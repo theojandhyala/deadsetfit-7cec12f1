@@ -36,15 +36,21 @@ export const getFeed = createServerFn({ method: "GET" })
 
     const [{ data: authors }, { data: likes }, { data: myLikes }, { data: commentCounts }] = await Promise.all([
       supabaseAdmin.from("profiles").select("id, display_name, username, avatar_url, grit_points").in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]),
-      supabase.from("post_likes").select("post_id").in("post_id", postIds.length ? postIds : ["00000000-0000-0000-0000-000000000000"]),
-      supabase.from("post_likes").select("post_id").eq("user_id", userId).in("post_id", postIds.length ? postIds : ["00000000-0000-0000-0000-000000000000"]),
+      supabase.from("post_likes").select("post_id, reaction").in("post_id", postIds.length ? postIds : ["00000000-0000-0000-0000-000000000000"]),
+      supabase.from("post_likes").select("post_id, reaction").eq("user_id", userId).in("post_id", postIds.length ? postIds : ["00000000-0000-0000-0000-000000000000"]),
       supabase.from("post_comments").select("post_id").in("post_id", postIds.length ? postIds : ["00000000-0000-0000-0000-000000000000"]),
     ]);
 
     const authorMap = new Map((authors ?? []).map(a => [a.id, { ...a, level: gritLevel(a.grit_points ?? 0) }]));
     const likeCount = new Map<string, number>();
-    (likes ?? []).forEach(l => likeCount.set(l.post_id, (likeCount.get(l.post_id) ?? 0) + 1));
-    const mine = new Set((myLikes ?? []).map(l => l.post_id));
+    const reactionCounts = new Map<string, Record<string, number>>();
+    (likes ?? []).forEach(l => {
+      likeCount.set(l.post_id, (likeCount.get(l.post_id) ?? 0) + 1);
+      const rc = reactionCounts.get(l.post_id) ?? {};
+      rc[l.reaction] = (rc[l.reaction] ?? 0) + 1;
+      reactionCounts.set(l.post_id, rc);
+    });
+    const myReactions = new Map((myLikes ?? []).map(l => [l.post_id, l.reaction]));
     const cmCount = new Map<string, number>();
     (commentCounts ?? []).forEach(c => cmCount.set(c.post_id, (cmCount.get(c.post_id) ?? 0) + 1));
 
@@ -52,8 +58,10 @@ export const getFeed = createServerFn({ method: "GET" })
       ...p,
       author: authorMap.get(p.user_id) ?? { id: p.user_id, display_name: "Athlete", username: null, avatar_url: null, grit_points: 0, level: "BEGINNER" as const },
       likeCount: likeCount.get(p.id) ?? 0,
+      reactions: reactionCounts.get(p.id) ?? {},
+      myReaction: myReactions.get(p.id) ?? null,
       commentCount: cmCount.get(p.id) ?? 0,
-      liked: mine.has(p.id),
+      liked: myReactions.has(p.id),
     }));
   });
 
@@ -78,22 +86,29 @@ export const createPost = createServerFn({ method: "POST" })
     return row;
   });
 
-// === Toggle like ===
-const LikeInput = z.object({ postId: z.string().uuid() });
+// === Set reaction (fire, beast, respect, goat). Same reaction toggles off. ===
+const ReactionInput = z.object({
+  postId: z.string().uuid(),
+  reaction: z.enum(["fire", "beast", "respect", "goat"]).default("fire"),
+});
 export const toggleLike = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => LikeInput.parse(d))
+  .inputValidator((d: unknown) => ReactionInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: existing } = await supabase
       .from("post_likes")
-      .select("post_id").eq("post_id", data.postId).eq("user_id", userId).maybeSingle();
-    if (existing) {
+      .select("reaction").eq("post_id", data.postId).eq("user_id", userId).maybeSingle();
+    if (existing && existing.reaction === data.reaction) {
       await supabase.from("post_likes").delete().eq("post_id", data.postId).eq("user_id", userId);
-      return { liked: false };
+      return { liked: false, reaction: null as string | null };
     }
-    await supabase.from("post_likes").insert({ post_id: data.postId, user_id: userId });
-    return { liked: true };
+    if (existing) {
+      await supabase.from("post_likes").update({ reaction: data.reaction }).eq("post_id", data.postId).eq("user_id", userId);
+    } else {
+      await supabase.from("post_likes").insert({ post_id: data.postId, user_id: userId, reaction: data.reaction });
+    }
+    return { liked: true, reaction: data.reaction };
   });
 
 // === Comments ===

@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Heart, MessageCircle, Trophy, Share2, Loader2, Send, Plus, Gift, Copy, Check, Crown, Users, Search, UserPlus, UserCheck, MapPin } from "lucide-react";
+import { MessageCircle, Trophy, Share2, Loader2, Send, Plus, Gift, Copy, Check, Crown, Users, Search, UserPlus, UserCheck, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getFeed, createPost, toggleLike, addComment, getComments,
@@ -87,9 +87,14 @@ function Feed({ userId }: { userId: string }) {
   const _toggleLike = useServerFn(toggleLike);
   const [posts, setPosts] = useState<FeedPost[] | null>(null);
   const [composing, setComposing] = useState(false);
+  const [postKind, setPostKind] = useState<"text" | "pr">("text");
   const [text, setText] = useState("");
+  const [prLift, setPrLift] = useState("");
+  const [prWeight, setPrWeight] = useState("");
+  const [prReps, setPrReps] = useState("");
   const [posting, setPosting] = useState(false);
   const [openComments, setOpenComments] = useState<string | null>(null);
+  const [pickerFor, setPickerFor] = useState<string | null>(null);
 
   async function load() {
     try {
@@ -102,20 +107,48 @@ function Feed({ userId }: { userId: string }) {
   useEffect(() => { load(); }, []);
 
   async function publish() {
-    if (!text.trim()) return;
     setPosting(true);
     try {
-      await _createPost({ data: { kind: "text", content: text.trim(), metadata: {} } });
-      setText(""); setComposing(false);
+      if (postKind === "pr") {
+        const w = Number(prWeight);
+        if (!prLift.trim() || !w) { toast.error("Lift + weight required"); setPosting(false); return; }
+        await _createPost({
+          data: {
+            kind: "pr",
+            content: text.trim(),
+            metadata: { lift: prLift.trim().toUpperCase(), weight: w, reps: prReps ? Number(prReps) : 1 },
+          },
+        });
+      } else {
+        if (!text.trim()) { setPosting(false); return; }
+        await _createPost({ data: { kind: "text", content: text.trim(), metadata: {} } });
+      }
+      setText(""); setPrLift(""); setPrWeight(""); setPrReps("");
+      setComposing(false); setPostKind("text");
       await load();
     } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
     finally { setPosting(false); }
   }
 
-  async function like(p: FeedPost) {
+  async function react(p: FeedPost, reaction: "fire" | "beast" | "respect" | "goat") {
+    setPickerFor(null);
+    const wasMine = p.myReaction;
+    const sameOff = wasMine === reaction;
     // optimistic
-    setPosts(arr => arr?.map(x => x.id === p.id ? { ...x, liked: !x.liked, likeCount: x.likeCount + (x.liked ? -1 : 1) } : x) ?? null);
-    try { await _toggleLike({ data: { postId: p.id } }); }
+    setPosts(arr => arr?.map(x => {
+      if (x.id !== p.id) return x;
+      const reactions = { ...(x.reactions || {}) };
+      if (wasMine) reactions[wasMine] = Math.max(0, (reactions[wasMine] || 1) - 1);
+      if (!sameOff) reactions[reaction] = (reactions[reaction] || 0) + 1;
+      return {
+        ...x,
+        myReaction: sameOff ? null : reaction,
+        liked: !sameOff,
+        likeCount: x.likeCount + (sameOff ? -1 : wasMine ? 0 : 1),
+        reactions,
+      };
+    }) ?? null);
+    try { await _toggleLike({ data: { postId: p.id, reaction } }); }
     catch { load(); }
   }
 
@@ -137,13 +170,32 @@ function Feed({ userId }: { userId: string }) {
         </button>
       ) : (
         <div className="mb-4 bg-grit-card border border-grit p-4">
+          <div className="flex gap-2 mb-3">
+            {(["text", "pr"] as const).map(k => (
+              <button key={k} onClick={() => setPostKind(k)} className="label-cap px-3 py-1 border"
+                style={{ borderColor: postKind === k ? "#e63222" : "#262626", color: postKind === k ? "#e63222" : "#8a8a8a" }}>
+                {k === "text" ? "POST" : "NEW PR"}
+              </button>
+            ))}
+          </div>
+          {postKind === "pr" && (
+            <div className="grid grid-cols-3 gap-2 mb-2">
+              <input value={prLift} onChange={(e) => setPrLift(e.target.value)} placeholder="Bench" maxLength={20}
+                className="input-grit text-xs col-span-3" />
+              <input value={prWeight} onChange={(e) => setPrWeight(e.target.value)} inputMode="decimal" placeholder="kg"
+                className="input-grit text-xs col-span-2" />
+              <input value={prReps} onChange={(e) => setPrReps(e.target.value)} inputMode="numeric" placeholder="reps"
+                className="input-grit text-xs" />
+            </div>
+          )}
           <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} maxLength={500}
-            placeholder="What did you smash today?" className="input-grit w-full resize-none" />
+            placeholder={postKind === "pr" ? "Say something about the PR (optional)…" : "What did you smash today?"}
+            className="input-grit w-full resize-none" />
           <div className="flex justify-between items-center mt-2">
             <span className="text-xs text-[#8a8a8a]">{text.length}/500</span>
             <div className="flex gap-2">
-              <button onClick={() => { setComposing(false); setText(""); }} className="btn-ghost px-3 py-1.5 text-xs">Cancel</button>
-              <button onClick={publish} disabled={posting || !text.trim()} className="btn-grit px-4 py-1.5 text-xs">
+              <button onClick={() => { setComposing(false); setText(""); setPostKind("text"); }} className="btn-ghost px-3 py-1.5 text-xs">Cancel</button>
+              <button onClick={publish} disabled={posting} className="btn-grit px-4 py-1.5 text-xs">
                 {posting ? <Loader2 size={12} className="animate-spin" /> : "Post"}
               </button>
             </div>
@@ -186,11 +238,22 @@ function Feed({ userId }: { userId: string }) {
               </div>
             </div>
           )}
-          <footer className="flex items-center gap-5 text-[#8a8a8a]">
-            <button onClick={() => like(p)} className="flex items-center gap-1.5 text-xs">
-              <Heart size={16} fill={p.liked ? "#e63222" : "none"} color={p.liked ? "#e63222" : "currentColor"} />
-              {p.likeCount}
+          <footer className="flex items-center gap-3 text-[#8a8a8a] relative">
+            <button onClick={() => setPickerFor(pickerFor === p.id ? null : p.id)} className="flex items-center gap-1.5 text-xs">
+              <span className="text-base leading-none">{reactionEmoji(p.myReaction)}</span>
+              <span>{p.likeCount}</span>
             </button>
+            {pickerFor === p.id && (
+              <div className="absolute -top-12 left-0 bg-grit-card border border-accent-red px-2 py-1.5 flex gap-2 z-10 shadow-lg">
+                {(["fire","beast","respect","goat"] as const).map(r => (
+                  <button key={r} onClick={() => react(p, r)}
+                    className="text-xl leading-none hover:scale-125 transition-transform"
+                    style={{ opacity: p.myReaction === r ? 1 : 0.85 }}>
+                    {reactionEmoji(r)}
+                  </button>
+                ))}
+              </div>
+            )}
             <button onClick={() => setOpenComments(openComments === p.id ? null : p.id)} className="flex items-center gap-1.5 text-xs">
               <MessageCircle size={16} /> {p.commentCount}
             </button>
@@ -203,6 +266,16 @@ function Feed({ userId }: { userId: string }) {
       ))}
     </div>
   );
+}
+
+function reactionEmoji(r: string | null) {
+  switch (r) {
+    case "fire": return "🔥";
+    case "beast": return "💪";
+    case "respect": return "🙌";
+    case "goat": return "🐐";
+    default: return "🔥";
+  }
 }
 
 function CommentsPanel({ postId, onPosted }: { postId: string; onPosted: () => void }) {
