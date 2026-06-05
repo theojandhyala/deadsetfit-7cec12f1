@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Flame, LogOut, Crown, Pencil, Trophy, Plus, X, Trash2, Settings, Sparkles } from "lucide-react";
+import { Flame, LogOut, Crown, Pencil, Trophy, Plus, X, Trash2, Settings, Sparkles, Heart } from "lucide-react";
 import { useAppState, flushRemoteState } from "@/lib/storage";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -331,6 +331,9 @@ function ProfilePage() {
       <section className="px-5 mb-6 flex flex-col gap-2">
         <Link to="/coach" className="btn-grit w-full inline-flex items-center justify-center">
           <Sparkles size={14} className="mr-2" /> Ask DEADSET Coach
+        </Link>
+        <Link to="/recovery" className="btn-ghost w-full inline-flex items-center justify-center">
+          <Heart size={14} className="mr-2" /> Recovery & Mobility
         </Link>
         <Link to="/settings" className="btn-ghost w-full inline-flex items-center justify-center">
           <Settings size={14} className="mr-2" /> Settings
