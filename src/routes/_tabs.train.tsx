@@ -7,6 +7,7 @@ import { RestTimer } from "@/components/RestTimer";
 import { Reminders } from "@/components/Reminders";
 import { DailyQuests } from "@/components/DailyQuests";
 import { Big3Card } from "@/components/Big3Card";
+import { WeeklyRecap } from "@/components/WeeklyRecap";
 import { QuickLogFAB } from "@/components/QuickLogFAB";
 import { useAppState } from "@/lib/storage";
 import { EXERCISES, getExercise } from "@/lib/exercises";
@@ -146,6 +147,7 @@ function TrainPage() {
       <Reminders />
 
       <div className="px-5 mb-5"><Big3Card state={state} /></div>
+      <div className="px-5 mb-5"><WeeklyRecap state={state} /></div>
 
 
 
