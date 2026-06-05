@@ -1,8 +1,9 @@
 import { useMemo } from "react";
-import { Trophy, Lock } from "lucide-react";
+import { Trophy as TrophyIcon } from "lucide-react";
+import { calculateStreak, calculateGritScore } from "@/lib/calc";
 import type { AppState } from "@/lib/types";
 
-interface Trophy {
+interface TrophyItem {
   id: string;
   label: string;
   desc: string;
@@ -11,15 +12,15 @@ interface Trophy {
 }
 
 export function TrophyCase({ state }: { state: AppState }) {
-  const trophies = useMemo<Trophy[]>(() => {
+  const trophies = useMemo<TrophyItem[]>(() => {
     const sessions = state.sessions || [];
     const completed = sessions.filter((s) => s.endedAt);
     const sessionCount = completed.length;
     const totalVolume = completed.reduce((a, s) => a + (s.totalVolume || 0), 0);
     const totalPRs = completed.reduce((a, s) => a + (s.prCount || 0), 0);
     const daysTrained = new Set(completed.map((s) => s.date)).size;
-    const streak = state.profile?.workout_streak ?? 0;
-    const grit = (state.profile as unknown as { grit_points?: number })?.grit_points ?? 0;
+    const streak = calculateStreak(state.completedDates);
+    const grit = calculateGritScore(state).total;
 
     return [
       { id: "first-rep", label: "FIRST REP", desc: "Logged your first session", icon: "🥇", unlocked: sessionCount >= 1 },
