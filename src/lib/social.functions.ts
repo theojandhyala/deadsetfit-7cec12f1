@@ -86,22 +86,29 @@ export const createPost = createServerFn({ method: "POST" })
     return row;
   });
 
-// === Toggle like ===
-const LikeInput = z.object({ postId: z.string().uuid() });
+// === Set reaction (fire, beast, respect, goat). Same reaction toggles off. ===
+const ReactionInput = z.object({
+  postId: z.string().uuid(),
+  reaction: z.enum(["fire", "beast", "respect", "goat"]).default("fire"),
+});
 export const toggleLike = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => LikeInput.parse(d))
+  .inputValidator((d: unknown) => ReactionInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: existing } = await supabase
       .from("post_likes")
-      .select("post_id").eq("post_id", data.postId).eq("user_id", userId).maybeSingle();
-    if (existing) {
+      .select("reaction").eq("post_id", data.postId).eq("user_id", userId).maybeSingle();
+    if (existing && existing.reaction === data.reaction) {
       await supabase.from("post_likes").delete().eq("post_id", data.postId).eq("user_id", userId);
-      return { liked: false };
+      return { liked: false, reaction: null as string | null };
     }
-    await supabase.from("post_likes").insert({ post_id: data.postId, user_id: userId });
-    return { liked: true };
+    if (existing) {
+      await supabase.from("post_likes").update({ reaction: data.reaction }).eq("post_id", data.postId).eq("user_id", userId);
+    } else {
+      await supabase.from("post_likes").insert({ post_id: data.postId, user_id: userId, reaction: data.reaction });
+    }
+    return { liked: true, reaction: data.reaction };
   });
 
 // === Comments ===
