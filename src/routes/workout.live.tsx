@@ -65,10 +65,19 @@ function buildSession(state: ReturnType<typeof useAppState>[0], dayKey: DayKey):
   };
 }
 
+const DAY_KEYS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+const DAY_SHORT: Record<DayKey, string> = { MON: "Mon", TUE: "Tue", WED: "Wed", THU: "Thu", FRI: "Fri", SAT: "Sat", SUN: "Sun" };
+
 function LiveWorkoutPage() {
   const [state, set] = useAppState();
   const nav = useNavigate();
   const score = useServerFn(scorePump);
+
+  function startDay(dayKey: DayKey) {
+    const s = buildSession(state, dayKey);
+    if (!s) return;
+    set((st) => ({ ...st, sessions: [...st.sessions, s], activeSessionId: s.id }));
+  }
 
   useEffect(() => {
     if (state.activeSessionId) return;
