@@ -122,11 +122,72 @@ function LiveWorkoutPage() {
   }, [session]);
 
   if (!session) {
+    const active = state.programs.find((p) => p.id === state.activeProgramId);
+    const today = todayKey();
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center">
-        <p className="display text-2xl uppercase font-extrabold text-grit mb-2">Rest Day</p>
-        <p className="text-sm text-[#8a8a8a] mb-6">Nothing scheduled. Add exercises or pick a program.</p>
-        <Link to="/train" className="btn-grit">Back</Link>
+      <div className="min-h-screen flex flex-col p-6" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+        <div className="flex items-center justify-between mb-6">
+          <Link to="/train" className="text-grit-dim"><X size={22} /></Link>
+          <p className="display text-sm uppercase font-extrabold text-grit">Pick a Day</p>
+          <div className="w-6" />
+        </div>
+        {active ? (
+          <>
+            <p className="label-cap text-grit-dim text-[10px] mb-1">ACTIVE PROGRAM</p>
+            <p className="display text-xl uppercase font-extrabold text-grit mb-5 truncate">{active.name}</p>
+            <div className="space-y-2 mb-6">
+              {DAY_KEYS.map((k) => {
+                const d = active.days[k];
+                const count = d.items.length;
+                const isToday = k === today;
+                const empty = count === 0;
+                return (
+                  <button
+                    key={k}
+                    onClick={() => !empty && startDay(k)}
+                    disabled={empty}
+                    className="w-full bg-grit-card border p-3 flex items-center justify-between text-left disabled:opacity-50"
+                    style={{ borderColor: isToday ? "#e63222" : "#262626" }}
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="label-cap text-[10px] text-grit-dim">{DAY_SHORT[k]}</span>
+                        {isToday && <span className="text-[9px] px-1.5 py-0.5 bg-accent-red text-white label-cap">TODAY</span>}
+                      </div>
+                      <div className="display uppercase font-extrabold text-grit text-sm truncate">{d.label}</div>
+                      <div className="text-[10px] label-cap text-grit-dim mt-0.5">{count} {count === 1 ? "exercise" : "exercises"}</div>
+                    </div>
+                    {empty ? (
+                      <Link
+                        to="/programs/$programId"
+                        params={{ programId: active.id }}
+                        className="text-[10px] label-cap text-accent-red"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        + ADD
+                      </Link>
+                    ) : (
+                      <Play size={18} className="text-accent-red" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <Link
+              to="/programs/$programId"
+              params={{ programId: active.id }}
+              className="btn-ghost text-center"
+            >
+              Edit Program
+            </Link>
+          </>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center text-center">
+            <p className="display text-2xl uppercase font-extrabold text-grit mb-2">No Program Active</p>
+            <p className="text-sm text-[#8a8a8a] mb-6">Pick or build a program to start training.</p>
+            <Link to="/programs" className="btn-grit">Browse Programs</Link>
+          </div>
+        )}
       </div>
     );
   }
