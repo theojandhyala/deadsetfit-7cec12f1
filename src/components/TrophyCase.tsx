@@ -44,7 +44,7 @@ export function TrophyCase({ state }: { state: AppState }) {
     <section className="px-5 mb-6">
       <div className="flex items-center justify-between mb-2">
         <p className="label-cap flex items-center gap-1.5">
-          <Trophy size={12} className="text-accent-red" /> Trophy Case
+          <TrophyIcon size={12} className="text-accent-red" /> Trophy Case
         </p>
         <span className="text-[10px] text-grit-dim label-cap">{unlockedCount}/{trophies.length}</span>
       </div>
