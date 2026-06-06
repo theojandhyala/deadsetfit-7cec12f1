@@ -70,6 +70,7 @@ function TrainPage() {
   const [logFor, setLogFor] = useState<{ id: string; name: string } | null>(null);
   const [resting, setResting] = useState<number | null>(null);
   const [editMode, setEditMode] = useState(false);
+  const [editSearch, setEditSearch] = useState("");
   const [genLoading, setGenLoading] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
 
@@ -82,10 +83,21 @@ function TrainPage() {
   const streak = calculateStreak(state.completedDates);
 
   async function handleGenerate() {
-    if (!state.profile) return;
     setGenLoading(true); setGenError(null);
+    const profile = state.profile ?? ({
+      goal: "MAINTAIN",
+      experience: "BEGINNER",
+      gender: "OTHER",
+      age: 25,
+      weightKg: 75,
+      heightCm: 175,
+      daysPerWeek: 4,
+      equipment: "FULL_GYM",
+      username: "athlete",
+      startingWeightKg: 75,
+    } as unknown as NonNullable<typeof state.profile>);
     const buildFromDefault = (): Schedule => {
-      const base = defaultSchedule(state.profile!);
+      const base = defaultSchedule(profile);
       const cleaned: Schedule = {} as Schedule;
       for (const k of DAY_KEYS) {
         const d = base[k];
@@ -98,8 +110,8 @@ function TrainPage() {
     };
     try {
       const res = await generate({ data: {
-        goal: state.profile.goal, experience: state.profile.experience,
-        daysPerWeek: state.profile.daysPerWeek, equipment: state.profile.equipment,
+        goal: profile.goal, experience: profile.experience,
+        daysPerWeek: profile.daysPerWeek, equipment: profile.equipment,
       }});
       const cleaned: Schedule = {} as Schedule;
       let hasAny = false;
@@ -252,7 +264,7 @@ function TrainPage() {
 
 
 
-      {/* Edit mode: assign muscle group per day */}
+      {/* Edit mode: assign muscle group + searchable exercise picker */}
       {editMode && (
         <div className="px-5 mb-5 bg-grit-card border border-grit p-4">
           <p className="label-cap mb-3">Edit {DAY_SHORT[selectedDay]}</p>
@@ -262,25 +274,69 @@ function TrainPage() {
             onChange={(e) => set((s) => ({ ...s, schedule: { ...(s.schedule || schedule), [selectedDay]: { ...(s.schedule?.[selectedDay] || day), label: e.target.value.toUpperCase() } } }))}
             className="input-grit mb-3"
           />
-          <p className="label-cap mb-2">Exercises</p>
-          <div className="grid grid-cols-2 gap-2">
-            {EXERCISES.map((e) => {
-              const sel = day?.exerciseIds.includes(e.id);
-              return (
-                <button key={e.id}
-                  onClick={() => set((s) => {
-                    const sched = { ...(s.schedule || schedule) };
-                    const cur = sched[selectedDay]?.exerciseIds || [];
-                    const next = cur.includes(e.id) ? cur.filter((x) => x !== e.id) : [...cur, e.id];
-                    sched[selectedDay] = { ...(sched[selectedDay] || { label: day?.label || "" }), exerciseIds: next };
-                    return { ...s, schedule: sched };
-                  })}
-                  className="p-2 border text-left text-xs font-bold uppercase"
-                  style={{ borderColor: sel ? "#e63222" : "#262626", color: sel ? "#e63222" : "#f5f5f0" }}>
-                  {e.name}
-                </button>
-              );
-            })}
+
+          {/* Selected exercises */}
+          {(day?.exerciseIds?.length || 0) > 0 && (
+            <>
+              <p className="label-cap mb-2">Selected ({day!.exerciseIds.length})</p>
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {day!.exerciseIds.map((id) => {
+                  const ex = getExercise(id);
+                  if (!ex) return null;
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => set((s) => {
+                        const sched = { ...(s.schedule || schedule) };
+                        const cur = sched[selectedDay]?.exerciseIds || [];
+                        sched[selectedDay] = { ...(sched[selectedDay] || { label: day?.label || "REST" }), exerciseIds: cur.filter((x) => x !== id) };
+                        return { ...s, schedule: sched };
+                      })}
+                      className="text-[10px] px-2 py-1 border border-accent-red text-accent-red uppercase font-bold tracking-wider flex items-center gap-1"
+                    >
+                      {ex.name} ×
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          <p className="label-cap mb-2">Add exercises</p>
+          <input
+            placeholder="SEARCH NAME OR MUSCLE"
+            value={editSearch}
+            onChange={(e) => setEditSearch(e.target.value)}
+            className="input-grit mb-2"
+          />
+          <div className="max-h-72 overflow-y-auto -mx-1 px-1">
+            <div className="grid grid-cols-1 gap-1.5">
+              {EXERCISES.filter((e) => {
+                const q = editSearch.trim().toLowerCase();
+                if (!q) return true;
+                return e.name.toLowerCase().includes(q) || e.muscleGroup.toLowerCase().includes(q);
+              }).map((e) => {
+                const sel = day?.exerciseIds.includes(e.id);
+                return (
+                  <button key={e.id}
+                    onClick={() => set((s) => {
+                      const sched = { ...(s.schedule || schedule) };
+                      const cur = sched[selectedDay]?.exerciseIds || [];
+                      const next = cur.includes(e.id) ? cur.filter((x) => x !== e.id) : [...cur, e.id];
+                      sched[selectedDay] = { ...(sched[selectedDay] || { label: day?.label || "REST" }), exerciseIds: next };
+                      return { ...s, schedule: sched };
+                    })}
+                    className="p-2.5 border text-left flex items-center justify-between gap-2"
+                    style={{ borderColor: sel ? "#e63222" : "#262626", background: "#0a0a0a" }}>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold uppercase truncate" style={{ color: sel ? "#e63222" : "#f5f5f0" }}>{e.name}</div>
+                      <div className="text-[9px] label-cap text-grit-dim mt-0.5">{e.muscleGroup} · {e.skill}</div>
+                    </div>
+                    <span className="text-[10px] label-cap" style={{ color: sel ? "#e63222" : "#8a8a8a" }}>{sel ? "ADDED" : "+ ADD"}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
