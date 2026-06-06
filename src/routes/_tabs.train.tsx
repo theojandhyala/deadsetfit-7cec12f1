@@ -70,6 +70,7 @@ function TrainPage() {
   const [logFor, setLogFor] = useState<{ id: string; name: string } | null>(null);
   const [resting, setResting] = useState<number | null>(null);
   const [editMode, setEditMode] = useState(false);
+  const [editSearch, setEditSearch] = useState("");
   const [genLoading, setGenLoading] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
 
