@@ -82,10 +82,21 @@ function TrainPage() {
   const streak = calculateStreak(state.completedDates);
 
   async function handleGenerate() {
-    if (!state.profile) return;
     setGenLoading(true); setGenError(null);
+    const profile = state.profile ?? ({
+      goal: "MAINTAIN",
+      experience: "BEGINNER",
+      gender: "OTHER",
+      age: 25,
+      weightKg: 75,
+      heightCm: 175,
+      daysPerWeek: 4,
+      equipment: "FULL_GYM",
+      username: "athlete",
+      startingWeightKg: 75,
+    } as unknown as NonNullable<typeof state.profile>);
     const buildFromDefault = (): Schedule => {
-      const base = defaultSchedule(state.profile!);
+      const base = defaultSchedule(profile);
       const cleaned: Schedule = {} as Schedule;
       for (const k of DAY_KEYS) {
         const d = base[k];
@@ -98,8 +109,8 @@ function TrainPage() {
     };
     try {
       const res = await generate({ data: {
-        goal: state.profile.goal, experience: state.profile.experience,
-        daysPerWeek: state.profile.daysPerWeek, equipment: state.profile.equipment,
+        goal: profile.goal, experience: profile.experience,
+        daysPerWeek: profile.daysPerWeek, equipment: profile.equipment,
       }});
       const cleaned: Schedule = {} as Schedule;
       let hasAny = false;
