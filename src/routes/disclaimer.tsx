@@ -6,7 +6,13 @@ export const Route = createFileRoute("/disclaimer")({
     meta: [
       { title: "DEADSET — Health Disclaimer" },
       { name: "description", content: "Important safety information for using DEADSET." },
+      { property: "og:title", content: "DEADSET — Health Disclaimer" },
+      { property: "og:description", content: "Important safety information for using DEADSET." },
+      { property: "og:url", content: "https://deadsetfit.org/disclaimer" },
+      { name: "twitter:title", content: "DEADSET — Health Disclaimer" },
+      { name: "twitter:description", content: "Important safety information for using DEADSET." },
     ],
+    links: [{ rel: "canonical", href: "https://deadsetfit.org/disclaimer" }],
   }),
   component: DisclaimerPage,
 });
