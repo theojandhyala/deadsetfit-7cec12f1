@@ -397,9 +397,27 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
       }
+      if (previewWatchRef.current !== null) {
+        navigator.geolocation.clearWatch(previewWatchRef.current);
+      }
       releaseWakeLock();
     };
   }, []);
+
+  // Synthetic samples for preview map (single point so map can center)
+  const mapSamples: RunSample[] = samples.length > 0
+    ? samples
+    : previewPos
+      ? [{ t: 0, lat: previewPos.lat, lng: previewPos.lng, d: 0, total: 0, acc: gpsAccuracy ?? undefined }]
+      : [];
+
+  const gpsStrength = gpsAccuracy == null
+    ? { label: "SEARCHING", color: "#8a8a8a" }
+    : gpsAccuracy <= 15
+      ? { label: "STRONG", color: "#22c55e" }
+      : gpsAccuracy <= 35
+        ? { label: "OK", color: "#fbbf24" }
+        : { label: "WEAK", color: "#e63222" };
 
   const distanceM = samples.length ? samples[samples.length - 1].total : 0;
   const pace = avgPace(distanceM, elapsedSec);
