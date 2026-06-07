@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { usePro } from "@/hooks/usePro";
+import { detectCountry, currencyForCountry, CURRENCY_META, priceIdFor, type SupportedCurrency } from "@/lib/currency";
 
 export const Route = createFileRoute("/upgrade")({
   head: () => ({ meta: [{ title: "DEADSET — Go Pro" }] }),
@@ -23,7 +24,8 @@ function UpgradePage() {
   const navigate = useNavigate();
   const { isPro, loading } = usePro();
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
-  const [plan, setPlan] = useState<"pro_monthly" | "pro_yearly">("pro_yearly");
+  const [plan, setPlan] = useState<"monthly" | "yearly">("yearly");
+  const [currency, setCurrency] = useState<SupportedCurrency>("usd");
   const [showCheckout, setShowCheckout] = useState(false);
 
   useEffect(() => {
@@ -31,7 +33,11 @@ function UpgradePage() {
       if (!session) { navigate({ to: "/auth" }); return; }
       setUser({ id: session.user.id, email: session.user.email ?? undefined });
     });
+    detectCountry().then((c) => setCurrency(currencyForCountry(c)));
   }, [navigate]);
+
+  const priceLabels = CURRENCY_META[currency];
+  const priceId = priceIdFor(plan, currency);
 
   if (loading || !user) {
     return (
@@ -88,8 +94,8 @@ function UpgradePage() {
 
           <div className="mt-8 space-y-3">
             <button
-              onClick={() => setPlan("pro_yearly")}
-              className={`w-full rounded-lg border p-4 text-left transition-colors ${plan === "pro_yearly" ? "border-accent-red bg-accent-red/10" : "border-grit-card bg-grit-card/50"}`}
+              onClick={() => setPlan("yearly")}
+              className={`w-full rounded-lg border p-4 text-left transition-colors ${plan === "yearly" ? "border-accent-red bg-accent-red/10" : "border-grit-card bg-grit-card/50"}`}
             >
               <div className="flex items-baseline justify-between">
                 <div>
@@ -97,19 +103,19 @@ function UpgradePage() {
                   <div className="text-[10px] uppercase tracking-widest text-accent-red mt-1">Save 33% — best value</div>
                 </div>
                 <div className="text-right">
-                  <div className="font-display text-2xl text-grit-text">$39.99</div>
+                  <div className="font-display text-2xl text-grit-text">{priceLabels.yearly}</div>
                   <div className="text-[10px] text-grit uppercase tracking-widest">/ year</div>
                 </div>
               </div>
             </button>
             <button
-              onClick={() => setPlan("pro_monthly")}
-              className={`w-full rounded-lg border p-4 text-left transition-colors ${plan === "pro_monthly" ? "border-accent-red bg-accent-red/10" : "border-grit-card bg-grit-card/50"}`}
+              onClick={() => setPlan("monthly")}
+              className={`w-full rounded-lg border p-4 text-left transition-colors ${plan === "monthly" ? "border-accent-red bg-accent-red/10" : "border-grit-card bg-grit-card/50"}`}
             >
               <div className="flex items-baseline justify-between">
                 <div className="font-display text-sm uppercase tracking-widest text-grit-text">Monthly</div>
                 <div className="text-right">
-                  <div className="font-display text-2xl text-grit-text">$4.99</div>
+                  <div className="font-display text-2xl text-grit-text">{priceLabels.monthly}</div>
                   <div className="text-[10px] text-grit uppercase tracking-widest">/ month</div>
                 </div>
               </div>
@@ -127,7 +133,7 @@ function UpgradePage() {
       ) : (
         <div className="px-2 pb-12">
           <StripeEmbeddedCheckout
-            priceId={plan}
+            priceId={priceId}
             customerEmail={user.email}
             userId={user.id}
             returnUrl={`${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`}
