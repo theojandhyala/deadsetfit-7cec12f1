@@ -730,5 +730,3 @@ interface WakeLockSentinel {
   release: () => Promise<void>;
 }
 
-/* Re-export to silence unused lint */
-export { MapPin };
