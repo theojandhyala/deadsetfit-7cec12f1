@@ -40,6 +40,30 @@ function ProfilePage() {
   const [h, setH] = useState(String(p?.heightCm ?? ""));
   const [username, setUsername] = useState(p?.username || "");
   const [savingProfile, setSavingProfile] = useState(false);
+  const [session, setSession] = useState<{ userId: string } | null | "loading">("loading");
+
+  useEffect(() => {
+    let cancelled = false;
+    const timeout = setTimeout(() => {
+      if (!cancelled) setSession((s) => (s === "loading" ? null : s));
+    }, 4000);
+    supabase.auth.getSession().then(({ data }) => {
+      if (cancelled) return;
+      clearTimeout(timeout);
+      setSession(data.session ? { userId: data.session.user.id } : null);
+    }).catch(() => {
+      if (cancelled) return;
+      clearTimeout(timeout);
+      setSession(null);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+      if (cancelled) return;
+      clearTimeout(timeout);
+      setSession(s ? { userId: s.user.id } : null);
+    });
+    return () => { cancelled = true; clearTimeout(timeout); sub.subscription.unsubscribe(); };
+  }, []);
+
 
   // Auto-push public_stats whenever logs / manualPRs / sessions change.
   useEffect(() => {
