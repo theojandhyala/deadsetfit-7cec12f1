@@ -15,7 +15,6 @@ import { Route as RecoveryRouteImport } from './routes/recovery'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
-import { Route as LandingRouteImport } from './routes/landing'
 import { Route as DisclaimerRouteImport } from './routes/disclaimer'
 import { Route as CoachRouteImport } from './routes/coach'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -62,11 +61,6 @@ const OnboardingRoute = OnboardingRouteImport.update({
 const LeaderboardRoute = LeaderboardRouteImport.update({
   id: '/leaderboard',
   path: '/leaderboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LandingRoute = LandingRouteImport.update({
-  id: '/landing',
-  path: '/landing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DisclaimerRoute = DisclaimerRouteImport.update({
@@ -159,7 +153,6 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/coach': typeof CoachRoute
   '/disclaimer': typeof DisclaimerRoute
-  '/landing': typeof LandingRoute
   '/leaderboard': typeof LeaderboardRoute
   '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
@@ -184,7 +177,6 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/coach': typeof CoachRoute
   '/disclaimer': typeof DisclaimerRoute
-  '/landing': typeof LandingRoute
   '/leaderboard': typeof LeaderboardRoute
   '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
@@ -211,7 +203,6 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/coach': typeof CoachRoute
   '/disclaimer': typeof DisclaimerRoute
-  '/landing': typeof LandingRoute
   '/leaderboard': typeof LeaderboardRoute
   '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
@@ -238,7 +229,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/coach'
     | '/disclaimer'
-    | '/landing'
     | '/leaderboard'
     | '/onboarding'
     | '/privacy'
@@ -263,7 +253,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/coach'
     | '/disclaimer'
-    | '/landing'
     | '/leaderboard'
     | '/onboarding'
     | '/privacy'
@@ -289,7 +278,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/coach'
     | '/disclaimer'
-    | '/landing'
     | '/leaderboard'
     | '/onboarding'
     | '/privacy'
@@ -316,7 +304,6 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CoachRoute: typeof CoachRoute
   DisclaimerRoute: typeof DisclaimerRoute
-  LandingRoute: typeof LandingRoute
   LeaderboardRoute: typeof LeaderboardRoute
   OnboardingRoute: typeof OnboardingRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -368,13 +355,6 @@ declare module '@tanstack/react-router' {
       path: '/leaderboard'
       fullPath: '/leaderboard'
       preLoaderRoute: typeof LeaderboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/landing': {
-      id: '/landing'
-      path: '/landing'
-      fullPath: '/landing'
-      preLoaderRoute: typeof LandingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/disclaimer': {
@@ -545,7 +525,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CoachRoute: CoachRoute,
   DisclaimerRoute: DisclaimerRoute,
-  LandingRoute: LandingRoute,
   LeaderboardRoute: LeaderboardRoute,
   OnboardingRoute: OnboardingRoute,
   PrivacyRoute: PrivacyRoute,
