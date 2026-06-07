@@ -178,7 +178,7 @@ function RunHub({
                   className="w-full bg-grit-card border border-grit hover:border-accent-red transition-colors text-left flex gap-3 p-3"
                 >
                   <div className="w-20 h-20 flex-shrink-0">
-                    <RunMap samples={r.samples} height={80} showMarkers={false} />
+                    <RunMap samples={r.samples} height={80} showMarkers={false} thumbnail />
                   </div>
                   <div className="flex-1 min-w-0 flex flex-col justify-between">
                     <div className="flex items-start justify-between gap-2">
@@ -237,6 +237,8 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
   const [samples, setSamples] = useState<RunSample[]>([]);
   const [elapsedSec, setElapsedSec] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
+  const [previewPos, setPreviewPos] = useState<{ lat: number; lng: number } | null>(null);
 
   // Refs to avoid stale closures inside watchPosition
   const statusRef = useRef<Status>(status);
@@ -247,6 +249,7 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
   const pausedAccumRef = useRef<number>(0); // total paused ms
   const pausedAtRef = useRef<number>(0);
   const watchIdRef = useRef<number | null>(null);
+  const previewWatchRef = useRef<number | null>(null);
 
   // Timer
   useEffect(() => {
@@ -258,10 +261,39 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
     return () => clearInterval(id);
   }, [status]);
 
+  // Acquire GPS in ready state so user sees their position before starting
+  useEffect(() => {
+    if (status !== "ready") return;
+    if (!("geolocation" in navigator)) {
+      setError("GPS not supported on this device.");
+      return;
+    }
+    previewWatchRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        setGpsAccuracy(pos.coords.accuracy);
+        setPreviewPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setError(null);
+      },
+      (err) => setError(err.message || "GPS error"),
+      { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 },
+    );
+    return () => {
+      if (previewWatchRef.current !== null) {
+        navigator.geolocation.clearWatch(previewWatchRef.current);
+        previewWatchRef.current = null;
+      }
+    };
+  }, [status]);
+
   const start = () => {
     if (!("geolocation" in navigator)) {
       setError("GPS not supported on this device.");
       return;
+    }
+    // Clear preview watch
+    if (previewWatchRef.current !== null) {
+      navigator.geolocation.clearWatch(previewWatchRef.current);
+      previewWatchRef.current = null;
     }
     setError(null);
     startedAtRef.current = Date.now();
@@ -274,16 +306,17 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
       (pos) => {
         if (statusRef.current !== "running") return;
         const { latitude, longitude, accuracy, altitude } = pos.coords;
-        // Reject very inaccurate fixes
-        if (accuracy && accuracy > 50) return;
+        setGpsAccuracy(accuracy);
+        // Reject very inaccurate fixes (>100m)
+        if (accuracy && accuracy > 100) return;
         const t = Date.now() - startedAtRef.current - pausedAccumRef.current;
         const prev = samplesRef.current[samplesRef.current.length - 1];
         let d = 0;
         let total = 0;
         if (prev) {
           d = haversine({ lat: prev.lat, lng: prev.lng }, { lat: latitude, lng: longitude });
-          // Reject jitter < 2m
-          if (d < 2) return;
+          // Reject jitter < 1.5m
+          if (d < 1.5) return;
           total = prev.total + d;
         }
         const next: RunSample = {
@@ -306,6 +339,7 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
     // Keep screen awake if supported
     requestWakeLock();
   };
+
 
   const pause = () => {
     if (status !== "running") return;
@@ -363,9 +397,27 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
       }
+      if (previewWatchRef.current !== null) {
+        navigator.geolocation.clearWatch(previewWatchRef.current);
+      }
       releaseWakeLock();
     };
   }, []);
+
+  // Synthetic samples for preview map (single point so map can center)
+  const mapSamples: RunSample[] = samples.length > 0
+    ? samples
+    : previewPos
+      ? [{ t: 0, lat: previewPos.lat, lng: previewPos.lng, d: 0, total: 0, acc: gpsAccuracy ?? undefined }]
+      : [];
+
+  const gpsStrength = gpsAccuracy == null
+    ? { label: "SEARCHING", color: "#8a8a8a" }
+    : gpsAccuracy <= 15
+      ? { label: "STRONG", color: "#22c55e" }
+      : gpsAccuracy <= 35
+        ? { label: "OK", color: "#fbbf24" }
+        : { label: "WEAK", color: "#e63222" };
 
   const distanceM = samples.length ? samples[samples.length - 1].total : 0;
   const pace = avgPace(distanceM, elapsedSec);
@@ -394,22 +446,24 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
         </button>
         <div className="flex items-center gap-1.5">
           <span
-            className={`w-1.5 h-1.5 rounded-full ${
-              status === "running" ? "bg-accent-red animate-pulse" : "bg-grit-dim"
-            }`}
+            className="w-1.5 h-1.5 rounded-full"
+            style={{
+              background: gpsStrength.color,
+              animation: status === "running" ? "pulse 1.5s ease-in-out infinite" : undefined,
+            }}
           />
-          <span className="label-cap text-[10px] text-grit-dim">
-            {status === "ready" && "READY"}
-            {status === "running" && "TRACKING"}
-            {status === "paused" && "PAUSED"}
-            {status === "finished" && "FINISHED"}
+          <span className="label-cap text-[10px]" style={{ color: gpsStrength.color }}>
+            GPS {gpsStrength.label}
+            {gpsAccuracy != null && ` · ±${Math.round(gpsAccuracy)}m`}
           </span>
         </div>
       </header>
 
       {/* Hero distance */}
       <div className="bg-grit-card border border-grit p-6 text-center">
-        <p className="label-cap text-[10px] text-grit-dim mb-2">DISTANCE</p>
+        <p className="label-cap text-[10px] text-grit-dim mb-2">
+          {status === "ready" ? "READY TO RUN" : "DISTANCE"}
+        </p>
         <p className="display text-6xl font-extrabold text-accent-red leading-none tracking-tight">
           {(distanceM / 1000).toFixed(2)}
         </p>
@@ -429,7 +483,7 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
       </div>
 
       {/* Map */}
-      <RunMap samples={samples} live={status === "running" || status === "paused"} />
+      <RunMap samples={mapSamples} live={status === "running" || status === "paused"} />
 
       {error && (
         <div className="bg-accent-red/10 border border-accent-red text-accent-red text-xs px-3 py-2 uppercase tracking-wider">
