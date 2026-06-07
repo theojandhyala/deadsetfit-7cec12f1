@@ -1,14 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AuthPage } from "./auth";
+import { Landing } from "@/components/Landing";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "DEADSET — Forge Your Body | Gym & PR Tracker" },
+      { title: "DEADSET — Train Smarter. Track Everything. Forge Your Body." },
       {
         name: "description",
         content:
-          "DEADSET is a no-nonsense gym companion. Track bench, squat, deadlift PRs, follow programs, earn Grit, and forge your physique with your friends.",
+          "DEADSET is the all-in-one fitness app built to help you plan workouts, track progress, and stay motivated to reach your goals.",
       },
       { property: "og:title", content: "DEADSET — Forge Your Body" },
       { property: "og:description", content: "Track PRs, follow programs, log workouts. Train. Build. Become." },
@@ -18,13 +18,7 @@ export const Route = createFileRoute("/")({
       { name: "twitter:title", content: "DEADSET — Forge Your Body" },
       { name: "twitter:description", content: "Track PRs, follow programs, log workouts. Train. Build. Become." },
     ],
-    links: [
-      { rel: "canonical", href: "https://deadsetfit.org/" },
-    ],
+    links: [{ rel: "canonical", href: "https://deadsetfit.org/" }],
   }),
-  component: Index,
+  component: Landing,
 });
-
-function Index() {
-  return <AuthPage />;
-}
