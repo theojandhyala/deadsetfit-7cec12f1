@@ -81,7 +81,32 @@ function ProfilePage() {
     p?.experience,
   ]);
 
-  if (!p) return null;
+  if (session === "loading" && !p) {
+    return <div className="flex items-center justify-center pt-20"><div className="text-grit-dim text-xs label-cap">Loading…</div></div>;
+  }
+
+  if (!p || !session) {
+    return (
+      <div style={{ paddingTop: "env(safe-area-inset-top)" }} className="px-6 pt-10">
+        <header className="mb-8">
+          <p className="label-cap">PROFILE</p>
+          <h1 className="display text-5xl font-extrabold text-grit leading-none mt-1">YOUR<br/>STATS.</h1>
+        </header>
+        <div className="bg-grit-card border border-grit p-6 mb-4">
+          <p className="text-sm text-[#8a8a8a] mb-4">Sign in to save your profile, sync across devices, and compete on the leaderboard.</p>
+          <button onClick={() => navigate({ to: "/auth" })} className="btn-grit w-full py-3 label-cap">Sign in / Create account</button>
+        </div>
+        <button onClick={() => navigate({ to: "/friends" })} className="w-full bg-grit-card border border-accent-red p-4 flex items-center gap-3 text-left hover:bg-[#1a1a1a]">
+          <div className="w-10 h-10 bg-accent-red flex items-center justify-center"><Sparkles size={18} className="text-grit-bg" /></div>
+          <div className="flex-1">
+            <p className="label-cap text-accent-red">FIND YOUR CREW</p>
+            <p className="text-xs text-[#8a8a8a] mt-0.5">Add mates, climb leagues, share PRs.</p>
+          </div>
+        </button>
+      </div>
+    );
+  }
+
   const streak = calculateStreak(state.completedDates);
   const score = calculateGritScore(state);
   const badge = gritBadge(score.total);
