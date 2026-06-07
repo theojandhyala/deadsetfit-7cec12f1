@@ -4,7 +4,6 @@ import {
   Activity,
   ChevronLeft,
   ChevronRight,
-  MapPin,
   Pause,
   Play,
   Square,
