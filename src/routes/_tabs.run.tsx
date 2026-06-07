@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useAppState } from "@/lib/storage";
 import { RunMap } from "@/components/RunMap";
+import { RunAdvanced } from "@/components/RunAdvanced";
 import {
   avgPace,
   bestKmPace,
