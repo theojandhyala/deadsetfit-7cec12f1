@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { usePro } from "@/hooks/usePro";
+import { detectCountry, currencyForCountry, CURRENCY_META, priceIdFor, type SupportedCurrency } from "@/lib/currency";
 
 export const Route = createFileRoute("/upgrade")({
   head: () => ({ meta: [{ title: "DEADSET — Go Pro" }] }),
@@ -23,7 +24,8 @@ function UpgradePage() {
   const navigate = useNavigate();
   const { isPro, loading } = usePro();
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
-  const [plan, setPlan] = useState<"pro_monthly" | "pro_yearly">("pro_yearly");
+  const [plan, setPlan] = useState<"monthly" | "yearly">("yearly");
+  const [currency, setCurrency] = useState<SupportedCurrency>("usd");
   const [showCheckout, setShowCheckout] = useState(false);
 
   useEffect(() => {
@@ -31,7 +33,11 @@ function UpgradePage() {
       if (!session) { navigate({ to: "/auth" }); return; }
       setUser({ id: session.user.id, email: session.user.email ?? undefined });
     });
+    detectCountry().then((c) => setCurrency(currencyForCountry(c)));
   }, [navigate]);
+
+  const priceLabels = CURRENCY_META[currency];
+  const priceId = priceIdFor(plan, currency);
 
   if (loading || !user) {
     return (
