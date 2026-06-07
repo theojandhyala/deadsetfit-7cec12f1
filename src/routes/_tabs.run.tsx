@@ -535,10 +535,12 @@ function BigStat({
 
 function RunDetail({
   run,
+  allRuns,
   onBack,
   onDelete,
 }: {
   run: Run;
+  allRuns: Run[];
   onBack: () => void;
   onDelete: () => void;
 }) {
