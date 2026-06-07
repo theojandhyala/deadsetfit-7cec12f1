@@ -130,7 +130,7 @@ function ProgressPage() {
       pushHist(acc, day, l.weight);
       if (l.weight > acc.weight) {
         acc.weight = l.weight;
-        acc.reps = (l as { reps?: number }).reps ?? 0;
+        acc.reps = l.reps;
         acc.date = l.date;
       }
     });
