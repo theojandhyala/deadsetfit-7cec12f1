@@ -94,7 +94,7 @@ function FriendsPage() {
         <h1 className="display text-4xl font-extrabold text-grit leading-none mt-1">YOUR CREW</h1>
       </header>
       <div className="px-5 mt-4 flex gap-2 border-b border-grit overflow-x-auto">
-        {(["FEED", "FRIENDS", "LEAGUE", "INVITE"] as Tab[]).map(t => (
+        {(["FRIENDS", "FEED", "LEAGUE", "INVITE"] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className="label-cap pb-3 pt-1 border-b-2 whitespace-nowrap"
             style={{ borderColor: tab === t ? "#e63222" : "transparent", color: tab === t ? "#f5f5f0" : "#8a8a8a" }}>
