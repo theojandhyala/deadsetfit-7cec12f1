@@ -237,6 +237,8 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
   const [samples, setSamples] = useState<RunSample[]>([]);
   const [elapsedSec, setElapsedSec] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
+  const [previewPos, setPreviewPos] = useState<{ lat: number; lng: number } | null>(null);
 
   // Refs to avoid stale closures inside watchPosition
   const statusRef = useRef<Status>(status);
@@ -247,6 +249,7 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
   const pausedAccumRef = useRef<number>(0); // total paused ms
   const pausedAtRef = useRef<number>(0);
   const watchIdRef = useRef<number | null>(null);
+  const previewWatchRef = useRef<number | null>(null);
 
   // Timer
   useEffect(() => {
@@ -258,10 +261,39 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
     return () => clearInterval(id);
   }, [status]);
 
+  // Acquire GPS in ready state so user sees their position before starting
+  useEffect(() => {
+    if (status !== "ready") return;
+    if (!("geolocation" in navigator)) {
+      setError("GPS not supported on this device.");
+      return;
+    }
+    previewWatchRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        setGpsAccuracy(pos.coords.accuracy);
+        setPreviewPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setError(null);
+      },
+      (err) => setError(err.message || "GPS error"),
+      { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 },
+    );
+    return () => {
+      if (previewWatchRef.current !== null) {
+        navigator.geolocation.clearWatch(previewWatchRef.current);
+        previewWatchRef.current = null;
+      }
+    };
+  }, [status]);
+
   const start = () => {
     if (!("geolocation" in navigator)) {
       setError("GPS not supported on this device.");
       return;
+    }
+    // Clear preview watch
+    if (previewWatchRef.current !== null) {
+      navigator.geolocation.clearWatch(previewWatchRef.current);
+      previewWatchRef.current = null;
     }
     setError(null);
     startedAtRef.current = Date.now();
@@ -274,16 +306,17 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
       (pos) => {
         if (statusRef.current !== "running") return;
         const { latitude, longitude, accuracy, altitude } = pos.coords;
-        // Reject very inaccurate fixes
-        if (accuracy && accuracy > 50) return;
+        setGpsAccuracy(accuracy);
+        // Reject very inaccurate fixes (>100m)
+        if (accuracy && accuracy > 100) return;
         const t = Date.now() - startedAtRef.current - pausedAccumRef.current;
         const prev = samplesRef.current[samplesRef.current.length - 1];
         let d = 0;
         let total = 0;
         if (prev) {
           d = haversine({ lat: prev.lat, lng: prev.lng }, { lat: latitude, lng: longitude });
-          // Reject jitter < 2m
-          if (d < 2) return;
+          // Reject jitter < 1.5m
+          if (d < 1.5) return;
           total = prev.total + d;
         }
         const next: RunSample = {
@@ -306,6 +339,7 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
     // Keep screen awake if supported
     requestWakeLock();
   };
+
 
   const pause = () => {
     if (status !== "running") return;
