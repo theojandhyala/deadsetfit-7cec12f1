@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useAppState } from "@/lib/storage";
 import { RunMap } from "@/components/RunMap";
+import { RunAdvanced } from "@/components/RunAdvanced";
 import {
   avgPace,
   bestKmPace,
@@ -63,6 +64,7 @@ function RunPage() {
       return (
         <RunDetail
           run={run}
+          allRuns={runs}
           onBack={() => setView("hub")}
           onDelete={() => {
             setState((s) => ({
@@ -533,10 +535,12 @@ function BigStat({
 
 function RunDetail({
   run,
+  allRuns,
   onBack,
   onDelete,
 }: {
   run: Run;
+  allRuns: Run[];
   onBack: () => void;
   onDelete: () => void;
 }) {
@@ -637,6 +641,8 @@ function RunDetail({
           </ul>
         </section>
       )}
+
+      <RunAdvanced run={run} allRuns={allRuns} />
     </div>
   );
 }
