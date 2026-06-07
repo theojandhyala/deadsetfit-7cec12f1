@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UpgradeRouteImport } from './routes/upgrade'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as RecoveryRouteImport } from './routes/recovery'
@@ -21,6 +22,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as TabsRouteImport } from './routes/_tabs'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkoutLiveRouteImport } from './routes/workout.live'
+import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as TabsTrainRouteImport } from './routes/_tabs.train'
 import { Route as TabsProgressRouteImport } from './routes/_tabs.progress'
 import { Route as TabsProgramsRouteImport } from './routes/_tabs.programs'
@@ -32,7 +34,13 @@ import { Route as TabsChallengesRouteImport } from './routes/_tabs.challenges'
 import { Route as TabsProgramsProgramIdRouteImport } from './routes/_tabs.programs.$programId'
 import { Route as TabsLiftExerciseIdRouteImport } from './routes/_tabs.lift.$exerciseId'
 import { Route as TabsAthleteIdRouteImport } from './routes/_tabs.athlete.$id'
+import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
+const UpgradeRoute = UpgradeRouteImport.update({
+  id: '/upgrade',
+  path: '/upgrade',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
@@ -92,6 +100,11 @@ const WorkoutLiveRoute = WorkoutLiveRouteImport.update({
   path: '/workout/live',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
+  id: '/checkout/return',
+  path: '/checkout/return',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TabsTrainRoute = TabsTrainRouteImport.update({
   id: '/train',
   path: '/train',
@@ -147,6 +160,12 @@ const TabsAthleteIdRoute = TabsAthleteIdRouteImport.update({
   path: '/athlete/$id',
   getParentRoute: () => TabsRoute,
 } as any)
+const ApiPublicPaymentsWebhookRoute =
+  ApiPublicPaymentsWebhookRouteImport.update({
+    id: '/api/public/payments/webhook',
+    path: '/api/public/payments/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -159,6 +178,7 @@ export interface FileRoutesByFullPath {
   '/recovery': typeof RecoveryRoute
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
+  '/upgrade': typeof UpgradeRoute
   '/challenges': typeof TabsChallengesRoute
   '/diet': typeof TabsDietRoute
   '/friends': typeof TabsFriendsRoute
@@ -167,10 +187,12 @@ export interface FileRoutesByFullPath {
   '/programs': typeof TabsProgramsRouteWithChildren
   '/progress': typeof TabsProgressRoute
   '/train': typeof TabsTrainRoute
+  '/checkout/return': typeof CheckoutReturnRoute
   '/workout/live': typeof WorkoutLiveRoute
   '/athlete/$id': typeof TabsAthleteIdRoute
   '/lift/$exerciseId': typeof TabsLiftExerciseIdRoute
   '/programs/$programId': typeof TabsProgramsProgramIdRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -183,6 +205,7 @@ export interface FileRoutesByTo {
   '/recovery': typeof RecoveryRoute
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
+  '/upgrade': typeof UpgradeRoute
   '/challenges': typeof TabsChallengesRoute
   '/diet': typeof TabsDietRoute
   '/friends': typeof TabsFriendsRoute
@@ -191,10 +214,12 @@ export interface FileRoutesByTo {
   '/programs': typeof TabsProgramsRouteWithChildren
   '/progress': typeof TabsProgressRoute
   '/train': typeof TabsTrainRoute
+  '/checkout/return': typeof CheckoutReturnRoute
   '/workout/live': typeof WorkoutLiveRoute
   '/athlete/$id': typeof TabsAthleteIdRoute
   '/lift/$exerciseId': typeof TabsLiftExerciseIdRoute
   '/programs/$programId': typeof TabsProgramsProgramIdRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -209,6 +234,7 @@ export interface FileRoutesById {
   '/recovery': typeof RecoveryRoute
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
+  '/upgrade': typeof UpgradeRoute
   '/_tabs/challenges': typeof TabsChallengesRoute
   '/_tabs/diet': typeof TabsDietRoute
   '/_tabs/friends': typeof TabsFriendsRoute
@@ -217,10 +243,12 @@ export interface FileRoutesById {
   '/_tabs/programs': typeof TabsProgramsRouteWithChildren
   '/_tabs/progress': typeof TabsProgressRoute
   '/_tabs/train': typeof TabsTrainRoute
+  '/checkout/return': typeof CheckoutReturnRoute
   '/workout/live': typeof WorkoutLiveRoute
   '/_tabs/athlete/$id': typeof TabsAthleteIdRoute
   '/_tabs/lift/$exerciseId': typeof TabsLiftExerciseIdRoute
   '/_tabs/programs/$programId': typeof TabsProgramsProgramIdRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -235,6 +263,7 @@ export interface FileRouteTypes {
     | '/recovery'
     | '/settings'
     | '/terms'
+    | '/upgrade'
     | '/challenges'
     | '/diet'
     | '/friends'
@@ -243,10 +272,12 @@ export interface FileRouteTypes {
     | '/programs'
     | '/progress'
     | '/train'
+    | '/checkout/return'
     | '/workout/live'
     | '/athlete/$id'
     | '/lift/$exerciseId'
     | '/programs/$programId'
+    | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -259,6 +290,7 @@ export interface FileRouteTypes {
     | '/recovery'
     | '/settings'
     | '/terms'
+    | '/upgrade'
     | '/challenges'
     | '/diet'
     | '/friends'
@@ -267,10 +299,12 @@ export interface FileRouteTypes {
     | '/programs'
     | '/progress'
     | '/train'
+    | '/checkout/return'
     | '/workout/live'
     | '/athlete/$id'
     | '/lift/$exerciseId'
     | '/programs/$programId'
+    | '/api/public/payments/webhook'
   id:
     | '__root__'
     | '/'
@@ -284,6 +318,7 @@ export interface FileRouteTypes {
     | '/recovery'
     | '/settings'
     | '/terms'
+    | '/upgrade'
     | '/_tabs/challenges'
     | '/_tabs/diet'
     | '/_tabs/friends'
@@ -292,10 +327,12 @@ export interface FileRouteTypes {
     | '/_tabs/programs'
     | '/_tabs/progress'
     | '/_tabs/train'
+    | '/checkout/return'
     | '/workout/live'
     | '/_tabs/athlete/$id'
     | '/_tabs/lift/$exerciseId'
     | '/_tabs/programs/$programId'
+    | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -310,11 +347,21 @@ export interface RootRouteChildren {
   RecoveryRoute: typeof RecoveryRoute
   SettingsRoute: typeof SettingsRoute
   TermsRoute: typeof TermsRoute
+  UpgradeRoute: typeof UpgradeRoute
+  CheckoutReturnRoute: typeof CheckoutReturnRoute
   WorkoutLiveRoute: typeof WorkoutLiveRoute
+  ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/upgrade': {
+      id: '/upgrade'
+      path: '/upgrade'
+      fullPath: '/upgrade'
+      preLoaderRoute: typeof UpgradeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/terms': {
       id: '/terms'
       path: '/terms'
@@ -399,6 +446,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkoutLiveRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/checkout/return': {
+      id: '/checkout/return'
+      path: '/checkout/return'
+      fullPath: '/checkout/return'
+      preLoaderRoute: typeof CheckoutReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_tabs/train': {
       id: '/_tabs/train'
       path: '/train'
@@ -476,6 +530,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TabsAthleteIdRouteImport
       parentRoute: typeof TabsRoute
     }
+    '/api/public/payments/webhook': {
+      id: '/api/public/payments/webhook'
+      path: '/api/public/payments/webhook'
+      fullPath: '/api/public/payments/webhook'
+      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -531,18 +592,11 @@ const rootRouteChildren: RootRouteChildren = {
   RecoveryRoute: RecoveryRoute,
   SettingsRoute: SettingsRoute,
   TermsRoute: TermsRoute,
+  UpgradeRoute: UpgradeRoute,
+  CheckoutReturnRoute: CheckoutReturnRoute,
   WorkoutLiveRoute: WorkoutLiveRoute,
+  ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
