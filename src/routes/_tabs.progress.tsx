@@ -8,6 +8,8 @@ import { isoDay, calculateStreak } from "@/lib/calc";
 import { analyzePhysique } from "@/lib/physique.functions";
 import type { PhysiqueScan } from "@/lib/types";
 import { QuickLogFAB } from "@/components/QuickLogFAB";
+import { PRList, groupForMuscle } from "@/components/PRList";
+
 
 export const Route = createFileRoute("/_tabs/progress")({
   head: () => ({ meta: [{ title: "DEADSET — Progress" }] }),
@@ -99,21 +101,66 @@ function ProgressPage() {
     setCompare((c) => c.filter((d) => d !== date));
   }
 
-  // PRs across both new sessions and legacy logs
+  // PRs across both new sessions and legacy logs — enriched with reps, date, history, group
   const prs = useMemo(() => {
-    const byId = new Map<string, { name: string; weight: number }>();
+    type Acc = {
+      exerciseId: string;
+      name: string;
+      weight: number;
+      reps: number;
+      date: string;
+      muscleGroup?: string;
+      history: { date: string; weight: number }[];
+    };
+    const byId = new Map<string, Acc>();
+    const pushHist = (acc: Acc, day: string, w: number) => {
+      const existing = acc.history.find((h) => h.date === day);
+      if (existing) existing.weight = Math.max(existing.weight, w);
+      else acc.history.push({ date: day, weight: w });
+    };
     state.logs.forEach((l) => {
       const ex = getExercise(l.exerciseId);
       const name = ex?.name ?? l.exerciseId;
-      const cur = byId.get(l.exerciseId);
-      if (!cur || l.weight > cur.weight) byId.set(l.exerciseId, { name, weight: l.weight });
+      const day = l.date.slice(0, 10);
+      let acc = byId.get(l.exerciseId);
+      if (!acc) {
+        acc = { exerciseId: l.exerciseId, name, weight: 0, reps: 0, date: l.date, muscleGroup: ex?.muscleGroup, history: [] };
+        byId.set(l.exerciseId, acc);
+      }
+      pushHist(acc, day, l.weight);
+      if (l.weight > acc.weight) {
+        acc.weight = l.weight;
+        acc.reps = l.reps;
+        acc.date = l.date;
+      }
     });
     state.sessions.forEach((s) => s.exercises.forEach((e) => e.sets.forEach((set) => {
-      const cur = byId.get(e.exerciseId);
-      if (!cur || set.weight > cur.weight) byId.set(e.exerciseId, { name: e.name, weight: set.weight });
+      const ex = getExercise(e.exerciseId);
+      let acc = byId.get(e.exerciseId);
+      if (!acc) {
+        acc = { exerciseId: e.exerciseId, name: e.name, weight: 0, reps: 0, date: s.startedAt, muscleGroup: ex?.muscleGroup, history: [] };
+        byId.set(e.exerciseId, acc);
+      }
+      pushHist(acc, s.date, set.weight);
+      if (set.weight > acc.weight) {
+        acc.weight = set.weight;
+        acc.reps = set.reps;
+        acc.date = s.startedAt;
+      }
     })));
-    return Array.from(byId.values()).filter((p) => p.weight > 0).sort((a, b) => b.weight - a.weight);
+    return Array.from(byId.values())
+      .filter((p) => p.weight > 0)
+      .map((p) => ({
+        exerciseId: p.exerciseId,
+        name: p.name,
+        weight: p.weight,
+        reps: p.reps,
+        date: p.date,
+        group: groupForMuscle(p.muscleGroup, p.exerciseId),
+        history: p.history.sort((a, b) => a.date.localeCompare(b.date)),
+      }));
   }, [state.logs, state.sessions]);
+
 
   // Body part volume split (last 30 days from sessions)
   const bodyParts = useMemo(() => {
@@ -381,17 +428,10 @@ function ProgressPage() {
 
       {/* PRs */}
       <section className="px-5 mb-8">
-        <p className="label-cap mb-2 flex items-center gap-2"><Trophy size={12} /> Personal Records</p>
-        <div className="bg-grit-card border border-grit">
-          {prs.length === 0 && <p className="p-5 text-sm text-[#8a8a8a]">Log a set to start tracking PRs.</p>}
-          {prs.slice(0, 20).map((p) => (
-            <div key={p.name} className="flex items-center justify-between px-4 py-3 border-b border-grit last:border-b-0">
-              <span className="font-bold uppercase text-sm text-grit tracking-wide truncate pr-2">{p.name}</span>
-              <span className="display font-extrabold text-accent-red flex-shrink-0">{p.weight} KG</span>
-            </div>
-          ))}
-        </div>
+        <p className="label-cap mb-3 flex items-center gap-2"><Trophy size={12} /> Personal Records</p>
+        <PRList prs={prs} />
       </section>
+
 
       {viewScan && <ScanModal scan={viewScan} onClose={() => setViewScan(null)} onDelete={() => deleteScan(viewScan.id)} />}
       <QuickLogFAB />
