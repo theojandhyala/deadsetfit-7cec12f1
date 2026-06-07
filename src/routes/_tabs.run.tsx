@@ -707,9 +707,11 @@ let wakeLockSentinel: WakeLockSentinel | null = null;
 
 async function requestWakeLock() {
   try {
-    if ("wakeLock" in navigator) {
-      // @ts-expect-error - wakeLock not in lib.dom of older TS targets
-      wakeLockSentinel = await navigator.wakeLock.request("screen");
+    const nav = navigator as Navigator & {
+      wakeLock?: { request: (type: "screen") => Promise<WakeLockSentinel> };
+    };
+    if (nav.wakeLock) {
+      wakeLockSentinel = await nav.wakeLock.request("screen");
     }
   } catch {
     // ignore
