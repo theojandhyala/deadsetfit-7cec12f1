@@ -1,18 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import heroImg from "@/assets/landing-hero.jpg";
 import aboutImg from "@/assets/landing-about.jpg";
 import benefitsImg from "@/assets/landing-benefits.jpg";
-
-export const Route = createFileRoute("/landing")({
-  head: () => ({
-    meta: [
-      { title: "DEADSET — Train Smarter. Track Everything. Forge Your Body." },
-      { name: "description", content: "The all-in-one fitness app built to help you plan workouts, track progress, and stay motivated to reach your goals." },
-    ],
-  }),
-  component: Landing,
-});
 
 const NAV = [
   { label: "FEATURES", id: "features" },
@@ -327,7 +317,7 @@ function Footer() {
   );
 }
 
-function Landing() {
+export function Landing() {
   return (
     <div className="min-h-screen bg-grit text-grit-text">
       <Nav />
