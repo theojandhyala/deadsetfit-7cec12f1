@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Search, Trophy, ChevronDown, Calendar } from "lucide-react";
+import { Search, Trophy, ChevronDown } from "lucide-react";
 
 export type PRRecord = {
   exerciseId: string;
@@ -17,9 +17,9 @@ export type PRGroup = "PUSH" | "PULL" | "LEGS" | "CORE" | "OTHER";
 const GROUP_ORDER: PRGroup[] = ["PUSH", "PULL", "LEGS", "CORE", "OTHER"];
 
 const GROUP_LABEL: Record<PRGroup, string> = {
-  PUSH: "Push — Chest / Shoulders / Triceps",
-  PULL: "Pull — Back / Biceps",
-  LEGS: "Legs — Quads / Hams / Glutes",
+  PUSH: "Push",
+  PULL: "Pull",
+  LEGS: "Legs",
   CORE: "Core",
   OTHER: "Other",
 };
@@ -32,87 +32,35 @@ function isFresh(iso: string) {
 
 function formatDate(iso: string) {
   const d = new Date(iso);
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-function Sparkline({ points }: { points: { date: string; weight: number }[] }) {
-  if (points.length < 2) {
-    return (
-      <div className="h-8 flex items-end gap-[2px]">
-        <div className="w-full h-1 bg-grit/40" />
-      </div>
-    );
-  }
-  const weights = points.map((p) => p.weight);
-  const min = Math.min(...weights);
-  const max = Math.max(...weights);
-  const range = max - min || 1;
-  const W = 100;
-  const H = 28;
-  const step = W / (points.length - 1);
-  const path = points
-    .map((p, i) => {
-      const x = i * step;
-      const y = H - ((p.weight - min) / range) * H;
-      return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
-  const last = points[points.length - 1];
-  const lastX = W;
-  const lastY = H - ((last.weight - min) / range) * H;
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full h-8 overflow-visible">
-      <defs>
-        <linearGradient id="prspark" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#e63222" stopOpacity="0.4" />
-          <stop offset="100%" stopColor="#e63222" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={`${path} L${W},${H} L0,${H} Z`} fill="url(#prspark)" />
-      <path d={path} fill="none" stroke="#e63222" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx={lastX} cy={lastY} r="2" fill="#e63222" />
-    </svg>
-  );
-}
-
-function PRCard({ pr }: { pr: PRRecord }) {
+function PRRow({ pr }: { pr: PRRecord }) {
   const fresh = isFresh(pr.date);
   return (
-    <div className="bg-grit-card border border-grit p-4 flex flex-col gap-3 relative">
-      <div className="flex items-start justify-between gap-3">
-        <p className="font-bold uppercase text-sm text-grit tracking-wide leading-tight pr-6">
+    <div className="flex items-center justify-between gap-3 px-3 py-2.5 bg-grit-card border border-grit">
+      <div className="min-w-0 flex-1">
+        <p className="font-bold uppercase text-xs text-grit tracking-wide truncate">
           {pr.name}
         </p>
-        <div
-          className={`flex-shrink-0 p-1.5 border ${
-            fresh
-              ? "border-accent-red text-accent-red bg-accent-red/10"
-              : "border-grit text-grit-dim"
-          }`}
-          style={fresh ? { boxShadow: "0 0 12px rgba(230,50,34,0.5)" } : undefined}
-          aria-label={fresh ? "New PR this week" : "PR"}
-        >
-          <Trophy size={12} />
-        </div>
+        <p className="text-[10px] uppercase tracking-wider text-grit-dim mt-0.5">
+          {formatDate(pr.date)}
+          {fresh && (
+            <span className="ml-2 text-accent-red font-bold tracking-widest">NEW</span>
+          )}
+        </p>
       </div>
-
-      <div className="flex items-baseline gap-2">
-        <p className="display text-4xl font-extrabold text-accent-red leading-none">{pr.weight}</p>
-        <p className="display text-sm font-bold text-grit-dim uppercase tracking-wider">kg</p>
+      <div className="flex items-baseline gap-1 flex-shrink-0">
+        <span className="display text-xl font-extrabold text-accent-red leading-none">
+          {pr.weight}
+        </span>
+        <span className="text-[10px] font-bold text-grit-dim uppercase tracking-wider">
+          kg
+        </span>
         {pr.reps > 0 && (
-          <p className="display text-sm font-bold text-grit ml-1 uppercase tracking-wider">
-            × {pr.reps}
-          </p>
-        )}
-      </div>
-
-      <Sparkline points={pr.history} />
-
-      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-grit-dim">
-        <Calendar size={10} />
-        <span>{formatDate(pr.date)}</span>
-        {fresh && (
-          <span className="ml-auto text-accent-red font-bold tracking-widest">NEW</span>
+          <span className="text-[10px] font-bold text-grit uppercase tracking-wider ml-1">
+            ×{pr.reps}
+          </span>
         )}
       </div>
     </div>
@@ -169,7 +117,7 @@ export function PRList({ prs }: { prs: PRRecord[] }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="relative">
         <Search
           size={14}
@@ -206,9 +154,9 @@ export function PRList({ prs }: { prs: PRRecord[] }) {
               />
             </button>
             {open && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+              <div className="flex flex-col gap-1.5 mt-1.5">
                 {list.map((pr) => (
-                  <PRCard key={pr.exerciseId} pr={pr} />
+                  <PRRow key={pr.exerciseId} pr={pr} />
                 ))}
               </div>
             )}
@@ -223,6 +171,27 @@ export function PRList({ prs }: { prs: PRRecord[] }) {
       )}
     </div>
   );
+}
+
+export function groupForMuscle(muscleGroup: string | undefined, exerciseId: string): PRGroup {
+  // ARMS split: triceps → PUSH, biceps → PULL
+  if (/curl/i.test(exerciseId)) return "PULL";
+  if (/skull|tricep|pushdown/i.test(exerciseId)) return "PUSH";
+  switch ((muscleGroup || "").toUpperCase()) {
+    case "CHEST":
+    case "SHOULDERS":
+      return "PUSH";
+    case "BACK":
+      return "PULL";
+    case "LEGS":
+      return "LEGS";
+    case "CORE":
+      return "CORE";
+    case "ARMS":
+      return "PUSH";
+    default:
+      return "OTHER";
+  }
 }
 
 export function groupForMuscle(muscleGroup: string | undefined, exerciseId: string): PRGroup {
