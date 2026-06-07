@@ -227,20 +227,17 @@ function Benefits() {
 }
 
 function Reviews() {
-  const reviews = [
-    { t: "Amazing app!", b: "So easy to use and has everything I need to track my workouts. Highly recommend!", a: "James M." },
-    { t: "Game changer", b: "I've tried so many fitness apps, DEADSET is by far the best. It keeps me consistent.", a: "Sarah T." },
-    { t: "Perfect for progress", b: "The progress tracking is incredible. I love seeing my numbers improve over time.", a: "Liam B." },
-    { t: "Clean and powerful", b: "Super clean design and so many useful features. Worth every star.", a: "Alex P." },
-  ];
   return (
     <Section id="reviews">
       <div className="text-center mb-12">
         <h2 className="display font-extrabold text-4xl sm:text-5xl mb-3" style={{ fontStyle: "italic" }}>REVIEWS</h2>
-        <p className="text-grit-dim">Loved by thousands of lifters worldwide.</p>
+        <p className="text-grit-dim">No reviews yet — be the first to share your experience.</p>
       </div>
       <div className="grid sm:grid-cols-2 gap-4 max-w-3xl mx-auto">
-        {reviews.map((r, i) => (
+        {[
+          { t: "Coming soon", b: "We're just getting started. Help shape DEADSET by being one of our first users.", a: "You?" },
+          { t: "Your voice matters", b: "Every feature we build is driven by real lifters. Drop us feedback any time.", a: "Founder" },
+        ].map((r, i) => (
           <div key={i} className="p-5" style={{ background: "rgba(20,20,20,0.7)", border: "1px solid rgba(255,255,255,0.05)" }}>
             <div className="text-accent-red mb-2 text-sm">★★★★★</div>
             <p className="label-cap text-sm text-grit mb-2">{r.t}</p>
