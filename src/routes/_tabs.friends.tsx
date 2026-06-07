@@ -28,12 +28,13 @@ export const Route = createFileRoute("/_tabs/friends")({
   component: FriendsPage,
 });
 
-type Tab = "FEED" | "FRIENDS" | "LEAGUE" | "INVITE";
+type Tab = "FRIENDS" | "FEED" | "LEAGUE" | "INVITE";
 
 function FriendsPage() {
   const navigate = useNavigate();
   const [session, setSession] = useState<{ userId: string } | null | "loading">("loading");
-  const [tab, setTab] = useState<Tab>("FEED");
+  const [tab, setTab] = useState<Tab>("FRIENDS");
+
 
   useEffect(() => {
     let cancelled = false;
