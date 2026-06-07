@@ -1,0 +1,10 @@
+{
+  "name": "DEADSET",
+  "short_name": "DEADSET",
+  "description": "Train. Build. Become.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a"
+}
