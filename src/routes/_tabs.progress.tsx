@@ -428,17 +428,10 @@ function ProgressPage() {
 
       {/* PRs */}
       <section className="px-5 mb-8">
-        <p className="label-cap mb-2 flex items-center gap-2"><Trophy size={12} /> Personal Records</p>
-        <div className="bg-grit-card border border-grit">
-          {prs.length === 0 && <p className="p-5 text-sm text-[#8a8a8a]">Log a set to start tracking PRs.</p>}
-          {prs.slice(0, 20).map((p) => (
-            <div key={p.name} className="flex items-center justify-between px-4 py-3 border-b border-grit last:border-b-0">
-              <span className="font-bold uppercase text-sm text-grit tracking-wide truncate pr-2">{p.name}</span>
-              <span className="display font-extrabold text-accent-red flex-shrink-0">{p.weight} KG</span>
-            </div>
-          ))}
-        </div>
+        <p className="label-cap mb-3 flex items-center gap-2"><Trophy size={12} /> Personal Records</p>
+        <PRList prs={prs} />
       </section>
+
 
       {viewScan && <ScanModal scan={viewScan} onClose={() => setViewScan(null)} onDelete={() => deleteScan(viewScan.id)} />}
       <QuickLogFAB />
