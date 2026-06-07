@@ -13,7 +13,18 @@ import { RankShareCard } from "@/components/RankShareCard";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_tabs/friends")({
-  head: () => ({ meta: [{ title: "DEADSET — Friends" }] }),
+  head: () => ({
+    meta: [
+      { title: "DEADSET — Friends" },
+      { name: "description", content: "Share lifts, climb leagues and invite mates on DEADSET." },
+      { property: "og:title", content: "DEADSET — Friends" },
+      { property: "og:description", content: "Share lifts, climb leagues and invite mates on DEADSET." },
+      { property: "og:url", content: "https://deadsetfit.org/friends" },
+      { name: "twitter:title", content: "DEADSET — Friends" },
+      { name: "twitter:description", content: "Share lifts, climb leagues and invite mates on DEADSET." },
+    ],
+    links: [{ rel: "canonical", href: "https://deadsetfit.org/friends" }],
+  }),
   component: FriendsPage,
 });
 
@@ -25,13 +36,35 @@ function FriendsPage() {
   const [tab, setTab] = useState<Tab>("FEED");
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session ? { userId: data.session.user.id } : null);
-    });
+    let cancelled = false;
+    // Timeout fallback: if session check hangs >4s, treat as unauthenticated
+    // so user sees the sign-in prompt instead of a blank loading screen.
+    const timeout = setTimeout(() => {
+      if (!cancelled) setSession((s) => (s === "loading" ? null : s));
+    }, 4000);
+
+    supabase.auth.getSession()
+      .then(({ data }) => {
+        if (cancelled) return;
+        clearTimeout(timeout);
+        setSession(data.session ? { userId: data.session.user.id } : null);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        clearTimeout(timeout);
+        setSession(null);
+      });
+
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+      if (cancelled) return;
+      clearTimeout(timeout);
       setSession(s ? { userId: s.user.id } : null);
     });
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   if (session === "loading") {
