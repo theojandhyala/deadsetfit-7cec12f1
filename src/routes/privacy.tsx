@@ -5,7 +5,13 @@ export const Route = createFileRoute("/privacy")({
     meta: [
       { title: "DEADSET — Privacy Policy" },
       { name: "description", content: "How DEADSET collects, uses, and protects your personal data." },
+      { property: "og:title", content: "DEADSET — Privacy Policy" },
+      { property: "og:description", content: "How DEADSET collects, uses, and protects your personal data." },
+      { property: "og:url", content: "https://deadsetfit.org/privacy" },
+      { name: "twitter:title", content: "DEADSET — Privacy Policy" },
+      { name: "twitter:description", content: "How DEADSET collects, uses, and protects your personal data." },
     ],
+    links: [{ rel: "canonical", href: "https://deadsetfit.org/privacy" }],
   }),
   component: PrivacyPage,
 });

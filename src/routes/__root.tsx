@@ -106,7 +106,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:site_name", content: "DEADSET" },
       { property: "og:type", content: "website" },
       { property: "og:locale", content: "en_US" },
+      { property: "og:title", content: "DEADSET — Forge Your Body" },
+      { property: "og:description", content: "Track PRs, follow programs, log workouts. Train. Build. Become." },
+      { property: "og:image", content: "https://deadsetfit.org/__l5e/assets-v1/784b292b-3adf-4fa7-9f14-d45495738304/deadset-logo.png" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "DEADSET — Forge Your Body" },
+      { name: "twitter:description", content: "Track PRs, follow programs, log workouts. Train. Build. Become." },
+      { name: "twitter:image", content: "https://deadsetfit.org/__l5e/assets-v1/784b292b-3adf-4fa7-9f14-d45495738304/deadset-logo.png" },
     ],
     scripts: [
       {
