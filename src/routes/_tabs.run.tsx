@@ -446,22 +446,24 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
         </button>
         <div className="flex items-center gap-1.5">
           <span
-            className={`w-1.5 h-1.5 rounded-full ${
-              status === "running" ? "bg-accent-red animate-pulse" : "bg-grit-dim"
-            }`}
+            className="w-1.5 h-1.5 rounded-full"
+            style={{
+              background: gpsStrength.color,
+              animation: status === "running" ? "pulse 1.5s ease-in-out infinite" : undefined,
+            }}
           />
-          <span className="label-cap text-[10px] text-grit-dim">
-            {status === "ready" && "READY"}
-            {status === "running" && "TRACKING"}
-            {status === "paused" && "PAUSED"}
-            {status === "finished" && "FINISHED"}
+          <span className="label-cap text-[10px]" style={{ color: gpsStrength.color }}>
+            GPS {gpsStrength.label}
+            {gpsAccuracy != null && ` · ±${Math.round(gpsAccuracy)}m`}
           </span>
         </div>
       </header>
 
       {/* Hero distance */}
       <div className="bg-grit-card border border-grit p-6 text-center">
-        <p className="label-cap text-[10px] text-grit-dim mb-2">DISTANCE</p>
+        <p className="label-cap text-[10px] text-grit-dim mb-2">
+          {status === "ready" ? "READY TO RUN" : "DISTANCE"}
+        </p>
         <p className="display text-6xl font-extrabold text-accent-red leading-none tracking-tight">
           {(distanceM / 1000).toFixed(2)}
         </p>
@@ -481,7 +483,7 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
       </div>
 
       {/* Map */}
-      <RunMap samples={samples} live={status === "running" || status === "paused"} />
+      <RunMap samples={mapSamples} live={status === "running" || status === "paused"} />
 
       {error && (
         <div className="bg-accent-red/10 border border-accent-red text-accent-red text-xs px-3 py-2 uppercase tracking-wider">
