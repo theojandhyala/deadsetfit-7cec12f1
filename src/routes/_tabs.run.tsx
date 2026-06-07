@@ -641,6 +641,8 @@ function RunDetail({
           </ul>
         </section>
       )}
+
+      <RunAdvanced run={run} allRuns={allRuns} />
     </div>
   );
 }
