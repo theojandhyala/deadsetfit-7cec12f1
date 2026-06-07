@@ -178,7 +178,7 @@ function RunHub({
                   className="w-full bg-grit-card border border-grit hover:border-accent-red transition-colors text-left flex gap-3 p-3"
                 >
                   <div className="w-20 h-20 flex-shrink-0">
-                    <RunMap samples={r.samples} height={80} showMarkers={false} />
+                    <RunMap samples={r.samples} height={80} showMarkers={false} thumbnail />
                   </div>
                   <div className="flex-1 min-w-0 flex flex-col justify-between">
                     <div className="flex items-start justify-between gap-2">
