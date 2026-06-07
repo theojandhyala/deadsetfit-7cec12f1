@@ -6,7 +6,13 @@ export const Route = createFileRoute("/terms")({
     meta: [
       { title: "DEADSET — Terms of Service" },
       { name: "description", content: "The rules for using DEADSET." },
+      { property: "og:title", content: "DEADSET — Terms of Service" },
+      { property: "og:description", content: "The rules for using DEADSET." },
+      { property: "og:url", content: "https://deadsetfit.org/terms" },
+      { name: "twitter:title", content: "DEADSET — Terms of Service" },
+      { name: "twitter:description", content: "The rules for using DEADSET." },
     ],
+    links: [{ rel: "canonical", href: "https://deadsetfit.org/terms" }],
   }),
   component: TermsPage,
 });
