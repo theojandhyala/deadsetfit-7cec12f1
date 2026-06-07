@@ -22,6 +22,8 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { StateSync } from "../components/StateSync";
 import { UsernameGate } from "../components/UsernameGate";
 import { Toaster } from "../components/ui/sonner";
+import { ProProvider, PaywallProvider } from "../hooks/usePro";
+import { PaywallSheet } from "../components/PaywallSheet";
 
 
 
@@ -170,11 +172,15 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <StateSync />
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
-      <UsernameGate />
-      <Toaster />
+      <ProProvider>
+        <PaywallProvider>
+          <StateSync />
+          <Outlet />
+          <UsernameGate />
+          <PaywallSheet />
+          <Toaster />
+        </PaywallProvider>
+      </ProProvider>
     </QueryClientProvider>
   );
 }

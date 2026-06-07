@@ -13,6 +13,7 @@ import { useAppState } from "@/lib/storage";
 import { EXERCISES, getExercise } from "@/lib/exercises";
 import { calculateGritScore, calculateStreak, defaultSchedule, isoDay, todayKey } from "@/lib/calc";
 import { generateSchedule } from "@/lib/ai.functions";
+import { ProBanner } from "@/components/ProBanner";
 import type { DayKey, Schedule, Program } from "@/lib/types";
 
 const DAY_KEYS: DayKey[] = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
@@ -156,6 +157,7 @@ function TrainPage() {
           </button>
         </div>
       </header>
+      <ProBanner />
       <Reminders />
 
       <div className="px-5 mb-5"><Big3Card state={state} /></div>

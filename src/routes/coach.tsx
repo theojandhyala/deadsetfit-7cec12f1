@@ -1,12 +1,13 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { ChevronLeft, Send, Sparkles } from "lucide-react";
+import { ChevronLeft, Send, Sparkles, Crown, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAppState } from "@/lib/storage";
 import { coachChat } from "@/lib/coach.functions";
 import { getPRValue, PR_CATALOG } from "@/lib/fifa-stats";
 import { calculateStreak } from "@/lib/calc";
+import { usePro } from "@/hooks/usePro";
 
 export const Route = createFileRoute("/coach")({
   head: () => ({ meta: [{ title: "DEADSET — AI Coach" }] }),
@@ -39,6 +40,7 @@ function loadThread(): Msg[] {
 
 function CoachPage() {
   const navigate = useNavigate();
+  const { isPro, loading: proLoading } = usePro();
   const [state] = useAppState();
   const chat = useServerFn(coachChat);
   const [messages, setMessages] = useState<Msg[]>(() => loadThread());
@@ -46,6 +48,61 @@ function CoachPage() {
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  if (proLoading) {
+    return (
+      <div className="min-h-screen bg-grit-bg flex items-center justify-center">
+        <Loader2 className="animate-spin text-grit" size={24} />
+      </div>
+    );
+  }
+
+  if (!isPro) {
+    return (
+      <div className="flex flex-col min-h-dvh bg-grit-bg" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+        <header className="px-5 pt-4 pb-3 flex items-center gap-2 border-b border-grit">
+          <button onClick={() => navigate({ to: "/profile" as never })} className="p-1 -ml-1">
+            <ChevronLeft size={20} />
+          </button>
+          <Sparkles size={16} className="text-accent-red" />
+          <p className="display text-lg font-extrabold uppercase text-grit leading-none">DEADSET Coach</p>
+        </header>
+        <div className="flex-1 px-6 py-10">
+          <div className="max-w-md mx-auto text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-accent-red/15 border border-accent-red/40 mb-5">
+              <Crown size={28} className="text-accent-red" />
+            </div>
+            <h2 className="font-display text-3xl uppercase tracking-wider text-grit-text leading-tight">
+              AI Coach is Pro
+            </h2>
+            <p className="mt-3 text-sm text-grit">
+              Unlimited personalized coaching on lifts, recovery, programming, plateaus, and form — built around your real PRs and training history.
+            </p>
+            <ul className="mt-6 space-y-2 text-left text-sm text-grit-text">
+              {[
+                "Personalized to your stats & goals",
+                "Plateau-breaking advice",
+                "Form & technique help",
+                "Programming guidance",
+              ].map((p) => (
+                <li key={p} className="flex items-start gap-2">
+                  <Check size={14} className="text-accent-red mt-0.5 shrink-0" />
+                  <span>{p}</span>
+                </li>
+              ))}
+            </ul>
+            <Link
+              to="/upgrade"
+              className="mt-7 inline-block w-full rounded-md bg-accent-red px-6 py-3.5 font-display text-sm uppercase tracking-widest text-white hover:bg-accent-red/90 transition-colors"
+            >
+              Unlock Coach — $4.99/mo
+            </Link>
+            <p className="mt-3 text-[10px] text-grit uppercase tracking-widest">Cancel anytime</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(messages)); } catch { /* ignore */ }
