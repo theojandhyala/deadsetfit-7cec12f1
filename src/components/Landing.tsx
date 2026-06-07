@@ -109,10 +109,10 @@ function Hero() {
 
           <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 p-4" style={{ background: "rgba(20,20,20,0.7)", border: "1px solid rgba(230,50,34,0.2)" }}>
             {[
-              { n: "50K+", l: "USERS" },
-              { n: "1M+", l: "WORKOUTS LOGGED" },
-              { n: "100K+", l: "GOALS ACHIEVED" },
-              { n: "4.9", l: "APP STORE RATING" },
+              { n: "0", l: "USERS SO FAR" },
+              { n: "YOU", l: "COULD BE FIRST" },
+              { n: "∞", l: "POTENTIAL GAINS" },
+              { n: "FREE", l: "ALWAYS WILL BE" },
             ].map((s, i) => (
               <div key={i}>
                 <p className="display font-extrabold text-xl text-accent-red">{s.n}</p>
