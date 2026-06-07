@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Loader2, Play, Plus, Sparkles, ListPlus, Flame, Trophy, Heart } from "lucide-react";
+import { Loader2, Play, Plus, Sparkles, ListPlus, Flame, Trophy, Heart, Footprints } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { VideoModal } from "@/components/VideoModal";
 import { RestTimer } from "@/components/RestTimer";
@@ -191,7 +191,10 @@ function TrainPage() {
                   <p className="text-xs text-grit-dim mt-1">No exercises today — recover & come back stronger.</p>
                 </div>
               )}
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
+                <Link to="/run" className="btn-ghost py-2.5 flex items-center justify-center gap-2 text-xs">
+                  <Footprints size={14} /> Run
+                </Link>
                 <Link to="/programs" className="btn-ghost py-2.5 flex items-center justify-center gap-2 text-xs">
                   <ListPlus size={14} /> Schedule
                 </Link>

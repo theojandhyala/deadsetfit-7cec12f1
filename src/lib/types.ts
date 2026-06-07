@@ -176,6 +176,41 @@ export interface ChallengeRecord {
   date: string;
 }
 
+export interface RunSample {
+  /** ms since session start */
+  t: number;
+  lat: number;
+  lng: number;
+  /** meters from previous sample */
+  d: number;
+  /** meters total */
+  total: number;
+  /** GPS accuracy in meters, if known */
+  acc?: number;
+  /** altitude in meters, if known */
+  alt?: number;
+}
+
+export interface Run {
+  id: string;
+  /** ISO start */
+  date: string;
+  /** active seconds (excludes paused time) */
+  durationSec: number;
+  /** total meters */
+  distanceM: number;
+  /** average pace seconds-per-km */
+  avgPaceSecPerKm: number;
+  /** best 1km pace seconds-per-km (rolling) */
+  bestPaceSecPerKm?: number;
+  /** elevation gain in meters (cumulative positive deltas) */
+  elevGainM?: number;
+  samples: RunSample[];
+  /** seconds-per-km for each completed kilometer */
+  splits: number[];
+  notes?: string;
+}
+
 export interface AppState {
   profile: Profile | null;
   schedule: Schedule | null;
@@ -198,5 +233,7 @@ export interface AppState {
   manualPRs?: Record<string, { value: number; reps?: number; date: string }>;
   units?: "kg" | "lb";
   remindersEnabled?: boolean;
+  runs?: Run[];
 }
+
 
