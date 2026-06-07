@@ -64,6 +64,7 @@ function RunPage() {
       return (
         <RunDetail
           run={run}
+          allRuns={runs}
           onBack={() => setView("hub")}
           onDelete={() => {
             setState((s) => ({
