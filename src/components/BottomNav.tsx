@@ -1,9 +1,9 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Dumbbell, LineChart, Apple, User, Users } from "lucide-react";
+import { Dumbbell, Route, Apple, User, Users } from "lucide-react";
 
 const tabs = [
   { to: "/train", label: "Train", Icon: Dumbbell },
-  { to: "/progress", label: "Progress", Icon: LineChart },
+  { to: "/run", label: "Run", Icon: Route },
   { to: "/friends", label: "Friends", Icon: Users },
   { to: "/diet", label: "Diet", Icon: Apple },
   { to: "/profile", label: "Profile", Icon: User },

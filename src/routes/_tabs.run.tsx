@@ -1,15 +1,20 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   Activity,
   ChevronLeft,
   ChevronRight,
+  Flame,
+  MapPinned,
   Pause,
   Play,
   Settings,
+  Share2,
   Square,
   Trash2,
   Trophy,
+  Users,
   Zap,
 } from "lucide-react";
 import { useAppState } from "@/lib/storage";
@@ -118,6 +123,8 @@ function RunHub({
   const weekStart = now - 7 * 24 * 3600 * 1000;
   const weekRuns = runs.filter((r) => new Date(r.date).getTime() >= weekStart);
   const weekDist = weekRuns.reduce((s, r) => s + r.distanceM, 0);
+  const latestRun = runs[0];
+  const bestRun = runs.reduce<Run | null>((best, r) => !best || r.distanceM > best.distanceM ? r : best, null);
 
   return (
     <div className="px-4 pt-6 pb-24 max-w-screen-sm mx-auto space-y-5">
@@ -127,7 +134,7 @@ function RunHub({
           Lace up.
         </h1>
         <p className="text-sm text-grit-dim">
-          Track every step. Distance, pace, splits, elevation.
+          Track every step, chase routes, and push it to the crew.
         </p>
       </header>
 
@@ -147,6 +154,25 @@ function RunHub({
         <StatBlock label="Total runs" value={String(totals.count)} />
         <StatBlock label="All-time" value={formatDistance(totals.distance)} />
       </div>
+
+      <section className="bg-grit-card border border-grit p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="label-cap text-[10px] text-accent-red">SOCIAL RUNNING</p>
+            <h2 className="display text-xl font-extrabold uppercase text-grit leading-none mt-1">
+              Your next route matters.
+            </h2>
+          </div>
+          <Link to="/friends" className="btn-grit px-3 py-2 text-[10px] gap-1">
+            <Users size={14} /> Crew
+          </Link>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <MiniCue icon={<MapPinned size={14} />} label="Trail map" value="Topo" />
+          <MiniCue icon={<Flame size={14} />} label="Best route" value={bestRun ? formatDistance(bestRun.distanceM) : "—"} />
+          <MiniCue icon={<Share2 size={14} />} label="Share" value={latestRun ? "Ready" : "After run"} />
+        </div>
+      </section>
 
       {/* History */}
       <section className="space-y-2">
@@ -230,12 +256,24 @@ function StatBlock({ label, value }: { label: string; value: string }) {
   );
 }
 
+function MiniCue({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
+  return (
+    <div className="border border-grit bg-[#0f0f0f] p-2 min-w-0">
+      <div className="text-accent-red mb-2">{icon}</div>
+      <p className="text-[8px] uppercase tracking-widest text-grit-dim truncate">{label}</p>
+      <p className="display text-sm font-extrabold uppercase text-grit truncate">{value}</p>
+    </div>
+  );
+}
+
 /* ====================== LIVE TRACKER ====================== */
 
 type Status = "ready" | "running" | "paused" | "finished";
+type LocationPermission = "checking" | "prompt" | "granted" | "denied" | "unknown";
 
 function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
   const [status, setStatus] = useState<Status>("ready");
+  const [permission, setPermission] = useState<LocationPermission>("checking");
   const [samples, setSamples] = useState<RunSample[]>([]);
   const [elapsedSec, setElapsedSec] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -264,6 +302,32 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
   const rejectCountRef = useRef(0);
   const lastRawPosRef = useRef<{ lat: number; lng: number; time: number } | null>(null);
 
+  const handleGpsError = (err: GeolocationPositionError) => {
+    if (err.code === err.PERMISSION_DENIED) {
+      setPermission("denied");
+      setError("Location is blocked. Enable location for this site, then retry GPS.");
+      if (statusRef.current === "running" && samplesRef.current.length <= 1) setStatus("ready");
+      return;
+    }
+    setError(err.message || "GPS error");
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!("permissions" in navigator) || !("geolocation" in navigator)) {
+      setPermission("unknown");
+      return;
+    }
+    navigator.permissions.query({ name: "geolocation" as PermissionName })
+      .then((result) => {
+        if (cancelled) return;
+        setPermission(result.state as LocationPermission);
+        result.onchange = () => setPermission(result.state as LocationPermission);
+      })
+      .catch(() => setPermission("unknown"));
+    return () => { cancelled = true; };
+  }, []);
+
   // Timer
   useEffect(() => {
     if (status !== "running") return;
@@ -288,7 +352,7 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
         setLastFixTime(Date.now());
         setError(null);
       },
-      (err) => setError(err.message || "GPS error"),
+      handleGpsError,
       { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 },
     );
     return () => {
@@ -298,6 +362,25 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
       }
     };
   }, [status]);
+
+  const retryGps = () => {
+    if (!("geolocation" in navigator)) {
+      setError("GPS not supported on this device.");
+      return;
+    }
+    setPermission("prompt");
+    setError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setPermission("granted");
+        setGpsAccuracy(pos.coords.accuracy);
+        setPreviewPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLastFixTime(Date.now());
+      },
+      handleGpsError,
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 12000 },
+    );
+  };
 
   const start = () => {
     if (!("geolocation" in navigator)) {
@@ -312,8 +395,19 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
     setError(null);
     startedAtRef.current = Date.now();
     pausedAccumRef.current = 0;
-    setSamples([]);
+    const initialSamples: RunSample[] = previewPos
+      ? [{ t: 0, lat: previewPos.lat, lng: previewPos.lng, d: 0, total: 0, acc: gpsAccuracy ?? undefined }]
+      : [];
+    samplesRef.current = initialSamples;
+    setSamples(initialSamples);
     setElapsedSec(0);
+    setFixCount(0);
+    setRejectCount(0);
+    fixCountRef.current = 0;
+    rejectCountRef.current = 0;
+    lastRawPosRef.current = null;
+    setSpeedAnomaly(false);
+    setRawSpeed(null);
     setStatus("running");
 
     watchIdRef.current = navigator.geolocation.watchPosition(
@@ -325,8 +419,7 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
         setLastFixTime(now);
 
         // Raw speed from device (m/s)
-        const deviceSpeed = speed ?? null;
-        setRawSpeed(deviceSpeed);
+        const deviceSpeed = typeof speed === "number" && speed >= 0 ? speed : null;
 
         const t = now - startedAtRef.current - pausedAccumRef.current;
         const prev = samplesRef.current[samplesRef.current.length - 1];
@@ -342,13 +435,19 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
           if (dt > 0) instantSpeed = rawDist / dt;
         }
         lastRawPosRef.current = { lat: latitude, lng: longitude, time: now };
+        setRawSpeed(deviceSpeed ?? instantSpeed);
 
         const result = smoothGpsFix(prev, {
           lat: latitude,
           lng: longitude,
           accuracy: accuracy ?? undefined,
           altitude,
+          speed: deviceSpeed,
           timeMs: t,
+        }, {
+          maxAccuracyM: 90,
+          maxSpeedMps: 12.5,
+          minDeltaM: 0.5,
         });
         if (!result.accepted) {
           rejectCountRef.current += 1;
@@ -373,10 +472,8 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
         };
         setSamples((s) => [...s, next]);
       },
-      (err) => {
-        setError(err.message || "GPS error");
-      },
-      { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 },
+      handleGpsError,
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 12000 },
     );
 
     // Keep screen awake if supported
@@ -407,7 +504,7 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
 
   const save = () => {
     const distanceM = samples.length ? samples[samples.length - 1].total : 0;
-    if (distanceM < 10) {
+    if (distanceM < 3) {
       // Discard runs with no meaningful distance
       onFinish(null);
       return;
@@ -510,7 +607,9 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
         <p className="display text-6xl font-extrabold text-accent-red leading-none tracking-tight">
           {(distanceM / 1000).toFixed(2)}
         </p>
-        <p className="label-cap text-xs text-grit-dim mt-2">KILOMETERS</p>
+        <p className="label-cap text-xs text-grit-dim mt-2">
+          KILOMETERS · {Math.round(distanceM)}M EXACT
+        </p>
       </div>
 
       {/* Stats grid */}
@@ -526,7 +625,21 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
       </div>
 
       {/* Map */}
-      <RunMap samples={mapSamples} live={status === "running" || status === "paused"} />
+      <RunMap samples={mapSamples} live={status === "running" || status === "paused"} mapStyle="trail" />
+
+      {permission === "denied" && (
+        <div className="bg-grit-card border border-accent-red p-4 space-y-3">
+          <div>
+            <p className="label-cap text-[10px] text-accent-red">GPS BLOCKED</p>
+            <p className="text-xs text-grit-dim mt-1">
+              Allow location access in your browser/site settings so the tracker can record your live route.
+            </p>
+          </div>
+          <button onClick={retryGps} className="btn-grit w-full py-3 text-xs">
+            Retry GPS
+          </button>
+        </div>
+      )}
 
       {error && (
         <div className="bg-accent-red/10 border border-accent-red text-accent-red text-xs px-3 py-2 uppercase tracking-wider">
@@ -754,6 +867,12 @@ function RunDetail({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const maxSplit = run.splits.length ? Math.max(...run.splits) : 0;
   const minSplit = run.splits.length ? Math.min(...run.splits) : 0;
+  const routePoints = run.samples.length;
+  const accuracySamples = run.samples.filter((s) => s.acc != null);
+  const avgAccuracy = accuracySamples.length
+    ? accuracySamples.reduce((sum, s) => sum + (s.acc ?? 0), 0) / accuracySamples.length
+    : 0;
+  const segmentCount = Math.max(1, Math.ceil(run.distanceM / 1000));
 
   return (
     <div className="px-4 pt-6 pb-24 max-w-screen-sm mx-auto space-y-4">
@@ -785,7 +904,26 @@ function RunDetail({
         </h1>
       </div>
 
-      <RunMap samples={run.samples} height={280} />
+      <RunMap samples={run.samples} height={340} mapStyle="trail" />
+
+      <section className="bg-grit-card border border-grit p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="label-cap text-[10px] text-accent-red">ROUTE</p>
+            <h2 className="display text-xl font-extrabold uppercase text-grit leading-none mt-1">
+              Trail effort saved.
+            </h2>
+          </div>
+          <Link to="/friends" className="btn-ghost px-3 py-2 text-[10px] gap-1">
+            <Share2 size={14} /> Share
+          </Link>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <MiniCue icon={<MapPinned size={14} />} label="Points" value={String(routePoints)} />
+          <MiniCue icon={<Zap size={14} />} label="Segments" value={String(segmentCount)} />
+          <MiniCue icon={<Activity size={14} />} label="GPS" value={avgAccuracy ? `±${Math.round(avgAccuracy)}m` : "—"} />
+        </div>
+      </section>
 
       <div className="grid grid-cols-2 gap-2">
         <DetailStat label="Distance" value={`${(run.distanceM / 1000).toFixed(2)} km`} big />

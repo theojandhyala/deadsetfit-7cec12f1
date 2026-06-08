@@ -103,13 +103,14 @@ export function smoothGpsFix(
     lng: number;
     accuracy?: number;
     altitude?: number | null;
+    speed?: number | null;
     timeMs: number; // run-relative ms
   },
   opts: { maxAccuracyM?: number; maxSpeedMps?: number; minDeltaM?: number } = {},
 ): { accepted: false } | { accepted: true; lat: number; lng: number; d: number; total: number; acc?: number; alt?: number } {
-  const maxAccuracy = opts.maxAccuracyM ?? 50;
-  const maxSpeed = opts.maxSpeedMps ?? 10; // ~36 km/h
-  const minDelta = opts.minDeltaM ?? 2;
+  const maxAccuracy = opts.maxAccuracyM ?? 100;
+  const maxSpeed = opts.maxSpeedMps ?? 12.5; // ~45 km/h, still rejects GPS teleports
+  const minDelta = opts.minDeltaM ?? 0.75;
   const acc = raw.accuracy;
 
   // Reject very inaccurate fixes outright.
@@ -133,9 +134,10 @@ export function smoothGpsFix(
   );
   const dtSec = Math.max(0.001, (raw.timeMs - prev.t) / 1000);
 
-  // Jitter: tiny movement relative to noise. If we moved less than the GPS
-  // noise floor, drop the fix entirely — it's the device wobbling, not us.
-  const noiseFloor = Math.max(minDelta, (acc ?? 0) * 0.5);
+  // Jitter: keep this deliberately permissive so 0.01km changes show quickly.
+  // Accuracy still matters, but we cap the noise gate and let device speed prove movement.
+  const movingBySensor = typeof raw.speed === "number" && raw.speed > 0.35;
+  const noiseFloor = movingBySensor ? minDelta : Math.max(minDelta, Math.min(4, (acc ?? 0) * 0.12));
   if (rawDist < noiseFloor) return { accepted: false };
 
   // Impossible-speed teleport: reject hard.
@@ -145,7 +147,8 @@ export function smoothGpsFix(
   // less accurate than our prior position, we trust it less.
   const prevAcc = prev.acc ?? 10;
   const newAcc = acc ?? 10;
-  const k = prevAcc / (prevAcc + newAcc); // 0..1, higher = trust new fix more
+  const baseK = prevAcc / (prevAcc + newAcc); // 0..1, higher = trust new fix more
+  const k = Math.min(0.85, Math.max(movingBySensor ? 0.55 : 0.35, baseK));
   const blendedLat = prev.lat + k * (raw.lat - prev.lat);
   const blendedLng = prev.lng + k * (raw.lng - prev.lng);
 

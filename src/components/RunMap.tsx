@@ -9,6 +9,8 @@ interface RunMapProps {
   live?: boolean;
   /** Force the lightweight SVG renderer (for thumbnails). */
   thumbnail?: boolean;
+  /** Use topo tiles that expose paths/trails/contours for run detail/live tracking. */
+  mapStyle?: "dark" | "trail";
 }
 
 /**
@@ -84,6 +86,7 @@ function LeafletRoute({
   samples,
   height = 280,
   live = false,
+  mapStyle = "trail",
 }: RunMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -127,13 +130,17 @@ function LeafletRoute({
         scrollWheelZoom: false,
       });
 
-      L.tileLayer(
+      const darkLayer = L.tileLayer(
         "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-        {
-          maxZoom: 19,
-          subdomains: "abcd",
-        },
-      ).addTo(map);
+        { maxZoom: 19, subdomains: "abcd" },
+      );
+      const trailLayer = L.tileLayer(
+        "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+        { maxZoom: 17 },
+      );
+      const activeLayer = mapStyle === "trail" ? trailLayer : darkLayer;
+      activeLayer.addTo(map);
+      L.control.layers({ Trails: trailLayer, Dark: darkLayer }, undefined, { position: "bottomleft" }).addTo(map);
 
       mapRef.current = map;
       setReady(true);
@@ -219,7 +226,7 @@ function LeafletRoute({
         map.panTo(latlngs[latlngs.length - 1], { animate: true, duration: 0.5 });
       } else {
         const bounds = L.latLngBounds(latlngs);
-        map.fitBounds(bounds, { padding: [24, 24], maxZoom: 17, animate: false });
+        map.fitBounds(bounds, { padding: [30, 30], maxZoom: 17, animate: false });
       }
     } else if (latlngs.length === 1) {
       map.setView(latlngs[0], 16);
@@ -243,6 +250,11 @@ function LeafletRoute({
         <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-black/80 border border-accent-red px-2 py-1 z-[400]">
           <span className="w-1.5 h-1.5 bg-accent-red rounded-full animate-pulse" />
           <span className="label-cap text-[9px] text-accent-red">LIVE</span>
+        </div>
+      )}
+      {mapStyle === "trail" && (
+        <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-black/80 border border-grit px-2 py-1 z-[400]">
+          <span className="label-cap text-[9px] text-grit">TRAILS · CONTOURS</span>
         </div>
       )}
     </div>
