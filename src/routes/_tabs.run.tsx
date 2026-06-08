@@ -4,12 +4,16 @@ import {
   Activity,
   ChevronLeft,
   ChevronRight,
+  Flame,
+  MapPinned,
   Pause,
   Play,
   Settings,
+  Share2,
   Square,
   Trash2,
   Trophy,
+  Users,
   Zap,
 } from "lucide-react";
 import { useAppState } from "@/lib/storage";
@@ -118,6 +122,8 @@ function RunHub({
   const weekStart = now - 7 * 24 * 3600 * 1000;
   const weekRuns = runs.filter((r) => new Date(r.date).getTime() >= weekStart);
   const weekDist = weekRuns.reduce((s, r) => s + r.distanceM, 0);
+  const latestRun = runs[0];
+  const bestRun = runs.reduce<Run | null>((best, r) => !best || r.distanceM > best.distanceM ? r : best, null);
 
   return (
     <div className="px-4 pt-6 pb-24 max-w-screen-sm mx-auto space-y-5">
@@ -127,7 +133,7 @@ function RunHub({
           Lace up.
         </h1>
         <p className="text-sm text-grit-dim">
-          Track every step. Distance, pace, splits, elevation.
+          Track every step, chase routes, and push it to the crew.
         </p>
       </header>
 
@@ -147,6 +153,25 @@ function RunHub({
         <StatBlock label="Total runs" value={String(totals.count)} />
         <StatBlock label="All-time" value={formatDistance(totals.distance)} />
       </div>
+
+      <section className="bg-grit-card border border-grit p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="label-cap text-[10px] text-accent-red">SOCIAL RUNNING</p>
+            <h2 className="display text-xl font-extrabold uppercase text-grit leading-none mt-1">
+              Your next route matters.
+            </h2>
+          </div>
+          <Link to="/friends" className="btn-grit px-3 py-2 text-[10px] gap-1">
+            <Users size={14} /> Crew
+          </Link>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <MiniCue icon={<MapPinned size={14} />} label="Trail map" value="Topo" />
+          <MiniCue icon={<Flame size={14} />} label="Best route" value={bestRun ? formatDistance(bestRun.distanceM) : "—"} />
+          <MiniCue icon={<Share2 size={14} />} label="Share" value={latestRun ? "Ready" : "After run"} />
+        </div>
+      </section>
 
       {/* History */}
       <section className="space-y-2">
