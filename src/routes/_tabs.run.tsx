@@ -459,7 +459,7 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
 
   const save = () => {
     const distanceM = samples.length ? samples[samples.length - 1].total : 0;
-    if (distanceM < 10) {
+    if (distanceM < 3) {
       // Discard runs with no meaningful distance
       onFinish(null);
       return;
@@ -808,6 +808,11 @@ function RunDetail({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const maxSplit = run.splits.length ? Math.max(...run.splits) : 0;
   const minSplit = run.splits.length ? Math.min(...run.splits) : 0;
+  const routePoints = run.samples.length;
+  const avgAccuracy = run.samples.length
+    ? run.samples.reduce((sum, s) => sum + (s.acc ?? 0), 0) / run.samples.filter((s) => s.acc != null).length
+    : 0;
+  const segmentCount = Math.max(1, Math.ceil(run.distanceM / 1000));
 
   return (
     <div className="px-4 pt-6 pb-24 max-w-screen-sm mx-auto space-y-4">
@@ -839,7 +844,26 @@ function RunDetail({
         </h1>
       </div>
 
-      <RunMap samples={run.samples} height={280} />
+      <RunMap samples={run.samples} height={340} mapStyle="trail" />
+
+      <section className="bg-grit-card border border-grit p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="label-cap text-[10px] text-accent-red">ROUTE</p>
+            <h2 className="display text-xl font-extrabold uppercase text-grit leading-none mt-1">
+              Trail effort saved.
+            </h2>
+          </div>
+          <Link to="/friends" className="btn-ghost px-3 py-2 text-[10px] gap-1">
+            <Share2 size={14} /> Share
+          </Link>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <MiniCue icon={<MapPinned size={14} />} label="Points" value={String(routePoints)} />
+          <MiniCue icon={<Zap size={14} />} label="Segments" value={String(segmentCount)} />
+          <MiniCue icon={<Activity size={14} />} label="GPS" value={avgAccuracy ? `±${Math.round(avgAccuracy)}m` : "—"} />
+        </div>
+      </section>
 
       <div className="grid grid-cols-2 gap-2">
         <DetailStat label="Distance" value={`${(run.distanceM / 1000).toFixed(2)} km`} big />
