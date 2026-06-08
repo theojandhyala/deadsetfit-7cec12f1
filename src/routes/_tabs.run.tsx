@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   Activity,
@@ -255,7 +256,7 @@ function StatBlock({ label, value }: { label: string; value: string }) {
   );
 }
 
-function MiniCue({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function MiniCue({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
     <div className="border border-grit bg-[#0f0f0f] p-2 min-w-0">
       <div className="text-accent-red mb-2">{icon}</div>
