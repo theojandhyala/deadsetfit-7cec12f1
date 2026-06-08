@@ -240,6 +240,14 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
   const [error, setError] = useState<string | null>(null);
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [previewPos, setPreviewPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [debugOpen, setDebugOpen] = useState(false);
+
+  // GPS quality metrics
+  const [fixCount, setFixCount] = useState(0);
+  const [rejectCount, setRejectCount] = useState(0);
+  const [speedAnomaly, setSpeedAnomaly] = useState(false);
+  const [rawSpeed, setRawSpeed] = useState<number | null>(null);
+  const [lastFixTime, setLastFixTime] = useState<number | null>(null);
 
   // Refs to avoid stale closures inside watchPosition
   const statusRef = useRef<Status>(status);
@@ -251,6 +259,9 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
   const pausedAtRef = useRef<number>(0);
   const watchIdRef = useRef<number | null>(null);
   const previewWatchRef = useRef<number | null>(null);
+  const fixCountRef = useRef(0);
+  const rejectCountRef = useRef(0);
+  const lastRawPosRef = useRef<{ lat: number; lng: number; time: number } | null>(null);
 
   // Timer
   useEffect(() => {
