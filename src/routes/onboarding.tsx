@@ -4,11 +4,11 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Check, Zap } from "lucide-react";
 import { GritLogo } from "@/components/GritLogo";
-import { getState, setState, waitForRemoteState } from "@/lib/storage";
+import { getState, setLocalStateOwner, setState, waitForRemoteState } from "@/lib/storage";
 import { defaultSchedule } from "@/lib/calc";
 import { getExercise } from "@/lib/exercises";
 import { getMyProfile, saveProfile } from "@/lib/profile.functions";
-import { profileFromAccount, withTimeout } from "@/lib/account-restore";
+import { profileFromAccount, profileQuestionsComplete, withTimeout } from "@/lib/account-restore";
 import type { Equipment, Experience, Gender, Goal, Profile, Weakness } from "@/lib/types";
 import { buildPublicStats } from "@/lib/fifa-stats";
 
@@ -84,11 +84,8 @@ function Onboarding() {
       }
       await withTimeout(waitForRemoteState(session.user.id), undefined);
       if (cancelled) return;
-      if (getState().profile) {
-        navigate({ to: "/train", replace: true });
-        return;
-      }
-      const accountProfile = profileFromAccount(await withTimeout(getProfile().catch(() => null), null));
+      const row = await withTimeout(getProfile().catch(() => null), null);
+      const accountProfile = profileQuestionsComplete(row) ? profileFromAccount(row) : null;
       if (accountProfile) {
         setState((current) => ({
           ...current,
@@ -112,6 +109,7 @@ function Onboarding() {
         startingWeightKg: merged.startingWeightKg ?? merged.weightKg,
       } as Profile;
       const sched = mode === "BUILD" ? emptySchedule() : defaultSchedule(p);
+      setLocalStateOwner("");
       setState((s) => ({ ...s, profile: p, schedule: sched }));
       const publicStats = buildPublicStats(getState());
       save({
