@@ -562,7 +562,9 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
         <p className="display text-6xl font-extrabold text-accent-red leading-none tracking-tight">
           {(distanceM / 1000).toFixed(2)}
         </p>
-        <p className="label-cap text-xs text-grit-dim mt-2">KILOMETERS</p>
+        <p className="label-cap text-xs text-grit-dim mt-2">
+          KILOMETERS · {Math.round(distanceM)}M EXACT
+        </p>
       </div>
 
       {/* Stats grid */}
@@ -578,7 +580,7 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
       </div>
 
       {/* Map */}
-      <RunMap samples={mapSamples} live={status === "running" || status === "paused"} />
+      <RunMap samples={mapSamples} live={status === "running" || status === "paused"} mapStyle="trail" />
 
       {error && (
         <div className="bg-accent-red/10 border border-accent-red text-accent-red text-xs px-3 py-2 uppercase tracking-wider">
