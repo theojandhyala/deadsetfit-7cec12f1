@@ -534,6 +534,116 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
         </div>
       )}
 
+      {/* GPS Quality HUD */}
+      <div className="bg-grit-card border border-grit p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span
+              className="w-2 h-2 rounded-full"
+              style={{
+                background: gpsStrength.color,
+                boxShadow: `0 0 6px ${gpsStrength.color}`,
+              }}
+            />
+            <span className="label-cap text-[10px]" style={{ color: gpsStrength.color }}>
+              {gpsStrength.label}
+            </span>
+            {speedAnomaly && (
+              <span className="label-cap text-[10px] text-accent-red bg-accent-red/10 px-1.5 py-0.5 border border-accent-red">
+                SPEED JUMP
+              </span>
+            )}
+          </div>
+          <button
+            onClick={() => setDebugOpen((v) => !v)}
+            className={`flex items-center gap-1 text-[10px] uppercase tracking-wider font-bold px-2 py-1 border transition-colors ${
+              debugOpen
+                ? "text-accent-red border-accent-red bg-accent-red/10"
+                : "text-grit-dim border-grit hover:text-grit"
+            }`}
+          >
+            <Settings size={12} />
+            {debugOpen ? "Hide" : "Debug"}
+          </button>
+        </div>
+
+        {/* Accuracy bar */}
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] uppercase tracking-wider text-grit-dim w-12">Acc</span>
+          <div className="flex-1 h-2 bg-[#0e0e0e] border border-grit overflow-hidden">
+            <div
+              className="h-full transition-all duration-300"
+              style={{
+                width: gpsAccuracy == null ? "0%" : `${Math.min(100, (gpsAccuracy / 50) * 100)}%`,
+                background: gpsAccuracy != null && gpsAccuracy <= 15
+                  ? "#22c55e"
+                  : gpsAccuracy != null && gpsAccuracy <= 35
+                    ? "#fbbf24"
+                    : "#e63222",
+              }}
+            />
+          </div>
+          <span className="text-[10px] font-bold tabular-nums w-14 text-right">
+            {gpsAccuracy != null ? `±${Math.round(gpsAccuracy)}m` : "—"}
+          </span>
+        </div>
+
+        {/* Fix staleness */}
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] uppercase tracking-wider text-grit-dim w-12">Fix</span>
+          <span className="text-[10px] font-bold tabular-nums">
+            {lastFixTime == null
+              ? "—"
+              : Date.now() - lastFixTime < 2000
+                ? "< 1s ago"
+                : `${Math.round((Date.now() - lastFixTime) / 1000)}s ago`}
+          </span>
+        </div>
+
+        {debugOpen && (
+          <div className="border-t border-grit pt-2 space-y-1">
+            <div className="grid grid-cols-2 gap-2 text-[10px]">
+              <div>
+                <span className="text-grit-dim uppercase tracking-wider">Samples</span>
+                <span className="block font-bold tabular-nums text-grit">{samples.length}</span>
+              </div>
+              <div>
+                <span className="text-grit-dim uppercase tracking-wider">Fixes</span>
+                <span className="block font-bold tabular-nums text-grit">{fixCount}</span>
+              </div>
+              <div>
+                <span className="text-grit-dim uppercase tracking-wider">Rejects</span>
+                <span className="block font-bold tabular-nums text-grit">{rejectCount}</span>
+              </div>
+              <div>
+                <span className="text-grit-dim uppercase tracking-wider">Accept %</span>
+                <span className="block font-bold tabular-nums text-grit">
+                  {fixCount + rejectCount > 0
+                    ? `${Math.round((fixCount / (fixCount + rejectCount)) * 100)}%`
+                    : "—"}
+                </span>
+              </div>
+              <div>
+                <span className="text-grit-dim uppercase tracking-wider">Raw speed</span>
+                <span className="block font-bold tabular-nums text-grit">
+                  {rawSpeed != null ? `${rawSpeed.toFixed(1)} m/s` : "—"}
+                </span>
+              </div>
+              <div>
+                <span className="text-grit-dim uppercase tracking-wider">Coords</span>
+                <span className="block font-bold tabular-nums text-grit">
+                  {previewPos
+                    ? `${previewPos.lat.toFixed(5)}, ${previewPos.lng.toFixed(5)}`
+                    : samples.length > 0
+                      ? `${samples[samples.length - 1].lat.toFixed(5)}, ${samples[samples.length - 1].lng.toFixed(5)}`
+                      : "—"}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Controls */}
       <div className="pt-2">
         {status === "ready" && (
