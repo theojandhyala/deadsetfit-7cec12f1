@@ -23,6 +23,7 @@ import {
   formatDistance,
   formatDuration,
   formatPace,
+  haversine,
   smoothGpsFix,
 } from "@/lib/run";
 import type { Run, RunSample } from "@/lib/types";
