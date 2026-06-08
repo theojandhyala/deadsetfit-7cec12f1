@@ -255,6 +255,16 @@ function StatBlock({ label, value }: { label: string; value: string }) {
   );
 }
 
+function MiniCue({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="border border-grit bg-[#0f0f0f] p-2 min-w-0">
+      <div className="text-accent-red mb-2">{icon}</div>
+      <p className="text-[8px] uppercase tracking-widest text-grit-dim truncate">{label}</p>
+      <p className="display text-sm font-extrabold uppercase text-grit truncate">{value}</p>
+    </div>
+  );
+}
+
 /* ====================== LIVE TRACKER ====================== */
 
 type Status = "ready" | "running" | "paused" | "finished";
