@@ -7,6 +7,8 @@ import {
   hydrateFromRemote,
   clearLocalState,
   getState,
+  getLocalStateOwner,
+  setLocalStateOwner,
   beginRemoteStateLoad,
   finishRemoteStateLoad,
   clearRemoteStateStatus,
@@ -34,7 +36,7 @@ export function StateSync() {
         if (cancelled) return;
         if (res?.data) {
           try {
-            hydrateFromRemote(JSON.parse(res.data));
+            hydrateFromRemote(JSON.parse(res.data), userId);
           } catch {
             /* ignore */
           }
@@ -44,6 +46,7 @@ export function StateSync() {
           if (local.profile) {
             await save({ data: { data: JSON.stringify(local) } }).catch(() => {});
           }
+          setLocalStateOwner(userId);
         }
         enableRemoteSync(async (json) => {
           await save({ data: { data: json } });
@@ -75,7 +78,7 @@ export function StateSync() {
         activeUserId = uid;
         disableRemoteSync();
         beginRemoteStateLoad(uid);
-        clearLocalState();
+        if (getLocalStateOwner() && getLocalStateOwner() !== uid) clearLocalState();
         pull(uid);
       }
     });
