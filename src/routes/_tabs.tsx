@@ -48,6 +48,7 @@ function TabsLayout() {
           withTimeout(waitForRemoteState(session.user.id), undefined, 1500),
           withTimeout(getProfileRef.current().catch(() => null), null, 2000),
         ]);
+        if (getState().profile && getLocalStateOwner() === session.user.id) return;
         if (!profileQuestionsComplete(row)) {
           navRef.current({ to: "/onboarding", replace: true });
           return;
