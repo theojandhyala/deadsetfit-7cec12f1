@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
-import { signInWithUsername } from "@/lib/profile.functions";
+import { getMyProfile, signInWithUsername } from "@/lib/profile.functions";
+import { profileQuestionsComplete } from "@/lib/account-restore";
 
 import { toast } from "sonner";
 
@@ -21,17 +22,24 @@ export function AuthPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const usernameSignIn = useServerFn(signInWithUsername);
+  const getProfile = useServerFn(getMyProfile);
+
+  async function routeAfterAuth() {
+    const profile = await getProfile().catch(() => null);
+    navigate({ to: profileQuestionsComplete(profile) ? "/train" : "/onboarding", replace: true });
+  }
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (session) navigate({ to: "/train", replace: true });
+      if (session) routeAfterAuth();
     });
     // getSession() reads localStorage; don't timeout — falling back to null
     // was blocking returning users from auto-redirecting into the app.
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) navigate({ to: "/train", replace: true });
+      if (session) routeAfterAuth();
     }).catch(() => {});
     return () => data.subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
   async function submit(e: React.FormEvent) {
@@ -47,7 +55,8 @@ export function AuthPage() {
         });
         if (error) throw error;
         toast.success("Welcome to DEADSET");
-        navigate({ to: "/onboarding", replace: true });
+        if (data.session) navigate({ to: "/onboarding", replace: true });
+        else toast.success("Check your email, then finish your questions after signing in");
       } else {
         const id = identifier.trim();
         if (id.includes("@")) {
