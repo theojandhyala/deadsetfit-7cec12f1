@@ -3,10 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { BottomNav } from "@/components/BottomNav";
 import { TopBar } from "@/components/TopBar";
-import { getState, setState, waitForRemoteState } from "@/lib/storage";
+import { getLocalStateOwner, getState, setState, waitForRemoteState } from "@/lib/storage";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyProfile } from "@/lib/profile.functions";
-import { profileFromAccount, withTimeout } from "@/lib/account-restore";
+import { profileFromAccount, profileQuestionsComplete, withTimeout } from "@/lib/account-restore";
 import { defaultSchedule } from "@/lib/calc";
 
 export const Route = createFileRoute("/_tabs")({
@@ -18,10 +18,7 @@ function TabsLayout() {
   const getProfile = useServerFn(getMyProfile);
   // Start ready=true if local state already has a profile — render INSTANTLY
   // on hot refresh / navigation; remote sync continues in the background.
-  const [ready, setReady] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return !!getState().profile;
-  });
+  const [ready, setReady] = useState(false);
   const navRef = useRef(navigate);
   const getProfileRef = useRef(getProfile);
   navRef.current = navigate;
@@ -42,15 +39,21 @@ function TabsLayout() {
           navRef.current({ to: "/auth", replace: true });
           return;
         }
-        // Already rendering? Don't block — let the remote sync hydrate in bg.
-        if (getState().profile) return;
+        const localOwner = getLocalStateOwner();
+        // Already rendering? Only trust local app state when it belongs to this signed-in account.
+        if (getState().profile && localOwner === session.user.id) return;
 
         // No local profile: fetch from server fast, in parallel with remote state.
         const [, row] = await Promise.all([
           withTimeout(waitForRemoteState(session.user.id), undefined, 1500),
           withTimeout(getProfileRef.current().catch(() => null), null, 2000),
         ]);
-        if (!getState().profile) {
+        if (getState().profile && getLocalStateOwner() === session.user.id) return;
+        if (!profileQuestionsComplete(row)) {
+          navRef.current({ to: "/onboarding", replace: true });
+          return;
+        }
+        if (!getState().profile || localOwner !== session.user.id) {
           const accountProfile = profileFromAccount(row);
           if (accountProfile) {
             setState((current) => ({

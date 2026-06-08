@@ -41,10 +41,12 @@ export const saveProfile = createServerFn({ method: "POST" })
 
     const { error } = await supabase
       .from("profiles")
-      .update(data)
-      .eq("id", userId);
+      .upsert({ id: userId, ...data }, { onConflict: "id" });
 
-    if (error) throw new Error(error.message);
+    if (error) {
+      if (error.code === "23505") throw new Error("Username is already taken");
+      throw new Error(error.message);
+    }
     return { ok: true };
   });
 

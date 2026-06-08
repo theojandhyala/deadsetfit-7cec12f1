@@ -7,6 +7,8 @@ import {
   hydrateFromRemote,
   clearLocalState,
   getState,
+  getLocalStateOwner,
+  setLocalStateOwner,
   beginRemoteStateLoad,
   finishRemoteStateLoad,
   clearRemoteStateStatus,
@@ -34,16 +36,17 @@ export function StateSync() {
         if (cancelled) return;
         if (res?.data) {
           try {
-            hydrateFromRemote(JSON.parse(res.data));
+            hydrateFromRemote(JSON.parse(res.data), userId);
           } catch {
             /* ignore */
           }
         } else {
           // First sign-in on this account: push whatever's local so it isn't lost.
           const local = getState();
-          if (local.profile) {
+          if (local.profile && getLocalStateOwner() === userId) {
             await save({ data: { data: JSON.stringify(local) } }).catch(() => {});
           }
+          setLocalStateOwner(userId);
         }
         enableRemoteSync(async (json) => {
           await save({ data: { data: json } });
@@ -64,18 +67,19 @@ export function StateSync() {
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       const uid = session?.user?.id ?? null;
-      if (event === "SIGNED_OUT" || !uid) {
+      if (event === "SIGNED_OUT") {
         disableRemoteSync();
         clearLocalState();
         clearRemoteStateStatus();
         activeUserId = null;
         return;
       }
+      if (!uid) return;
       if (uid !== activeUserId) {
         activeUserId = uid;
         disableRemoteSync();
         beginRemoteStateLoad(uid);
-        clearLocalState();
+        if (getLocalStateOwner() && getLocalStateOwner() !== uid) clearLocalState();
         pull(uid);
       }
     });

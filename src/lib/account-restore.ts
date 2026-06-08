@@ -66,3 +66,18 @@ export function profileFromAccount(row: AccountProfile | null | undefined): Prof
     startingWeightKg: Number(row.weight_kg ?? 75),
   };
 }
+
+export function profileQuestionsComplete(row: AccountProfile | null | undefined) {
+  if (!row?.onboarded) return false;
+  return Boolean(
+    goals.has(row.goal as Goal) &&
+    experiences.has(row.experience as Experience) &&
+    genders.has(row.gender as Gender) &&
+    equipment.has(row.equipment as Equipment) &&
+    typeof row.age === "number" &&
+    Number(row.weight_kg) > 0 &&
+    Number(row.height_cm) > 0 &&
+    (row.days_per_week === 3 || row.days_per_week === 4 || row.days_per_week === 5 || row.days_per_week === 6) &&
+    row.username,
+  );
+}

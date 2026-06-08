@@ -3,6 +3,7 @@ import type { AppState } from "./types";
 import { DEFAULT_STATE } from "./default-state";
 
 const KEY = "grit_app_state_v1";
+const OWNER_KEY = "grit_app_state_owner_v1";
 
 const listeners = new Set<() => void>();
 const syncListeners = new Set<() => void>();
@@ -50,21 +51,40 @@ export function getState(): AppState {
   return read();
 }
 
+export function getLocalStateOwner() {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(OWNER_KEY);
+}
+
+export function setLocalStateOwner(userId: string) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(OWNER_KEY, userId);
+}
+
 export function setState(updater: (s: AppState) => AppState) {
   const next = updater(read());
   write(next);
 }
 
 /** Replace local state from a remote payload without pushing it back. */
-export function hydrateFromRemote(remote: Partial<AppState>) {
+export function hydrateFromRemote(remote: Partial<AppState>, userId?: string) {
   suppressNextPush = true;
-  const merged = { ...DEFAULT_STATE, ...remote } as AppState;
-  if (typeof window !== "undefined") localStorage.setItem(KEY, JSON.stringify(merged));
+  const current = read();
+  const merged = { ...DEFAULT_STATE, ...current, ...remote } as AppState;
+  if (!remote.profile && current.profile) merged.profile = current.profile;
+  if (!remote.schedule && current.schedule) merged.schedule = current.schedule;
+  if (typeof window !== "undefined") {
+    localStorage.setItem(KEY, JSON.stringify(merged));
+    if (userId) localStorage.setItem(OWNER_KEY, userId);
+  }
   listeners.forEach((l) => l());
 }
 
 export function clearLocalState() {
-  if (typeof window !== "undefined") localStorage.removeItem(KEY);
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(KEY);
+    localStorage.removeItem(OWNER_KEY);
+  }
   listeners.forEach((l) => l());
 }
 
