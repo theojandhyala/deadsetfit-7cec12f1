@@ -284,6 +284,7 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
       (pos) => {
         setGpsAccuracy(pos.coords.accuracy);
         setPreviewPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLastFixTime(Date.now());
         setError(null);
       },
       (err) => setError(err.message || "GPS error"),
