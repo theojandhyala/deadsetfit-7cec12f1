@@ -43,7 +43,7 @@ export function StateSync() {
         } else {
           // First sign-in on this account: push whatever's local so it isn't lost.
           const local = getState();
-          if (local.profile) {
+          if (local.profile && getLocalStateOwner() === userId) {
             await save({ data: { data: JSON.stringify(local) } }).catch(() => {});
           }
           setLocalStateOwner(userId);
