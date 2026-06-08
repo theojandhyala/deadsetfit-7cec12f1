@@ -63,6 +63,7 @@ function Onboarding() {
   const navigate = useNavigate();
   const [idx, setIdx] = useState(0);
   const [mode, setMode] = useState<Mode | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Partial<Profile>>({});
   const save = useServerFn(saveProfile);
   const getProfile = useServerFn(getMyProfile);
@@ -82,6 +83,7 @@ function Onboarding() {
         navigate({ to: "/auth", replace: true });
         return;
       }
+      setUserId(session.user.id);
       await withTimeout(waitForRemoteState(session.user.id), undefined);
       if (cancelled) return;
       const row = await withTimeout(getProfile().catch(() => null), null);
@@ -109,7 +111,7 @@ function Onboarding() {
         startingWeightKg: merged.startingWeightKg ?? merged.weightKg,
       } as Profile;
       const sched = mode === "BUILD" ? emptySchedule() : defaultSchedule(p);
-      setLocalStateOwner("");
+      if (userId) setLocalStateOwner(userId);
       setState((s) => ({ ...s, profile: p, schedule: sched }));
       const publicStats = buildPublicStats(getState());
       save({
