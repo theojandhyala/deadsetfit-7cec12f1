@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Pause,
   Play,
+  Settings,
   Square,
   Trash2,
   Trophy,
