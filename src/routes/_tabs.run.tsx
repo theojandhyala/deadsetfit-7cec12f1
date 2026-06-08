@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Pause,
   Play,
+  Settings,
   Square,
   Trash2,
   Trophy,
@@ -22,6 +23,7 @@ import {
   formatDistance,
   formatDuration,
   formatPace,
+  haversine,
   smoothGpsFix,
 } from "@/lib/run";
 import type { Run, RunSample } from "@/lib/types";
@@ -239,6 +241,14 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
   const [error, setError] = useState<string | null>(null);
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [previewPos, setPreviewPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [debugOpen, setDebugOpen] = useState(false);
+
+  // GPS quality metrics
+  const [fixCount, setFixCount] = useState(0);
+  const [rejectCount, setRejectCount] = useState(0);
+  const [speedAnomaly, setSpeedAnomaly] = useState(false);
+  const [rawSpeed, setRawSpeed] = useState<number | null>(null);
+  const [lastFixTime, setLastFixTime] = useState<number | null>(null);
 
   // Refs to avoid stale closures inside watchPosition
   const statusRef = useRef<Status>(status);
@@ -250,6 +260,9 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
   const pausedAtRef = useRef<number>(0);
   const watchIdRef = useRef<number | null>(null);
   const previewWatchRef = useRef<number | null>(null);
+  const fixCountRef = useRef(0);
+  const rejectCountRef = useRef(0);
+  const lastRawPosRef = useRef<{ lat: number; lng: number; time: number } | null>(null);
 
   // Timer
   useEffect(() => {
@@ -272,6 +285,7 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
       (pos) => {
         setGpsAccuracy(pos.coords.accuracy);
         setPreviewPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLastFixTime(Date.now());
         setError(null);
       },
       (err) => setError(err.message || "GPS error"),
@@ -305,10 +319,30 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         if (statusRef.current !== "running") return;
-        const { latitude, longitude, accuracy, altitude } = pos.coords;
+        const { latitude, longitude, accuracy, altitude, speed } = pos.coords;
+        const now = Date.now();
         setGpsAccuracy(accuracy);
-        const t = Date.now() - startedAtRef.current - pausedAccumRef.current;
+        setLastFixTime(now);
+
+        // Raw speed from device (m/s)
+        const deviceSpeed = speed ?? null;
+        setRawSpeed(deviceSpeed);
+
+        const t = now - startedAtRef.current - pausedAccumRef.current;
         const prev = samplesRef.current[samplesRef.current.length - 1];
+
+        // Compute raw instantaneous speed for anomaly detection
+        let instantSpeed: number | null = null;
+        if (lastRawPosRef.current) {
+          const rawDist = haversine(
+            { lat: lastRawPosRef.current.lat, lng: lastRawPosRef.current.lng },
+            { lat: latitude, lng: longitude },
+          );
+          const dt = (now - lastRawPosRef.current.time) / 1000;
+          if (dt > 0) instantSpeed = rawDist / dt;
+        }
+        lastRawPosRef.current = { lat: latitude, lng: longitude, time: now };
+
         const result = smoothGpsFix(prev, {
           lat: latitude,
           lng: longitude,
@@ -316,7 +350,18 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
           altitude,
           timeMs: t,
         });
-        if (!result.accepted) return;
+        if (!result.accepted) {
+          rejectCountRef.current += 1;
+          setRejectCount(rejectCountRef.current);
+          // Flag speed anomaly if instant speed is impossibly high
+          if (instantSpeed != null && instantSpeed > 10) {
+            setSpeedAnomaly(true);
+            setTimeout(() => setSpeedAnomaly(false), 3000);
+          }
+          return;
+        }
+        fixCountRef.current += 1;
+        setFixCount(fixCountRef.current);
         const next: RunSample = {
           t,
           lat: result.lat,
@@ -488,6 +533,116 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
           {error}
         </div>
       )}
+
+      {/* GPS Quality HUD */}
+      <div className="bg-grit-card border border-grit p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span
+              className="w-2 h-2 rounded-full"
+              style={{
+                background: gpsStrength.color,
+                boxShadow: `0 0 6px ${gpsStrength.color}`,
+              }}
+            />
+            <span className="label-cap text-[10px]" style={{ color: gpsStrength.color }}>
+              {gpsStrength.label}
+            </span>
+            {speedAnomaly && (
+              <span className="label-cap text-[10px] text-accent-red bg-accent-red/10 px-1.5 py-0.5 border border-accent-red">
+                SPEED JUMP
+              </span>
+            )}
+          </div>
+          <button
+            onClick={() => setDebugOpen((v) => !v)}
+            className={`flex items-center gap-1 text-[10px] uppercase tracking-wider font-bold px-2 py-1 border transition-colors ${
+              debugOpen
+                ? "text-accent-red border-accent-red bg-accent-red/10"
+                : "text-grit-dim border-grit hover:text-grit"
+            }`}
+          >
+            <Settings size={12} />
+            {debugOpen ? "Hide" : "Debug"}
+          </button>
+        </div>
+
+        {/* Accuracy bar */}
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] uppercase tracking-wider text-grit-dim w-12">Acc</span>
+          <div className="flex-1 h-2 bg-[#0e0e0e] border border-grit overflow-hidden">
+            <div
+              className="h-full transition-all duration-300"
+              style={{
+                width: gpsAccuracy == null ? "0%" : `${Math.min(100, (gpsAccuracy / 50) * 100)}%`,
+                background: gpsAccuracy != null && gpsAccuracy <= 15
+                  ? "#22c55e"
+                  : gpsAccuracy != null && gpsAccuracy <= 35
+                    ? "#fbbf24"
+                    : "#e63222",
+              }}
+            />
+          </div>
+          <span className="text-[10px] font-bold tabular-nums w-14 text-right">
+            {gpsAccuracy != null ? `±${Math.round(gpsAccuracy)}m` : "—"}
+          </span>
+        </div>
+
+        {/* Fix staleness */}
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] uppercase tracking-wider text-grit-dim w-12">Fix</span>
+          <span className="text-[10px] font-bold tabular-nums">
+            {lastFixTime == null
+              ? "—"
+              : Date.now() - lastFixTime < 2000
+                ? "< 1s ago"
+                : `${Math.round((Date.now() - lastFixTime) / 1000)}s ago`}
+          </span>
+        </div>
+
+        {debugOpen && (
+          <div className="border-t border-grit pt-2 space-y-1">
+            <div className="grid grid-cols-2 gap-2 text-[10px]">
+              <div>
+                <span className="text-grit-dim uppercase tracking-wider">Samples</span>
+                <span className="block font-bold tabular-nums text-grit">{samples.length}</span>
+              </div>
+              <div>
+                <span className="text-grit-dim uppercase tracking-wider">Fixes</span>
+                <span className="block font-bold tabular-nums text-grit">{fixCount}</span>
+              </div>
+              <div>
+                <span className="text-grit-dim uppercase tracking-wider">Rejects</span>
+                <span className="block font-bold tabular-nums text-grit">{rejectCount}</span>
+              </div>
+              <div>
+                <span className="text-grit-dim uppercase tracking-wider">Accept %</span>
+                <span className="block font-bold tabular-nums text-grit">
+                  {fixCount + rejectCount > 0
+                    ? `${Math.round((fixCount / (fixCount + rejectCount)) * 100)}%`
+                    : "—"}
+                </span>
+              </div>
+              <div>
+                <span className="text-grit-dim uppercase tracking-wider">Raw speed</span>
+                <span className="block font-bold tabular-nums text-grit">
+                  {rawSpeed != null ? `${rawSpeed.toFixed(1)} m/s` : "—"}
+                </span>
+              </div>
+              <div>
+                <span className="text-grit-dim uppercase tracking-wider">Coords</span>
+                <span className="block font-bold tabular-nums text-grit">
+                  {previewPos
+                    ? `${previewPos.lat.toFixed(5)}, ${previewPos.lng.toFixed(5)}`
+                    : samples.length > 0
+                      ? `${samples[samples.length - 1].lat.toFixed(5)}, ${samples[samples.length - 1].lng.toFixed(5)}`
+                      : "—"}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Controls */}
       <div className="pt-2">
