@@ -350,6 +350,13 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
     pausedAccumRef.current = 0;
     setSamples([]);
     setElapsedSec(0);
+    setFixCount(0);
+    setRejectCount(0);
+    fixCountRef.current = 0;
+    rejectCountRef.current = 0;
+    lastRawPosRef.current = null;
+    setSpeedAnomaly(false);
+    setRawSpeed(null);
     setStatus("running");
 
     watchIdRef.current = navigator.geolocation.watchPosition(
@@ -361,8 +368,7 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
         setLastFixTime(now);
 
         // Raw speed from device (m/s)
-        const deviceSpeed = speed ?? null;
-        setRawSpeed(deviceSpeed);
+        const deviceSpeed = typeof speed === "number" && speed >= 0 ? speed : null;
 
         const t = now - startedAtRef.current - pausedAccumRef.current;
         const prev = samplesRef.current[samplesRef.current.length - 1];
@@ -378,13 +384,19 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
           if (dt > 0) instantSpeed = rawDist / dt;
         }
         lastRawPosRef.current = { lat: latitude, lng: longitude, time: now };
+        setRawSpeed(deviceSpeed ?? instantSpeed);
 
         const result = smoothGpsFix(prev, {
           lat: latitude,
           lng: longitude,
           accuracy: accuracy ?? undefined,
           altitude,
+          speed: deviceSpeed,
           timeMs: t,
+        }, {
+          maxAccuracyM: 90,
+          maxSpeedMps: 12.5,
+          minDeltaM: 0.5,
         });
         if (!result.accepted) {
           rejectCountRef.current += 1;
@@ -412,7 +424,7 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
       (err) => {
         setError(err.message || "GPS error");
       },
-      { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 12000 },
     );
 
     // Keep screen awake if supported
