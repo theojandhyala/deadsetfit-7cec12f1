@@ -348,7 +348,11 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
     setError(null);
     startedAtRef.current = Date.now();
     pausedAccumRef.current = 0;
-    setSamples([]);
+    const initialSamples: RunSample[] = previewPos
+      ? [{ t: 0, lat: previewPos.lat, lng: previewPos.lng, d: 0, total: 0, acc: gpsAccuracy ?? undefined }]
+      : [];
+    samplesRef.current = initialSamples;
+    setSamples(initialSamples);
     setElapsedSec(0);
     setFixCount(0);
     setRejectCount(0);
