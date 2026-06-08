@@ -302,6 +302,16 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
   const rejectCountRef = useRef(0);
   const lastRawPosRef = useRef<{ lat: number; lng: number; time: number } | null>(null);
 
+  const handleGpsError = (err: GeolocationPositionError) => {
+    if (err.code === err.PERMISSION_DENIED) {
+      setPermission("denied");
+      setError("Location is blocked. Enable location for this site, then retry GPS.");
+      if (statusRef.current === "running" && samplesRef.current.length <= 1) setStatus("ready");
+      return;
+    }
+    setError(err.message || "GPS error");
+  };
+
   useEffect(() => {
     let cancelled = false;
     if (!("permissions" in navigator) || !("geolocation" in navigator)) {
@@ -342,7 +352,7 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
         setLastFixTime(Date.now());
         setError(null);
       },
-      (err) => setError(err.message || "GPS error"),
+      handleGpsError,
       { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 },
     );
     return () => {
@@ -443,9 +453,7 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
         };
         setSamples((s) => [...s, next]);
       },
-      (err) => {
-        setError(err.message || "GPS error");
-      },
+      handleGpsError,
       { enableHighAccuracy: true, maximumAge: 0, timeout: 12000 },
     );
 
