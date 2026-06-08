@@ -269,9 +269,11 @@ function MiniCue({ icon, label, value }: { icon: ReactNode; label: string; value
 /* ====================== LIVE TRACKER ====================== */
 
 type Status = "ready" | "running" | "paused" | "finished";
+type LocationPermission = "checking" | "prompt" | "granted" | "denied" | "unknown";
 
 function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
   const [status, setStatus] = useState<Status>("ready");
+  const [permission, setPermission] = useState<LocationPermission>("checking");
   const [samples, setSamples] = useState<RunSample[]>([]);
   const [elapsedSec, setElapsedSec] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -299,6 +301,22 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
   const fixCountRef = useRef(0);
   const rejectCountRef = useRef(0);
   const lastRawPosRef = useRef<{ lat: number; lng: number; time: number } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!("permissions" in navigator) || !("geolocation" in navigator)) {
+      setPermission("unknown");
+      return;
+    }
+    navigator.permissions.query({ name: "geolocation" as PermissionName })
+      .then((result) => {
+        if (cancelled) return;
+        setPermission(result.state as LocationPermission);
+        result.onchange = () => setPermission(result.state as LocationPermission);
+      })
+      .catch(() => setPermission("unknown"));
+    return () => { cancelled = true; };
+  }, []);
 
   // Timer
   useEffect(() => {
