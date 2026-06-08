@@ -318,10 +318,30 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         if (statusRef.current !== "running") return;
-        const { latitude, longitude, accuracy, altitude } = pos.coords;
+        const { latitude, longitude, accuracy, altitude, speed } = pos.coords;
+        const now = Date.now();
         setGpsAccuracy(accuracy);
-        const t = Date.now() - startedAtRef.current - pausedAccumRef.current;
+        setLastFixTime(now);
+
+        // Raw speed from device (m/s)
+        const deviceSpeed = speed ?? null;
+        setRawSpeed(deviceSpeed);
+
+        const t = now - startedAtRef.current - pausedAccumRef.current;
         const prev = samplesRef.current[samplesRef.current.length - 1];
+
+        // Compute raw instantaneous speed for anomaly detection
+        let instantSpeed: number | null = null;
+        if (lastRawPosRef.current) {
+          const rawDist = haversine(
+            { lat: lastRawPosRef.current.lat, lng: lastRawPosRef.current.lng },
+            { lat: latitude, lng: longitude },
+          );
+          const dt = (now - lastRawPosRef.current.time) / 1000;
+          if (dt > 0) instantSpeed = rawDist / dt;
+        }
+        lastRawPosRef.current = { lat: latitude, lng: longitude, time: now };
+
         const result = smoothGpsFix(prev, {
           lat: latitude,
           lng: longitude,
@@ -329,7 +349,18 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
           altitude,
           timeMs: t,
         });
-        if (!result.accepted) return;
+        if (!result.accepted) {
+          rejectCountRef.current += 1;
+          setRejectCount(rejectCountRef.current);
+          // Flag speed anomaly if instant speed is impossibly high
+          if (instantSpeed != null && instantSpeed > 10) {
+            setSpeedAnomaly(true);
+            setTimeout(() => setSpeedAnomaly(false), 3000);
+          }
+          return;
+        }
+        fixCountRef.current += 1;
+        setFixCount(fixCountRef.current);
         const next: RunSample = {
           t,
           lat: result.lat,
