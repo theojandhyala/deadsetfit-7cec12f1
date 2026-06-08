@@ -219,7 +219,7 @@ function LeafletRoute({
         map.panTo(latlngs[latlngs.length - 1], { animate: true, duration: 0.5 });
       } else {
         const bounds = L.latLngBounds(latlngs);
-        map.fitBounds(bounds, { padding: [20, 20] });
+        map.fitBounds(bounds, { padding: [24, 24], maxZoom: 17, animate: false });
       }
     } else if (latlngs.length === 1) {
       map.setView(latlngs[0], 16);

@@ -22,7 +22,7 @@ import {
   formatDistance,
   formatDuration,
   formatPace,
-  haversine,
+  smoothGpsFix,
 } from "@/lib/run";
 import type { Run, RunSample } from "@/lib/types";
 
@@ -307,26 +307,24 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
         if (statusRef.current !== "running") return;
         const { latitude, longitude, accuracy, altitude } = pos.coords;
         setGpsAccuracy(accuracy);
-        // Reject very inaccurate fixes (>100m)
-        if (accuracy && accuracy > 100) return;
         const t = Date.now() - startedAtRef.current - pausedAccumRef.current;
         const prev = samplesRef.current[samplesRef.current.length - 1];
-        let d = 0;
-        let total = 0;
-        if (prev) {
-          d = haversine({ lat: prev.lat, lng: prev.lng }, { lat: latitude, lng: longitude });
-          // Reject jitter < 1.5m
-          if (d < 1.5) return;
-          total = prev.total + d;
-        }
-        const next: RunSample = {
-          t,
+        const result = smoothGpsFix(prev, {
           lat: latitude,
           lng: longitude,
-          d,
-          total,
-          acc: accuracy,
-          alt: altitude ?? undefined,
+          accuracy: accuracy ?? undefined,
+          altitude,
+          timeMs: t,
+        });
+        if (!result.accepted) return;
+        const next: RunSample = {
+          t,
+          lat: result.lat,
+          lng: result.lng,
+          d: result.d,
+          total: result.total,
+          acc: result.acc,
+          alt: result.alt,
         };
         setSamples((s) => [...s, next]);
       },
