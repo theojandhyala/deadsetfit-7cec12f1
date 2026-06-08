@@ -363,6 +363,25 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
     };
   }, [status]);
 
+  const retryGps = () => {
+    if (!("geolocation" in navigator)) {
+      setError("GPS not supported on this device.");
+      return;
+    }
+    setPermission("prompt");
+    setError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setPermission("granted");
+        setGpsAccuracy(pos.coords.accuracy);
+        setPreviewPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLastFixTime(Date.now());
+      },
+      handleGpsError,
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 12000 },
+    );
+  };
+
   const start = () => {
     if (!("geolocation" in navigator)) {
       setError("GPS not supported on this device.");
@@ -608,6 +627,20 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
       {/* Map */}
       <RunMap samples={mapSamples} live={status === "running" || status === "paused"} mapStyle="trail" />
 
+      {permission === "denied" && (
+        <div className="bg-grit-card border border-accent-red p-4 space-y-3">
+          <div>
+            <p className="label-cap text-[10px] text-accent-red">GPS BLOCKED</p>
+            <p className="text-xs text-grit-dim mt-1">
+              Allow location access in your browser/site settings so the tracker can record your live route.
+            </p>
+          </div>
+          <button onClick={retryGps} className="btn-grit w-full py-3 text-xs">
+            Retry GPS
+          </button>
+        </div>
+      )}
+
       {error && (
         <div className="bg-accent-red/10 border border-accent-red text-accent-red text-xs px-3 py-2 uppercase tracking-wider">
           {error}
@@ -835,8 +868,9 @@ function RunDetail({
   const maxSplit = run.splits.length ? Math.max(...run.splits) : 0;
   const minSplit = run.splits.length ? Math.min(...run.splits) : 0;
   const routePoints = run.samples.length;
-  const avgAccuracy = run.samples.length
-    ? run.samples.reduce((sum, s) => sum + (s.acc ?? 0), 0) / run.samples.filter((s) => s.acc != null).length
+  const accuracySamples = run.samples.filter((s) => s.acc != null);
+  const avgAccuracy = accuracySamples.length
+    ? accuracySamples.reduce((sum, s) => sum + (s.acc ?? 0), 0) / accuracySamples.length
     : 0;
   const segmentCount = Math.max(1, Math.ceil(run.distanceM / 1000));
 
