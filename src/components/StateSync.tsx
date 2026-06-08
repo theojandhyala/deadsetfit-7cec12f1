@@ -67,13 +67,14 @@ export function StateSync() {
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       const uid = session?.user?.id ?? null;
-      if (event === "SIGNED_OUT" || !uid) {
+      if (event === "SIGNED_OUT") {
         disableRemoteSync();
         clearLocalState();
         clearRemoteStateStatus();
         activeUserId = null;
         return;
       }
+      if (!uid) return;
       if (uid !== activeUserId) {
         activeUserId = uid;
         disableRemoteSync();
