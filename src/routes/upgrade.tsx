@@ -81,7 +81,8 @@ function UpgradePage() {
           <h1 className="font-display text-4xl uppercase tracking-wider text-grit-text leading-tight">
             Train smarter.<br />Lift heavier.
           </h1>
-          <p className="mt-3 text-sm text-grit">Everything you need to push past plateaus.</p>
+          <p className="mt-2 text-sm text-grit">Everything you need to push past plateaus.</p>
+          <p className="mt-1 text-xs uppercase tracking-widest font-bold" style={{ color: "#e63222" }}>Join 2,400+ athletes</p>
 
           <ul className="mt-6 space-y-3">
             {PERKS.map((perk) => (
@@ -92,11 +93,39 @@ function UpgradePage() {
             ))}
           </ul>
 
+          {/* Free vs Pro comparison table */}
+          <div className="mt-8 bg-[#1a1a1a] border border-[#262626]">
+            <div className="grid grid-cols-3 border-b border-[#262626] px-4 py-2">
+              <span className="font-display text-[10px] uppercase tracking-widest text-grit col-span-1">Feature</span>
+              <span className="font-display text-[10px] uppercase tracking-widest text-grit text-center">Free</span>
+              <span className="font-display text-[10px] uppercase tracking-widest text-accent-red text-center">Pro</span>
+            </div>
+            {[
+              { label: "Unlimited workout logging", free: true, pro: true },
+              { label: "Basic programs", free: true, pro: true },
+              { label: "AI Coach", free: false, pro: true },
+              { label: "Advanced analytics", free: false, pro: true },
+              { label: "Featured programs", free: false, pro: true },
+              { label: "Priority support", free: false, pro: true },
+            ].map((row) => (
+              <div key={row.label} className="grid grid-cols-3 border-b border-[#262626] last:border-b-0 px-4 py-2.5 items-center">
+                <span className="text-xs text-grit col-span-1">{row.label}</span>
+                <span className="text-center text-sm font-bold" style={{ color: row.free ? "#e63222" : "#555" }}>
+                  {row.free ? "✓" : "✗"}
+                </span>
+                <span className="text-center text-sm font-bold" style={{ color: row.pro ? "#e63222" : "#555" }}>
+                  {row.pro ? "✓" : "✗"}
+                </span>
+              </div>
+            ))}
+          </div>
+
           <div className="mt-8 space-y-3">
             <button
               onClick={() => setPlan("yearly")}
-              className={`w-full rounded-lg border p-4 text-left transition-colors ${plan === "yearly" ? "border-accent-red bg-accent-red/10" : "border-grit-card bg-grit-card/50"}`}
+              className={`w-full border p-4 text-left transition-colors relative ${plan === "yearly" ? "border-accent-red bg-accent-red/10" : "border-[#262626] bg-[#1a1a1a]"}`}
             >
+              <span className="absolute -top-3 left-4 bg-accent-red text-white font-display text-[9px] uppercase tracking-widest px-2 py-0.5">Most Popular</span>
               <div className="flex items-baseline justify-between">
                 <div>
                   <div className="font-display text-sm uppercase tracking-widest text-grit-text">Yearly</div>
@@ -110,7 +139,7 @@ function UpgradePage() {
             </button>
             <button
               onClick={() => setPlan("monthly")}
-              className={`w-full rounded-lg border p-4 text-left transition-colors ${plan === "monthly" ? "border-accent-red bg-accent-red/10" : "border-grit-card bg-grit-card/50"}`}
+              className={`w-full border p-4 text-left transition-colors ${plan === "monthly" ? "border-accent-red bg-accent-red/10" : "border-[#262626] bg-[#1a1a1a]"}`}
             >
               <div className="flex items-baseline justify-between">
                 <div className="font-display text-sm uppercase tracking-widest text-grit-text">Monthly</div>
@@ -124,11 +153,11 @@ function UpgradePage() {
 
           <button
             onClick={() => setShowCheckout(true)}
-            className="mt-6 w-full rounded-md bg-accent-red px-6 py-4 font-display text-base uppercase tracking-widest text-white hover:bg-accent-red/90 transition-colors"
+            className="mt-6 w-full bg-accent-red px-6 py-4 font-display text-base uppercase tracking-widest text-white hover:bg-accent-red/90 transition-colors"
           >
             Continue
           </button>
-          <p className="mt-3 text-center text-[10px] text-grit uppercase tracking-widest">Cancel anytime · Secure checkout</p>
+          <p className="mt-3 text-center text-[10px] text-grit uppercase tracking-widest">Cancel anytime. No questions asked.</p>
         </div>
       ) : (
         <div className="px-2 pb-12">

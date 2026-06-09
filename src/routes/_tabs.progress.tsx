@@ -230,6 +230,14 @@ function ProgressPage() {
         </div>
       </section>
 
+      {/* Training Consistency Heatmap */}
+      <section className="px-5 mb-6">
+        <p className="label-cap mb-2">Training Consistency</p>
+        <div className="bg-grit-card border border-grit p-4 overflow-x-auto">
+          <ConsistencyHeatmap completedDates={state.completedDates} />
+        </div>
+      </section>
+
       {/* Physique Scan */}
       <section className="px-5 mb-6">
         <p className="label-cap mb-2 flex items-center gap-2"><Sparkles size={12} /> AI Physique Scan</p>
@@ -454,6 +462,101 @@ function ScoreChip({ label, value }: { label: string; value: string }) {
     <div className="border border-grit px-2 py-1">
       <p className="text-[8px] uppercase tracking-wider text-grit-dim">{label}</p>
       <p className="display text-sm font-extrabold text-grit leading-none">{value}</p>
+    </div>
+  );
+}
+
+function ConsistencyHeatmap({ completedDates }: { completedDates: string[] }) {
+  // Count workouts per date (some dates may appear multiple times)
+  const countMap = new Map<string, number>();
+  for (const d of completedDates) {
+    countMap.set(d, (countMap.get(d) ?? 0) + 1);
+  }
+
+  const WEEKS = 52;
+  const today = new Date();
+  // Start on Monday 52 weeks ago
+  const start = new Date(today);
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7) - (WEEKS - 1) * 7);
+
+  // Build weeks array (each week = 7 days)
+  const weeks: { date: string; count: number }[][] = [];
+  for (let w = 0; w < WEEKS; w++) {
+    const col: { date: string; count: number }[] = [];
+    for (let d = 0; d < 7; d++) {
+      const dt = new Date(start);
+      dt.setDate(start.getDate() + w * 7 + d);
+      const iso = dt.toISOString().slice(0, 10);
+      col.push({ date: iso, count: countMap.get(iso) ?? 0 });
+    }
+    weeks.push(col);
+  }
+
+  // Month labels: find first week of each month
+  const monthLabels: { label: string; weekIdx: number }[] = [];
+  for (let w = 0; w < WEEKS; w++) {
+    const firstDay = weeks[w][0].date;
+    const dt = new Date(firstDay);
+    // Show label if it's the first occurrence of this month
+    if (dt.getDate() <= 7) {
+      const prev = w > 0 ? new Date(weeks[w - 1][0].date).getMonth() : -1;
+      if (dt.getMonth() !== prev) {
+        monthLabels.push({
+          label: dt.toLocaleString("default", { month: "short" }).toUpperCase(),
+          weekIdx: w,
+        });
+      }
+    }
+  }
+
+  const CELL = 10;
+  const GAP = 2;
+  const totalW = WEEKS * (CELL + GAP) - GAP;
+
+  return (
+    <div style={{ minWidth: totalW }}>
+      {/* Month labels */}
+      <div className="flex mb-1" style={{ gap: GAP }}>
+        {weeks.map((_, w) => {
+          const label = monthLabels.find((m) => m.weekIdx === w);
+          return (
+            <div key={w} style={{ width: CELL, flexShrink: 0 }}>
+              {label && (
+                <span className="text-[8px] label-cap text-grit-dim" style={{ whiteSpace: "nowrap" }}>
+                  {label.label}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {/* Grid */}
+      <div className="flex" style={{ gap: GAP }}>
+        {weeks.map((col, w) => (
+          <div key={w} className="flex flex-col" style={{ gap: GAP }}>
+            {col.map((cell) => (
+              <div
+                key={cell.date}
+                title={`${cell.date}: ${cell.count} workout${cell.count !== 1 ? "s" : ""}`}
+                style={{
+                  width: CELL,
+                  height: CELL,
+                  background: cell.count === 0 ? "#1a1a1a" : cell.count === 1 ? "#7a1410" : "#e63222",
+                  flexShrink: 0,
+                }}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+      {/* Legend */}
+      <div className="flex items-center gap-2 mt-2">
+        <span className="text-[9px] label-cap text-grit-dim">Less</span>
+        {["#1a1a1a", "#7a1410", "#e63222"].map((c) => (
+          <div key={c} style={{ width: CELL, height: CELL, background: c, flexShrink: 0 }} />
+        ))}
+        <span className="text-[9px] label-cap text-grit-dim">More</span>
+      </div>
     </div>
   );
 }

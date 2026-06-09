@@ -10,8 +10,8 @@ const BIG3: { id: string; label: string }[] = [
 ];
 
 function allSetsFor(state: AppState, exerciseId: string): SetLog[] {
-  const out: SetLog[] = state.logs.filter((l) => l.exerciseId === exerciseId).slice();
-  state.sessions.forEach((s) =>
+  const out: SetLog[] = (state.logs ?? []).filter((l) => l.exerciseId === exerciseId).slice();
+  (state.sessions ?? []).forEach((s) =>
     s.exercises
       .filter((e) => e.exerciseId === exerciseId)
       .forEach((e) =>
