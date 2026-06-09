@@ -84,10 +84,32 @@ export function StateSync() {
       }
     });
 
+    // Proactively refresh session when the user returns to the app
+    const refresh = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const expiresIn = (session.expires_at ?? 0) - Math.floor(Date.now() / 1000);
+          if (expiresIn < 300) {
+            await supabase.auth.refreshSession();
+          }
+        }
+      } catch { /* ignore */ }
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("focus", refresh);
+
     return () => {
       cancelled = true;
       sub.subscription.unsubscribe();
       disableRemoteSync();
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("focus", refresh);
     };
   }, [load, save]);
 

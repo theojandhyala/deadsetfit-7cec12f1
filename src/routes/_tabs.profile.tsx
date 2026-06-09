@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Flame, LogOut, Crown, Pencil, Trophy, Trash2, Settings, Sparkles, Heart } from "lucide-react";
+import { Flame, LogOut, Crown, Pencil, Trophy, Trash2, Settings, Sparkles, Heart, Share2, Copy, Check } from "lucide-react";
 import { useAppState, flushRemoteState } from "@/lib/storage";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -254,6 +254,9 @@ function ProfilePage() {
         />
       </section>
 
+      {/* Share Profile */}
+      {p.username && <ShareProfileCard username={p.username} />}
+
       {/* Streak */}
       <section className="px-5 mb-5">
         <div className="bg-grit-card border border-grit p-4 flex items-center gap-4">
@@ -450,5 +453,57 @@ function Select({ value, onChange, opts }: { value: string; onChange: (v: string
     <select value={value} onChange={(e) => onChange(e.target.value)} className="input-grit w-full">
       {opts.map((o) => <option key={o} value={o}>{o}</option>)}
     </select>
+  );
+}
+
+function ShareProfileCard({ username }: { username: string }) {
+  const profileUrl = `https://deadsetfit.org/u/${username}`;
+  const [copied, setCopied] = useState(false);
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(profileUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast.success("Profile link copied");
+    } catch {
+      toast.error("Couldn't copy link");
+    }
+  }
+
+  async function share() {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "DEADSET — My Profile", url: profileUrl });
+        return;
+      } catch {
+        /* user cancelled or not supported */
+      }
+    }
+    copyLink();
+  }
+
+  return (
+    <section className="px-5 mb-5">
+      <div className="bg-grit-card border border-grit p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Share2 size={14} className="text-accent-red" />
+          <p className="label-cap text-accent-red text-[11px]">Share Your Profile</p>
+        </div>
+        <button
+          onClick={copyLink}
+          className="w-full flex items-center justify-between px-3 py-2 mb-3 border border-grit bg-[#0a0a0a] text-left"
+        >
+          <span className="text-xs text-grit-dim truncate flex-1">{profileUrl}</span>
+          {copied ? <Check size={12} className="text-accent-red ml-2 shrink-0" /> : <Copy size={12} className="text-grit-dim ml-2 shrink-0" />}
+        </button>
+        <button
+          onClick={share}
+          className="w-full py-2.5 btn-grit flex items-center justify-center gap-2 label-cap text-xs"
+        >
+          <Share2 size={12} /> Share Profile
+        </button>
+      </div>
+    </section>
   );
 }
