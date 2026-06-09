@@ -10,14 +10,6 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import faviconAsset from "@/assets/deadset-logo.png.asset.json";
-import icon16 from "@/assets/icon-16.png.asset.json";
-import icon32 from "@/assets/icon-32.png.asset.json";
-import icon76 from "@/assets/icon-76.png.asset.json";
-import icon120 from "@/assets/icon-120.png.asset.json";
-import icon152 from "@/assets/icon-152.png.asset.json";
-import icon167 from "@/assets/icon-167.png.asset.json";
-import icon180 from "@/assets/icon-180.png.asset.json";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { StateSync } from "../components/StateSync";
 import { UsernameGate } from "../components/UsernameGate";
@@ -111,21 +103,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "@type": "Organization",
           name: "DEADSET",
           url: "https://deadsetfit.org",
-          logo: "https://deadsetfit.org" + faviconAsset.url,
+          logo: "https://deadsetfit.org/favicon.ico",
           description: "DEADSET. Train. Build. Become. A no-nonsense gym companion for tracking PRs, programs, and progress.",
         }),
       },
     ],
     links: [
-      { rel: "icon", type: "image/png", sizes: "16x16", href: icon16.url },
-      { rel: "icon", type: "image/png", sizes: "32x32", href: icon32.url },
-      { rel: "shortcut icon", type: "image/png", href: faviconAsset.url },
-      { rel: "apple-touch-icon", sizes: "76x76", href: icon76.url },
-      { rel: "apple-touch-icon", sizes: "120x120", href: icon120.url },
-      { rel: "apple-touch-icon", sizes: "152x152", href: icon152.url },
-      { rel: "apple-touch-icon", sizes: "167x167", href: icon167.url },
-      { rel: "apple-touch-icon", sizes: "180x180", href: icon180.url },
-      { rel: "apple-touch-icon", href: icon180.url },
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },

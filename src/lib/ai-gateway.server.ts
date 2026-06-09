@@ -1,15 +1,15 @@
-// Server-only helper for calling Lovable AI Gateway directly via fetch.
+// Server-only helper for calling OpenAI-compatible AI API directly via fetch.
 // Kept simple (no AI SDK dependency) for plain JSON requests.
 
-const BASE = "https://ai.gateway.lovable.dev/v1";
+const BASE = process.env.AI_BASE_URL ?? "https://api.openai.com/v1";
 
 export async function chatJSON<T = unknown>(opts: {
   model?: string;
   system: string;
   user: string;
 }): Promise<T> {
-  const key = process.env.LOVABLE_API_KEY;
-  if (!key) throw new Error("Missing LOVABLE_API_KEY");
+  const key = process.env.OPENAI_API_KEY ?? process.env.AI_API_KEY;
+  if (!key) throw new Error("Missing OPENAI_API_KEY");
 
   const res = await fetch(`${BASE}/chat/completions`, {
     method: "POST",
@@ -18,7 +18,7 @@ export async function chatJSON<T = unknown>(opts: {
       Authorization: `Bearer ${key}`,
     },
     body: JSON.stringify({
-      model: opts.model ?? "google/gemini-2.5-flash",
+      model: opts.model ?? "gpt-4o-mini",
       messages: [
         { role: "system", content: opts.system },
         { role: "user", content: opts.user },
@@ -31,7 +31,7 @@ export async function chatJSON<T = unknown>(opts: {
   if (!res.ok) {
     const text = await res.text();
     if (res.status === 429) throw new Error("Rate limit exceeded. Please retry shortly.");
-    if (res.status === 402) throw new Error("AI credits exhausted. Add credits in Settings → Workspace → Usage.");
+    if (res.status === 402) throw new Error("AI credits exhausted. Please check your API key and billing.");
     throw new Error(`AI gateway error ${res.status}: ${text}`);
   }
 
@@ -52,14 +52,14 @@ export async function chatText(opts: {
   system: string;
   messages: { role: "user" | "assistant"; content: string }[];
 }): Promise<string> {
-  const key = process.env.LOVABLE_API_KEY;
-  if (!key) throw new Error("Missing LOVABLE_API_KEY");
+  const key = process.env.OPENAI_API_KEY ?? process.env.AI_API_KEY;
+  if (!key) throw new Error("Missing OPENAI_API_KEY");
 
   const res = await fetch(`${BASE}/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
     body: JSON.stringify({
-      model: opts.model ?? "google/gemini-2.5-flash",
+      model: opts.model ?? "gpt-4o-mini",
       messages: [{ role: "system", content: opts.system }, ...opts.messages],
     }),
   });
@@ -67,7 +67,7 @@ export async function chatText(opts: {
   if (!res.ok) {
     const text = await res.text();
     if (res.status === 429) throw new Error("Rate limit exceeded. Please retry shortly.");
-    if (res.status === 402) throw new Error("AI credits exhausted. Add credits in Settings → Workspace → Usage.");
+    if (res.status === 402) throw new Error("AI credits exhausted. Please check your API key and billing.");
     throw new Error(`AI gateway error ${res.status}: ${text}`);
   }
   const data = (await res.json()) as { choices: { message: { content: string } }[] };
@@ -81,15 +81,15 @@ export async function chatVisionJSON<T = unknown>(opts: {
   user: string;
   imageDataUrl: string;
 }): Promise<T> {
-  const key = process.env.LOVABLE_API_KEY;
-  if (!key) throw new Error("Missing LOVABLE_API_KEY");
+  const key = process.env.OPENAI_API_KEY ?? process.env.AI_API_KEY;
+  if (!key) throw new Error("Missing OPENAI_API_KEY");
 
   const res = await fetch(`${BASE}/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
 
     body: JSON.stringify({
-      model: opts.model ?? "google/gemini-2.5-flash",
+      model: opts.model ?? "gpt-4o-mini",
       messages: [
         { role: "system", content: opts.system },
         { role: "user", content: [

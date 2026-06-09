@@ -1,0 +1,5 @@
+{
+  "buildCommand": "bun run build && node scripts/vercel-output.mjs",
+  "framework": null,
+  "installCommand": "bun install"
+}
