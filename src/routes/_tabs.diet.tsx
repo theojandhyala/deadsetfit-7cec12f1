@@ -26,6 +26,7 @@ function DietPage() {
   const [loading, setLoading] = useState(false);
   const [swapping, setSwapping] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [mealConstraints, setMealConstraints] = useState("");
   const [name, setName] = useState(""); const [cals, setCals] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [barcodeOpen, setBarcodeOpen] = useState(false);
@@ -68,7 +69,7 @@ function DietPage() {
     if (!profile) return;
     setLoading(true); setError(null);
     try {
-      const res = await gen({ data: { goal: profile.goal, calories, ...macros, dislikes: profile.injuries } });
+      const res = await gen({ data: { goal: profile.goal, calories, ...macros, dislikes: profile.injuries, constraints: mealConstraints || undefined } });
       set((s) => ({ ...s, mealPlan: res }));
     } catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
     finally { setLoading(false); }
@@ -328,6 +329,15 @@ function DietPage() {
           <button onClick={loadMeals} disabled={loading} className="label-cap text-accent-red">
             {loading ? <Loader2 size={12} className="inline animate-spin" /> : "Generate"}
           </button>
+        </div>
+        <div className="mb-3">
+          <input
+            value={mealConstraints}
+            onChange={(e) => setMealConstraints(e.target.value)}
+            placeholder="e.g. no dairy, high protein, quick meals"
+            className="input-grit w-full text-xs"
+          />
+          <p className="text-[9px] uppercase tracking-widest text-[#8a8a8a] mt-1">Any preferences or restrictions?</p>
         </div>
         {!state.mealPlan && !loading && (
           <div className="bg-grit-card border border-grit p-5 text-sm text-[#8a8a8a]">Tap Generate to get AI meal suggestions tuned to your goal.</div>

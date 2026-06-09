@@ -174,6 +174,40 @@ function RunHub({
         </div>
       </section>
 
+      {/* Run Stats Summary — shown when 3+ runs */}
+      {runs.length >= 3 && (() => {
+        const now2 = Date.now();
+        const weekStart2 = now2 - 7 * 24 * 3600 * 1000;
+        const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+        const weekDist2 = runs.filter(r => new Date(r.date).getTime() >= weekStart2).reduce((s, r) => s + r.distanceM, 0);
+        const monthCount = runs.filter(r => new Date(r.date) >= monthStart).length;
+        const pbDist = Math.max(...runs.map(r => r.distanceM));
+        const pbPace = runs.reduce((best, r) => r.avgPaceSecPerKm < best ? r.avgPaceSecPerKm : best, runs[0].avgPaceSecPerKm);
+        return (
+          <section className="bg-grit-card border border-[#262626] p-4 space-y-3">
+            <p className="label-cap text-[10px] text-accent-red">RUN STATS SUMMARY</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="border border-[#262626] p-3">
+                <p className="text-[9px] uppercase tracking-widest text-grit-dim">This week</p>
+                <p className="display text-lg font-extrabold text-grit leading-none mt-1">{(weekDist2 / 1000).toFixed(1)} <span className="text-[10px] text-grit-dim">KM</span></p>
+              </div>
+              <div className="border border-[#262626] p-3">
+                <p className="text-[9px] uppercase tracking-widest text-grit-dim">This month</p>
+                <p className="display text-lg font-extrabold text-grit leading-none mt-1">{monthCount} <span className="text-[10px] text-grit-dim">RUNS</span></p>
+              </div>
+              <div className="border border-[#262626] p-3">
+                <p className="text-[9px] uppercase tracking-widest text-grit-dim">PB distance</p>
+                <p className="display text-lg font-extrabold text-accent-red leading-none mt-1">{(pbDist / 1000).toFixed(2)} <span className="text-[10px] text-grit-dim">KM</span></p>
+              </div>
+              <div className="border border-[#262626] p-3">
+                <p className="text-[9px] uppercase tracking-widest text-grit-dim">PB pace</p>
+                <p className="display text-lg font-extrabold text-accent-red leading-none mt-1">{formatPace(pbPace)} <span className="text-[10px] text-grit-dim">/KM</span></p>
+              </div>
+            </div>
+          </section>
+        );
+      })()}
+
       {/* History */}
       <section className="space-y-2">
         <div className="flex items-center justify-between">
@@ -203,34 +237,49 @@ function RunHub({
               <li key={r.id}>
                 <button
                   onClick={() => onOpen(r.id)}
-                  className="w-full bg-grit-card border border-grit hover:border-accent-red transition-colors text-left flex gap-3 p-3"
+                  className="w-full bg-grit-card border border-grit hover:border-accent-red transition-colors text-left p-3 space-y-2"
                 >
-                  <div className="w-20 h-20 flex-shrink-0">
-                    <RunMap samples={r.samples} height={80} showMarkers={false} thumbnail />
-                  </div>
-                  <div className="flex-1 min-w-0 flex flex-col justify-between">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="display text-sm font-extrabold uppercase text-grit tracking-wide truncate">
-                          {labelRun(r)}
-                        </p>
-                        <p className="text-[10px] uppercase tracking-wider text-grit-dim mt-0.5">
-                          {formatRunDate(r.date)}
-                        </p>
+                  <div className="flex gap-3">
+                    <div className="w-20 flex-shrink-0 space-y-1">
+                      <div className="h-20">
+                        <RunMap samples={r.samples} height={80} showMarkers={false} thumbnail />
                       </div>
-                      <ChevronRight size={16} className="text-grit-dim flex-shrink-0" />
                     </div>
-                    <div className="flex items-baseline gap-3">
-                      <span className="display text-lg font-extrabold text-accent-red leading-none">
-                        {(r.distanceM / 1000).toFixed(2)}
-                        <span className="text-[10px] font-bold text-grit-dim uppercase ml-0.5">km</span>
-                      </span>
-                      <span className="text-[10px] uppercase tracking-wider text-grit-dim">
-                        {formatDuration(r.durationSec)}
-                      </span>
-                      <span className="text-[10px] uppercase tracking-wider text-grit-dim">
-                        {formatPace(r.avgPaceSecPerKm)}/km
-                      </span>
+                    <div className="flex-1 min-w-0 flex flex-col justify-between">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="display text-sm font-extrabold uppercase text-grit tracking-wide truncate">
+                            {labelRun(r)}
+                          </p>
+                          <p className="text-[10px] uppercase tracking-wider text-grit-dim mt-0.5">
+                            {formatRunDate(r.date)}
+                          </p>
+                        </div>
+                        <ChevronRight size={16} className="text-grit-dim flex-shrink-0" />
+                      </div>
+                      <div className="flex items-baseline gap-3">
+                        <span className="display text-lg font-extrabold text-accent-red leading-none">
+                          {(r.distanceM / 1000).toFixed(2)}
+                          <span className="text-[10px] font-bold text-grit-dim uppercase ml-0.5">km</span>
+                        </span>
+                        <span className="text-[10px] uppercase tracking-wider text-grit-dim">
+                          {formatDuration(r.durationSec)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1 border-t border-[#262626] pt-2">
+                    <div>
+                      <p className="text-[9px] uppercase tracking-widest text-grit-dim">Pace</p>
+                      <p className="text-[11px] font-bold text-grit tabular-nums">{formatPace(r.avgPaceSecPerKm)}/km</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] uppercase tracking-widest text-grit-dim">Duration</p>
+                      <p className="text-[11px] font-bold text-grit tabular-nums">{formatDuration(r.durationSec)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] uppercase tracking-widest text-grit-dim">Calories</p>
+                      <p className="text-[11px] font-bold text-grit tabular-nums">{estimateCalories(r)} kcal</p>
                     </div>
                   </div>
                 </button>
@@ -449,14 +498,17 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
           maxSpeedMps: 12.5,
           minDeltaM: 0.5,
         });
+        // Skip point if speed anomaly (impossibly fast GPS jump > 10 m/s)
+        if (instantSpeed != null && instantSpeed > 10) {
+          rejectCountRef.current += 1;
+          setRejectCount(rejectCountRef.current);
+          setSpeedAnomaly(true);
+          setTimeout(() => setSpeedAnomaly(false), 3000);
+          return;
+        }
         if (!result.accepted) {
           rejectCountRef.current += 1;
           setRejectCount(rejectCountRef.current);
-          // Flag speed anomaly if instant speed is impossibly high
-          if (instantSpeed != null && instantSpeed > 10) {
-            setSpeedAnomaly(true);
-            setTimeout(() => setSpeedAnomaly(false), 3000);
-          }
           return;
         }
         fixCountRef.current += 1;

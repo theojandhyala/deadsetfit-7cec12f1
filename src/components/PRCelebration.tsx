@@ -17,7 +17,7 @@ export function PRCelebration({
   onShare?: () => void;
 }) {
   useEffect(() => {
-    try { navigator.vibrate?.([30, 60, 30, 60, 120]); } catch { /* noop */ }
+    try { navigator.vibrate?.([100, 50, 100, 50, 200]); } catch { /* noop */ }
     const t = setTimeout(onClose, 5000);
     return () => clearTimeout(t);
   }, [onClose]);
@@ -62,7 +62,7 @@ export function PRCelebration({
 
       <div className="relative text-center animate-[pr-pop_0.5s_ease-out]">
         <Trophy size={64} className="text-accent-red mx-auto mb-4 drop-shadow-lg" strokeWidth={2.5} />
-        <p className="label-cap text-accent-red text-sm tracking-[0.4em]">NEW PR</p>
+        <p className="label-cap text-sm tracking-[0.4em] animate-[pr-flash_0.8s_ease-in-out_3]" style={{ color: "#e63222" }}>NEW PR</p>
         <h1 className="display text-5xl sm:text-6xl font-extrabold uppercase text-grit leading-none mt-3">
           {exerciseName}
         </h1>
@@ -90,6 +90,10 @@ export function PRCelebration({
           0% { transform: scale(0.6); opacity: 0; }
           60% { transform: scale(1.08); opacity: 1; }
           100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes pr-flash {
+          0%, 100% { opacity: 1; text-shadow: 0 0 0 transparent; }
+          50% { opacity: 0.2; text-shadow: 0 0 20px #e63222; }
         }
       `}</style>
     </div>
