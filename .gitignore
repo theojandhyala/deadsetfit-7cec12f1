@@ -32,3 +32,4 @@ dist-ssr
 *.sw?
 .vercel/output
 .wrangler-test/
+.claude/

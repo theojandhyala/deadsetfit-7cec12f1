@@ -34,6 +34,20 @@ function FriendsPage() {
   const navigate = useNavigate();
   const [session, setSession] = useState<{ userId: string } | null | "loading">("loading");
   const [tab, setTab] = useState<Tab>("FRIENDS");
+  const [globalQ, setGlobalQ] = useState("");
+  const [globalResults, setGlobalResults] = useState<SearchHit[] | null>(null);
+  const [globalFollowed, setGlobalFollowed] = useState<Set<string>>(new Set());
+  const _searchGlobal = useServerFn(searchAthletes);
+  const _toggleGlobal = useServerFn(toggleFollow);
+
+  useEffect(() => {
+    if (globalQ.trim().length < 2) { setGlobalResults(null); return; }
+    const id = setTimeout(async () => {
+      try { setGlobalResults(await _searchGlobal({ data: { q: globalQ.trim() } })); }
+      catch { /* ignore */ }
+    }, 300);
+    return () => clearTimeout(id);
+  }, [globalQ]);
 
 
   useEffect(() => {
@@ -93,6 +107,61 @@ function FriendsPage() {
         <p className="label-cap">FRIENDS</p>
         <h1 className="display text-4xl font-extrabold text-grit leading-none mt-1">YOUR CREW</h1>
       </header>
+
+      {/* Prominent global search — always visible above tabs */}
+      <div className="px-5 mt-4 relative">
+        <div className="flex items-center gap-2 border border-grit bg-grit-card px-3 py-2.5">
+          <Search size={16} className="text-accent-red shrink-0" />
+          <input
+            value={globalQ}
+            onChange={(e) => setGlobalQ(e.target.value)}
+            placeholder="Search athletes by username..."
+            className="flex-1 bg-transparent text-sm text-grit placeholder:text-grit-dim outline-none"
+            maxLength={40}
+          />
+          {globalQ && (
+            <button onClick={() => { setGlobalQ(""); setGlobalResults(null); }} className="text-grit-dim hover:text-grit">✕</button>
+          )}
+        </div>
+        {globalResults && globalResults.length > 0 && (
+          <div className="absolute left-5 right-5 top-full z-20 border border-grit border-t-0 bg-[#0a0a0a] shadow-xl">
+            {globalResults.slice(0, 8).map((r) => (
+              <div key={r.id} className="flex items-center gap-3 px-3 py-2.5 border-b border-grit last:border-b-0">
+                <Link to="/athlete/$id" params={{ id: r.id }} onClick={() => { setGlobalQ(""); setGlobalResults(null); }} className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="w-8 h-8 bg-[#1a1a1a] border border-grit flex items-center justify-center display font-extrabold text-grit text-xs overflow-hidden shrink-0">
+                    {r.avatar_url ? <img src={r.avatar_url} alt="" className="w-full h-full object-cover" /> : (r.display_name || r.username || "A")[0]}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-grit truncate">{r.display_name || r.username || "Athlete"}</p>
+                    <p className="text-[10px] label-cap text-grit-dim truncate">
+                      {r.username ? `@${r.username} · ` : ""}{r.level}
+                    </p>
+                  </div>
+                </Link>
+                <button
+                  onClick={async () => {
+                    const wasFollowing = r.following || globalFollowed.has(r.id);
+                    if (!wasFollowing) {
+                      setGlobalFollowed(prev => new Set([...prev, r.id]));
+                      try { await _toggleGlobal({ data: { userId: r.id } }); }
+                      catch { setGlobalFollowed(prev => { const s = new Set(prev); s.delete(r.id); return s; }); }
+                    }
+                  }}
+                  className={`label-cap text-[9px] px-2 py-1 border shrink-0 ${(r.following || globalFollowed.has(r.id)) ? "border-grit text-grit-dim" : "border-accent-red text-accent-red"}`}
+                >
+                  {(r.following || globalFollowed.has(r.id)) ? "Following ✓" : "+ Follow"}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {globalResults && globalResults.length === 0 && (
+          <div className="absolute left-5 right-5 top-full z-20 border border-grit border-t-0 bg-[#0a0a0a] p-4 text-sm text-grit-dim text-center">
+            No athletes found for "{globalQ}"
+          </div>
+        )}
+      </div>
+
       <div className="px-5 mt-4 flex gap-2 border-b border-grit overflow-x-auto">
         {(["FRIENDS", "FEED", "LEAGUE", "INVITE"] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)}
@@ -119,7 +188,9 @@ function Feed({ userId }: { userId: string }) {
   const _getFeed = useServerFn(getFeed);
   const _createPost = useServerFn(createPost);
   const _toggleLike = useServerFn(toggleLike);
+  const _toggleFollow = useServerFn(toggleFollow);
   const [posts, setPosts] = useState<FeedPost[] | null>(null);
+  const [followedIds, setFollowedIds] = useState<Set<string>>(new Set());
   const [composing, setComposing] = useState(false);
   const [postKind, setPostKind] = useState<"text" | "pr">("text");
   const [text, setText] = useState("");
@@ -186,6 +257,12 @@ function Feed({ userId }: { userId: string }) {
     catch { load(); }
   }
 
+  async function followFromFeed(authorId: string) {
+    setFollowedIds(prev => new Set([...prev, authorId]));
+    try { await _toggleFollow({ data: { userId: authorId } }); }
+    catch { setFollowedIds(prev => { const s = new Set(prev); s.delete(authorId); return s; }); }
+  }
+
   async function share(p: FeedPost) {
     const url = window.location.href;
     if (navigator.share) try { await navigator.share({ title: "DEADSET", text: p.content, url }); return; } catch { /* user cancelled */ }
@@ -250,7 +327,20 @@ function Feed({ userId }: { userId: string }) {
               {(p.author.display_name || "A")[0]}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-grit text-sm truncate">{p.author.display_name || "Athlete"}</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="font-bold text-grit text-sm truncate">{p.author.display_name || "Athlete"}</p>
+                {p.author.id !== userId && !followedIds.has(p.author.id) && (
+                  <button
+                    onClick={() => followFromFeed(p.author.id)}
+                    className="label-cap text-[9px] px-2 py-0.5 border border-accent-red text-accent-red flex items-center gap-1"
+                  >
+                    <UserPlus size={9} /> FOLLOW
+                  </button>
+                )}
+                {p.author.id !== userId && followedIds.has(p.author.id) && (
+                  <span className="label-cap text-[9px] px-2 py-0.5 border border-grit text-grit-dim">Following ✓</span>
+                )}
+              </div>
               <p className="text-[10px] text-[#8a8a8a] label-cap">
                 {p.author.username ? `@${p.author.username} · ` : ""}{p.author.level} · {timeAgo(p.created_at)}
               </p>
@@ -724,32 +814,49 @@ function Friends() {
   );
 }
 
-function AthleteRow({ a, busy, onToggle }: {
-  a: { id: string; username: string | null; display_name: string | null; avatar_url: string | null; level: string | null; following: boolean; grit_points?: number | null };
+function AthleteRow({ a, busy, onToggle, mutuals }: {
+  a: { id: string; username: string | null; display_name: string | null; avatar_url: string | null; level: string | null; following: boolean; grit_points?: number | null; topPR?: { label: string; value: number; unit: string } | null };
   busy: boolean;
   onToggle: () => void;
+  mutuals?: number;
 }) {
   return (
-    <div className="bg-grit-card border border-grit p-3 mb-2 flex items-center gap-3">
-      <Link to="/athlete/$id" params={{ id: a.id }} className="flex items-center gap-3 flex-1 min-w-0">
-        <div className="w-10 h-10 bg-[#1a1a1a] border border-grit flex items-center justify-center display font-extrabold text-grit overflow-hidden">
-          {a.avatar_url ? <img src={a.avatar_url} alt="" className="w-full h-full object-cover" /> : (a.display_name || a.username || "A")[0]}
+    <div className="bg-grit-card border border-grit p-3 mb-2">
+      <div className="flex items-center gap-3">
+        <Link to="/athlete/$id" params={{ id: a.id }} className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="w-10 h-10 bg-[#1a1a1a] border border-grit flex items-center justify-center display font-extrabold text-grit overflow-hidden">
+            {a.avatar_url ? <img src={a.avatar_url} alt="" className="w-full h-full object-cover" /> : (a.display_name || a.username || "A")[0]}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-grit text-sm truncate">{a.display_name || a.username || "Athlete"}</p>
+            <p className="text-[10px] text-[#8a8a8a] label-cap truncate">
+              {a.username ? `@${a.username} · ` : ""}{a.level}{a.grit_points ? ` · ${a.grit_points} DS` : ""}
+            </p>
+            {mutuals && mutuals > 0 ? (
+              <p className="text-[10px] text-accent-red label-cap mt-0.5">{mutuals} mutual{mutuals > 1 ? "s" : ""}</p>
+            ) : null}
+          </div>
+        </Link>
+        <button
+          onClick={onToggle}
+          disabled={busy}
+          className={a.following ? "btn-ghost px-3 py-2 text-xs flex items-center gap-1.5" : "btn-grit px-3 py-2 text-xs flex items-center gap-1.5"}
+        >
+          {busy ? <Loader2 size={12} className="animate-spin" /> :
+            a.following ? <><UserCheck size={12} /> FOLLOWING</> : <><UserPlus size={12} /> FOLLOW</>}
+        </button>
+      </div>
+      {a.topPR && a.topPR.value > 0 && (
+        <div className="mt-2 flex items-center justify-between">
+          <span className="label-cap text-[9px] text-grit-dim">Top PR: <span className="text-grit">{a.topPR.label} {a.topPR.value}{a.topPR.unit}</span></span>
+          <Link to="/athlete/$id" params={{ id: a.id }} className="label-cap text-[9px] text-accent-red">View Profile →</Link>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-grit text-sm truncate">{a.display_name || a.username || "Athlete"}</p>
-          <p className="text-[10px] text-[#8a8a8a] label-cap truncate">
-            {a.username ? `@${a.username} · ` : ""}{a.level}{a.grit_points ? ` · ${a.grit_points} DS` : ""}
-          </p>
+      )}
+      {!a.topPR && (
+        <div className="mt-1.5 flex justify-end">
+          <Link to="/athlete/$id" params={{ id: a.id }} className="label-cap text-[9px] text-grit-dim">View Profile →</Link>
         </div>
-      </Link>
-      <button
-        onClick={onToggle}
-        disabled={busy}
-        className={a.following ? "btn-ghost px-3 py-2 text-xs flex items-center gap-1.5" : "btn-grit px-3 py-2 text-xs flex items-center gap-1.5"}
-      >
-        {busy ? <Loader2 size={12} className="animate-spin" /> :
-          a.following ? <><UserCheck size={12} /> FOLLOWING</> : <><UserPlus size={12} /> FOLLOW</>}
-      </button>
+      )}
     </div>
   );
 }
