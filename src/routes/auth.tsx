@@ -17,9 +17,11 @@ export const Route = createFileRoute("/auth")({
 
 export function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot" | "reset">("signin");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [forgotEmail, setForgotEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const usernameSignIn = useServerFn(signInWithUsername);
   const getProfile = useServerFn(getMyProfile);
@@ -30,8 +32,15 @@ export function AuthPage() {
   }
 
   useEffect(() => {
+    // Check for password recovery in URL hash
+    const hash = window.location.hash;
+    if (hash.includes("type=recovery")) {
+      setMode("reset");
+      return;
+    }
+
     const { data } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (session) routeAfterAuth();
+      if (session && mode !== "reset") routeAfterAuth();
     });
     // getSession() reads localStorage; don't timeout — falling back to null
     // was blocking returning users from auto-redirecting into the app.
@@ -79,6 +88,40 @@ export function AuthPage() {
     }
   }
 
+
+  async function sendResetEmail(e: React.FormEvent) {
+    e.preventDefault();
+    if (!forgotEmail.trim()) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
+        redirectTo: window.location.origin + "/auth",
+      });
+      if (error) throw error;
+      toast.success("Check your email for a reset link");
+      setForgotEmail("");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to send reset email");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function submitNewPassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newPassword || newPassword.length < 6) { toast.error("Password must be at least 6 characters"); return; }
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      toast.success("Password updated — you're signed in");
+      navigate({ to: "/train", replace: true });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update password");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function oauth(provider: "google" | "apple") {
     setBusy(true);
@@ -192,76 +235,152 @@ export function AuthPage() {
 
         {/* Form Card */}
         <div className="w-full max-w-sm" style={{ background: "rgba(20,20,20,0.95)", padding: "24px", border: "1px solid rgba(230,50,34,0.25)", backdropFilter: "blur(8px)" }}>
-          <h1 className="label-cap text-grit text-lg mb-5">{mode === "signup" ? "Create Account" : "Sign In"}</h1>
 
-          <form onSubmit={submit} className="space-y-3">
-            <input
-              type="text"
-              required
-              autoCapitalize="none"
-              autoCorrect="off"
-              placeholder={mode === "signup" ? "EMAIL" : "EMAIL OR USERNAME"}
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              className="w-full px-3 py-3 text-sm uppercase tracking-wider"
-              style={{ background: "#0a0a0a", color: "#f5f5f0", border: "1px solid #2a2a2a" }}
-            />
+          {mode === "reset" && (
+            <>
+              <h1 className="label-cap text-grit text-lg mb-5">Set New Password</h1>
+              <form onSubmit={submitNewPassword} className="space-y-3">
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  placeholder="NEW PASSWORD"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full px-3 py-3 text-sm uppercase tracking-wider"
+                  style={{ background: "#0a0a0a", color: "#f5f5f0", border: "1px solid #2a2a2a" }}
+                />
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="w-full py-3 label-cap text-sm"
+                  style={{ background: "#e63222", color: "#0a0a0a" }}
+                >
+                  {busy ? "..." : "Set Password"}
+                </button>
+              </form>
+            </>
+          )}
 
-            <input
-              type="password"
-              required
-              minLength={6}
-              placeholder="PASSWORD"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-3 text-sm uppercase tracking-wider"
-              style={{ background: "#0a0a0a", color: "#f5f5f0", border: "1px solid #2a2a2a" }}
-            />
-            <button
-              type="submit"
-              disabled={busy}
-              className="w-full py-3 label-cap text-sm"
-              style={{ background: "#e63222", color: "#0a0a0a" }}
-            >
-              {busy ? "..." : mode === "signup" ? "Sign Up" : "Sign In"}
-            </button>
-          </form>
+          {mode === "forgot" && (
+            <>
+              <h1 className="label-cap text-grit text-lg mb-2">Reset Password</h1>
+              <p className="text-xs text-grit-dim mb-4">Enter your email and we'll send you a reset link.</p>
+              <form onSubmit={sendResetEmail} className="space-y-3">
+                <input
+                  type="email"
+                  required
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  placeholder="EMAIL"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  className="w-full px-3 py-3 text-sm uppercase tracking-wider"
+                  style={{ background: "#0a0a0a", color: "#f5f5f0", border: "1px solid #2a2a2a" }}
+                />
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="w-full py-3 label-cap text-sm"
+                  style={{ background: "#e63222", color: "#0a0a0a" }}
+                >
+                  {busy ? "..." : "Send Reset Email"}
+                </button>
+              </form>
+              <button
+                type="button"
+                onClick={() => setMode("signin")}
+                className="w-full mt-4 text-xs label-cap text-grit-dim"
+              >
+                Back to sign in
+              </button>
+            </>
+          )}
 
-          <div className="flex items-center gap-3 my-4">
-            <div style={{ flex: 1, height: 1, background: "#2a2a2a" }} />
-            <span className="text-[10px] label-cap text-grit-dim">OR</span>
-            <div style={{ flex: 1, height: 1, background: "#2a2a2a" }} />
-          </div>
+          {(mode === "signin" || mode === "signup") && (
+            <>
+              <h1 className="label-cap text-grit text-lg mb-5">{mode === "signup" ? "Create Account" : "Sign In"}</h1>
 
-          <button
-            onClick={() => oauth("google")}
-            disabled={busy}
-            className="w-full py-3 label-cap text-sm"
-            style={{ background: "#f5f5f0", color: "#0a0a0a" }}
-          >
-            Continue With Google
-          </button>
+              <form onSubmit={submit} className="space-y-3">
+                <input
+                  type="text"
+                  required
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  placeholder={mode === "signup" ? "EMAIL" : "EMAIL OR USERNAME"}
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  className="w-full px-3 py-3 text-sm uppercase tracking-wider"
+                  style={{ background: "#0a0a0a", color: "#f5f5f0", border: "1px solid #2a2a2a" }}
+                />
 
-          <button
-            onClick={() => oauth("apple")}
-            disabled={busy}
-            className="w-full py-3 label-cap text-sm mt-2 inline-flex items-center justify-center gap-2"
-            style={{ background: "#000", color: "#fff", border: "1px solid #2a2a2a" }}
-            aria-label="Continue with Apple"
-          >
-            <svg width="14" height="14" viewBox="0 0 384 512" fill="currentColor" aria-hidden="true">
-              <path d="M318.7 268.7c-.2-37 16.5-65 50.5-85.6-19-27.2-47.7-42.2-85.6-45.1-35.8-2.8-75 21.1-89.3 21.1-15.1 0-49.7-20-76.9-20C72.4 140.2 24 184.5 24 274.6c0 26.6 4.9 54.1 14.6 82.4 13 36.8 60 127 109 125.5 25.6-.6 43.7-18.2 77-18.2 32.3 0 49.1 18.2 77.6 18.2 49.5-.7 92-82.6 104.4-119.6-66.6-31.4-63.9-92-63.9-93.8zM260.1 79.2c25.6-30.4 23.3-58.1 22.6-68.2-22.7 1.3-49 15.5-64 32.9-16.5 18.7-26.2 41.8-24.1 67.6 24.5 1.9 46.9-10.7 65.5-32.3z"/>
-            </svg>
-            Continue With Apple
-          </button>
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  placeholder="PASSWORD"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-3 py-3 text-sm uppercase tracking-wider"
+                  style={{ background: "#0a0a0a", color: "#f5f5f0", border: "1px solid #2a2a2a" }}
+                />
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="w-full py-3 label-cap text-sm"
+                  style={{ background: "#e63222", color: "#0a0a0a" }}
+                >
+                  {busy ? "..." : mode === "signup" ? "Sign Up" : "Sign In"}
+                </button>
+              </form>
 
-          <button
-            type="button"
-            onClick={() => setMode(mode === "signup" ? "signin" : "signup")}
-            className="w-full mt-4 text-xs label-cap text-grit-dim"
-          >
-            {mode === "signup" ? "Have an account? Sign In" : "New here? Create Account"}
-          </button>
+              {mode === "signin" && (
+                <button
+                  type="button"
+                  onClick={() => setMode("forgot")}
+                  className="w-full mt-3 text-xs label-cap text-grit-dim"
+                >
+                  Forgot password?
+                </button>
+              )}
+
+              <div className="flex items-center gap-3 my-4">
+                <div style={{ flex: 1, height: 1, background: "#2a2a2a" }} />
+                <span className="text-[10px] label-cap text-grit-dim">OR</span>
+                <div style={{ flex: 1, height: 1, background: "#2a2a2a" }} />
+              </div>
+
+              <button
+                onClick={() => oauth("google")}
+                disabled={busy}
+                className="w-full py-3 label-cap text-sm"
+                style={{ background: "#f5f5f0", color: "#0a0a0a" }}
+              >
+                Continue With Google
+              </button>
+
+              <button
+                onClick={() => oauth("apple")}
+                disabled={busy}
+                className="w-full py-3 label-cap text-sm mt-2 inline-flex items-center justify-center gap-2"
+                style={{ background: "#000", color: "#fff", border: "1px solid #2a2a2a" }}
+                aria-label="Continue with Apple"
+              >
+                <svg width="14" height="14" viewBox="0 0 384 512" fill="currentColor" aria-hidden="true">
+                  <path d="M318.7 268.7c-.2-37 16.5-65 50.5-85.6-19-27.2-47.7-42.2-85.6-45.1-35.8-2.8-75 21.1-89.3 21.1-15.1 0-49.7-20-76.9-20C72.4 140.2 24 184.5 24 274.6c0 26.6 4.9 54.1 14.6 82.4 13 36.8 60 127 109 125.5 25.6-.6 43.7-18.2 77-18.2 32.3 0 49.1 18.2 77.6 18.2 49.5-.7 92-82.6 104.4-119.6-66.6-31.4-63.9-92-63.9-93.8zM260.1 79.2c25.6-30.4 23.3-58.1 22.6-68.2-22.7 1.3-49 15.5-64 32.9-16.5 18.7-26.2 41.8-24.1 67.6 24.5 1.9 46.9-10.7 65.5-32.3z"/>
+                </svg>
+                Continue With Apple
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMode(mode === "signup" ? "signin" : "signup")}
+                className="w-full mt-4 text-xs label-cap text-grit-dim"
+              >
+                {mode === "signup" ? "Have an account? Sign In" : "New here? Create Account"}
+              </button>
+            </>
+          )}
 
         </div>
 
