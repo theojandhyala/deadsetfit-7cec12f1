@@ -34,6 +34,7 @@ const MealsInput = z.object({
   carbs: z.number(),
   fats: z.number(),
   dislikes: z.string().optional(),
+  constraints: z.string().optional(),
 });
 
 export const generateMeals = createServerFn({ method: "POST" })
@@ -43,7 +44,8 @@ export const generateMeals = createServerFn({ method: "POST" })
     const sys = `You are a sports nutritionist. Reply with strict JSON only:
 {"breakfast":{"name":"...","calories":0,"protein":0,"carbs":0,"fats":0},"lunch":{...},"dinner":{...},"snack":{...}}
 Total of all 4 meals should approximate the daily targets.`;
-    const user = `Goal: ${data.goal}. Target ${data.calories} kcal, P${data.protein} C${data.carbs} F${data.fats}. Dislikes: ${data.dislikes || "none"}. Suggest practical, varied meals.`;
+    const constraintsPart = data.constraints ? ` Preferences/restrictions: ${data.constraints}.` : "";
+    const user = `Goal: ${data.goal}. Target ${data.calories} kcal, P${data.protein} C${data.carbs} F${data.fats}. Dislikes: ${data.dislikes || "none"}.${constraintsPart} Suggest practical, varied meals.`;
     return await chatJSON<{
       breakfast: { name: string; calories: number; protein: number; carbs: number; fats: number };
       lunch: { name: string; calories: number; protein: number; carbs: number; fats: number };

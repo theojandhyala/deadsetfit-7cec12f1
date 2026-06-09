@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Trophy, Timer, Flame, Play, Pause, RotateCcw, Check, X, Plus, Minus, Zap, ArrowLeft } from "lucide-react";
+import { Trophy, Timer, Flame, Play, Pause, RotateCcw, Check, X, Plus, Minus, Zap, ArrowLeft, Share2 } from "lucide-react";
 import { useAppState } from "@/lib/storage";
 import { isoDay } from "@/lib/calc";
 import type { ChallengeRecord } from "@/lib/types";
@@ -163,14 +163,14 @@ function ChallengesPage() {
                   <p className="display text-lg font-extrabold uppercase text-grit leading-tight">{c.name}</p>
                   <p className="text-[11px] text-grit-dim mt-0.5">{c.tagline}</p>
                 </div>
-                <div className="text-right flex-shrink-0">
+                <div className="text-right flex-shrink-0 flex flex-col items-end gap-1">
                   <p className="label-cap text-[9px] flex items-center justify-end gap-0.5 text-accent-red">
                     <Zap size={9} /> {c.xp} XP
                   </p>
                   {best ? (
-                    <p className="text-[10px] text-grit mt-1 font-bold uppercase tracking-wider">
-                      PR: {c.type === "time" ? fmtTime(best.value) : `${best.value}`}
-                    </p>
+                    <span className="label-cap text-[9px] px-1.5 py-0.5 border border-accent-red text-accent-red">
+                      YOUR BEST: {c.type === "time" ? fmtTime(best.value) : `${best.value}`}
+                    </span>
                   ) : (
                     <p className="text-[10px] text-grit-dim mt-1 font-bold uppercase tracking-wider">NEW</p>
                   )}
@@ -330,7 +330,30 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
             <p className="display text-3xl font-extrabold text-grit mt-4">
               {isTime ? fmtTime(finished.value) : `${finished.value}`}
             </p>
-            <div className="flex gap-2 mt-5">
+            <button
+              onClick={async () => {
+                const score = isTime ? fmtTime(finished.value) : `${finished.value} reps`;
+                const shareData = {
+                  title: 'DEADSET Challenge',
+                  text: `I just completed the ${challenge.name} challenge on DEADSET! Score: ${score}`,
+                  url: 'https://deadsetfit.org',
+                };
+                try {
+                  if (navigator.share) {
+                    await navigator.share(shareData);
+                  } else {
+                    await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
+                    alert('Copied to clipboard!');
+                  }
+                } catch {
+                  // user cancelled or blocked
+                }
+              }}
+              className="w-full mt-4 border border-[#262626] text-grit-dim py-3 flex items-center justify-center gap-2 label-cap text-[10px] hover:border-accent-red hover:text-accent-red transition-colors"
+            >
+              <Share2 size={14} /> Share Result
+            </button>
+            <div className="flex gap-2 mt-3">
               <button onClick={reset} className="btn-ghost flex-1">
                 <RotateCcw size={14} className="mr-2" /> Retry
               </button>
