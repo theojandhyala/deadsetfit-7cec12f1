@@ -201,7 +201,17 @@ function CoachPage() {
         ))}
 
         {sending && (
-          <div className="text-grit-dim text-xs italic">Coach is thinking…</div>
+          <div className="flex items-center gap-1 py-1">
+            <span className="inline-block w-2 h-2 bg-accent-red animate-[typing-dot_1.2s_ease-in-out_infinite]" style={{ animationDelay: "0s" }} />
+            <span className="inline-block w-2 h-2 bg-accent-red animate-[typing-dot_1.2s_ease-in-out_infinite]" style={{ animationDelay: "0.2s" }} />
+            <span className="inline-block w-2 h-2 bg-accent-red animate-[typing-dot_1.2s_ease-in-out_infinite]" style={{ animationDelay: "0.4s" }} />
+            <style>{`
+              @keyframes typing-dot {
+                0%, 60%, 100% { opacity: 0.2; transform: translateY(0); }
+                30% { opacity: 1; transform: translateY(-4px); }
+              }
+            `}</style>
+          </div>
         )}
       </div>
 

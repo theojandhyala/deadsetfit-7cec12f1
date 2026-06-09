@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { X, Check, Plus, Minus, Play, Loader2, Trophy, Share2, Flame, Calculator, Zap } from "lucide-react";
 import { useAppState } from "@/lib/storage";
@@ -97,6 +97,7 @@ function LiveWorkoutPage() {
   const [finished, setFinished] = useState(false);
   const [share, setShare] = useState(false);
   const [plateOpen, setPlateOpen] = useState(false);
+  const liveWeightRef = useRef<number>(60);
   const [showRPE, setShowRPE] = useState(false);
   const [celebrate, setCelebrate] = useState<{ name: string; weight: number; reps: number } | null>(null);
 
@@ -390,7 +391,7 @@ function LiveWorkoutPage() {
           })()}
           showRPE={showRPE}
           onToggleRPE={() => setShowRPE((v) => !v)}
-          onOpenPlateCalc={() => setPlateOpen(true)}
+          onOpenPlateCalc={(w) => { liveWeightRef.current = w; setPlateOpen(true); }}
         />
 
         {current.sets.length > 0 && (
@@ -442,7 +443,7 @@ function LiveWorkoutPage() {
       {videoQuery && <VideoModal query={videoQuery} title={videoTitle} onClose={() => setVideoQuery(null)} />}
       {plateOpen && (
         <PlateCalculator
-          initialWeight={Number((document.getElementById("liveWeightInput") as HTMLInputElement | null)?.value) || 60}
+          initialWeight={liveWeightRef.current || 60}
           onClose={() => setPlateOpen(false)}
         />
       )}
@@ -485,7 +486,7 @@ function SetEntry({
   lastSessionSet: SetLog | null;
   showRPE: boolean;
   onToggleRPE: () => void;
-  onOpenPlateCalc: () => void;
+  onOpenPlateCalc: (weight: number) => void;
 }) {
   const [w, setW] = useState<string>(prev ? String(prev.weight) : "");
   const [r, setR] = useState<string>(prev ? String(prev.reps) : "");
@@ -521,13 +522,13 @@ function SetEntry({
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className="label-cap">Weight (kg)</label>
-            <button onClick={onOpenPlateCalc} className="label-cap text-accent-red flex items-center text-[10px]">
+            <button onClick={() => onOpenPlateCalc(wn)} className="label-cap text-accent-red flex items-center text-[10px]">
               <Calculator size={11} className="mr-1" />Plates
             </button>
           </div>
           <div className="flex items-center">
             <button onClick={() => setW(String(Math.max(0, (Number(w) || 0) - 2.5)))} className="w-10 h-12 border border-grit text-grit">−</button>
-            <input id="liveWeightInput" inputMode="decimal" value={w} onChange={(e) => setW(e.target.value)} className="input-grit text-center flex-1 mx-0 border-l-0 border-r-0" />
+            <input inputMode="decimal" value={w} onChange={(e) => setW(e.target.value)} className="input-grit text-center flex-1 mx-0 border-l-0 border-r-0" />
             <button onClick={() => setW(String((Number(w) || 0) + 2.5))} className="w-10 h-12 border border-grit text-grit">+</button>
           </div>
         </div>

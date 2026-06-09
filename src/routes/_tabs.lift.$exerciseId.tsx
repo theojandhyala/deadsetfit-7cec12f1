@@ -164,8 +164,107 @@ function LiftDetailPage() {
         </>
       )}
 
+      <StrengthStandard exerciseId={exerciseId} e1rm={e1rmPR} bodyweightKg={state.profile?.weightKg ?? 80} />
+
       <div className="h-12" />
     </div>
+  );
+}
+
+const STRENGTH_LEVELS = ["Beginner", "Novice", "Intermediate", "Advanced", "Elite"] as const;
+type StrengthLevel = typeof STRENGTH_LEVELS[number];
+
+// Multipliers: [bench, squat, deadlift, ohp]
+const BIG4_MULTIPLIERS: Record<StrengthLevel, [number, number, number, number]> = {
+  Beginner:     [0.5,  0.75, 1.0,  0.35],
+  Novice:       [0.75, 1.25, 1.5,  0.55],
+  Intermediate: [1.0,  1.5,  2.0,  0.75],
+  Advanced:     [1.25, 2.0,  2.5,  1.0],
+  Elite:        [1.5,  2.5,  3.0,  1.25],
+};
+const GENERIC_MULTIPLIERS: Record<StrengthLevel, number> = {
+  Beginner: 0.25, Novice: 0.5, Intermediate: 0.75, Advanced: 1.0, Elite: 1.25,
+};
+const BIG4_IDS = ["bench-press", "squat", "deadlift", "overhead-press"] as const;
+type Big4Id = typeof BIG4_IDS[number];
+
+function getStandardKg(exerciseId: string, level: StrengthLevel, bw: number): number {
+  const idx = BIG4_IDS.indexOf(exerciseId as Big4Id);
+  if (idx >= 0) return Math.round(BIG4_MULTIPLIERS[level][idx] * bw);
+  return Math.round(GENERIC_MULTIPLIERS[level] * bw);
+}
+
+function StrengthStandard({ exerciseId, e1rm, bodyweightKg }: { exerciseId: string; e1rm: number; bodyweightKg: number }) {
+  const thresholds = STRENGTH_LEVELS.map((l) => getStandardKg(exerciseId, l, bodyweightKg));
+  // Find current level: highest threshold the user meets
+  let currentLevelIdx = -1;
+  for (let i = 0; i < thresholds.length; i++) {
+    if (e1rm >= thresholds[i]) currentLevelIdx = i;
+  }
+  const nextIdx = currentLevelIdx + 1;
+  const nextLevel = nextIdx < STRENGTH_LEVELS.length ? STRENGTH_LEVELS[nextIdx] : null;
+  const nextThreshold = nextLevel ? thresholds[nextIdx] : null;
+  const gap = nextThreshold ? nextThreshold - e1rm : 0;
+
+  // Progress within current segment
+  const segStart = currentLevelIdx >= 0 ? thresholds[currentLevelIdx] : 0;
+  const segEnd = nextThreshold ?? thresholds[thresholds.length - 1];
+  const segProgress = nextThreshold
+    ? Math.min(100, Math.max(0, ((e1rm - segStart) / (segEnd - segStart)) * 100))
+    : 100;
+
+  return (
+    <section className="mx-5 mb-4 bg-grit-card border border-grit p-4">
+      <p className="label-cap text-[10px] text-grit-dim mb-3">STRENGTH STANDARD</p>
+      {/* 5-segment bar */}
+      <div className="flex gap-0.5 mb-3">
+        {STRENGTH_LEVELS.map((level, i) => {
+          const isActive = i === currentLevelIdx;
+          const isPast = i < currentLevelIdx;
+          const isNext = i === nextIdx;
+          return (
+            <div key={level} className="flex-1 flex flex-col items-center gap-1">
+              <div
+                className="w-full h-3"
+                style={{
+                  background: isActive ? "#e63222" : isPast ? "#7a1410" : "#1a1a1a",
+                  outline: isActive ? "1px solid #e63222" : undefined,
+                  position: "relative",
+                  overflow: "hidden",
+                }}
+              >
+                {isNext && e1rm > 0 && (
+                  <div style={{ width: `${segProgress}%`, height: "100%", background: "#7a1410" }} />
+                )}
+              </div>
+              <span className="text-[8px] label-cap" style={{ color: isActive ? "#e63222" : "#8a8a8a" }}>
+                {level.slice(0, 3).toUpperCase()}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {e1rm > 0 ? (
+        <div>
+          <p className="text-sm text-grit font-bold">
+            You lift <span className="text-accent-red">{e1rm}kg</span>
+            {currentLevelIdx >= 0 ? ` · ${STRENGTH_LEVELS[currentLevelIdx]}` : " · Below Beginner"}
+          </p>
+          {nextLevel && nextThreshold && (
+            <p className="text-xs text-grit-dim mt-1">
+              Next level ({nextLevel}): {nextThreshold}kg
+              <span className="text-accent-red ml-1">+{gap}kg away</span>
+            </p>
+          )}
+          {!nextLevel && (
+            <p className="text-xs text-grit-dim mt-1">Elite level achieved.</p>
+          )}
+        </div>
+      ) : (
+        <p className="text-xs text-grit-dim">Log a set to see your strength standard.</p>
+      )}
+    </section>
   );
 }
 
