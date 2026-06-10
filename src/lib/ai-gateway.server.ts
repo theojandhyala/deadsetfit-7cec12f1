@@ -27,11 +27,11 @@ export async function chatJSON<T = unknown>(opts: {
     }),
   });
 
-
   if (!res.ok) {
     const text = await res.text();
     if (res.status === 429) throw new Error("Rate limit exceeded. Please retry shortly.");
-    if (res.status === 402) throw new Error("AI credits exhausted. Please check your API key and billing.");
+    if (res.status === 402)
+      throw new Error("AI credits exhausted. Please check your API key and billing.");
     throw new Error(`AI gateway error ${res.status}: ${text}`);
   }
 
@@ -67,13 +67,13 @@ export async function chatText(opts: {
   if (!res.ok) {
     const text = await res.text();
     if (res.status === 429) throw new Error("Rate limit exceeded. Please retry shortly.");
-    if (res.status === 402) throw new Error("AI credits exhausted. Please check your API key and billing.");
+    if (res.status === 402)
+      throw new Error("AI credits exhausted. Please check your API key and billing.");
     throw new Error(`AI gateway error ${res.status}: ${text}`);
   }
   const data = (await res.json()) as { choices: { message: { content: string } }[] };
   return data.choices?.[0]?.message?.content ?? "";
 }
-
 
 export async function chatVisionJSON<T = unknown>(opts: {
   model?: string;
@@ -92,10 +92,13 @@ export async function chatVisionJSON<T = unknown>(opts: {
       model: opts.model ?? "gpt-4o-mini",
       messages: [
         { role: "system", content: opts.system },
-        { role: "user", content: [
-          { type: "text", text: opts.user },
-          { type: "image_url", image_url: { url: opts.imageDataUrl } },
-        ]},
+        {
+          role: "user",
+          content: [
+            { type: "text", text: opts.user },
+            { type: "image_url", image_url: { url: opts.imageDataUrl } },
+          ],
+        },
       ],
       response_format: { type: "json_object" },
     }),
@@ -109,8 +112,9 @@ export async function chatVisionJSON<T = unknown>(opts: {
   }
   const data = (await res.json()) as { choices: { message: { content: string } }[] };
   const content = data.choices?.[0]?.message?.content ?? "{}";
-  try { return JSON.parse(content) as T; }
-  catch {
+  try {
+    return JSON.parse(content) as T;
+  } catch {
     const m = content.match(/\{[\s\S]*\}/);
     if (m) return JSON.parse(m[0]) as T;
     throw new Error("AI returned invalid JSON");

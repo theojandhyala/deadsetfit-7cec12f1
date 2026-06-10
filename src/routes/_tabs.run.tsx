@@ -44,15 +44,18 @@ export const Route = createFileRoute("/_tabs/run")({
 
 type View = "hub" | "live" | "summary" | "detail";
 
-const ACTIVITY_CONFIG: Record<ActivityType, {
-  label: string;
-  icon: ReactNode;
-  color: string;
-  metricLabel: string;
-  calMult: number; // kcal per kg per km (approx)
-  maxSpeedMps: number;
-  description: string;
-}> = {
+const ACTIVITY_CONFIG: Record<
+  ActivityType,
+  {
+    label: string;
+    icon: ReactNode;
+    color: string;
+    metricLabel: string;
+    calMult: number; // kcal per kg per km (approx)
+    maxSpeedMps: number;
+    description: string;
+  }
+> = {
   run: {
     label: "Run",
     icon: <Activity size={22} />,
@@ -102,9 +105,9 @@ const ACTIVITY_CONFIG: Record<ActivityType, {
 
 function RunPage() {
   const [state, setState] = useAppState();
-  const runs = (state.runs ?? []).slice().sort((a, b) =>
-    new Date(b.date).getTime() - new Date(a.date).getTime(),
-  );
+  const runs = (state.runs ?? [])
+    .slice()
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const [view, setView] = useState<View>("hub");
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -224,7 +227,6 @@ function RunHub({
           GPS tracks every move. Strava-style trail, splits and stats.
         </p>
       </header>
-
       {/* Activity type picker */}
       <div className="grid grid-cols-5 gap-1.5">
         {(Object.entries(ACTIVITY_CONFIG) as [ActivityType, typeof cfg][]).map(([type, c]) => (
@@ -238,13 +240,15 @@ function RunHub({
             }}
           >
             <span style={{ color: selectedActivity === type ? c.color : "#8a8a8a" }}>{c.icon}</span>
-            <span className="label-cap text-[9px]" style={{ color: selectedActivity === type ? c.color : "#8a8a8a" }}>
+            <span
+              className="label-cap text-[9px]"
+              style={{ color: selectedActivity === type ? c.color : "#8a8a8a" }}
+            >
               {c.label}
             </span>
           </button>
         ))}
       </div>
-
       {/* Start CTA */}
       <button
         onClick={onStart}
@@ -258,14 +262,12 @@ function RunHub({
         <Play size={20} strokeWidth={3} fill="currentColor" />
         Start {cfg.label}
       </button>
-
       {/* This week summary */}
       <div className="grid grid-cols-3 gap-2">
         <StatBlock label="This week" value={formatDistance(weekDist)} />
         <StatBlock label="Total" value={String(totals.count)} suffix="sessions" />
         <StatBlock label="All-time" value={formatDistance(totals.distance)} />
       </div>
-
       {/* History by type */}
       {Object.entries(ACTIVITY_CONFIG).map(([type, c]) => {
         const typed = runs.filter((r) => (r.activityType ?? "run") === type);
@@ -274,14 +276,17 @@ function RunHub({
           <div key={type} className="flex items-center gap-3 p-3 border border-grit bg-grit-card">
             <span style={{ color: c.color }}>{c.icon}</span>
             <div className="flex-1 min-w-0">
-              <p className="label-cap text-[10px]" style={{ color: c.color }}>{c.label.toUpperCase()}</p>
-              <p className="text-sm font-bold text-grit">{formatDistance(typed.reduce((s, r) => s + r.distanceM, 0))}</p>
+              <p className="label-cap text-[10px]" style={{ color: c.color }}>
+                {c.label.toUpperCase()}
+              </p>
+              <p className="text-sm font-bold text-grit">
+                {formatDistance(typed.reduce((s, r) => s + r.distanceM, 0))}
+              </p>
             </div>
             <span className="label-cap text-[10px] text-grit-dim">{typed.length} sessions</span>
           </div>
         );
       })}
-
       {/* History list */} origin/main
       <section className="space-y-2">
         <div className="flex items-center justify-between">
@@ -298,9 +303,7 @@ function RunHub({
             <div className="p-4 border border-grit text-grit-dim">
               <Activity size={32} />
             </div>
-            <p className="display text-lg font-extrabold uppercase text-grit">
-              No activities yet
-            </p>
+            <p className="display text-lg font-extrabold uppercase text-grit">No activities yet</p>
             <p className="text-xs text-grit-dim uppercase tracking-wider">
               Hit start. Your route appears here.
             </p>
@@ -337,9 +340,14 @@ function RunHub({
                           <ChevronRight size={16} className="text-grit-dim flex-shrink-0" />
                         </div>
                         <div className="flex items-baseline gap-3">
-                          <span className="display text-lg font-extrabold leading-none" style={{ color: actCfg.color }}>
+                          <span
+                            className="display text-lg font-extrabold leading-none"
+                            style={{ color: actCfg.color }}
+                          >
                             {(r.distanceM / 1000).toFixed(2)}
-                            <span className="text-[10px] font-bold text-grit-dim uppercase ml-0.5">km</span>
+                            <span className="text-[10px] font-bold text-grit-dim uppercase ml-0.5">
+                              km
+                            </span>
                           </span>
                           <span className="text-[10px] uppercase tracking-wider text-grit-dim">
                             {formatDuration(r.durationSec)}
@@ -359,12 +367,20 @@ function RunHub({
                         </p>
                       </div>
                       <div>
-                        <p className="text-[9px] uppercase tracking-widest text-grit-dim">Duration</p>
-                        <p className="text-[11px] font-bold text-grit tabular-nums">{formatDuration(r.durationSec)}</p>
+                        <p className="text-[9px] uppercase tracking-widest text-grit-dim">
+                          Duration
+                        </p>
+                        <p className="text-[11px] font-bold text-grit tabular-nums">
+                          {formatDuration(r.durationSec)}
+                        </p>
                       </div>
                       <div>
-                        <p className="text-[9px] uppercase tracking-widest text-grit-dim">Calories</p>
-                        <p className="text-[11px] font-bold text-grit tabular-nums">{r.calories ?? estimateCalories(r)} kcal</p>
+                        <p className="text-[9px] uppercase tracking-widest text-grit-dim">
+                          Calories
+                        </p>
+                        <p className="text-[11px] font-bold text-grit tabular-nums">
+                          {r.calories ?? estimateCalories(r)} kcal
+                        </p>
                       </div>
                     </div>
                   </button>
@@ -383,7 +399,9 @@ function StatBlock({ label, value, suffix }: { label: string; value: string; suf
     <div className="bg-grit-card border border-grit p-3 flex flex-col gap-1">
       <span className="text-[9px] uppercase tracking-widest text-grit-dim">{label}</span>
       <span className="display text-lg font-extrabold text-grit leading-none">{value}</span>
-      {suffix && <span className="text-[9px] text-grit-dim uppercase tracking-wider">{suffix}</span>}
+      {suffix && (
+        <span className="text-[9px] text-grit-dim uppercase tracking-wider">{suffix}</span>
+      )}
     </div>
   );
 }
@@ -443,21 +461,26 @@ function LiveRunner({
       setPermission("unknown");
       return;
     }
-    navigator.permissions.query({ name: "geolocation" as PermissionName })
+    navigator.permissions
+      .query({ name: "geolocation" as PermissionName })
       .then((result) => {
         if (cancelled) return;
         setPermission(result.state as LocationPermission);
         result.onchange = () => setPermission(result.state as LocationPermission);
       })
       .catch(() => setPermission("unknown"));
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Timer
   useEffect(() => {
     if (status !== "running") return;
     const id = setInterval(() => {
-      setElapsedSec(Math.max(0, (Date.now() - startedAtRef.current - pausedAccumRef.current) / 1000));
+      setElapsedSec(
+        Math.max(0, (Date.now() - startedAtRef.current - pausedAccumRef.current) / 1000),
+      );
     }, 250);
     return () => clearInterval(id);
   }, [status]);
@@ -488,7 +511,10 @@ function LiveRunner({
   }, [status]);
 
   const start = () => {
-    if (!("geolocation" in navigator)) { setError("GPS not supported."); return; }
+    if (!("geolocation" in navigator)) {
+      setError("GPS not supported.");
+      return;
+    }
     if (previewWatchRef.current !== null) {
       navigator.geolocation.clearWatch(previewWatchRef.current);
       previewWatchRef.current = null;
@@ -497,7 +523,16 @@ function LiveRunner({
     startedAtRef.current = Date.now();
     pausedAccumRef.current = 0;
     const initial: RunSample[] = previewPos
-      ? [{ t: 0, lat: previewPos.lat, lng: previewPos.lng, d: 0, total: 0, acc: gpsAccuracy ?? undefined }]
+      ? [
+          {
+            t: 0,
+            lat: previewPos.lat,
+            lng: previewPos.lng,
+            d: 0,
+            total: 0,
+            acc: gpsAccuracy ?? undefined,
+          },
+        ]
       : [];
     samplesRef.current = initial;
     setSamples(initial);
@@ -536,11 +571,18 @@ function LiveRunner({
           return;
         }
 
-        const result = smoothGpsFix(prev, {
-          lat: latitude, lng: longitude,
-          accuracy: accuracy ?? undefined,
-          altitude, speed: deviceSpeed, timeMs: t,
-        }, { maxAccuracyM: 90, maxSpeedMps: cfg.maxSpeedMps, minDeltaM: 0.5 });
+        const result = smoothGpsFix(
+          prev,
+          {
+            lat: latitude,
+            lng: longitude,
+            accuracy: accuracy ?? undefined,
+            altitude,
+            speed: deviceSpeed,
+            timeMs: t,
+          },
+          { maxAccuracyM: 90, maxSpeedMps: cfg.maxSpeedMps, minDeltaM: 0.5 },
+        );
 
         if (!result.accepted) {
           rejectCountRef.current += 1;
@@ -548,9 +590,13 @@ function LiveRunner({
           return;
         }
         const next: RunSample = {
-          t, lat: result.lat, lng: result.lng,
-          d: result.d, total: result.total,
-          acc: result.acc, alt: result.alt,
+          t,
+          lat: result.lat,
+          lng: result.lng,
+          d: result.d,
+          total: result.total,
+          acc: result.acc,
+          alt: result.alt,
         };
         setSamples((s) => [...s, next]);
       },
@@ -626,16 +672,27 @@ function LiveRunner({
   useEffect(() => {
     return () => {
       if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
-      if (previewWatchRef.current !== null) navigator.geolocation.clearWatch(previewWatchRef.current);
+      if (previewWatchRef.current !== null)
+        navigator.geolocation.clearWatch(previewWatchRef.current);
       releaseWakeLock();
     };
   }, []);
 
-  const mapSamples: RunSample[] = samples.length > 0
-    ? samples
-    : previewPos
-      ? [{ t: 0, lat: previewPos.lat, lng: previewPos.lng, d: 0, total: 0, acc: gpsAccuracy ?? undefined }]
-      : [];
+  const mapSamples: RunSample[] =
+    samples.length > 0
+      ? samples
+      : previewPos
+        ? [
+            {
+              t: 0,
+              lat: previewPos.lat,
+              lng: previewPos.lng,
+              d: 0,
+              total: 0,
+              acc: gpsAccuracy ?? undefined,
+            },
+          ]
+        : [];
 
   const distanceM = samples.length ? samples[samples.length - 1].total : 0;
   const pace = avgPace(distanceM, elapsedSec);
@@ -650,21 +707,27 @@ function LiveRunner({
     if (dt > 0 && dd > 0) currentPace = dt / (dd / 1000);
   }
 
-  const gpsStrength = gpsAccuracy == null
-    ? { label: "SEARCHING", color: "#8a8a8a" }
-    : gpsAccuracy <= 15 ? { label: "STRONG", color: "#22c55e" }
-    : gpsAccuracy <= 35 ? { label: "OK", color: "#fbbf24" }
-    : { label: "WEAK", color: "#e63222" };
+  const gpsStrength =
+    gpsAccuracy == null
+      ? { label: "SEARCHING", color: "#8a8a8a" }
+      : gpsAccuracy <= 15
+        ? { label: "STRONG", color: "#22c55e" }
+        : gpsAccuracy <= 35
+          ? { label: "OK", color: "#fbbf24" }
+          : { label: "WEAK", color: "#e63222" };
 
   const isCycle = activityType === "cycle";
   const speedKmhNow = elapsedSec > 0 ? (distanceM / elapsedSec) * 3.6 : 0;
-  const currentSpeedKmhNow = recent.length >= 2
-    ? (() => {
-        const f = recent[0]; const l = recent[recent.length - 1];
-        const dt = (l.t - f.t) / 1000; const dd = l.total - f.total;
-        return dt > 0 ? (dd / dt) * 3.6 : 0;
-      })()
-    : speedKmhNow;
+  const currentSpeedKmhNow =
+    recent.length >= 2
+      ? (() => {
+          const f = recent[0];
+          const l = recent[recent.length - 1];
+          const dt = (l.t - f.t) / 1000;
+          const dd = l.total - f.total;
+          return dt > 0 ? (dd / dt) * 3.6 : 0;
+        })()
+      : speedKmhNow;
 
   const mapHeight = mapExpanded ? 380 : 240;
 
@@ -680,10 +743,15 @@ function LiveRunner({
         </button>
         <div className="flex items-center gap-2">
           <span style={{ color: cfg.color }}>{cfg.icon}</span>
-          <span className="label-cap text-[11px]" style={{ color: cfg.color }}>{cfg.label.toUpperCase()}</span>
+          <span className="label-cap text-[11px]" style={{ color: cfg.color }}>
+            {cfg.label.toUpperCase()}
+          </span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full" style={{ background: gpsStrength.color, boxShadow: `0 0 6px ${gpsStrength.color}` }} />
+          <span
+            className="w-2 h-2 rounded-full"
+            style={{ background: gpsStrength.color, boxShadow: `0 0 6px ${gpsStrength.color}` }}
+          />
           <span className="label-cap text-[10px]" style={{ color: gpsStrength.color }}>
             {gpsAccuracy != null ? `±${Math.round(gpsAccuracy)}m` : "GPS"}
           </span>
@@ -691,11 +759,17 @@ function LiveRunner({
       </header>
 
       {/* Hero metric */}
-      <div className="bg-grit-card border p-5 text-center" style={{ borderColor: status === "running" ? cfg.color : "#262626" }}>
+      <div
+        className="bg-grit-card border p-5 text-center"
+        style={{ borderColor: status === "running" ? cfg.color : "#262626" }}
+      >
         <p className="label-cap text-[10px] text-grit-dim mb-1">
           {status === "ready" ? "READY" : "DISTANCE"}
         </p>
-        <p className="display text-6xl font-extrabold leading-none tracking-tight" style={{ color: cfg.color }}>
+        <p
+          className="display text-6xl font-extrabold leading-none tracking-tight"
+          style={{ color: cfg.color }}
+        >
           {(distanceM / 1000).toFixed(2)}
         </p>
         <p className="label-cap text-xs text-grit-dim mt-1">KILOMETRES</p>
@@ -707,12 +781,21 @@ function LiveRunner({
         {isCycle ? (
           <>
             <BigStat label="Avg km/h" value={speedKmhNow.toFixed(1)} />
-            <BigStat label="Now km/h" value={currentSpeedKmhNow.toFixed(1)} accent={status === "running"} />
+            <BigStat
+              label="Now km/h"
+              value={currentSpeedKmhNow.toFixed(1)}
+              accent={status === "running"}
+            />
           </>
         ) : (
           <>
             <BigStat label="Avg pace" value={formatPace(pace)} suffix="/km" />
-            <BigStat label="Now" value={formatPace(currentPace)} suffix="/km" accent={status === "running"} />
+            <BigStat
+              label="Now"
+              value={formatPace(currentPace)}
+              suffix="/km"
+              accent={status === "running"}
+            />
           </>
         )}
       </div>
@@ -735,7 +818,9 @@ function LiveRunner({
         {status === "running" && samples.length >= 2 && (
           <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-black/80 border border-accent-red px-2 py-1 z-[400]">
             <span className="w-1.5 h-1.5 bg-accent-red rounded-full animate-pulse" />
-            <span className="label-cap text-[9px] text-accent-red">LIVE · {samples.length} pts</span>
+            <span className="label-cap text-[9px] text-accent-red">
+              LIVE · {samples.length} pts
+            </span>
           </div>
         )}
       </div>
@@ -743,9 +828,23 @@ function LiveRunner({
       {permission === "denied" && (
         <div className="bg-grit-card border border-accent-red p-4 space-y-2">
           <p className="label-cap text-[10px] text-accent-red">GPS BLOCKED</p>
-          <p className="text-xs text-grit-dim">Enable location in browser settings to record your route.</p>
-          <button onClick={() => { setPermission("prompt"); setError(null); navigator.geolocation.getCurrentPosition(() => setPermission("granted"), handleGpsError, { enableHighAccuracy: true }); }}
-            className="btn-grit w-full py-2.5 text-xs">Retry GPS</button>
+          <p className="text-xs text-grit-dim">
+            Enable location in browser settings to record your route.
+          </p>
+          <button
+            onClick={() => {
+              setPermission("prompt");
+              setError(null);
+              navigator.geolocation.getCurrentPosition(
+                () => setPermission("granted"),
+                handleGpsError,
+                { enableHighAccuracy: true },
+              );
+            }}
+            className="btn-grit w-full py-2.5 text-xs"
+          >
+            Retry GPS
+          </button>
         </div>
       )}
 
@@ -760,7 +859,9 @@ function LiveRunner({
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="bg-grit-card border border-grit p-2">
             <p className="text-[9px] uppercase tracking-wider text-grit-dim">Calories</p>
-            <p className="text-sm font-bold text-grit">{Math.round((distanceM / 1000) * weightKg * cfg.calMult)}</p>
+            <p className="text-sm font-bold text-grit">
+              {Math.round((distanceM / 1000) * weightKg * cfg.calMult)}
+            </p>
           </div>
           <div className="bg-grit-card border border-grit p-2">
             <p className="text-[9px] uppercase tracking-wider text-grit-dim">Fixes</p>
@@ -838,18 +939,31 @@ function LiveRunner({
 }
 
 function BigStat({
-  label, value, suffix, accent,
+  label,
+  value,
+  suffix,
+  accent,
 }: {
-  label: string; value: string; suffix?: string; accent?: boolean;
+  label: string;
+  value: string;
+  suffix?: string;
+  accent?: boolean;
 }) {
   return (
     <div className="bg-grit-card border border-grit p-3 flex flex-col gap-1">
       <span className="text-[9px] uppercase tracking-widest text-grit-dim">{label}</span>
       <div className="flex items-baseline gap-1">
-        <span className="display text-xl font-extrabold leading-none" style={{ color: accent ? "#e63222" : "var(--grit-text, #e5e5e5)" }}>
+        <span
+          className="display text-xl font-extrabold leading-none"
+          style={{ color: accent ? "#e63222" : "var(--grit-text, #e5e5e5)" }}
+        >
           {value}
         </span>
-        {suffix && <span className="text-[9px] font-bold uppercase tracking-wider text-grit-dim">{suffix}</span>}
+        {suffix && (
+          <span className="text-[9px] font-bold uppercase tracking-wider text-grit-dim">
+            {suffix}
+          </span>
+        )}
       </div>
     </div>
   );
@@ -883,7 +997,12 @@ function RunSummary({
   async function share() {
     const text = `${name} · ${(run.distanceM / 1000).toFixed(2)} km · ${formatDuration(run.durationSec)} · ${run.calories ?? estimateCalories(run)} kcal 🔥 via DEADSET`;
     if (navigator.share) {
-      try { await navigator.share({ title: "DEADSET Activity", text }); return; } catch { /* cancelled */ }
+      try {
+        await navigator.share({ title: "DEADSET Activity", text });
+        return;
+      } catch {
+        /* cancelled */
+      }
     }
     await navigator.clipboard.writeText(text);
     toast.success("Copied to clipboard");
@@ -892,14 +1011,23 @@ function RunSummary({
   return (
     <div className="px-4 pt-6 pb-24 max-w-screen-sm mx-auto space-y-4">
       <header className="flex items-center justify-between">
-        <button onClick={onDiscard} className="flex items-center gap-1 text-grit-dim text-xs uppercase tracking-wider font-bold">
+        <button
+          onClick={onDiscard}
+          className="flex items-center gap-1 text-grit-dim text-xs uppercase tracking-wider font-bold"
+        >
           <Trash2 size={14} /> Discard
         </button>
         <div className="flex items-center gap-2">
           <span style={{ color: cfg.color }}>{cfg.icon}</span>
-          <span className="label-cap text-[11px]" style={{ color: cfg.color }}>ACTIVITY COMPLETE</span>
+          <span className="label-cap text-[11px]" style={{ color: cfg.color }}>
+            ACTIVITY COMPLETE
+          </span>
         </div>
-        <button onClick={share} className="flex items-center gap-1 text-xs uppercase tracking-wider font-bold" style={{ color: cfg.color }}>
+        <button
+          onClick={share}
+          className="flex items-center gap-1 text-xs uppercase tracking-wider font-bold"
+          style={{ color: cfg.color }}
+        >
           <Share2 size={14} /> Share
         </button>
       </header>
@@ -910,13 +1038,19 @@ function RunSummary({
       {/* Stats */}
       <div className="grid grid-cols-2 gap-2">
         <div className="border p-4 text-center" style={{ borderColor: cfg.color }}>
-          <p className="label-cap text-[9px]" style={{ color: cfg.color }}>DISTANCE</p>
-          <p className="display text-3xl font-extrabold text-grit leading-none mt-1">{(run.distanceM / 1000).toFixed(2)}</p>
+          <p className="label-cap text-[9px]" style={{ color: cfg.color }}>
+            DISTANCE
+          </p>
+          <p className="display text-3xl font-extrabold text-grit leading-none mt-1">
+            {(run.distanceM / 1000).toFixed(2)}
+          </p>
           <p className="label-cap text-[9px] text-grit-dim">km</p>
         </div>
         <div className="border border-grit p-4 text-center bg-grit-card">
           <p className="label-cap text-[9px] text-grit-dim">TIME</p>
-          <p className="display text-3xl font-extrabold text-grit leading-none mt-1">{formatDuration(run.durationSec)}</p>
+          <p className="display text-3xl font-extrabold text-grit leading-none mt-1">
+            {formatDuration(run.durationSec)}
+          </p>
           <p className="label-cap text-[9px] text-grit-dim">duration</p>
         </div>
         <div className="border border-grit p-3 bg-grit-card text-center">
@@ -931,19 +1065,25 @@ function RunSummary({
         </div>
         <div className="border border-grit p-3 bg-grit-card text-center">
           <p className="label-cap text-[9px] text-grit-dim">CALORIES</p>
-          <p className="display text-xl font-extrabold text-grit leading-none mt-1">{run.calories ?? estimateCalories(run)}</p>
+          <p className="display text-xl font-extrabold text-grit leading-none mt-1">
+            {run.calories ?? estimateCalories(run)}
+          </p>
           <p className="label-cap text-[9px] text-grit-dim">kcal</p>
         </div>
         {(run.elevGainM ?? 0) > 0 && (
           <div className="border border-grit p-3 bg-grit-card text-center">
             <p className="label-cap text-[9px] text-grit-dim">ELEVATION</p>
-            <p className="display text-xl font-extrabold text-grit leading-none mt-1">+{run.elevGainM}m</p>
+            <p className="display text-xl font-extrabold text-grit leading-none mt-1">
+              +{run.elevGainM}m
+            </p>
           </div>
         )}
         {run.splits.length > 0 && (
           <div className="border border-grit p-3 bg-grit-card text-center">
             <p className="label-cap text-[9px] text-grit-dim">BEST KM</p>
-            <p className="display text-xl font-extrabold text-grit leading-none mt-1">{formatPace(run.bestPaceSecPerKm ?? 0)}/km</p>
+            <p className="display text-xl font-extrabold text-grit leading-none mt-1">
+              {formatPace(run.bestPaceSecPerKm ?? 0)}/km
+            </p>
           </div>
         )}
       </div>
@@ -972,7 +1112,9 @@ function RunSummary({
           />
         </div>
         <div>
-          <label className="label-cap text-[10px] text-grit-dim block mb-1">Avg heart rate (optional)</label>
+          <label className="label-cap text-[10px] text-grit-dim block mb-1">
+            Avg heart rate (optional)
+          </label>
           <input
             value={hr}
             onChange={(e) => setHr(e.target.value)}
@@ -1018,7 +1160,12 @@ function RunDetail({
   async function share() {
     const text = `${run.name || labelRun(run)} · ${(run.distanceM / 1000).toFixed(2)} km · ${formatDuration(run.durationSec)} · ${run.calories ?? estimateCalories(run)} kcal 🔥 via DEADSET`;
     if (navigator.share) {
-      try { await navigator.share({ title: "DEADSET Activity", text }); return; } catch { /* cancelled */ }
+      try {
+        await navigator.share({ title: "DEADSET Activity", text });
+        return;
+      } catch {
+        /* cancelled */
+      }
     }
     await navigator.clipboard.writeText(text);
     toast.success("Copied");
@@ -1027,13 +1174,18 @@ function RunDetail({
   return (
     <div className="px-4 pt-6 pb-24 max-w-screen-sm mx-auto space-y-4">
       <header className="flex items-center justify-between">
-        <button onClick={onBack} className="flex items-center gap-1 text-grit-dim hover:text-grit text-xs uppercase tracking-wider font-bold">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1 text-grit-dim hover:text-grit text-xs uppercase tracking-wider font-bold"
+        >
           <ChevronLeft size={16} /> Back
         </button>
         <div className="flex items-center gap-3">
-          <button onClick={share} className="text-grit-dim hover:text-grit"><Share2 size={16} /></button>
+          <button onClick={share} className="text-grit-dim hover:text-grit">
+            <Share2 size={16} />
+          </button>
           <button
-            onClick={() => confirmDelete ? onDelete() : setConfirmDelete(true)}
+            onClick={() => (confirmDelete ? onDelete() : setConfirmDelete(true))}
             className={`flex items-center gap-1 text-xs uppercase tracking-wider font-bold ${confirmDelete ? "text-accent-red" : "text-grit-dim hover:text-accent-red"}`}
           >
             <Trash2 size={14} />
@@ -1045,7 +1197,9 @@ function RunDetail({
       <div>
         <div className="flex items-center gap-2 mb-1">
           <span style={{ color: cfg.color }}>{cfg.icon}</span>
-          <p className="label-cap text-[10px]" style={{ color: cfg.color }}>{formatRunDate(run.date)}</p>
+          <p className="label-cap text-[10px]" style={{ color: cfg.color }}>
+            {formatRunDate(run.date)}
+          </p>
         </div>
         <h1 className="display text-2xl font-extrabold uppercase text-grit tracking-tight">
           {run.name || labelRun(run)}
@@ -1059,12 +1213,24 @@ function RunDetail({
       <div className="grid grid-cols-2 gap-2">
         <DetailStat label="Distance" value={`${(run.distanceM / 1000).toFixed(2)} km`} big />
         <DetailStat label="Time" value={formatDuration(run.durationSec)} big />
-        <DetailStat label={run.activityType === "cycle" ? "Avg speed" : "Avg pace"}
-          value={run.activityType === "cycle" ? `${speedKmh(run.distanceM, run.durationSec)} km/h` : `${formatPace(run.avgPaceSecPerKm)}/km`} />
-        <DetailStat label={run.activityType === "cycle" ? "Top speed est." : "Best km"}
-          value={run.activityType === "cycle"
-            ? `${run.bestPaceSecPerKm ? (3600 / run.bestPaceSecPerKm).toFixed(1) : "—"} km/h`
-            : (run.bestPaceSecPerKm ? `${formatPace(run.bestPaceSecPerKm)}/km` : "—")} />
+        <DetailStat
+          label={run.activityType === "cycle" ? "Avg speed" : "Avg pace"}
+          value={
+            run.activityType === "cycle"
+              ? `${speedKmh(run.distanceM, run.durationSec)} km/h`
+              : `${formatPace(run.avgPaceSecPerKm)}/km`
+          }
+        />
+        <DetailStat
+          label={run.activityType === "cycle" ? "Top speed est." : "Best km"}
+          value={
+            run.activityType === "cycle"
+              ? `${run.bestPaceSecPerKm ? (3600 / run.bestPaceSecPerKm).toFixed(1) : "—"} km/h`
+              : run.bestPaceSecPerKm
+                ? `${formatPace(run.bestPaceSecPerKm)}/km`
+                : "—"
+          }
+        />
         <DetailStat label="Elevation" value={run.elevGainM ? `+${run.elevGainM} m` : "—"} />
         <DetailStat label="Calories" value={`${run.calories ?? estimateCalories(run)} kcal`} />
         {run.heartRateAvg && <DetailStat label="Avg HR" value={`${run.heartRateAvg} bpm`} />}
@@ -1088,10 +1254,15 @@ function RunDetail({
                   <div className="flex-1 h-5 bg-grit relative overflow-hidden">
                     <div
                       className="absolute inset-y-0 left-0"
-                      style={{ width: `${pct}%`, background: isBest ? cfg.color : isWorst ? "#404040" : "#2a2a2a" }}
+                      style={{
+                        width: `${pct}%`,
+                        background: isBest ? cfg.color : isWorst ? "#404040" : "#2a2a2a",
+                      }}
                     />
                   </div>
-                  <span className={`w-16 text-right tabular-nums font-bold ${isBest ? "text-accent-red" : "text-grit"}`}>
+                  <span
+                    className={`w-16 text-right tabular-nums font-bold ${isBest ? "text-accent-red" : "text-grit"}`}
+                  >
                     {formatPace(sec)}
                   </span>
                   {isBest && <span className="label-cap text-[9px] text-accent-red">BEST</span>}
@@ -1107,10 +1278,16 @@ function RunDetail({
       {/* Share / Social */}
       <section className="border border-grit bg-grit-card p-4 space-y-3">
         <p className="label-cap text-[10px] text-accent-red">SHARE WITH CREW</p>
-        <button onClick={share} className="btn-grit w-full py-3 flex items-center justify-center gap-2">
+        <button
+          onClick={share}
+          className="btn-grit w-full py-3 flex items-center justify-center gap-2"
+        >
           <Share2 size={14} /> Share this {cfg.label.toLowerCase()}
         </button>
-        <Link to="/friends" className="block text-center label-cap text-[10px] text-grit-dim hover:text-accent-red">
+        <Link
+          to="/friends"
+          className="block text-center label-cap text-[10px] text-grit-dim hover:text-accent-red"
+        >
           Post to feed → <Users size={10} className="inline" />
         </Link>
       </section>
@@ -1118,11 +1295,23 @@ function RunDetail({
   );
 }
 
-function DetailStat({ label, value, big = false }: { label: string; value: string; big?: boolean }) {
+function DetailStat({
+  label,
+  value,
+  big = false,
+}: {
+  label: string;
+  value: string;
+  big?: boolean;
+}) {
   return (
     <div className="bg-grit-card border border-grit p-3 flex flex-col gap-1">
       <span className="text-[9px] uppercase tracking-widest text-grit-dim">{label}</span>
-      <span className={`display font-extrabold text-grit leading-none ${big ? "text-2xl" : "text-lg"}`}>{value}</span>
+      <span
+        className={`display font-extrabold text-grit leading-none ${big ? "text-2xl" : "text-lg"}`}
+      >
+        {value}
+      </span>
     </div>
   );
 }
@@ -1132,14 +1321,18 @@ function DetailStat({ label, value, big = false }: { label: string; value: strin
 function labelRun(r: Run): string {
   const cfg = ACTIVITY_CONFIG[r.activityType ?? "run"];
   const h = new Date(r.date).getHours();
-  const time = h < 5 ? "Late night" : h < 12 ? "Morning" : h < 17 ? "Afternoon" : h < 21 ? "Evening" : "Night";
+  const time =
+    h < 5 ? "Late night" : h < 12 ? "Morning" : h < 17 ? "Afternoon" : h < 21 ? "Evening" : "Night";
   return `${time} ${cfg.label}`;
 }
 
 function formatRunDate(iso: string): string {
   const d = new Date(iso);
   const today = new Date();
-  const sameDay = d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
+  const sameDay =
+    d.getFullYear() === today.getFullYear() &&
+    d.getMonth() === today.getMonth() &&
+    d.getDate() === today.getDate();
   const time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
   if (sameDay) return `Today · ${time}`;
   return `${d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })} · ${time}`;
@@ -1160,14 +1353,24 @@ let wakeLockSentinel: WakeLockSentinel | null = null;
 
 async function requestWakeLock() {
   try {
-    const nav = navigator as Navigator & { wakeLock?: { request: (type: "screen") => Promise<WakeLockSentinel> } };
+    const nav = navigator as Navigator & {
+      wakeLock?: { request: (type: "screen") => Promise<WakeLockSentinel> };
+    };
     if (nav.wakeLock) wakeLockSentinel = await nav.wakeLock.request("screen");
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 function releaseWakeLock() {
-  try { wakeLockSentinel?.release(); } catch { /* ignore */ }
+  try {
+    wakeLockSentinel?.release();
+  } catch {
+    /* ignore */
+  }
   wakeLockSentinel = null;
 }
 
-interface WakeLockSentinel { release: () => Promise<void>; }
+interface WakeLockSentinel {
+  release: () => Promise<void>;
+}

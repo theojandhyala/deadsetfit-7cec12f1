@@ -11,9 +11,7 @@ export function haversine(
   const dLng = toRad(b.lng - a.lng);
   const lat1 = toRad(a.lat);
   const lat2 = toRad(b.lat);
-  const s =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
   return 2 * EARTH_R * Math.asin(Math.sqrt(s));
 }
 
@@ -107,7 +105,17 @@ export function smoothGpsFix(
     timeMs: number; // run-relative ms
   },
   opts: { maxAccuracyM?: number; maxSpeedMps?: number; minDeltaM?: number } = {},
-): { accepted: false } | { accepted: true; lat: number; lng: number; d: number; total: number; acc?: number; alt?: number } {
+):
+  | { accepted: false }
+  | {
+      accepted: true;
+      lat: number;
+      lng: number;
+      d: number;
+      total: number;
+      acc?: number;
+      alt?: number;
+    } {
   const maxAccuracy = opts.maxAccuracyM ?? 100;
   const maxSpeed = opts.maxSpeedMps ?? 12.5; // ~45 km/h, still rejects GPS teleports
   const minDelta = opts.minDeltaM ?? 0.75;
@@ -128,10 +136,7 @@ export function smoothGpsFix(
     };
   }
 
-  const rawDist = haversine(
-    { lat: prev.lat, lng: prev.lng },
-    { lat: raw.lat, lng: raw.lng },
-  );
+  const rawDist = haversine({ lat: prev.lat, lng: prev.lng }, { lat: raw.lat, lng: raw.lng });
   const dtSec = Math.max(0.001, (raw.timeMs - prev.t) / 1000);
 
   // Jitter: keep this deliberately permissive so 0.01km changes show quickly.
@@ -152,10 +157,7 @@ export function smoothGpsFix(
   const blendedLat = prev.lat + k * (raw.lat - prev.lat);
   const blendedLng = prev.lng + k * (raw.lng - prev.lng);
 
-  const d = haversine(
-    { lat: prev.lat, lng: prev.lng },
-    { lat: blendedLat, lng: blendedLng },
-  );
+  const d = haversine({ lat: prev.lat, lng: prev.lng }, { lat: blendedLat, lng: blendedLng });
   if (d < minDelta) return { accepted: false };
 
   return {
@@ -188,7 +190,10 @@ export function samplesToSvgPath(
   pad = 4,
 ): { d: string; start?: { x: number; y: number }; end?: { x: number; y: number } } {
   if (samples.length < 2) return { d: "" };
-  let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+  let minLat = Infinity,
+    maxLat = -Infinity,
+    minLng = Infinity,
+    maxLng = -Infinity;
   for (const s of samples) {
     if (s.lat < minLat) minLat = s.lat;
     if (s.lat > maxLat) maxLat = s.lat;
@@ -208,7 +213,9 @@ export function samplesToSvgPath(
     x: offsetX + (s.lng - minLng) * lngScale * scale,
     y: 100 - (offsetY + (s.lat - minLat) * scale), // flip so north = up
   }));
-  const d = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" ");
+  const d = pts
+    .map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(2)},${p.y.toFixed(2)}`)
+    .join(" ");
   return { d, start: pts[0], end: pts[pts.length - 1] };
 }
 

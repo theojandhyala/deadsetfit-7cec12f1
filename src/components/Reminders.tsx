@@ -17,7 +17,11 @@ const DISMISS_KEY = "deadset_reminder_dismiss_v1";
 
 function getDismissed(): Record<string, string> {
   if (typeof window === "undefined") return {};
-  try { return JSON.parse(localStorage.getItem(DISMISS_KEY) || "{}"); } catch { return {}; }
+  try {
+    return JSON.parse(localStorage.getItem(DISMISS_KEY) || "{}");
+  } catch {
+    return {};
+  }
 }
 function setDismissed(map: Record<string, string>) {
   localStorage.setItem(DISMISS_KEY, JSON.stringify(map));
@@ -34,7 +38,9 @@ export function Reminders() {
   const [dismissed, setDismissedState] = useState<Record<string, string>>({});
   const [open, setOpen] = useState<Reminder | null>(null);
 
-  useEffect(() => { setDismissedState(getDismissed()); }, []);
+  useEffect(() => {
+    setDismissedState(getDismissed());
+  }, []);
 
   const today = isoDay();
   const items: Reminder[] = [];
@@ -116,7 +122,10 @@ export function Reminders() {
               className="snap-start flex-shrink-0 w-[78%] text-left bg-grit-card border border-accent-red/40 p-3 relative hover:border-accent-red transition-colors"
             >
               <span
-                onClick={(e) => { e.stopPropagation(); dismiss(r.id); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  dismiss(r.id);
+                }}
                 className="absolute top-1.5 right-1.5 p-1 text-grit-dim hover:text-grit cursor-pointer"
                 role="button"
                 aria-label="Dismiss"
@@ -134,15 +143,46 @@ export function Reminders() {
       </div>
 
       {open && (
-        <div className="fixed inset-0 z-[200] bg-black/85 flex items-end sm:items-center justify-center p-4" onClick={() => setOpen(null)}>
-          <div className="bg-grit-card border border-accent-red max-w-md w-full p-5 relative" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setOpen(null)} className="absolute top-3 right-3 text-grit-dim hover:text-grit"><X size={20} /></button>
-            <div className="flex items-center gap-2 text-accent-red mb-2">{open.icon}<p className="label-cap text-[10px]">REMINDER</p></div>
+        <div
+          className="fixed inset-0 z-[200] bg-black/85 flex items-end sm:items-center justify-center p-4"
+          onClick={() => setOpen(null)}
+        >
+          <div
+            className="bg-grit-card border border-accent-red max-w-md w-full p-5 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setOpen(null)}
+              className="absolute top-3 right-3 text-grit-dim hover:text-grit"
+            >
+              <X size={20} />
+            </button>
+            <div className="flex items-center gap-2 text-accent-red mb-2">
+              {open.icon}
+              <p className="label-cap text-[10px]">REMINDER</p>
+            </div>
             <h3 className="display text-2xl font-extrabold uppercase text-grit">{open.title}</h3>
             <p className="text-sm text-grit-dim mt-2">{open.body}</p>
             <div className="flex gap-2 mt-5">
-              <button onClick={() => { dismiss(open.id); setOpen(null); }} className="btn-ghost flex-1">Snooze</button>
-              <Link to={open.to} onClick={() => { dismiss(open.id); setOpen(null); }} className="btn-grit flex-1 text-center">{open.cta}</Link>
+              <button
+                onClick={() => {
+                  dismiss(open.id);
+                  setOpen(null);
+                }}
+                className="btn-ghost flex-1"
+              >
+                Snooze
+              </button>
+              <Link
+                to={open.to}
+                onClick={() => {
+                  dismiss(open.id);
+                  setOpen(null);
+                }}
+                className="btn-grit flex-1 text-center"
+              >
+                {open.cta}
+              </Link>
             </div>
           </div>
         </div>

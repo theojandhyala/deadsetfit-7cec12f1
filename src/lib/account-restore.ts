@@ -77,7 +77,10 @@ export function profileQuestionsComplete(row: AccountProfile | null | undefined)
     typeof row.age === "number" &&
     Number(row.weight_kg) > 0 &&
     Number(row.height_cm) > 0 &&
-    (row.days_per_week === 3 || row.days_per_week === 4 || row.days_per_week === 5 || row.days_per_week === 6) &&
+    (row.days_per_week === 3 ||
+      row.days_per_week === 4 ||
+      row.days_per_week === 5 ||
+      row.days_per_week === 6) &&
     row.username,
   );
 }

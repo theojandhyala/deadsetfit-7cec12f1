@@ -2,7 +2,16 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, ChevronUp, ChevronDown, X, Plus, Sparkles, Loader2, Search } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronUp,
+  ChevronDown,
+  X,
+  Plus,
+  Sparkles,
+  Loader2,
+  Search,
+} from "lucide-react";
 import { useAppState } from "@/lib/storage";
 import { listExercises, type LibraryExercise } from "@/lib/library.functions";
 import { smartSuggest } from "@/lib/programs.functions";
@@ -15,7 +24,15 @@ export const Route = createFileRoute("/_tabs/programs/$programId")({
 });
 
 const DAYS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
-const SHORT: Record<DayKey, string> = { MON: "Mon", TUE: "Tue", WED: "Wed", THU: "Thu", FRI: "Fri", SAT: "Sat", SUN: "Sun" };
+const SHORT: Record<DayKey, string> = {
+  MON: "Mon",
+  TUE: "Tue",
+  WED: "Wed",
+  THU: "Thu",
+  FRI: "Fri",
+  SAT: "Sat",
+  SUN: "Sun",
+};
 
 function toRef(ex: LibraryExercise): ProgramExerciseRef {
   return {
@@ -53,10 +70,11 @@ function BuilderPage() {
     const q = search.trim().toLowerCase();
     if (!q) return exercises.slice(0, 80);
     return exercises
-      .filter((e) =>
-        e.name.toLowerCase().includes(q) ||
-        e.primary_muscles.some((m) => m.includes(q)) ||
-        e.equipment.toLowerCase().includes(q),
+      .filter(
+        (e) =>
+          e.name.toLowerCase().includes(q) ||
+          e.primary_muscles.some((m) => m.includes(q)) ||
+          e.equipment.toLowerCase().includes(q),
       )
       .slice(0, 80);
   }, [exercises, search]);
@@ -70,7 +88,10 @@ function BuilderPage() {
           experience: state.profile.experience,
           days: DAYS.map((d) => ({
             label: program.days[d].label,
-            items: program.days[d].items.map((i) => ({ name: i.name, primary_muscles: i.primary_muscles })),
+            items: program.days[d].items.map((i) => ({
+              name: i.name,
+              primary_muscles: i.primary_muscles,
+            })),
           })),
           candidates: exercises.slice(0, 200).map((e) => ({
             id: e.id,
@@ -88,7 +109,9 @@ function BuilderPage() {
     return (
       <div className="px-5 pt-10 text-center">
         <p className="label-cap text-grit-dim">Program not found</p>
-        <Link to="/programs" className="btn-grit mt-4 inline-block">Back</Link>
+        <Link to="/programs" className="btn-grit mt-4 inline-block">
+          Back
+        </Link>
       </div>
     );
   }
@@ -101,7 +124,10 @@ function BuilderPage() {
   }
 
   function setLabel(label: string) {
-    update((p) => ({ ...p, days: { ...p.days, [day]: { ...p.days[day], label: label.toUpperCase() } } }));
+    update((p) => ({
+      ...p,
+      days: { ...p.days, [day]: { ...p.days[day], label: label.toUpperCase() } },
+    }));
   }
   function rename(name: string) {
     update((p) => ({ ...p, name: name.toUpperCase().slice(0, 40) }));
@@ -109,7 +135,10 @@ function BuilderPage() {
   function addExercise(ex: LibraryExercise) {
     update((p) => {
       if (p.days[day].items.some((i) => i.id === ex.id)) return p;
-      return { ...p, days: { ...p.days, [day]: { ...p.days[day], items: [...p.days[day].items, toRef(ex)] } } };
+      return {
+        ...p,
+        days: { ...p.days, [day]: { ...p.days[day], items: [...p.days[day].items, toRef(ex)] } },
+      };
     });
   }
   function addCustomExercise(name: string) {
@@ -135,7 +164,13 @@ function BuilderPage() {
     setSearch("");
   }
   function removeItem(id: string) {
-    update((p) => ({ ...p, days: { ...p.days, [day]: { ...p.days[day], items: p.days[day].items.filter((i) => i.id !== id) } } }));
+    update((p) => ({
+      ...p,
+      days: {
+        ...p.days,
+        [day]: { ...p.days[day], items: p.days[day].items.filter((i) => i.id !== id) },
+      },
+    }));
   }
   function move(id: string, dir: -1 | 1) {
     update((p) => {
@@ -151,7 +186,13 @@ function BuilderPage() {
   function setSetsReps(id: string, sets: number, reps: string) {
     update((p) => ({
       ...p,
-      days: { ...p.days, [day]: { ...p.days[day], items: p.days[day].items.map((i) => i.id === id ? { ...i, sets, reps } : i) } },
+      days: {
+        ...p.days,
+        [day]: {
+          ...p.days[day],
+          items: p.days[day].items.map((i) => (i.id === id ? { ...i, sets, reps } : i)),
+        },
+      },
     }));
   }
   function applySuggestion(suggestedIds: string[]) {
@@ -161,7 +202,16 @@ function BuilderPage() {
       .map((e) => toRef(e as LibraryExercise));
     update((p) => ({
       ...p,
-      days: { ...p.days, [day]: { ...p.days[day], items: [...p.days[day].items, ...refs.filter((r) => !p.days[day].items.some((i) => i.id === r.id))] } },
+      days: {
+        ...p.days,
+        [day]: {
+          ...p.days[day],
+          items: [
+            ...p.days[day].items,
+            ...refs.filter((r) => !p.days[day].items.some((i) => i.id === r.id)),
+          ],
+        },
+      },
     }));
     toast.success(`Added ${refs.length} to ${day}`);
   }
@@ -212,11 +262,7 @@ function BuilderPage() {
       {/* Day label input */}
       <div className="px-5 mb-4">
         <label className="label-cap text-grit-dim text-[10px] block mb-1">Day Label</label>
-        <input
-          value={d.label}
-          onChange={(e) => setLabel(e.target.value)}
-          className="input-grit"
-        />
+        <input value={d.label} onChange={(e) => setLabel(e.target.value)} className="input-grit" />
       </div>
 
       {/* Actions */}
@@ -229,7 +275,11 @@ function BuilderPage() {
           disabled={suggestMut.isPending}
           className="px-4 border border-accent-red text-accent-red label-cap text-xs flex items-center"
         >
-          {suggestMut.isPending ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+          {suggestMut.isPending ? (
+            <Loader2 size={14} className="animate-spin" />
+          ) : (
+            <Sparkles size={14} />
+          )}
         </button>
       </div>
 
@@ -244,15 +294,25 @@ function BuilderPage() {
           <div key={it.id} className="bg-grit-card border border-grit p-3">
             <div className="flex items-start gap-2">
               <div className="flex flex-col">
-                <button onClick={() => move(it.id, -1)} disabled={idx === 0} className="p-1 disabled:opacity-30">
+                <button
+                  onClick={() => move(it.id, -1)}
+                  disabled={idx === 0}
+                  className="p-1 disabled:opacity-30"
+                >
                   <ChevronUp size={14} className="text-grit-dim" />
                 </button>
-                <button onClick={() => move(it.id, 1)} disabled={idx === d.items.length - 1} className="p-1 disabled:opacity-30">
+                <button
+                  onClick={() => move(it.id, 1)}
+                  disabled={idx === d.items.length - 1}
+                  className="p-1 disabled:opacity-30"
+                >
                   <ChevronDown size={14} className="text-grit-dim" />
                 </button>
               </div>
               <div className="flex-1 min-w-0">
-                <div className="display uppercase font-extrabold text-grit text-sm truncate">{it.name}</div>
+                <div className="display uppercase font-extrabold text-grit text-sm truncate">
+                  {it.name}
+                </div>
                 <div className="text-[10px] label-cap text-grit-dim mt-0.5">
                   {it.equipment} · {it.primary_muscles.slice(0, 3).join(" · ")}
                 </div>
@@ -300,11 +360,18 @@ function BuilderPage() {
             className="w-full max-w-md mx-auto bg-grit-card border-t border-accent-red p-4 max-h-[85vh] flex flex-col"
           >
             <div className="flex justify-between items-center mb-3">
-              <p className="display uppercase text-grit font-extrabold text-lg">Add to {SHORT[day]}</p>
-              <button onClick={() => setPicker(false)} className="label-cap text-grit-dim text-xs">CLOSE</button>
+              <p className="display uppercase text-grit font-extrabold text-lg">
+                Add to {SHORT[day]}
+              </p>
+              <button onClick={() => setPicker(false)} className="label-cap text-grit-dim text-xs">
+                CLOSE
+              </button>
             </div>
             <div className="relative mb-3">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-grit-dim" />
+              <Search
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-grit-dim"
+              />
               <input
                 autoFocus
                 placeholder="SEARCH NAME OR MUSCLE"
@@ -332,17 +399,25 @@ function BuilderPage() {
                   <Plus size={14} className="text-accent-red" />
                 </button>
               )}
-              {allQ.isLoading && <p className="label-cap text-grit-dim text-xs py-4 text-center">Loading library…</p>}
+              {allQ.isLoading && (
+                <p className="label-cap text-grit-dim text-xs py-4 text-center">Loading library…</p>
+              )}
               <ul className="space-y-1.5">
                 {filtered.map((ex) => {
                   const added = d.items.some((i) => i.id === ex.id);
                   return (
                     <li key={ex.id}>
                       <button
-                        onClick={() => { addExercise(ex); }}
+                        onClick={() => {
+                          addExercise(ex);
+                        }}
                         disabled={added}
                         className="w-full text-left px-3 py-2 flex items-center justify-between gap-2"
-                        style={{ background: "#0a0a0a", border: `1px solid ${added ? "#e63222" : "#2a2a2a"}`, opacity: added ? 0.6 : 1 }}
+                        style={{
+                          background: "#0a0a0a",
+                          border: `1px solid ${added ? "#e63222" : "#2a2a2a"}`,
+                          opacity: added ? 0.6 : 1,
+                        }}
                       >
                         <div className="min-w-0 flex-1">
                           <div className="label-cap text-xs text-grit truncate">{ex.name}</div>
@@ -360,7 +435,9 @@ function BuilderPage() {
                   );
                 })}
                 {filtered.length === 0 && !allQ.isLoading && search.trim().length < 2 && (
-                  <li className="label-cap text-grit-dim text-xs text-center py-6">Type to search or create</li>
+                  <li className="label-cap text-grit-dim text-xs text-center py-6">
+                    Type to search or create
+                  </li>
                 )}
               </ul>
             </div>
@@ -383,10 +460,17 @@ function BuilderPage() {
               <p className="display uppercase text-grit font-extrabold text-lg">
                 <Sparkles size={16} className="inline -mt-1 mr-1 text-accent-red" /> Smart Suggest
               </p>
-              <button onClick={() => setSuggestOpen(false)} className="label-cap text-grit-dim text-xs">CLOSE</button>
+              <button
+                onClick={() => setSuggestOpen(false)}
+                className="label-cap text-grit-dim text-xs"
+              >
+                CLOSE
+              </button>
             </div>
             {suggestMut.data.gaps.length === 0 ? (
-              <p className="text-sm text-grit-dim label-cap">No major gaps detected. Solid program.</p>
+              <p className="text-sm text-grit-dim label-cap">
+                No major gaps detected. Solid program.
+              </p>
             ) : (
               <ul className="space-y-3">
                 {suggestMut.data.gaps.map((g, i) => {
@@ -394,12 +478,20 @@ function BuilderPage() {
                     .map((id) => exercises.find((e) => e.id === id))
                     .filter(Boolean) as LibraryExercise[];
                   return (
-                    <li key={i} className="border border-grit p-3" style={{ background: "#0a0a0a" }}>
-                      <div className="label-cap text-[10px] text-accent-red mb-1">{g.day} · {g.muscle}</div>
+                    <li
+                      key={i}
+                      className="border border-grit p-3"
+                      style={{ background: "#0a0a0a" }}
+                    >
+                      <div className="label-cap text-[10px] text-accent-red mb-1">
+                        {g.day} · {g.muscle}
+                      </div>
                       <p className="text-sm text-grit mb-2">{g.reason}</p>
                       <div className="space-y-1.5">
                         {refs.map((ex) => (
-                          <div key={ex.id} className="text-xs text-grit-dim">+ {ex.name}</div>
+                          <div key={ex.id} className="text-xs text-grit-dim">
+                            + {ex.name}
+                          </div>
                         ))}
                       </div>
                       {refs.length > 0 && (

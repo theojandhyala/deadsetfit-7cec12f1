@@ -17,7 +17,11 @@ export function PaywallSheet() {
   if (!state.open) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center" role="dialog" aria-modal="true">
+    <div
+      className="fixed inset-0 z-[100] flex items-end justify-center"
+      role="dialog"
+      aria-modal="true"
+    >
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={close} />
       <div
         className="relative w-full max-w-md bg-grit-bg border-t border-grit-card rounded-t-2xl p-6 pb-10 animate-in slide-in-from-bottom duration-300"
@@ -33,15 +37,15 @@ export function PaywallSheet() {
 
         <div className="flex items-center gap-2 mb-2">
           <Crown size={18} className="text-accent-red" />
-          <span className="font-display text-xs uppercase tracking-widest text-accent-red">DEADSET Pro</span>
+          <span className="font-display text-xs uppercase tracking-widest text-accent-red">
+            DEADSET Pro
+          </span>
         </div>
 
         <h2 className="font-display text-2xl uppercase tracking-wider text-grit-text leading-tight">
           {state.feature} is a Pro feature
         </h2>
-        {state.description && (
-          <p className="mt-2 text-sm text-grit">{state.description}</p>
-        )}
+        {state.description && <p className="mt-2 text-sm text-grit">{state.description}</p>}
 
         <ul className="mt-6 space-y-3">
           {PRO_PERKS.map((perk) => (
@@ -55,11 +59,16 @@ export function PaywallSheet() {
         <div className="mt-6 flex items-baseline gap-2">
           <span className="font-display text-3xl text-grit-text">$4.99</span>
           <span className="text-xs text-grit uppercase tracking-widest">/ month</span>
-          <span className="ml-auto text-[10px] text-grit uppercase tracking-widest">or $39.99/yr</span>
+          <span className="ml-auto text-[10px] text-grit uppercase tracking-widest">
+            or $39.99/yr
+          </span>
         </div>
 
         <button
-          onClick={() => { close(); navigate({ to: "/upgrade" }); }}
+          onClick={() => {
+            close();
+            navigate({ to: "/upgrade" });
+          }}
           className="mt-5 w-full rounded-md bg-accent-red px-6 py-3.5 font-display text-sm uppercase tracking-widest text-white hover:bg-accent-red/90 transition-colors"
         >
           Go Pro

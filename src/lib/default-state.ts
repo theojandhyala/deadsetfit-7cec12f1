@@ -23,4 +23,3 @@ export const DEFAULT_STATE: AppState = {
   remindersEnabled: true,
   runs: [],
 };
-

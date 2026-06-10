@@ -28,8 +28,14 @@ export function ProProvider({ children }: { children: ReactNode }) {
       return;
     }
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { setIsPro(false); setLoading(false); return; }
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) {
+        setIsPro(false);
+        setLoading(false);
+        return;
+      }
       const env = getStripeEnvironment();
       const { data } = await supabase
         .from("subscriptions")
@@ -40,16 +46,24 @@ export function ProProvider({ children }: { children: ReactNode }) {
         .limit(1)
         .maybeSingle();
       if (data) {
-        const active = (["active", "trialing", "past_due"].includes(data.status as string)
-          && (!data.current_period_end || new Date(data.current_period_end as string) > new Date()))
-          || (data.status === "canceled" && data.current_period_end && new Date(data.current_period_end as string) > new Date());
+        const active =
+          (["active", "trialing", "past_due"].includes(data.status as string) &&
+            (!data.current_period_end ||
+              new Date(data.current_period_end as string) > new Date())) ||
+          (data.status === "canceled" &&
+            data.current_period_end &&
+            new Date(data.current_period_end as string) > new Date());
         setIsPro(!!active);
         setStatus(data.status as string | null);
         setPriceId(data.price_id as string | null);
         setCurrentPeriodEnd(data.current_period_end as string | null);
         setCancelAtPeriodEnd(!!data.cancel_at_period_end);
       } else {
-        setIsPro(false); setStatus(null); setPriceId(null); setCurrentPeriodEnd(null); setCancelAtPeriodEnd(false);
+        setIsPro(false);
+        setStatus(null);
+        setPriceId(null);
+        setCurrentPeriodEnd(null);
+        setCancelAtPeriodEnd(false);
       }
     } catch (e) {
       console.warn("usePro refresh failed", e);
@@ -66,11 +80,22 @@ export function ProProvider({ children }: { children: ReactNode }) {
 
     let channel: ReturnType<typeof supabase.channel> | null = null;
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) return;
       channel = supabase
         .channel(`sub-${session.user.id}`)
-        .on("postgres_changes", { event: "*", schema: "public", table: "subscriptions", filter: `user_id=eq.${session.user.id}` }, () => refresh())
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "subscriptions",
+            filter: `user_id=eq.${session.user.id}`,
+          },
+          () => refresh(),
+        )
         .subscribe();
     })();
 
@@ -81,7 +106,9 @@ export function ProProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   return (
-    <ProContext.Provider value={{ isPro, loading, status, priceId, currentPeriodEnd, cancelAtPeriodEnd, refresh }}>
+    <ProContext.Provider
+      value={{ isPro, loading, status, priceId, currentPeriodEnd, cancelAtPeriodEnd, refresh }}
+    >
       {children}
     </ProContext.Provider>
   );
@@ -89,7 +116,16 @@ export function ProProvider({ children }: { children: ReactNode }) {
 
 export function usePro(): ProState {
   const ctx = useContext(ProContext);
-  if (!ctx) return { isPro: false, loading: false, status: null, priceId: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, refresh: async () => {} };
+  if (!ctx)
+    return {
+      isPro: false,
+      loading: false,
+      status: null,
+      priceId: null,
+      currentPeriodEnd: null,
+      cancelAtPeriodEnd: false,
+      refresh: async () => {},
+    };
   return ctx;
 }
 
@@ -103,13 +139,16 @@ const PaywallContext = createContext<PaywallCtx | null>(null);
 
 export function PaywallProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<{ open: boolean; feature: string; description?: string }>({
-    open: false, feature: "",
+    open: false,
+    feature: "",
   });
   const open = useCallback((opts: { feature: string; description?: string }) => {
     setState({ open: true, feature: opts.feature, description: opts.description });
   }, []);
   const close = useCallback(() => setState((s) => ({ ...s, open: false })), []);
-  return <PaywallContext.Provider value={{ open, close, state }}>{children}</PaywallContext.Provider>;
+  return (
+    <PaywallContext.Provider value={{ open, close, state }}>{children}</PaywallContext.Provider>
+  );
 }
 export function usePaywall(): PaywallCtx {
   const ctx = useContext(PaywallContext);

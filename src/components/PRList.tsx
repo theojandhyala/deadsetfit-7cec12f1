@@ -40,23 +40,17 @@ function PRRow({ pr }: { pr: PRRecord }) {
   return (
     <div className="flex items-center justify-between gap-3 px-3 py-2.5 bg-grit-card border border-grit">
       <div className="min-w-0 flex-1">
-        <p className="font-bold uppercase text-xs text-grit tracking-wide truncate">
-          {pr.name}
-        </p>
+        <p className="font-bold uppercase text-xs text-grit tracking-wide truncate">{pr.name}</p>
         <p className="text-[10px] uppercase tracking-wider text-grit-dim mt-0.5">
           {formatDate(pr.date)}
-          {fresh && (
-            <span className="ml-2 text-accent-red font-bold tracking-widest">NEW</span>
-          )}
+          {fresh && <span className="ml-2 text-accent-red font-bold tracking-widest">NEW</span>}
         </p>
       </div>
       <div className="flex items-baseline gap-1 flex-shrink-0">
         <span className="display text-xl font-extrabold text-accent-red leading-none">
           {pr.weight}
         </span>
-        <span className="text-[10px] font-bold text-grit-dim uppercase tracking-wider">
-          kg
-        </span>
+        <span className="text-[10px] font-bold text-grit-dim uppercase tracking-wider">kg</span>
         {pr.reps > 0 && (
           <span className="text-[10px] font-bold text-grit uppercase tracking-wider ml-1">
             ×{pr.reps}

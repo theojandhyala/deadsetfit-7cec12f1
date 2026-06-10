@@ -46,7 +46,6 @@ export const getLeaderboard = createServerFn({ method: "POST" })
     const enriched: LeaderboardRow[] = (rows ?? [])
       .filter((r): r is typeof r & { id: string } => typeof r.id === "string")
       .map((r) => {
-
         const stats = (r.public_stats ?? {}) as PublicStats;
         let value = 0;
         let unit = "kg";
@@ -54,7 +53,10 @@ export const getLeaderboard = createServerFn({ method: "POST" })
           value = Number(stats.overall ?? 0);
           unit = "OVR";
         } else if (cat === "TOTAL") {
-          value = getPRValue(stats, "bench-press") + getPRValue(stats, "squat") + getPRValue(stats, "deadlift");
+          value =
+            getPRValue(stats, "bench-press") +
+            getPRValue(stats, "squat") +
+            getPRValue(stats, "deadlift");
         } else if (cat === "BENCH") {
           value = getPRValue(stats, "bench-press");
         } else if (cat === "SQUAT") {

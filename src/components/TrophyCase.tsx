@@ -23,18 +23,90 @@ export function TrophyCase({ state }: { state: AppState }) {
     const grit = calculateGritScore(state).total;
 
     return [
-      { id: "first-rep", label: "FIRST REP", desc: "Logged your first session", icon: "🥇", unlocked: sessionCount >= 1 },
-      { id: "ten-sessions", label: "WARMED UP", desc: "10 sessions logged", icon: "🔥", unlocked: sessionCount >= 10 },
-      { id: "fifty-sessions", label: "REGULAR", desc: "50 sessions logged", icon: "💯", unlocked: sessionCount >= 50 },
-      { id: "hundred-sessions", label: "CENTURION", desc: "100 sessions", icon: "🏆", unlocked: sessionCount >= 100 },
-      { id: "ten-tons", label: "10 TONNES", desc: "10,000kg total volume", icon: "🏋️", unlocked: totalVolume >= 10000 },
-      { id: "hundred-tons", label: "100 TONNES", desc: "100,000kg lifted", icon: "🦣", unlocked: totalVolume >= 100000 },
-      { id: "first-pr", label: "PR HUNTER", desc: "Set your first PR", icon: "⚡", unlocked: totalPRs >= 1 },
-      { id: "ten-prs", label: "RECORD BREAKER", desc: "10 PRs broken", icon: "🎯", unlocked: totalPRs >= 10 },
-      { id: "week-streak", label: "WEEK ON", desc: "7-day streak", icon: "🔥", unlocked: streak >= 7 },
-      { id: "month-streak", label: "UNSTOPPABLE", desc: "30-day streak", icon: "👑", unlocked: streak >= 30 },
-      { id: "month-trained", label: "MONTH IN", desc: "30 days trained", icon: "📅", unlocked: daysTrained >= 30 },
-      { id: "deadset-elite", label: "DEADSET ELITE", desc: "10,000 Grit pts", icon: "💎", unlocked: grit >= 10000 },
+      {
+        id: "first-rep",
+        label: "FIRST REP",
+        desc: "Logged your first session",
+        icon: "🥇",
+        unlocked: sessionCount >= 1,
+      },
+      {
+        id: "ten-sessions",
+        label: "WARMED UP",
+        desc: "10 sessions logged",
+        icon: "🔥",
+        unlocked: sessionCount >= 10,
+      },
+      {
+        id: "fifty-sessions",
+        label: "REGULAR",
+        desc: "50 sessions logged",
+        icon: "💯",
+        unlocked: sessionCount >= 50,
+      },
+      {
+        id: "hundred-sessions",
+        label: "CENTURION",
+        desc: "100 sessions",
+        icon: "🏆",
+        unlocked: sessionCount >= 100,
+      },
+      {
+        id: "ten-tons",
+        label: "10 TONNES",
+        desc: "10,000kg total volume",
+        icon: "🏋️",
+        unlocked: totalVolume >= 10000,
+      },
+      {
+        id: "hundred-tons",
+        label: "100 TONNES",
+        desc: "100,000kg lifted",
+        icon: "🦣",
+        unlocked: totalVolume >= 100000,
+      },
+      {
+        id: "first-pr",
+        label: "PR HUNTER",
+        desc: "Set your first PR",
+        icon: "⚡",
+        unlocked: totalPRs >= 1,
+      },
+      {
+        id: "ten-prs",
+        label: "RECORD BREAKER",
+        desc: "10 PRs broken",
+        icon: "🎯",
+        unlocked: totalPRs >= 10,
+      },
+      {
+        id: "week-streak",
+        label: "WEEK ON",
+        desc: "7-day streak",
+        icon: "🔥",
+        unlocked: streak >= 7,
+      },
+      {
+        id: "month-streak",
+        label: "UNSTOPPABLE",
+        desc: "30-day streak",
+        icon: "👑",
+        unlocked: streak >= 30,
+      },
+      {
+        id: "month-trained",
+        label: "MONTH IN",
+        desc: "30 days trained",
+        icon: "📅",
+        unlocked: daysTrained >= 30,
+      },
+      {
+        id: "deadset-elite",
+        label: "DEADSET ELITE",
+        desc: "10,000 Grit pts",
+        icon: "💎",
+        unlocked: grit >= 10000,
+      },
     ];
   }, [state]);
 
@@ -46,7 +118,9 @@ export function TrophyCase({ state }: { state: AppState }) {
         <p className="label-cap flex items-center gap-1.5">
           <TrophyIcon size={12} className="text-accent-red" /> Trophy Case
         </p>
-        <span className="text-[10px] text-grit-dim label-cap">{unlockedCount}/{trophies.length}</span>
+        <span className="text-[10px] text-grit-dim label-cap">
+          {unlockedCount}/{trophies.length}
+        </span>
       </div>
       <div className="grid grid-cols-3 gap-2">
         {trophies.map((t) => (
@@ -58,7 +132,10 @@ export function TrophyCase({ state }: { state: AppState }) {
               opacity: t.unlocked ? 1 : 0.45,
             }}
           >
-            <span className="text-2xl mb-1" style={{ filter: t.unlocked ? "none" : "grayscale(1)" }}>
+            <span
+              className="text-2xl mb-1"
+              style={{ filter: t.unlocked ? "none" : "grayscale(1)" }}
+            >
               {t.unlocked ? t.icon : "🔒"}
             </span>
             <p className="label-cap text-[9px] text-grit leading-tight">{t.label}</p>

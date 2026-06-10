@@ -43,7 +43,10 @@ export function PlateCalculator({
   const { plates, remainder, perSide } = useMemo(() => platesPerSide(w, bar), [w, bar]);
 
   return (
-    <div className="fixed inset-0 z-[300] bg-black/90 flex items-end sm:items-center justify-center" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-[300] bg-black/90 flex items-end sm:items-center justify-center"
+      onClick={onClose}
+    >
       <div
         className="w-full max-w-md bg-grit-card border border-grit p-5"
         style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
@@ -51,7 +54,9 @@ export function PlateCalculator({
       >
         <div className="flex items-center justify-between mb-3">
           <p className="label-cap text-accent-red">PLATE CALCULATOR</p>
-          <button onClick={onClose} className="text-grit-dim"><X size={20} /></button>
+          <button onClick={onClose} className="text-grit-dim">
+            <X size={20} />
+          </button>
         </div>
 
         <div className="grid grid-cols-[1fr_auto] gap-2 items-end">
@@ -81,7 +86,9 @@ export function PlateCalculator({
         </div>
 
         <div className="mt-5 bg-[#0a0a0a] border border-grit p-4">
-          <p className="label-cap text-[10px] text-grit-dim mb-2">PER SIDE · {perSide.toFixed(2)}kg</p>
+          <p className="label-cap text-[10px] text-grit-dim mb-2">
+            PER SIDE · {perSide.toFixed(2)}kg
+          </p>
           {plates.length === 0 ? (
             <p className="text-sm text-grit-dim">{w < bar ? "Below bar weight." : "—"}</p>
           ) : (
@@ -113,7 +120,10 @@ export function PlateCalculator({
 
         {onApply && (
           <button
-            onClick={() => { onApply(w); onClose(); }}
+            onClick={() => {
+              onApply(w);
+              onClose();
+            }}
             className="btn-grit w-full mt-4"
           >
             Use {w}kg

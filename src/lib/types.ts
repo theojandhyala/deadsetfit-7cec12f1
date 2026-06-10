@@ -21,8 +21,18 @@ export interface Profile {
 }
 
 export type MuscleGroup =
-  | "CHEST" | "BACK" | "LEGS" | "SHOULDERS" | "ARMS" | "CORE"
-  | "PUSH" | "PULL" | "UPPER" | "LOWER" | "FULL BODY" | "REST";
+  | "CHEST"
+  | "BACK"
+  | "LEGS"
+  | "SHOULDERS"
+  | "ARMS"
+  | "CORE"
+  | "PUSH"
+  | "PULL"
+  | "UPPER"
+  | "LOWER"
+  | "FULL BODY"
+  | "REST";
 
 export interface Exercise {
   id: string;
@@ -87,8 +97,17 @@ export interface CheckIn {
   photoDataUrl: string;
 }
 
-export interface WeightEntry { date: string; weight: number; }
-export interface MeasurementEntry { date: string; chest: number; waist: number; arms: number; legs: number; }
+export interface WeightEntry {
+  date: string;
+  weight: number;
+}
+export interface MeasurementEntry {
+  date: string;
+  chest: number;
+  waist: number;
+  arms: number;
+  legs: number;
+}
 
 export interface Meal {
   name: string;
@@ -243,5 +262,3 @@ export interface AppState {
   remindersEnabled?: boolean;
   runs?: Run[];
 }
-
-

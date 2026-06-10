@@ -3,12 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Activity, Lock, Mountain, Sparkles, Target, TrendingUp, Trophy, Zap } from "lucide-react";
 import { usePro, usePaywall } from "@/hooks/usePro";
 import { getRunCoachTips, type RunCoachInsight } from "@/lib/run-coach.functions";
-import {
-  computeRunPRs,
-  elevationSeries,
-  paceSeries,
-  paceZones,
-} from "@/lib/run-analytics";
+import { computeRunPRs, elevationSeries, paceSeries, paceZones } from "@/lib/run-analytics";
 import { formatDuration, formatPace } from "@/lib/run";
 import type { Run } from "@/lib/types";
 
@@ -35,8 +30,7 @@ export function RunAdvanced({ run, allRuns }: RunAdvancedProps) {
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            background:
-              "linear-gradient(135deg, rgba(230,50,34,0.08), transparent 60%)",
+            background: "linear-gradient(135deg, rgba(230,50,34,0.08), transparent 60%)",
           }}
         />
         <div className="relative p-5 flex flex-col gap-4">
@@ -52,17 +46,29 @@ export function RunAdvanced({ run, allRuns }: RunAdvancedProps) {
               Unlock Advanced Run Data
             </h3>
             <p className="text-xs text-grit-dim mt-2 leading-relaxed">
-              AI coach tips on every run, pace charts, elevation profile, pace
-              zones, personal records (1k / 5k / 10k), and training trends.
+              AI coach tips on every run, pace charts, elevation profile, pace zones, personal
+              records (1k / 5k / 10k), and training trends.
             </p>
           </div>
           <ul className="grid grid-cols-2 gap-2 text-[10px] uppercase tracking-wider text-grit-dim">
-            <li className="flex items-center gap-1.5"><Activity size={12} className="text-accent-red" /> Pace chart</li>
-            <li className="flex items-center gap-1.5"><Mountain size={12} className="text-accent-red" /> Elevation profile</li>
-            <li className="flex items-center gap-1.5"><Target size={12} className="text-accent-red" /> Pace zones</li>
-            <li className="flex items-center gap-1.5"><Trophy size={12} className="text-accent-red" /> Run PRs</li>
-            <li className="flex items-center gap-1.5"><TrendingUp size={12} className="text-accent-red" /> Training trends</li>
-            <li className="flex items-center gap-1.5"><Sparkles size={12} className="text-accent-red" /> AI coach tips</li>
+            <li className="flex items-center gap-1.5">
+              <Activity size={12} className="text-accent-red" /> Pace chart
+            </li>
+            <li className="flex items-center gap-1.5">
+              <Mountain size={12} className="text-accent-red" /> Elevation profile
+            </li>
+            <li className="flex items-center gap-1.5">
+              <Target size={12} className="text-accent-red" /> Pace zones
+            </li>
+            <li className="flex items-center gap-1.5">
+              <Trophy size={12} className="text-accent-red" /> Run PRs
+            </li>
+            <li className="flex items-center gap-1.5">
+              <TrendingUp size={12} className="text-accent-red" /> Training trends
+            </li>
+            <li className="flex items-center gap-1.5">
+              <Sparkles size={12} className="text-accent-red" /> AI coach tips
+            </li>
           </ul>
           <button
             onClick={() =>
@@ -153,9 +159,7 @@ function ChartCard({
           <h2 className="label-cap text-xs text-grit">{title}</h2>
         </div>
         {subtitle && (
-          <span className="text-[10px] uppercase tracking-wider text-grit-dim">
-            {subtitle}
-          </span>
+          <span className="text-[10px] uppercase tracking-wider text-grit-dim">{subtitle}</span>
         )}
       </div>
       {children}
@@ -214,8 +218,7 @@ function CoachCard({ run, allRuns }: { run: Run; allRuns: Run[] }) {
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background:
-            "linear-gradient(135deg, rgba(230,50,34,0.08), transparent 70%)",
+          background: "linear-gradient(135deg, rgba(230,50,34,0.08), transparent 70%)",
         }}
       />
       <div className="relative flex items-center justify-between">
@@ -223,9 +226,7 @@ function CoachCard({ run, allRuns }: { run: Run; allRuns: Run[] }) {
           <Sparkles size={14} className="text-accent-red" />
           <h2 className="label-cap text-xs text-accent-red">Coach</h2>
         </div>
-        <span className="text-[9px] uppercase tracking-widest text-grit-dim">
-          PRO · AI
-        </span>
+        <span className="text-[9px] uppercase tracking-widest text-grit-dim">PRO · AI</span>
       </div>
 
       {loading && (
@@ -238,9 +239,7 @@ function CoachCard({ run, allRuns }: { run: Run; allRuns: Run[] }) {
       )}
 
       {error && !loading && (
-        <p className="relative text-xs text-grit-dim">
-          Coach is catching their breath. {error}
-        </p>
+        <p className="relative text-xs text-grit-dim">Coach is catching their breath. {error}</p>
       )}
 
       {insight && !loading && (
@@ -249,30 +248,19 @@ function CoachCard({ run, allRuns }: { run: Run; allRuns: Run[] }) {
             <p className="display text-base font-extrabold uppercase text-grit tracking-tight leading-tight">
               {insight.headline}
             </p>
-            <p className="text-xs text-grit-dim mt-1 leading-relaxed">
-              {insight.verdict}
-            </p>
+            <p className="text-xs text-grit-dim mt-1 leading-relaxed">{insight.verdict}</p>
           </div>
           <ul className="space-y-1.5">
             {insight.tips.map((tip, i) => (
-              <li
-                key={i}
-                className="flex gap-2 text-xs text-grit leading-relaxed"
-              >
-                <Zap
-                  size={12}
-                  className="text-accent-red flex-shrink-0 mt-0.5"
-                  strokeWidth={3}
-                />
+              <li key={i} className="flex gap-2 text-xs text-grit leading-relaxed">
+                <Zap size={12} className="text-accent-red flex-shrink-0 mt-0.5" strokeWidth={3} />
                 <span>{tip}</span>
               </li>
             ))}
           </ul>
           <div className="border-t border-grit pt-2">
             <p className="label-cap text-[9px] text-grit-dim mb-1">NEXT UP</p>
-            <p className="text-xs text-grit leading-relaxed">
-              {insight.nextWorkout}
-            </p>
+            <p className="text-xs text-grit leading-relaxed">{insight.nextWorkout}</p>
           </div>
         </div>
       )}
@@ -334,13 +322,7 @@ function PaceChart({ data, avg }: { data: { km: number; pace: number }[]; avg: n
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <text
-        x={pad.left}
-        y={H - 2}
-        fontSize="8"
-        fill="#737373"
-        fontFamily="monospace"
-      >
+      <text x={pad.left} y={H - 2} fontSize="8" fill="#737373" fontFamily="monospace">
         0 km
       </text>
       <text
@@ -381,11 +363,7 @@ function ElevationChart({ data }: { data: { km: number; alt: number }[] }) {
   const fill = `${path} L${px(maxX).toFixed(1)},${pad.top + innerH} L${px(minX).toFixed(1)},${pad.top + innerH} Z`;
 
   return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      preserveAspectRatio="none"
-      className="w-full h-20"
-    >
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full h-20">
       <defs>
         <linearGradient id="elevFill" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#8a8a8a" stopOpacity="0.4" />
@@ -431,14 +409,9 @@ function ZoneBar({
               key={z.name}
               className="flex items-center gap-2 text-[10px] uppercase tracking-wider"
             >
-              <span
-                className="w-2 h-2 flex-shrink-0"
-                style={{ background: z.color }}
-              />
+              <span className="w-2 h-2 flex-shrink-0" style={{ background: z.color }} />
               <span className="text-grit-dim flex-1 truncate">{z.name}</span>
-              <span className="text-grit font-bold tabular-nums">
-                {z.count}km
-              </span>
+              <span className="text-grit font-bold tabular-nums">{z.count}km</span>
             </li>
           ))}
       </ul>
@@ -505,17 +478,13 @@ function PRSection({
           <li
             key={it.label}
             className={`p-2 border ${
-              it.highlight
-                ? "border-accent-red bg-accent-red/10"
-                : "border-grit"
+              it.highlight ? "border-accent-red bg-accent-red/10" : "border-grit"
             }`}
           >
             <p className="text-[9px] uppercase tracking-widest text-grit-dim">
               {it.label}
               {it.highlight && (
-                <span className="ml-1.5 text-accent-red font-bold tracking-widest">
-                  NEW
-                </span>
+                <span className="ml-1.5 text-accent-red font-bold tracking-widest">NEW</span>
               )}
             </p>
             <p className="display text-base font-extrabold text-grit leading-none mt-1">

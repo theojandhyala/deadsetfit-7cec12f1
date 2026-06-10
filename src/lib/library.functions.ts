@@ -56,9 +56,21 @@ export const countExercises = createServerFn({ method: "GET" })
   });
 
 const slug = (s: string) =>
-  s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
 
-const ALLOWED_EQUIPMENT = ["BARBELL", "DUMBBELL", "CABLE", "MACHINE", "BODYWEIGHT", "BANDS", "KETTLEBELL"];
+const ALLOWED_EQUIPMENT = [
+  "BARBELL",
+  "DUMBBELL",
+  "CABLE",
+  "MACHINE",
+  "BODYWEIGHT",
+  "BANDS",
+  "KETTLEBELL",
+];
 const ALLOWED_CATEGORIES = ["PUSH", "PULL", "LEGS", "CORE", "CARDIO"];
 
 const ExSchema = z.object({
@@ -66,7 +78,15 @@ const ExSchema = z.object({
   category: z.enum(["PUSH", "PULL", "LEGS", "CORE", "CARDIO"]),
   primary_muscles: z.array(z.string()).min(1).max(4),
   secondary_muscles: z.array(z.string()).max(4).default([]),
-  equipment: z.enum(["BARBELL", "DUMBBELL", "CABLE", "MACHINE", "BODYWEIGHT", "BANDS", "KETTLEBELL"]),
+  equipment: z.enum([
+    "BARBELL",
+    "DUMBBELL",
+    "CABLE",
+    "MACHINE",
+    "BODYWEIGHT",
+    "BANDS",
+    "KETTLEBELL",
+  ]),
   difficulty: z.number().int().min(1).max(5),
   instructions: z.string().min(10).max(300),
   pro_tip: z.string().min(5).max(220),

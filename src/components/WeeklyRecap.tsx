@@ -56,7 +56,11 @@ export function WeeklyRecap({ state }: Props) {
       </div>
       <div className="grid grid-cols-3 gap-3">
         <Stat icon={<Flame size={14} />} label="SESSIONS" value={String(stats.sessions)} />
-        <Stat icon={<Dumbbell size={14} />} label="VOLUME" value={`${Math.round(stats.totalVolume).toLocaleString()}kg`} />
+        <Stat
+          icon={<Dumbbell size={14} />}
+          label="VOLUME"
+          value={`${Math.round(stats.totalVolume).toLocaleString()}kg`}
+        />
         <Stat icon={<Trophy size={14} />} label="PRs" value={String(stats.prs)} />
       </div>
       <div className="mt-3 h-1 bg-grit overflow-hidden">
@@ -75,7 +79,10 @@ export function WeeklyRecap({ state }: Props) {
 function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="border border-grit p-2.5">
-      <div className="flex items-center gap-1 text-grit-dim mb-1">{icon}<span className="label-cap text-[9px]">{label}</span></div>
+      <div className="flex items-center gap-1 text-grit-dim mb-1">
+        {icon}
+        <span className="label-cap text-[9px]">{label}</span>
+      </div>
       <p className="display font-extrabold text-grit text-lg leading-none">{value}</p>
     </div>
   );

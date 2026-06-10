@@ -41,7 +41,12 @@ function SvgRoute({
       className="relative w-full bg-grit-card border border-grit overflow-hidden"
       style={{ height }}
     >
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full" aria-hidden>
+      <svg
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+        className="absolute inset-0 w-full h-full"
+        aria-hidden
+      >
         <defs>
           <pattern id="rmgrid" width="10" height="10" patternUnits="userSpaceOnUse">
             <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#1a1a1a" strokeWidth="0.3" />
@@ -49,19 +54,50 @@ function SvgRoute({
         </defs>
         <rect width="100" height="100" fill="url(#rmgrid)" />
       </svg>
-      <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" className="absolute inset-0 w-full h-full overflow-visible">
+      <svg
+        viewBox="0 0 100 100"
+        preserveAspectRatio="xMidYMid meet"
+        className="absolute inset-0 w-full h-full overflow-visible"
+      >
         {d && (
           <>
-            <path d={d} fill="none" stroke={activityColor} strokeOpacity={0.35}
-              strokeWidth={4} strokeLinecap="round" strokeLinejoin="round"
-              style={{ filter: "blur(2px)" }} />
-            <path d={d} fill="none" stroke={activityColor}
-              strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+            <path
+              d={d}
+              fill="none"
+              stroke={activityColor}
+              strokeOpacity={0.35}
+              strokeWidth={4}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ filter: "blur(2px)" }}
+            />
+            <path
+              d={d}
+              fill="none"
+              stroke={activityColor}
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
             {showMarkers && start && (
-              <circle cx={start.x} cy={start.y} r={2} fill="#0a0a0a" stroke="#ffffff" strokeWidth={0.8} />
+              <circle
+                cx={start.x}
+                cy={start.y}
+                r={2}
+                fill="#0a0a0a"
+                stroke="#ffffff"
+                strokeWidth={0.8}
+              />
             )}
             {showMarkers && end && (
-              <circle cx={end.x} cy={end.y} r={2} fill={activityColor} stroke="#ffffff" strokeWidth={0.8} />
+              <circle
+                cx={end.x}
+                cy={end.y}
+                r={2}
+                fill={activityColor}
+                stroke="#ffffff"
+                strokeWidth={0.8}
+              />
             )}
           </>
         )}
@@ -113,9 +149,7 @@ function LeafletRoute({
       LRef.current = L;
 
       const first = samples[0];
-      const center: [number, number] = first
-        ? [first.lat, first.lng]
-        : [51.505, -0.09];
+      const center: [number, number] = first ? [first.lat, first.lng] : [51.505, -0.09];
 
       const map = L.map(containerRef.current, {
         center,
@@ -129,13 +163,14 @@ function LeafletRoute({
         "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
         { maxZoom: 19, subdomains: "abcd" },
       );
-      const trailLayer = L.tileLayer(
-        "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
-        { maxZoom: 17 },
-      );
+      const trailLayer = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+        maxZoom: 17,
+      });
       const activeLayer = mapStyle === "trail" ? trailLayer : darkLayer;
       activeLayer.addTo(map);
-      L.control.layers({ Trails: trailLayer, Dark: darkLayer }, undefined, { position: "bottomleft" }).addTo(map);
+      L.control
+        .layers({ Trails: trailLayer, Dark: darkLayer }, undefined, { position: "bottomleft" })
+        .addTo(map);
 
       mapRef.current = map;
       setReady(true);

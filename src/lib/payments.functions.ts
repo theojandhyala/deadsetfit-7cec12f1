@@ -40,16 +40,18 @@ async function resolveOrCreateCustomer(
 }
 
 export const createCheckoutSession = createServerFn({ method: "POST" })
-  .inputValidator((data: {
-    priceId: string;
-    customerEmail?: string;
-    userId?: string;
-    returnUrl: string;
-    environment: StripeEnv;
-  }) => {
-    if (!/^[a-zA-Z0-9_-]+$/.test(data.priceId)) throw new Error("Invalid priceId");
-    return data;
-  })
+  .inputValidator(
+    (data: {
+      priceId: string;
+      customerEmail?: string;
+      userId?: string;
+      returnUrl: string;
+      environment: StripeEnv;
+    }) => {
+      if (!/^[a-zA-Z0-9_-]+$/.test(data.priceId)) throw new Error("Invalid priceId");
+      return data;
+    },
+  )
   .handler(async ({ data }): Promise<CheckoutSessionResult> => {
     try {
       const { createStripeClient, getStripeErrorMessage } = await import("@/lib/stripe.server");
@@ -60,9 +62,13 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       const stripePrice = prices.data[0];
       const isRecurring = stripePrice.type === "recurring";
 
-      const customerId = (data.customerEmail || data.userId)
-        ? await resolveOrCreateCustomer(stripe, { email: data.customerEmail, userId: data.userId })
-        : undefined;
+      const customerId =
+        data.customerEmail || data.userId
+          ? await resolveOrCreateCustomer(stripe, {
+              email: data.customerEmail,
+              userId: data.userId,
+            })
+          : undefined;
 
       const session = await stripe.checkout.sessions.create({
         line_items: [{ price: stripePrice.id, quantity: 1 }],

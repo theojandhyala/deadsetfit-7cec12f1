@@ -17,7 +17,9 @@ export function UsernameGate() {
 
   async function check() {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) {
         setOpen(false);
         return;
@@ -39,7 +41,10 @@ export function UsernameGate() {
 
   if (!open) return null;
 
-  const clean = value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20);
+  const clean = value
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, "")
+    .slice(0, 20);
   const valid = clean.length >= 3;
 
   async function submit() {

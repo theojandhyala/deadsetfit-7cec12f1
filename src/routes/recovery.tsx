@@ -91,18 +91,39 @@ function RecoveryPage() {
     MUSCLE_GROUPS.forEach((m) => {
       if (label.includes(m)) detected.add(m);
     });
-    if (label.includes("PUSH")) { detected.add("CHEST"); detected.add("SHOULDERS"); detected.add("ARMS"); }
-    if (label.includes("PULL")) { detected.add("BACK"); detected.add("ARMS"); }
-    if (label.includes("UPPER")) { detected.add("CHEST"); detected.add("BACK"); detected.add("SHOULDERS"); detected.add("ARMS"); }
-    if (label.includes("LOWER")) { detected.add("LEGS"); detected.add("CORE"); }
-    if (label.includes("FULL")) { detected.add("CHEST"); detected.add("BACK"); detected.add("LEGS"); detected.add("CORE"); }
+    if (label.includes("PUSH")) {
+      detected.add("CHEST");
+      detected.add("SHOULDERS");
+      detected.add("ARMS");
+    }
+    if (label.includes("PULL")) {
+      detected.add("BACK");
+      detected.add("ARMS");
+    }
+    if (label.includes("UPPER")) {
+      detected.add("CHEST");
+      detected.add("BACK");
+      detected.add("SHOULDERS");
+      detected.add("ARMS");
+    }
+    if (label.includes("LOWER")) {
+      detected.add("LEGS");
+      detected.add("CORE");
+    }
+    if (label.includes("FULL")) {
+      detected.add("CHEST");
+      detected.add("BACK");
+      detected.add("LEGS");
+      detected.add("CORE");
+    }
     if (detected.size > 0) setSelectedMuscles(detected);
   }, [todaysLabel]);
 
   // Recovery Score
   const score = useMemo(() => {
     const last7 = [...Array(7)].map((_, i) => {
-      const d = new Date(); d.setDate(d.getDate() - i);
+      const d = new Date();
+      d.setDate(d.getDate() - i);
       return isoDay(d);
     });
     const completedDays = new Set(state.completedDates);
@@ -138,7 +159,10 @@ function RecoveryPage() {
     if (!timerRunning || !timer || timer.seconds <= 0) return;
     const id = setInterval(() => {
       setTimer((t) => {
-        if (!t || t.seconds <= 1) { setTimerRunning(false); return null; }
+        if (!t || t.seconds <= 1) {
+          setTimerRunning(false);
+          return null;
+        }
         return { ...t, seconds: t.seconds - 1 };
       });
     }, 1000);
@@ -148,7 +172,8 @@ function RecoveryPage() {
   function toggleMuscle(m: Muscle) {
     setSelectedMuscles((prev) => {
       const next = new Set(prev);
-      if (next.has(m)) next.delete(m); else next.add(m);
+      if (next.has(m)) next.delete(m);
+      else next.add(m);
       return next;
     });
   }
@@ -176,9 +201,13 @@ function RecoveryPage() {
       <header className="px-5 pt-6 pb-4 flex items-center justify-between">
         <div>
           <p className="label-cap">Recovery</p>
-          <h1 className="display text-3xl font-extrabold uppercase text-grit leading-tight">RECOVER HARD</h1>
+          <h1 className="display text-3xl font-extrabold uppercase text-grit leading-tight">
+            RECOVER HARD
+          </h1>
         </div>
-        <Link to="/train" className="label-cap text-grit-dim text-xs">← BACK</Link>
+        <Link to="/train" className="label-cap text-grit-dim text-xs">
+          ← BACK
+        </Link>
       </header>
 
       {/* Recovery Score */}
@@ -187,23 +216,32 @@ function RecoveryPage() {
           <div className="relative w-20 h-20 flex-shrink-0">
             <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
               <circle cx="50" cy="50" r="42" fill="none" stroke="#262626" strokeWidth="8" />
-              <circle cx="50" cy="50" r="42" fill="none" stroke={scoreColor} strokeWidth="8"
+              <circle
+                cx="50"
+                cy="50"
+                r="42"
+                fill="none"
+                stroke={scoreColor}
+                strokeWidth="8"
                 strokeDasharray={2 * Math.PI * 42}
                 strokeDashoffset={2 * Math.PI * 42 * (1 - score / 100)}
-                strokeLinecap="round" />
+                strokeLinecap="round"
+              />
             </svg>
             <div className="absolute inset-0 flex items-center justify-center display font-extrabold text-grit text-lg">
               {score}
             </div>
           </div>
           <div>
-            <p className="label-cap" style={{ color: scoreColor }}>{scoreLabel}</p>
+            <p className="label-cap" style={{ color: scoreColor }}>
+              {scoreLabel}
+            </p>
             <p className="text-xs text-grit-dim mt-1 leading-snug">
               {score >= 80
                 ? "You're fresh. Hit today's session with intent."
                 : score >= 60
-                ? "Moderate fatigue. Consider a deload or extra sleep."
-                : "High fatigue. Prioritize sleep, nutrition, and active recovery."}
+                  ? "Moderate fatigue. Consider a deload or extra sleep."
+                  : "High fatigue. Prioritize sleep, nutrition, and active recovery."}
             </p>
           </div>
         </div>
@@ -236,12 +274,15 @@ function RecoveryPage() {
       {/* Tabs */}
       <div className="px-5 mb-4 flex gap-2 border-b border-grit">
         {(["WARMUP", "STRETCH", "FOAM"] as const).map((t) => (
-          <button key={t} onClick={() => setTab(t)}
+          <button
+            key={t}
+            onClick={() => setTab(t)}
             className="label-cap pb-3 pt-1 border-b-2"
             style={{
               borderColor: tab === t ? "#e63222" : "transparent",
               color: tab === t ? "#f5f5f0" : "#8a8a8a",
-            }}>
+            }}
+          >
             {t === "WARMUP" ? "Warm-Up" : t === "STRETCH" ? "Stretch" : "Foam Roll"}
           </button>
         ))}
@@ -252,10 +293,15 @@ function RecoveryPage() {
         {tab === "WARMUP" && (
           <div className="flex flex-col gap-3">
             {warmupMoves.length === 0 && (
-              <p className="text-sm text-grit-dim text-center py-8">Select muscles above to generate a warm-up.</p>
+              <p className="text-sm text-grit-dim text-center py-8">
+                Select muscles above to generate a warm-up.
+              </p>
             )}
             {warmupMoves.map((w, i) => (
-              <div key={w.name + i} className="bg-grit-card border border-grit p-4 flex items-center justify-between gap-3">
+              <div
+                key={w.name + i}
+                className="bg-grit-card border border-grit p-4 flex items-center justify-between gap-3"
+              >
                 <div>
                   <p className="text-sm font-bold text-grit">{w.name}</p>
                   <p className="text-[10px] text-grit-dim mt-0.5">{w.muscles.join(" · ")}</p>
@@ -269,7 +315,9 @@ function RecoveryPage() {
         {tab === "STRETCH" && (
           <div className="flex flex-col gap-3">
             {stretchMoves.length === 0 && (
-              <p className="text-sm text-grit-dim text-center py-8">Select muscles above to generate stretches.</p>
+              <p className="text-sm text-grit-dim text-center py-8">
+                Select muscles above to generate stretches.
+              </p>
             )}
             {stretchMoves.map((s, i) => (
               <div key={s.name + i} className="bg-grit-card border border-grit p-4">
@@ -278,8 +326,10 @@ function RecoveryPage() {
                     <p className="text-sm font-bold text-grit">{s.name}</p>
                     <p className="text-[10px] text-grit-dim mt-0.5">{s.muscles.join(" · ")}</p>
                   </div>
-                  <button onClick={() => startTimer(s.holdSeconds, s.name)}
-                    className="btn-ghost px-3 py-1.5 text-[10px] flex items-center gap-1.5">
+                  <button
+                    onClick={() => startTimer(s.holdSeconds, s.name)}
+                    className="btn-ghost px-3 py-1.5 text-[10px] flex items-center gap-1.5"
+                  >
                     <Timer size={12} /> {s.holdSeconds}s
                   </button>
                 </div>
@@ -294,8 +344,10 @@ function RecoveryPage() {
               <div key={f.area} className="bg-grit-card border border-grit p-4">
                 <div className="flex items-center justify-between gap-3 mb-1">
                   <p className="text-sm font-bold text-grit">{f.area}</p>
-                  <button onClick={() => startTimer(f.time, f.area)}
-                    className="btn-ghost px-3 py-1.5 text-[10px] flex items-center gap-1.5">
+                  <button
+                    onClick={() => startTimer(f.time, f.area)}
+                    className="btn-ghost px-3 py-1.5 text-[10px] flex items-center gap-1.5"
+                  >
                     <Timer size={12} /> {f.time}s
                   </button>
                 </div>
@@ -311,13 +363,28 @@ function RecoveryPage() {
         <div className="fixed inset-x-0 bottom-24 z-40 mx-auto max-w-md px-5">
           <div className="bg-grit-card border-2 border-accent-red p-5 text-center pulse-red">
             <p className="label-cap text-accent-red mb-1">{timer.label}</p>
-            <p className="display text-5xl font-extrabold text-grit tabular-nums">{mm}:{ss}</p>
+            <p className="display text-5xl font-extrabold text-grit tabular-nums">
+              {mm}:{ss}
+            </p>
             <div className="flex justify-center gap-3 mt-4">
-              <button onClick={() => setTimerRunning((r) => !r)} className="btn-grit px-4 py-2 text-xs">
-                {timerRunning ? <Pause size={14} className="mr-1" /> : <Play size={14} className="mr-1" />}
+              <button
+                onClick={() => setTimerRunning((r) => !r)}
+                className="btn-grit px-4 py-2 text-xs"
+              >
+                {timerRunning ? (
+                  <Pause size={14} className="mr-1" />
+                ) : (
+                  <Play size={14} className="mr-1" />
+                )}
                 {timerRunning ? "PAUSE" : "RESUME"}
               </button>
-              <button onClick={() => { setTimer(null); setTimerRunning(false); }} className="btn-ghost px-4 py-2 text-xs">
+              <button
+                onClick={() => {
+                  setTimer(null);
+                  setTimerRunning(false);
+                }}
+                className="btn-ghost px-4 py-2 text-xs"
+              >
                 <RotateCcw size={14} className="mr-1" /> RESET
               </button>
             </div>

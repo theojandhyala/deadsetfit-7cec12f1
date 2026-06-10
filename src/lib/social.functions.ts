@@ -31,32 +31,55 @@ export const getFeed = createServerFn({ method: "GET" })
     const { data: posts, error } = await query;
     if (error) throw new Error(error.message);
 
-    const ids = Array.from(new Set((posts ?? []).map(p => p.user_id)));
-    const postIds = (posts ?? []).map(p => p.id);
+    const ids = Array.from(new Set((posts ?? []).map((p) => p.user_id)));
+    const postIds = (posts ?? []).map((p) => p.id);
 
-    const [{ data: authors }, { data: likes }, { data: myLikes }, { data: commentCounts }] = await Promise.all([
-      supabaseAdmin.from("profiles").select("id, display_name, username, avatar_url, grit_points").in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]),
-      supabase.from("post_likes").select("post_id, reaction").in("post_id", postIds.length ? postIds : ["00000000-0000-0000-0000-000000000000"]),
-      supabase.from("post_likes").select("post_id, reaction").eq("user_id", userId).in("post_id", postIds.length ? postIds : ["00000000-0000-0000-0000-000000000000"]),
-      supabase.from("post_comments").select("post_id").in("post_id", postIds.length ? postIds : ["00000000-0000-0000-0000-000000000000"]),
-    ]);
+    const [{ data: authors }, { data: likes }, { data: myLikes }, { data: commentCounts }] =
+      await Promise.all([
+        supabaseAdmin
+          .from("profiles")
+          .select("id, display_name, username, avatar_url, grit_points")
+          .in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]),
+        supabase
+          .from("post_likes")
+          .select("post_id, reaction")
+          .in("post_id", postIds.length ? postIds : ["00000000-0000-0000-0000-000000000000"]),
+        supabase
+          .from("post_likes")
+          .select("post_id, reaction")
+          .eq("user_id", userId)
+          .in("post_id", postIds.length ? postIds : ["00000000-0000-0000-0000-000000000000"]),
+        supabase
+          .from("post_comments")
+          .select("post_id")
+          .in("post_id", postIds.length ? postIds : ["00000000-0000-0000-0000-000000000000"]),
+      ]);
 
-    const authorMap = new Map((authors ?? []).map(a => [a.id, { ...a, level: gritLevel(a.grit_points ?? 0) }]));
+    const authorMap = new Map(
+      (authors ?? []).map((a) => [a.id, { ...a, level: gritLevel(a.grit_points ?? 0) }]),
+    );
     const likeCount = new Map<string, number>();
     const reactionCounts = new Map<string, Record<string, number>>();
-    (likes ?? []).forEach(l => {
+    (likes ?? []).forEach((l) => {
       likeCount.set(l.post_id, (likeCount.get(l.post_id) ?? 0) + 1);
       const rc = reactionCounts.get(l.post_id) ?? {};
       rc[l.reaction] = (rc[l.reaction] ?? 0) + 1;
       reactionCounts.set(l.post_id, rc);
     });
-    const myReactions = new Map((myLikes ?? []).map(l => [l.post_id, l.reaction]));
+    const myReactions = new Map((myLikes ?? []).map((l) => [l.post_id, l.reaction]));
     const cmCount = new Map<string, number>();
-    (commentCounts ?? []).forEach(c => cmCount.set(c.post_id, (cmCount.get(c.post_id) ?? 0) + 1));
+    (commentCounts ?? []).forEach((c) => cmCount.set(c.post_id, (cmCount.get(c.post_id) ?? 0) + 1));
 
-    return (posts ?? []).map(p => ({
+    return (posts ?? []).map((p) => ({
       ...p,
-      author: authorMap.get(p.user_id) ?? { id: p.user_id, display_name: "Athlete", username: null, avatar_url: null, grit_points: 0, level: "BEGINNER" as const },
+      author: authorMap.get(p.user_id) ?? {
+        id: p.user_id,
+        display_name: "Athlete",
+        username: null,
+        avatar_url: null,
+        grit_points: 0,
+        level: "BEGINNER" as const,
+      },
       likeCount: likeCount.get(p.id) ?? 0,
       reactions: reactionCounts.get(p.id) ?? {},
       myReaction: myReactions.get(p.id) ?? null,
@@ -79,7 +102,13 @@ export const createPost = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { error, data: row } = await supabase
       .from("posts")
-      .insert({ user_id: userId, kind: data.kind, content: data.content, image_url: data.image_url ?? null, metadata: data.metadata })
+      .insert({
+        user_id: userId,
+        kind: data.kind,
+        content: data.content,
+        image_url: data.image_url ?? null,
+        metadata: data.metadata,
+      })
       .select()
       .single();
     if (error) throw new Error(error.message);
@@ -98,15 +127,24 @@ export const toggleLike = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { data: existing } = await supabase
       .from("post_likes")
-      .select("reaction").eq("post_id", data.postId).eq("user_id", userId).maybeSingle();
+      .select("reaction")
+      .eq("post_id", data.postId)
+      .eq("user_id", userId)
+      .maybeSingle();
     if (existing && existing.reaction === data.reaction) {
       await supabase.from("post_likes").delete().eq("post_id", data.postId).eq("user_id", userId);
       return { liked: false, reaction: null as string | null };
     }
     if (existing) {
-      await supabase.from("post_likes").update({ reaction: data.reaction }).eq("post_id", data.postId).eq("user_id", userId);
+      await supabase
+        .from("post_likes")
+        .update({ reaction: data.reaction })
+        .eq("post_id", data.postId)
+        .eq("user_id", userId);
     } else {
-      await supabase.from("post_likes").insert({ post_id: data.postId, user_id: userId, reaction: data.reaction });
+      await supabase
+        .from("post_likes")
+        .insert({ post_id: data.postId, user_id: userId, reaction: data.reaction });
     }
     return { liked: true, reaction: data.reaction };
   });
@@ -118,7 +156,9 @@ export const addComment = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => CommentInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { error } = await supabase.from("post_comments").insert({ post_id: data.postId, user_id: userId, content: data.content });
+    const { error } = await supabase
+      .from("post_comments")
+      .insert({ post_id: data.postId, user_id: userId, content: data.content });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -136,12 +176,13 @@ export const getComments = createServerFn({ method: "POST" })
       .order("created_at", { ascending: true })
       .limit(100);
     if (error) throw new Error(error.message);
-    const ids = Array.from(new Set((rows ?? []).map(r => r.user_id)));
+    const ids = Array.from(new Set((rows ?? []).map((r) => r.user_id)));
     const { data: authors } = await supabaseAdmin
-      .from("profiles").select("id, display_name, username")
+      .from("profiles")
+      .select("id, display_name, username")
       .in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
-    const am = new Map((authors ?? []).map(a => [a.id, a]));
-    return (rows ?? []).map(r => ({ ...r, author: am.get(r.user_id) }));
+    const am = new Map((authors ?? []).map((a) => [a.id, a]));
+    return (rows ?? []).map((r) => ({ ...r, author: am.get(r.user_id) }));
   });
 
 // === Leaderboard / Leagues ===
@@ -164,12 +205,24 @@ export const getLeaderboard = createServerFn({ method: "GET" })
       .order("grit_points", { ascending: false })
       .limit(100);
     if (error) throw new Error(error.message);
-    const me = (data ?? []).find(p => p.id === userId);
+    const me = (data ?? []).find((p) => p.id === userId);
     const myPts = me?.grit_points ?? 0;
     const myLeague = leagueOf(myPts);
     return {
-      top: (data ?? []).map((p, i) => ({ ...p, rank: i + 1, league: leagueOf(p.grit_points ?? 0), level: gritLevel(p.grit_points ?? 0) })),
-      me: me ? { ...me, rank: (data ?? []).findIndex(p => p.id === userId) + 1, league: myLeague, level: gritLevel(myPts) } : null,
+      top: (data ?? []).map((p, i) => ({
+        ...p,
+        rank: i + 1,
+        league: leagueOf(p.grit_points ?? 0),
+        level: gritLevel(p.grit_points ?? 0),
+      })),
+      me: me
+        ? {
+            ...me,
+            rank: (data ?? []).findIndex((p) => p.id === userId) + 1,
+            league: myLeague,
+            level: gritLevel(myPts),
+          }
+        : null,
     };
   });
 
@@ -182,9 +235,17 @@ export const toggleFollow = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     if (data.userId === userId) throw new Error("Can't follow self");
     const { data: existing } = await supabase
-      .from("follows").select("follower_id").eq("follower_id", userId).eq("following_id", data.userId).maybeSingle();
+      .from("follows")
+      .select("follower_id")
+      .eq("follower_id", userId)
+      .eq("following_id", data.userId)
+      .maybeSingle();
     if (existing) {
-      await supabase.from("follows").delete().eq("follower_id", userId).eq("following_id", data.userId);
+      await supabase
+        .from("follows")
+        .delete()
+        .eq("follower_id", userId)
+        .eq("following_id", data.userId);
       return { following: false };
     }
     await supabase.from("follows").insert({ follower_id: userId, following_id: data.userId });
@@ -200,10 +261,13 @@ export const searchAthletes = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const q = data.q.replace(/[%_]/g, "");
     const { data: blocks } = await supabase
-      .from("user_blocks").select("blocker_id, blocked_id")
+      .from("user_blocks")
+      .select("blocker_id, blocked_id")
       .or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`);
     const hidden = new Set<string>();
-    (blocks ?? []).forEach((b) => hidden.add(b.blocker_id === userId ? b.blocked_id : b.blocker_id));
+    (blocks ?? []).forEach((b) =>
+      hidden.add(b.blocker_id === userId ? b.blocked_id : b.blocker_id),
+    );
     const { data: rows, error } = await supabaseAdmin
       .from("public_profiles")
       .select("id, username, display_name, avatar_url, level")
@@ -211,16 +275,20 @@ export const searchAthletes = createServerFn({ method: "POST" })
       .neq("id", userId)
       .limit(20);
     if (error) throw new Error(error.message);
-    const filtered = (rows ?? []).filter(r => r.id && !hidden.has(r.id as string));
-    const ids = filtered.map(r => r.id).filter((x): x is string => !!x);
+    const filtered = (rows ?? []).filter((r) => r.id && !hidden.has(r.id as string));
+    const ids = filtered.map((r) => r.id).filter((x): x is string => !!x);
     const { data: follows } = await supabase
-      .from("follows").select("following_id")
+      .from("follows")
+      .select("following_id")
       .eq("follower_id", userId)
       .in("following_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
-    const followingSet = new Set((follows ?? []).map(f => f.following_id));
-    return filtered.map(r => ({ ...r, id: r.id as string, following: followingSet.has(r.id as string) }));
+    const followingSet = new Set((follows ?? []).map((f) => f.following_id));
+    return filtered.map((r) => ({
+      ...r,
+      id: r.id as string,
+      following: followingSet.has(r.id as string),
+    }));
   });
-
 
 // === Suggested athletes (top of leaderboard, not already followed) ===
 export const getSuggestedAthletes = createServerFn({ method: "GET" })
@@ -228,8 +296,10 @@ export const getSuggestedAthletes = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
     const { data: follows } = await supabase
-      .from("follows").select("following_id").eq("follower_id", userId);
-    const followingSet = new Set((follows ?? []).map(f => f.following_id));
+      .from("follows")
+      .select("following_id")
+      .eq("follower_id", userId);
+    const followingSet = new Set((follows ?? []).map((f) => f.following_id));
     const { data: rows } = await supabaseAdmin
       .from("profiles")
       .select("id, username, display_name, avatar_url, grit_points")
@@ -237,9 +307,9 @@ export const getSuggestedAthletes = createServerFn({ method: "GET" })
       .order("grit_points", { ascending: false })
       .limit(30);
     return (rows ?? [])
-      .filter(r => !followingSet.has(r.id))
+      .filter((r) => !followingSet.has(r.id))
       .slice(0, 10)
-      .map(r => ({
+      .map((r) => ({
         id: r.id,
         username: r.username,
         display_name: r.display_name,
@@ -256,8 +326,14 @@ export const getMyFollowStats = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
     const [{ count: following }, { count: followers }] = await Promise.all([
-      supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", userId),
-      supabase.from("follows").select("*", { count: "exact", head: true }).eq("following_id", userId),
+      supabase
+        .from("follows")
+        .select("*", { count: "exact", head: true })
+        .eq("follower_id", userId),
+      supabase
+        .from("follows")
+        .select("*", { count: "exact", head: true })
+        .eq("following_id", userId),
     ]);
     return { following: following ?? 0, followers: followers ?? 0 };
   });
@@ -276,14 +352,31 @@ export const getAthleteCard = createServerFn({ method: "POST" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!row) throw new Error("Athlete not found");
-    const [{ data: follow }, { count: followers }, { count: following }, meRow] = await Promise.all([
-      supabase.from("follows").select("follower_id").eq("follower_id", userId).eq("following_id", data.userId).maybeSingle(),
-      supabase.from("follows").select("*", { count: "exact", head: true }).eq("following_id", data.userId),
-      supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", data.userId),
-      userId === data.userId
-        ? Promise.resolve(null)
-        : supabaseAdmin.from("public_profiles").select("public_stats, grit_points").eq("id", userId).maybeSingle(),
-    ]);
+    const [{ data: follow }, { count: followers }, { count: following }, meRow] = await Promise.all(
+      [
+        supabase
+          .from("follows")
+          .select("follower_id")
+          .eq("follower_id", userId)
+          .eq("following_id", data.userId)
+          .maybeSingle(),
+        supabase
+          .from("follows")
+          .select("*", { count: "exact", head: true })
+          .eq("following_id", data.userId),
+        supabase
+          .from("follows")
+          .select("*", { count: "exact", head: true })
+          .eq("follower_id", data.userId),
+        userId === data.userId
+          ? Promise.resolve(null)
+          : supabaseAdmin
+              .from("public_profiles")
+              .select("public_stats, grit_points")
+              .eq("id", userId)
+              .maybeSingle(),
+      ],
+    );
     return {
       ...row,
       level: gritLevel(row.grit_points ?? 0),
@@ -301,8 +394,15 @@ export const getMyReferralInfo = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const { data: p } = await supabase.from("profiles").select("referral_code, pro_until").eq("id", userId).single();
-    const { count } = await supabase.from("referrals").select("*", { count: "exact", head: true }).eq("referrer_id", userId);
+    const { data: p } = await supabase
+      .from("profiles")
+      .select("referral_code, pro_until")
+      .eq("id", userId)
+      .single();
+    const { count } = await supabase
+      .from("referrals")
+      .select("*", { count: "exact", head: true })
+      .eq("referrer_id", userId);
     return { code: p?.referral_code ?? null, count: count ?? 0, proUntil: p?.pro_until ?? null };
   });
 
@@ -314,21 +414,34 @@ export const redeemReferral = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const code = data.code.trim().toUpperCase();
     const { data: owner, error: oErr } = await supabaseAdmin
-      .from("profiles").select("id, referral_code").eq("referral_code", code).maybeSingle();
+      .from("profiles")
+      .select("id, referral_code")
+      .eq("referral_code", code)
+      .maybeSingle();
     if (oErr) throw new Error(oErr.message);
     if (!owner) throw new Error("Invalid code");
     if (owner.id === userId) throw new Error("Can't redeem your own code");
-    const { error } = await supabase.from("referrals").insert({ referrer_id: owner.id, referred_id: userId, code });
+    const { error } = await supabase
+      .from("referrals")
+      .insert({ referrer_id: owner.id, referred_id: userId, code });
     if (error) {
       if (error.code === "23505") throw new Error("Already redeemed");
       throw new Error(error.message);
     }
     // grant 30d pro to both
     const month = new Date(Date.now() + 30 * 86400_000).toISOString();
-    await supabase.from("profiles").update({ pro_until: month, referred_by: owner.id }).eq("id", userId);
+    await supabase
+      .from("profiles")
+      .update({ pro_until: month, referred_by: owner.id })
+      .eq("id", userId);
     // extend referrer (cross-user update requires admin client)
-    const { data: rp } = await supabaseAdmin.from("profiles").select("pro_until").eq("id", owner.id).single();
-    const base = rp?.pro_until && new Date(rp.pro_until) > new Date() ? new Date(rp.pro_until) : new Date();
+    const { data: rp } = await supabaseAdmin
+      .from("profiles")
+      .select("pro_until")
+      .eq("id", owner.id)
+      .single();
+    const base =
+      rp?.pro_until && new Date(rp.pro_until) > new Date() ? new Date(rp.pro_until) : new Date();
     const newDate = new Date(base.getTime() + 30 * 86400_000).toISOString();
     await supabaseAdmin.from("profiles").update({ pro_until: newDate }).eq("id", owner.id);
     return { ok: true };
@@ -336,7 +449,12 @@ export const redeemReferral = createServerFn({ method: "POST" })
 
 // === Profile sync (writes username + display_name) ===
 const ProfileInput = z.object({
-  username: z.string().min(3).max(24).regex(/^[a-zA-Z0-9_]+$/).optional(),
+  username: z
+    .string()
+    .min(3)
+    .max(24)
+    .regex(/^[a-zA-Z0-9_]+$/)
+    .optional(),
   display_name: z.string().min(1).max(40).optional(),
   bio: z.string().max(160).optional(),
 });
@@ -368,12 +486,15 @@ export const updateMyLocation = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => LocationInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { error } = await supabase.from("profiles").update({
-      city: data.city,
-      region: data.region ?? null,
-      country: data.country,
-      location_updated_at: new Date().toISOString(),
-    }).eq("id", userId);
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        city: data.city,
+        region: data.region ?? null,
+        country: data.country,
+        location_updated_at: new Date().toISOString(),
+      })
+      .eq("id", userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -387,7 +508,11 @@ export const getMyLocation = createServerFn({ method: "GET" })
       .select("city, region, country")
       .eq("id", userId)
       .maybeSingle();
-    return { city: data?.city ?? null, region: data?.region ?? null, country: data?.country ?? null };
+    return {
+      city: data?.city ?? null,
+      region: data?.region ?? null,
+      country: data?.country ?? null,
+    };
   });
 
 // === Nearby athletes (same city, then same country) ===
@@ -396,15 +521,35 @@ export const getNearbyAthletes = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
     const { data: me } = await supabaseAdmin
-      .from("profiles").select("city, country").eq("id", userId).maybeSingle();
+      .from("profiles")
+      .select("city, country")
+      .eq("id", userId)
+      .maybeSingle();
     if (!me?.city || !me?.country) {
-      return { athletes: [] as Array<{ id: string; username: string | null; display_name: string | null; avatar_url: string | null; level: string | null; grit_points: number | null; city: string | null; country: string | null; following: boolean }>, myCity: null as string | null, myCountry: null as string | null };
+      return {
+        athletes: [] as Array<{
+          id: string;
+          username: string | null;
+          display_name: string | null;
+          avatar_url: string | null;
+          level: string | null;
+          grit_points: number | null;
+          city: string | null;
+          country: string | null;
+          following: boolean;
+        }>,
+        myCity: null as string | null,
+        myCountry: null as string | null,
+      };
     }
     const { data: blocks } = await supabase
-      .from("user_blocks").select("blocker_id, blocked_id")
+      .from("user_blocks")
+      .select("blocker_id, blocked_id")
       .or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`);
     const hidden = new Set<string>();
-    (blocks ?? []).forEach((b) => hidden.add(b.blocker_id === userId ? b.blocked_id : b.blocker_id));
+    (blocks ?? []).forEach((b) =>
+      hidden.add(b.blocker_id === userId ? b.blocked_id : b.blocker_id),
+    );
 
     const { data: same } = await supabaseAdmin
       .from("public_profiles")
@@ -413,14 +558,15 @@ export const getNearbyAthletes = createServerFn({ method: "GET" })
       .ilike("country", me.country)
       .neq("id", userId)
       .limit(30);
-    const ids = (same ?? []).map(r => r.id).filter((x): x is string => !!x);
+    const ids = (same ?? []).map((r) => r.id).filter((x): x is string => !!x);
     const { data: follows } = await supabase
-      .from("follows").select("following_id")
+      .from("follows")
+      .select("following_id")
       .eq("follower_id", userId)
       .in("following_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
-    const fset = new Set((follows ?? []).map(f => f.following_id));
+    const fset = new Set((follows ?? []).map((f) => f.following_id));
     const athletes = (same ?? [])
-      .filter(r => r.id && !hidden.has(r.id as string))
-      .map(r => ({ ...r, id: r.id as string, following: fset.has(r.id as string) }));
+      .filter((r) => r.id && !hidden.has(r.id as string))
+      .map((r) => ({ ...r, id: r.id as string, following: fset.has(r.id as string) }));
     return { athletes, myCity: me.city, myCountry: me.country };
   });

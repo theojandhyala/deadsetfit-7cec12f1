@@ -30,7 +30,9 @@ export function BottomNav() {
         }
       })
       .catch(() => {});
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Clear badge when visiting friends tab
@@ -64,7 +66,13 @@ export function BottomNav() {
                   transition: "color 0.18s ease, transform 0.1s ease",
                 }}
               >
-                <span className="relative" style={{ transform: active ? "scale(1.12)" : "scale(1)", transition: "transform 0.2s cubic-bezier(0.22,1,0.36,1)" }}>
+                <span
+                  className="relative"
+                  style={{
+                    transform: active ? "scale(1.12)" : "scale(1)",
+                    transition: "transform 0.2s cubic-bezier(0.22,1,0.36,1)",
+                  }}
+                >
                   <Icon size={20} strokeWidth={2.5} />
                   {showBadge && (
                     <span
@@ -73,7 +81,12 @@ export function BottomNav() {
                     />
                   )}
                 </span>
-                <span className="text-[9px] font-bold uppercase tracking-widest" style={{ opacity: active ? 1 : 0.7, transition: "opacity 0.2s ease" }}>{label}</span>
+                <span
+                  className="text-[9px] font-bold uppercase tracking-widest"
+                  style={{ opacity: active ? 1 : 0.7, transition: "opacity 0.2s ease" }}
+                >
+                  {label}
+                </span>
               </Link>
             </li>
           );

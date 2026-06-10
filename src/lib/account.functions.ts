@@ -59,7 +59,6 @@ export const deleteMyAccount = createServerFn({ method: "POST" })
       }
     }
 
-
     const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -73,12 +72,18 @@ export const blockUser = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     if (data.userId === userId) throw new Error("Can't block yourself");
     // Remove any mutual follow so the blocked user can't see this user's content either.
-    await supabase.from("follows").delete().or(
-      `and(follower_id.eq.${userId},following_id.eq.${data.userId}),and(follower_id.eq.${data.userId},following_id.eq.${userId})`,
-    );
+    await supabase
+      .from("follows")
+      .delete()
+      .or(
+        `and(follower_id.eq.${userId},following_id.eq.${data.userId}),and(follower_id.eq.${data.userId},following_id.eq.${userId})`,
+      );
     const { error } = await supabase
       .from("user_blocks")
-      .upsert({ blocker_id: userId, blocked_id: data.userId }, { onConflict: "blocker_id,blocked_id" });
+      .upsert(
+        { blocker_id: userId, blocked_id: data.userId },
+        { onConflict: "blocker_id,blocked_id" },
+      );
     if (error) throw new Error(error.message);
     return { blocked: true };
   });

@@ -7,10 +7,14 @@ export function calculateCalories(p: Profile): number {
   const activity = 1.375 + p.daysPerWeek * 0.05; // ~1.525–1.675
   const tdee = bmr * activity;
   switch (p.goal) {
-    case "BULK": return Math.round(tdee + 350);
-    case "CUT": return Math.round(tdee - 450);
-    case "ATHLETIC": return Math.round(tdee + 150);
-    default: return Math.round(tdee);
+    case "BULK":
+      return Math.round(tdee + 350);
+    case "CUT":
+      return Math.round(tdee - 450);
+    case "ATHLETIC":
+      return Math.round(tdee + 150);
+    default:
+      return Math.round(tdee);
   }
 }
 
@@ -32,20 +36,48 @@ export function defaultSchedule(p: Profile) {
 
   const equip = p.equipment;
   const has = (e: string) => equip === e || equip === "FULL_GYM";
-  const pickPress = has("FULL_GYM") ? "bench-press" : has("HOME_GYM") ? "incline-db-press" : "push-ups";
+  const pickPress = has("FULL_GYM")
+    ? "bench-press"
+    : has("HOME_GYM")
+      ? "incline-db-press"
+      : "push-ups";
   const pickPull = has("FULL_GYM") ? "lat-pulldown" : "pull-ups";
   const pickSquat = has("FULL_GYM") ? "squat" : has("HOME_GYM") ? "rdl" : "lunges";
   const pickHinge = has("FULL_GYM") ? "deadlift" : "rdl";
 
-  const PUSH: Day = { label: "PUSH — CHEST / SHOULDERS / TRICEPS", ids: [pickPress, "incline-db-press", "ohp", "lateral-raise", "tricep-pushdown"].filter(uniq) };
-  const PULL: Day = { label: "PULL — BACK / BICEPS", ids: [pickPull, "seated-row", "face-pull", "barbell-curl", "hammer-curl"] };
-  const LEGS: Day = { label: "LEGS — QUADS / HAMS / GLUTES", ids: [pickSquat, pickHinge, "leg-press", "lunges", "leg-curl"].filter(uniq) };
-  const UPPER: Day = { label: "UPPER — CHEST / BACK / ARMS", ids: [pickPress, pickPull, "ohp", "barbell-curl", "tricep-pushdown"] };
-  const LOWER: Day = { label: "LOWER — LEGS / CORE", ids: [pickSquat, pickHinge, "lunges", "plank", "hanging-leg-raise"].filter(uniq) };
+  const PUSH: Day = {
+    label: "PUSH — CHEST / SHOULDERS / TRICEPS",
+    ids: [pickPress, "incline-db-press", "ohp", "lateral-raise", "tricep-pushdown"].filter(uniq),
+  };
+  const PULL: Day = {
+    label: "PULL — BACK / BICEPS",
+    ids: [pickPull, "seated-row", "face-pull", "barbell-curl", "hammer-curl"],
+  };
+  const LEGS: Day = {
+    label: "LEGS — QUADS / HAMS / GLUTES",
+    ids: [pickSquat, pickHinge, "leg-press", "lunges", "leg-curl"].filter(uniq),
+  };
+  const UPPER: Day = {
+    label: "UPPER — CHEST / BACK / ARMS",
+    ids: [pickPress, pickPull, "ohp", "barbell-curl", "tricep-pushdown"],
+  };
+  const LOWER: Day = {
+    label: "LOWER — LEGS / CORE",
+    ids: [pickSquat, pickHinge, "lunges", "plank", "hanging-leg-raise"].filter(uniq),
+  };
   const FULL: Day = { label: "FULL BODY", ids: [pickSquat, pickPress, pickPull, "plank"] };
-  const ARMS: Day = { label: "ARMS — BI / TRI", ids: ["barbell-curl", "hammer-curl", "skull-crushers", "tricep-pushdown"] };
-  const SHO: Day = { label: "SHOULDERS — DELTS", ids: ["ohp", "lateral-raise", "front-raise", "rear-delt-fly"] };
-  const CORE: Day = { label: "CORE", ids: ["plank", "hanging-leg-raise", "cable-crunch", "ab-wheel"] };
+  const ARMS: Day = {
+    label: "ARMS — BI / TRI",
+    ids: ["barbell-curl", "hammer-curl", "skull-crushers", "tricep-pushdown"],
+  };
+  const SHO: Day = {
+    label: "SHOULDERS — DELTS",
+    ids: ["ohp", "lateral-raise", "front-raise", "rear-delt-fly"],
+  };
+  const CORE: Day = {
+    label: "CORE",
+    ids: ["plank", "hanging-leg-raise", "cable-crunch", "ab-wheel"],
+  };
 
   let plan: Day[];
   if (d === 3) plan = [FULL, REST, FULL, REST, FULL, REST, REST];
@@ -53,16 +85,28 @@ export function defaultSchedule(p: Profile) {
   else if (d === 5) plan = [PUSH, PULL, LEGS, UPPER, LOWER, REST, REST];
   else plan = [PUSH, PULL, LEGS, SHO, ARMS, CORE, REST];
 
-  const days: ("MON"|"TUE"|"WED"|"THU"|"FRI"|"SAT"|"SUN")[] = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
+  const days: ("MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN")[] = [
+    "MON",
+    "TUE",
+    "WED",
+    "THU",
+    "FRI",
+    "SAT",
+    "SUN",
+  ];
   const result: Record<string, { label: string; exerciseIds: string[] }> = {};
-  days.forEach((d, i) => { result[d] = { label: plan[i].label, exerciseIds: plan[i].ids }; });
+  days.forEach((d, i) => {
+    result[d] = { label: plan[i].label, exerciseIds: plan[i].ids };
+  });
   return result as import("./types").Schedule;
 }
 
-function uniq(v: string, i: number, a: string[]) { return a.indexOf(v) === i; }
+function uniq(v: string, i: number, a: string[]) {
+  return a.indexOf(v) === i;
+}
 
-export function todayKey(): "MON"|"TUE"|"WED"|"THU"|"FRI"|"SAT"|"SUN" {
-  const keys = ["SUN","MON","TUE","WED","THU","FRI","SAT"] as const;
+export function todayKey(): "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN" {
+  const keys = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"] as const;
   return keys[new Date().getDay()];
 }
 
@@ -98,12 +142,18 @@ export type GritLevel = GritBadge;
 
 export function badgeColor(b: GritBadge): string {
   switch (b) {
-    case "DEADSET GOD": return "#e63222";
-    case "ELITE": return "#a78bfa";
-    case "BEAST": return "#fbbf24";
-    case "GRINDER": return "#22c55e";
-    case "ROOKIE": return "#60a5fa";
-    default: return "#8a8a8a";
+    case "DEADSET GOD":
+      return "#e63222";
+    case "ELITE":
+      return "#a78bfa";
+    case "BEAST":
+      return "#fbbf24";
+    case "GRINDER":
+      return "#22c55e";
+    case "ROOKIE":
+      return "#60a5fa";
+    default:
+      return "#8a8a8a";
   }
 }
 
@@ -115,7 +165,7 @@ export function estimate1RM(weight: number, reps: number): number {
 }
 
 export function bestSetFor(logs: SetLog[], exerciseId: string) {
-  const filtered = logs.filter(l => l.exerciseId === exerciseId);
+  const filtered = logs.filter((l) => l.exerciseId === exerciseId);
   if (!filtered.length) return null;
   let best = { weight: 0, reps: 0, oneRm: 0, date: "" };
   for (const l of filtered) {
@@ -126,7 +176,7 @@ export function bestSetFor(logs: SetLog[], exerciseId: string) {
 }
 
 export function maxRepsFor(logs: SetLog[], exerciseId: string) {
-  const filtered = logs.filter(l => l.exerciseId === exerciseId);
+  const filtered = logs.filter((l) => l.exerciseId === exerciseId);
   if (!filtered.length) return 0;
   return filtered.reduce((m, l) => Math.max(m, l.reps), 0);
 }
@@ -152,15 +202,26 @@ export interface GritScoreBreakdown {
 }
 export function calculateGritScore(state: AppState): GritScoreBreakdown {
   const p = state.profile;
-  if (!p) return { streak: 0, prs: 0, caloriesHit: 0, proteinHit: 0, checkIns: 0, measurements: 0, decay: 0, total: 0 };
+  if (!p)
+    return {
+      streak: 0,
+      prs: 0,
+      caloriesHit: 0,
+      proteinHit: 0,
+      checkIns: 0,
+      measurements: 0,
+      decay: 0,
+      total: 0,
+    };
 
   const streak = calculateStreak(state.completedDates);
-  const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 7);
   const weekAgoISO = weekAgo.toISOString().slice(0, 10);
 
   // PRs this week (from session.prCount)
   const prs = (state.sessions || [])
-    .filter(s => s.date >= weekAgoISO)
+    .filter((s) => s.date >= weekAgoISO)
     .reduce((sum, s) => sum + (s.prCount || 0), 0);
 
   // Calorie + protein target hits per day this week
@@ -170,26 +231,28 @@ export function calculateGritScore(state: AppState): GritScoreBreakdown {
   for (const f of state.foodLog || []) {
     if (f.date < weekAgoISO) continue;
     const d = byDay.get(f.date) ?? { cal: 0, pro: 0 };
-    d.cal += f.calories; d.pro += f.protein;
+    d.cal += f.calories;
+    d.pro += f.protein;
     byDay.set(f.date, d);
   }
-  let caloriesHit = 0, proteinHit = 0;
+  let caloriesHit = 0,
+    proteinHit = 0;
   for (const [, totals] of byDay) {
     if (Math.abs(totals.cal - cal) / cal <= 0.1) caloriesHit++;
     if (totals.pro >= macros.protein * 0.9) proteinHit++;
   }
 
-  const checkIns = (state.checkIns || []).filter(c => c.date >= weekAgoISO).length;
-  const measurements = (state.measurements || []).filter(m => m.date >= weekAgoISO).length;
+  const checkIns = (state.checkIns || []).filter((c) => c.date >= weekAgoISO).length;
+  const measurements = (state.measurements || []).filter((m) => m.date >= weekAgoISO).length;
 
   // Decay: any activity in last 48h?
   const lastActivity = Math.max(
-    ...(state.completedDates || []).map(d => new Date(d).getTime()),
-    ...(state.sessions || []).map(s => new Date(s.date).getTime()),
-    ...(state.foodLog || []).map(f => new Date(f.date).getTime()),
-    0
+    ...(state.completedDates || []).map((d) => new Date(d).getTime()),
+    ...(state.sessions || []).map((s) => new Date(s.date).getTime()),
+    ...(state.foodLog || []).map((f) => new Date(f.date).getTime()),
+    0,
   );
-  const decay = (Date.now() - lastActivity) > 48 * 3600_000 ? 100 : 0;
+  const decay = Date.now() - lastActivity > 48 * 3600_000 ? 100 : 0;
 
   const raw =
     streak * 15 +
@@ -201,7 +264,13 @@ export function calculateGritScore(state: AppState): GritScoreBreakdown {
     decay;
 
   return {
-    streak, prs, caloriesHit, proteinHit, checkIns, measurements, decay,
+    streak,
+    prs,
+    caloriesHit,
+    proteinHit,
+    checkIns,
+    measurements,
+    decay,
     total: Math.max(0, Math.min(1000, raw)),
   };
 }

@@ -107,10 +107,14 @@ export function DailyQuests() {
         >
           <p className="label-cap text-[10px] flex items-center gap-1.5">
             <Trophy size={12} className="text-accent-red" /> DAILY QUESTS
-            <span className="text-grit-dim">· {doneCount}/{quests.length}</span>
+            <span className="text-grit-dim">
+              · {doneCount}/{quests.length}
+            </span>
           </p>
           {allDone && (
-            <span className="label-cap text-[9px] px-2 py-0.5 bg-accent-red text-white">ALL DONE</span>
+            <span className="label-cap text-[9px] px-2 py-0.5 bg-accent-red text-white">
+              ALL DONE
+            </span>
           )}
           <span className="text-grit-dim text-xs">{expanded ? "▲" : "▼"}</span>
         </button>

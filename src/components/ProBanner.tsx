@@ -10,13 +10,21 @@ export function ProBanner() {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    try { if (sessionStorage.getItem(DISMISS_KEY)) setDismissed(true); } catch { /* ignore */ }
+    try {
+      if (sessionStorage.getItem(DISMISS_KEY)) setDismissed(true);
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   if (loading || isPro || dismissed) return null;
 
   function dismiss() {
-    try { sessionStorage.setItem(DISMISS_KEY, "1"); } catch { /* ignore */ }
+    try {
+      sessionStorage.setItem(DISMISS_KEY, "1");
+    } catch {
+      /* ignore */
+    }
     setDismissed(true);
   }
 
@@ -26,7 +34,9 @@ export function ProBanner() {
         <Crown size={16} className="text-accent-red" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="font-display text-xs uppercase tracking-widest text-grit-text">Unlock DEADSET Pro</p>
+        <p className="font-display text-xs uppercase tracking-widest text-grit-text">
+          Unlock DEADSET Pro
+        </p>
         <p className="text-[11px] text-grit mt-0.5">AI Coach, programs, analytics — $4.99/mo</p>
       </div>
       <Link

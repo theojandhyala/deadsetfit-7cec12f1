@@ -38,7 +38,9 @@ export const coachChat = createServerFn({ method: "POST" })
       c.squatKg && `Squat 1RM: ${c.squatKg}kg`,
       c.deadliftKg && `Deadlift 1RM: ${c.deadliftKg}kg`,
       typeof c.streak === "number" && `Current streak: ${c.streak} days`,
-    ].filter(Boolean).join("\n");
+    ]
+      .filter(Boolean)
+      .join("\n");
 
     const system = `You are DEADSET Coach — a direct, no-fluff strength & conditioning coach inside the DEADSET fitness app.
 Tone: brief, practical, motivating, never preachy. Use lbs only if the user does, otherwise kg.

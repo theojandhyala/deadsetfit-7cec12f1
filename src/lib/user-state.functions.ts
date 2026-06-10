@@ -21,11 +21,14 @@ export const saveUserState = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     let parsed: unknown;
-    try { parsed = JSON.parse(data.data); } catch { throw new Error("Invalid JSON"); }
+    try {
+      parsed = JSON.parse(data.data);
+    } catch {
+      throw new Error("Invalid JSON");
+    }
     const { error } = await supabase
       .from("user_state")
       .upsert({ user_id: userId, data: parsed as never }, { onConflict: "user_id" });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
-

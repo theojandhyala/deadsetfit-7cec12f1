@@ -2,8 +2,17 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { ChevronLeft, Trophy } from "lucide-react";
 import {
-  LineChart, Line, BarChart, Bar, ScatterChart, Scatter,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  ScatterChart,
+  Scatter,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
 } from "recharts";
 import { useAppState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
@@ -53,7 +62,10 @@ function LiftDetailPage() {
 
   // Per-day: best e1RM, total volume, best set
   const byDay = useMemo(() => {
-    const m = new Map<string, { date: string; e1rm: number; volume: number; topWeight: number; topReps: number }>();
+    const m = new Map<
+      string,
+      { date: string; e1rm: number; volume: number; topWeight: number; topReps: number }
+    >();
     for (const l of logs) {
       const d = l.date.slice(0, 10);
       const e = estimate1RM(l.weight, l.reps);
@@ -61,25 +73,29 @@ function LiftDetailPage() {
       const cur = m.get(d) ?? { date: d, e1rm: 0, volume: 0, topWeight: 0, topReps: 0 };
       cur.e1rm = Math.max(cur.e1rm, e);
       cur.volume += vol;
-      if (l.weight > cur.topWeight) { cur.topWeight = l.weight; cur.topReps = l.reps; }
+      if (l.weight > cur.topWeight) {
+        cur.topWeight = l.weight;
+        cur.topReps = l.reps;
+      }
       m.set(d, cur);
     }
     return Array.from(m.values()).sort((a, b) => a.date.localeCompare(b.date));
   }, [logs]);
 
-  const allTimePR = useMemo(() =>
-    all.reduce((m, l) => Math.max(m, l.weight), 0),
-  [all]);
-  const e1rmPR = useMemo(() =>
-    all.reduce((m, l) => Math.max(m, estimate1RM(l.weight, l.reps)), 0),
-  [all]);
+  const allTimePR = useMemo(() => all.reduce((m, l) => Math.max(m, l.weight), 0), [all]);
+  const e1rmPR = useMemo(
+    () => all.reduce((m, l) => Math.max(m, estimate1RM(l.weight, l.reps)), 0),
+    [all],
+  );
 
   const empty = byDay.length === 0;
 
   return (
     <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
       <header className="px-5 pt-6 pb-3 flex items-center gap-2">
-        <Link to="/progress" className="text-grit-dim"><ChevronLeft size={22} /></Link>
+        <Link to="/progress" className="text-grit-dim">
+          <ChevronLeft size={22} />
+        </Link>
         <div className="min-w-0">
           <p className="label-cap text-grit-dim">LIFT STATS</p>
           <h1 className="display text-2xl font-extrabold uppercase text-grit truncate">{name}</h1>
@@ -90,13 +106,15 @@ function LiftDetailPage() {
         <div className="bg-grit-card border border-grit p-3">
           <p className="label-cap text-[10px] text-grit-dim">ALL-TIME 1RM</p>
           <p className="display text-3xl font-extrabold text-grit leading-none mt-1">
-            {allTimePR || "—"}<span className="text-xs text-grit-dim ml-1">kg</span>
+            {allTimePR || "—"}
+            <span className="text-xs text-grit-dim ml-1">kg</span>
           </p>
         </div>
         <div className="bg-grit-card border border-grit p-3">
           <p className="label-cap text-[10px] text-grit-dim">EST. 1RM</p>
           <p className="display text-3xl font-extrabold text-accent-red leading-none mt-1">
-            {e1rmPR || "—"}<span className="text-xs text-grit-dim ml-1">kg</span>
+            {e1rmPR || "—"}
+            <span className="text-xs text-grit-dim ml-1">kg</span>
           </p>
         </div>
       </section>
@@ -133,7 +151,13 @@ function LiftDetailPage() {
                 <XAxis dataKey="date" tick={{ fill: "#8a8a8a", fontSize: 10 }} />
                 <YAxis tick={{ fill: "#8a8a8a", fontSize: 10 }} />
                 <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid #262626" }} />
-                <Line type="monotone" dataKey="e1rm" stroke="#e63222" strokeWidth={2} dot={{ r: 3 }} />
+                <Line
+                  type="monotone"
+                  dataKey="e1rm"
+                  stroke="#e63222"
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                />
               </LineChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -164,7 +188,11 @@ function LiftDetailPage() {
         </>
       )}
 
-      <StrengthStandard exerciseId={exerciseId} e1rm={e1rmPR} bodyweightKg={state.profile?.weightKg ?? 80} />
+      <StrengthStandard
+        exerciseId={exerciseId}
+        e1rm={e1rmPR}
+        bodyweightKg={state.profile?.weightKg ?? 80}
+      />
 
       <div className="h-12" />
     </div>
@@ -172,21 +200,25 @@ function LiftDetailPage() {
 }
 
 const STRENGTH_LEVELS = ["Beginner", "Novice", "Intermediate", "Advanced", "Elite"] as const;
-type StrengthLevel = typeof STRENGTH_LEVELS[number];
+type StrengthLevel = (typeof STRENGTH_LEVELS)[number];
 
 // Multipliers: [bench, squat, deadlift, ohp]
 const BIG4_MULTIPLIERS: Record<StrengthLevel, [number, number, number, number]> = {
-  Beginner:     [0.5,  0.75, 1.0,  0.35],
-  Novice:       [0.75, 1.25, 1.5,  0.55],
-  Intermediate: [1.0,  1.5,  2.0,  0.75],
-  Advanced:     [1.25, 2.0,  2.5,  1.0],
-  Elite:        [1.5,  2.5,  3.0,  1.25],
+  Beginner: [0.5, 0.75, 1.0, 0.35],
+  Novice: [0.75, 1.25, 1.5, 0.55],
+  Intermediate: [1.0, 1.5, 2.0, 0.75],
+  Advanced: [1.25, 2.0, 2.5, 1.0],
+  Elite: [1.5, 2.5, 3.0, 1.25],
 };
 const GENERIC_MULTIPLIERS: Record<StrengthLevel, number> = {
-  Beginner: 0.25, Novice: 0.5, Intermediate: 0.75, Advanced: 1.0, Elite: 1.25,
+  Beginner: 0.25,
+  Novice: 0.5,
+  Intermediate: 0.75,
+  Advanced: 1.0,
+  Elite: 1.25,
 };
 const BIG4_IDS = ["bench-press", "squat", "deadlift", "overhead-press"] as const;
-type Big4Id = typeof BIG4_IDS[number];
+type Big4Id = (typeof BIG4_IDS)[number];
 
 function getStandardKg(exerciseId: string, level: StrengthLevel, bw: number): number {
   const idx = BIG4_IDS.indexOf(exerciseId as Big4Id);
@@ -194,7 +226,15 @@ function getStandardKg(exerciseId: string, level: StrengthLevel, bw: number): nu
   return Math.round(GENERIC_MULTIPLIERS[level] * bw);
 }
 
-function StrengthStandard({ exerciseId, e1rm, bodyweightKg }: { exerciseId: string; e1rm: number; bodyweightKg: number }) {
+function StrengthStandard({
+  exerciseId,
+  e1rm,
+  bodyweightKg,
+}: {
+  exerciseId: string;
+  e1rm: number;
+  bodyweightKg: number;
+}) {
   const thresholds = STRENGTH_LEVELS.map((l) => getStandardKg(exerciseId, l, bodyweightKg));
   // Find current level: highest threshold the user meets
   let currentLevelIdx = -1;
@@ -234,10 +274,15 @@ function StrengthStandard({ exerciseId, e1rm, bodyweightKg }: { exerciseId: stri
                 }}
               >
                 {isNext && e1rm > 0 && (
-                  <div style={{ width: `${segProgress}%`, height: "100%", background: "#7a1410" }} />
+                  <div
+                    style={{ width: `${segProgress}%`, height: "100%", background: "#7a1410" }}
+                  />
                 )}
               </div>
-              <span className="text-[8px] label-cap" style={{ color: isActive ? "#e63222" : "#8a8a8a" }}>
+              <span
+                className="text-[8px] label-cap"
+                style={{ color: isActive ? "#e63222" : "#8a8a8a" }}
+              >
                 {level.slice(0, 3).toUpperCase()}
               </span>
             </div>
@@ -257,9 +302,7 @@ function StrengthStandard({ exerciseId, e1rm, bodyweightKg }: { exerciseId: stri
               <span className="text-accent-red ml-1">+{gap}kg away</span>
             </p>
           )}
-          {!nextLevel && (
-            <p className="text-xs text-grit-dim mt-1">Elite level achieved.</p>
-          )}
+          {!nextLevel && <p className="text-xs text-grit-dim mt-1">Elite level achieved.</p>}
         </div>
       ) : (
         <p className="text-xs text-grit-dim">Log a set to see your strength standard.</p>

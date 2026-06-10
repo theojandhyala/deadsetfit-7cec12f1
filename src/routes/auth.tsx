@@ -8,12 +8,10 @@ import { profileQuestionsComplete } from "@/lib/account-restore";
 
 import { toast } from "sonner";
 
-
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "DEADSET — Sign In" }] }),
   component: AuthPage,
 });
-
 
 export function AuthPage() {
   const navigate = useNavigate();
@@ -44,9 +42,12 @@ export function AuthPage() {
     });
     // getSession() reads localStorage; don't timeout — falling back to null
     // was blocking returning users from auto-redirecting into the app.
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) routeAfterAuth();
-    }).catch(() => {});
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        if (session) routeAfterAuth();
+      })
+      .catch(() => {});
     return () => data.subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
@@ -72,7 +73,9 @@ export function AuthPage() {
           const { error } = await supabase.auth.signInWithPassword({ email: id, password });
           if (error) throw error;
         } else {
-          const tokens = await usernameSignIn({ data: { username: id.replace(/^@/, ""), password } });
+          const tokens = await usernameSignIn({
+            data: { username: id.replace(/^@/, ""), password },
+          });
           if (!tokens.ok) throw new Error(tokens.error);
           const { error } = await supabase.auth.setSession({
             access_token: tokens.access_token,
@@ -87,7 +90,6 @@ export function AuthPage() {
       setBusy(false);
     }
   }
-
 
   async function sendResetEmail(e: React.FormEvent) {
     e.preventDefault();
@@ -109,7 +111,10 @@ export function AuthPage() {
 
   async function submitNewPassword(e: React.FormEvent) {
     e.preventDefault();
-    if (!newPassword || newPassword.length < 6) { toast.error("Password must be at least 6 characters"); return; }
+    if (!newPassword || newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
     setBusy(true);
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
@@ -126,7 +131,9 @@ export function AuthPage() {
   async function oauth(provider: "google" | "apple") {
     setBusy(true);
     try {
-      const res = await lovable.auth.signInWithOAuth(provider, { redirect_uri: window.location.origin });
+      const res = await lovable.auth.signInWithOAuth(provider, {
+        redirect_uri: window.location.origin,
+      });
       if (res.error) throw res.error;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : `${provider} sign-in failed`);
@@ -134,14 +141,10 @@ export function AuthPage() {
     }
   }
 
-
   return (
     <div className="min-h-screen bg-grit relative overflow-hidden flex flex-col">
       {/* Background grid + vignette */}
-      <div
-        className="absolute inset-0 grid-bg opacity-40"
-        aria-hidden="true"
-      />
+      <div className="absolute inset-0 grid-bg opacity-40" aria-hidden="true" />
       <div
         className="absolute inset-0"
         style={{
@@ -234,8 +237,15 @@ export function AuthPage() {
         </div>
 
         {/* Form Card */}
-        <div className="w-full max-w-sm" style={{ background: "rgba(20,20,20,0.95)", padding: "24px", border: "1px solid rgba(230,50,34,0.25)", backdropFilter: "blur(8px)" }}>
-
+        <div
+          className="w-full max-w-sm"
+          style={{
+            background: "rgba(20,20,20,0.95)",
+            padding: "24px",
+            border: "1px solid rgba(230,50,34,0.25)",
+            backdropFilter: "blur(8px)",
+          }}
+        >
           {mode === "reset" && (
             <>
               <h1 className="label-cap text-grit text-lg mb-5">Set New Password</h1>
@@ -265,7 +275,9 @@ export function AuthPage() {
           {mode === "forgot" && (
             <>
               <h1 className="label-cap text-grit text-lg mb-2">Reset Password</h1>
-              <p className="text-xs text-grit-dim mb-4">Enter your email and we'll send you a reset link.</p>
+              <p className="text-xs text-grit-dim mb-4">
+                Enter your email and we'll send you a reset link.
+              </p>
               <form onSubmit={sendResetEmail} className="space-y-3">
                 <input
                   type="email"
@@ -299,7 +311,9 @@ export function AuthPage() {
 
           {(mode === "signin" || mode === "signup") && (
             <>
-              <h1 className="label-cap text-grit text-lg mb-5">{mode === "signup" ? "Create Account" : "Sign In"}</h1>
+              <h1 className="label-cap text-grit text-lg mb-5">
+                {mode === "signup" ? "Create Account" : "Sign In"}
+              </h1>
 
               <form onSubmit={submit} className="space-y-3">
                 <input
@@ -366,8 +380,14 @@ export function AuthPage() {
                 style={{ background: "#000", color: "#fff", border: "1px solid #2a2a2a" }}
                 aria-label="Continue with Apple"
               >
-                <svg width="14" height="14" viewBox="0 0 384 512" fill="currentColor" aria-hidden="true">
-                  <path d="M318.7 268.7c-.2-37 16.5-65 50.5-85.6-19-27.2-47.7-42.2-85.6-45.1-35.8-2.8-75 21.1-89.3 21.1-15.1 0-49.7-20-76.9-20C72.4 140.2 24 184.5 24 274.6c0 26.6 4.9 54.1 14.6 82.4 13 36.8 60 127 109 125.5 25.6-.6 43.7-18.2 77-18.2 32.3 0 49.1 18.2 77.6 18.2 49.5-.7 92-82.6 104.4-119.6-66.6-31.4-63.9-92-63.9-93.8zM260.1 79.2c25.6-30.4 23.3-58.1 22.6-68.2-22.7 1.3-49 15.5-64 32.9-16.5 18.7-26.2 41.8-24.1 67.6 24.5 1.9 46.9-10.7 65.5-32.3z"/>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 384 512"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path d="M318.7 268.7c-.2-37 16.5-65 50.5-85.6-19-27.2-47.7-42.2-85.6-45.1-35.8-2.8-75 21.1-89.3 21.1-15.1 0-49.7-20-76.9-20C72.4 140.2 24 184.5 24 274.6c0 26.6 4.9 54.1 14.6 82.4 13 36.8 60 127 109 125.5 25.6-.6 43.7-18.2 77-18.2 32.3 0 49.1 18.2 77.6 18.2 49.5-.7 92-82.6 104.4-119.6-66.6-31.4-63.9-92-63.9-93.8zM260.1 79.2c25.6-30.4 23.3-58.1 22.6-68.2-22.7 1.3-49 15.5-64 32.9-16.5 18.7-26.2 41.8-24.1 67.6 24.5 1.9 46.9-10.7 65.5-32.3z" />
                 </svg>
                 Continue With Apple
               </button>
@@ -381,13 +401,18 @@ export function AuthPage() {
               </button>
             </>
           )}
-
         </div>
 
         <p className="mt-6 text-[10px] label-cap text-grit-dim text-center max-w-sm">
           By continuing you agree to our{" "}
-          <Link to="/terms" className="text-grit underline">Terms</Link> and{" "}
-          <Link to="/privacy" className="text-grit underline">Privacy Policy</Link>.
+          <Link to="/terms" className="text-grit underline">
+            Terms
+          </Link>{" "}
+          and{" "}
+          <Link to="/privacy" className="text-grit underline">
+            Privacy Policy
+          </Link>
+          .
         </p>
       </div>
     </div>

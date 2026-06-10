@@ -16,7 +16,9 @@ const SmartSuggestInput = z.object({
   goal: z.string(),
   experience: z.string(),
   days: z.array(DayInput),
-  candidates: z.array(z.object({ id: z.string(), name: z.string(), primary_muscles: z.array(z.string()) })).max(400),
+  candidates: z
+    .array(z.object({ id: z.string(), name: z.string(), primary_muscles: z.array(z.string()) }))
+    .max(400),
 });
 
 export const smartSuggest = createServerFn({ method: "POST" })
@@ -33,7 +35,10 @@ Program:
 ${data.days.map((d) => `- ${d.label}: ${d.items.map((i) => `${i.name} [${i.primary_muscles.join(",")}]`).join("; ") || "(empty)"}`).join("\n")}
 
 Candidate library (id — name — muscles):
-${data.candidates.slice(0, 200).map((c) => `${c.id} — ${c.name} — ${c.primary_muscles.join(",")}`).join("\n")}
+${data.candidates
+  .slice(0, 200)
+  .map((c) => `${c.id} — ${c.name} — ${c.primary_muscles.join(",")}`)
+  .join("\n")}
 
 Return gaps with suggested_ids drawn ONLY from the candidate ids above.`;
     return await chatJSON<{

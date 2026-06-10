@@ -155,7 +155,8 @@ export function ShareCard({ session, onClose }: { session: WorkoutSession; onClo
         )}
         <canvas ref={canvasRef} className="hidden" />
         <p className="text-[11px] text-grit-dim text-center mt-3 max-w-xs mx-auto">
-          Save it, then post to TikTok / Reels / Shorts. Tag <span className="text-grit font-bold">#deadset</span>.
+          Save it, then post to TikTok / Reels / Shorts. Tag{" "}
+          <span className="text-grit font-bold">#deadset</span>.
         </p>
         <div className="grid grid-cols-2 gap-3 mt-4 max-w-md mx-auto">
           <button onClick={download} className="btn-ghost">
