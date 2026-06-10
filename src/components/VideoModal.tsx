@@ -45,11 +45,16 @@ export function VideoModal({ videoId, query, title, clipStart, clipEnd, cue, onC
       style={{ background: "rgba(0,0,0,0.92)" }}
       onClick={onClose}
     >
-      <div className="w-full max-w-2xl bg-grit-card border border-grit" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="w-full max-w-2xl bg-grit-card border border-grit"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between px-4 py-3 border-b border-grit">
           <div className="min-w-0">
             <p className="label-cap text-[9px] text-accent-red">ACTION CLIP · LOOPING</p>
-            <h3 className="font-display uppercase tracking-wider text-grit text-lg truncate">{heading}</h3>
+            <h3 className="font-display uppercase tracking-wider text-grit text-lg truncate">
+              {heading}
+            </h3>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {videoId && (

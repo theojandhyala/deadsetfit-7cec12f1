@@ -5,7 +5,12 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const ProfileSchema = z.object({
-  username: z.string().min(3).max(20).regex(/^[a-z0-9_]+$/).optional(),
+  username: z
+    .string()
+    .min(3)
+    .max(20)
+    .regex(/^[a-z0-9_]+$/)
+    .optional(),
   display_name: z.string().min(1).max(60).optional(),
   goal: z.enum(["BULK", "CUT", "MAINTAIN", "ATHLETIC"]).optional(),
   experience: z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED"]).optional(),
@@ -71,10 +76,16 @@ export const getMyProfile = createServerFn({ method: "GET" })
  */
 export const signInWithUsername = createServerFn({ method: "POST" })
   .inputValidator((input) =>
-    z.object({
-      username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/),
-      password: z.string().min(6).max(128),
-    }).parse(input),
+    z
+      .object({
+        username: z
+          .string()
+          .min(3)
+          .max(20)
+          .regex(/^[a-zA-Z0-9_]+$/),
+        password: z.string().min(6).max(128),
+      })
+      .parse(input),
   )
   .handler(async ({ data }) => {
     const fail = { ok: false as const, error: "Invalid username or password" };
@@ -85,14 +96,14 @@ export const signInWithUsername = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!profile) return fail;
 
-    const { data: userRes, error: lookupErr } = await supabaseAdmin.auth.admin.getUserById(profile.id);
+    const { data: userRes, error: lookupErr } = await supabaseAdmin.auth.admin.getUserById(
+      profile.id,
+    );
     if (lookupErr || !userRes?.user?.email) return fail;
 
-    const anon = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_PUBLISHABLE_KEY!,
-      { auth: { persistSession: false, autoRefreshToken: false } },
-    );
+    const anon = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
     const { data: signIn, error } = await anon.auth.signInWithPassword({
       email: userRes.user.email,
       password: data.password,

@@ -18,7 +18,16 @@ export const Route = createFileRoute("/_tabs/library")({
 });
 
 const CATEGORIES = ["ALL", "PUSH", "PULL", "LEGS", "CORE"] as const;
-const EQUIPMENT = ["ALL", "BARBELL", "DUMBBELL", "CABLE", "MACHINE", "BODYWEIGHT", "BANDS", "KETTLEBELL"] as const;
+const EQUIPMENT = [
+  "ALL",
+  "BARBELL",
+  "DUMBBELL",
+  "CABLE",
+  "MACHINE",
+  "BODYWEIGHT",
+  "BANDS",
+  "KETTLEBELL",
+] as const;
 
 // Generation plan: 25 focuses x 20 = 500 candidates (dedupe on slug)
 const FOCUSES = [
@@ -226,7 +235,11 @@ function LibraryPage() {
               {open.category} · {open.equipment} · DIFFICULTY {open.difficulty}/5
             </div>
 
-            <MuscleDiagram primary={open.primary_muscles} secondary={open.secondary_muscles} size={220} />
+            <MuscleDiagram
+              primary={open.primary_muscles}
+              secondary={open.secondary_muscles}
+              size={220}
+            />
 
             <div className="mt-4">
               <div className="label-cap text-xs text-grit-dim mb-1">PRIMARY</div>

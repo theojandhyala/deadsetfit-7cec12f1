@@ -24,7 +24,11 @@ export function StatsGrid({ state }: { state: AppState }) {
       <div className="grid grid-cols-2 gap-2">
         <Cell icon={<Flame size={14} />} label="SESSIONS" value={String(s.sessions)} />
         <Cell icon={<Calendar size={14} />} label="DAYS TRAINED" value={String(s.days)} />
-        <Cell icon={<Dumbbell size={14} />} label="TOTAL VOLUME" value={`${s.volume.toLocaleString()}kg`} />
+        <Cell
+          icon={<Dumbbell size={14} />}
+          label="TOTAL VOLUME"
+          value={`${s.volume.toLocaleString()}kg`}
+        />
         <Cell icon={<Trophy size={14} />} label="PRs SET" value={String(s.prs)} />
       </div>
     </section>
@@ -35,7 +39,8 @@ function Cell({ icon, label, value }: { icon: React.ReactNode; label: string; va
   return (
     <div className="bg-grit-card border border-grit p-3">
       <div className="flex items-center gap-1.5 text-grit-dim mb-1">
-        {icon}<span className="label-cap text-[9px]">{label}</span>
+        {icon}
+        <span className="label-cap text-[9px]">{label}</span>
       </div>
       <p className="display font-extrabold text-grit text-xl leading-none">{value}</p>
     </div>

@@ -15,8 +15,6 @@ import { StateSync } from "../components/StateSync";
 import { UsernameGate } from "../components/UsernameGate";
 import { Toaster } from "../components/ui/sonner";
 
-
-
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -85,7 +83,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "theme-color", content: "#0a0a0a" },
       { name: "robots", content: "index, follow" },
       { name: "author", content: "DEADSET" },
-      { name: "keywords", content: "gym app, workout tracker, PR tracker, bench press, squat, deadlift, fitness, strength training, lifting log, workout program" },
+      {
+        name: "keywords",
+        content:
+          "gym app, workout tracker, PR tracker, bench press, squat, deadlift, fitness, strength training, lifting log, workout program",
+      },
       { name: "application-name", content: "DEADSET" },
       { name: "apple-mobile-web-app-title", content: "DEADSET" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
@@ -104,7 +106,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           name: "DEADSET",
           url: "https://deadsetfit.org",
           logo: "https://deadsetfit.org/favicon.ico",
-          description: "DEADSET. Train. Build. Become. A no-nonsense gym companion for tracking PRs, programs, and progress.",
+          description:
+            "DEADSET. Train. Build. Become. A no-nonsense gym companion for tracking PRs, programs, and progress.",
         }),
       },
     ],
@@ -112,7 +115,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Inter:wght@400;600;700;800&display=swap" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Inter:wght@400;600;700;800&display=swap",
+      },
     ],
   }),
   shellComponent: RootShell,

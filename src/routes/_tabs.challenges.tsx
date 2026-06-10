@@ -1,6 +1,20 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Trophy, Timer, Flame, Play, Pause, RotateCcw, Check, X, Plus, Minus, Zap, ArrowLeft, Share2 } from "lucide-react";
+import {
+  Trophy,
+  Timer,
+  Flame,
+  Play,
+  Pause,
+  RotateCcw,
+  Check,
+  X,
+  Plus,
+  Minus,
+  Zap,
+  ArrowLeft,
+  Share2,
+} from "lucide-react";
 import { useAppState } from "@/lib/storage";
 import { isoDay } from "@/lib/calc";
 import type { ChallengeRecord } from "@/lib/types";
@@ -22,30 +36,189 @@ type Challenge = {
 
 const CHALLENGES: Challenge[] = [
   // EASY
-  { id: "plank-1min", name: "60-Second Plank", tagline: "The entry test.", type: "time", target: 60, xp: 40, tier: "EASY" },
-  { id: "dead-hang", name: "60s Dead Hang", tagline: "Grip of steel.", type: "time", target: 60, xp: 50, tier: "EASY" },
-  { id: "squats-50", name: "50 Squats Speed Run", tagline: "Beat your clock.", type: "time", target: 90, xp: 50, tier: "EASY" },
-  { id: "pushups-30", name: "30 Push-ups Unbroken", tagline: "No stops. No drops.", type: "reps", target: 30, xp: 40, tier: "EASY" },
-  { id: "situps-50", name: "50 Sit-ups", tagline: "Core check.", type: "reps", target: 50, xp: 40, tier: "EASY" },
-  { id: "jumping-jacks-100", name: "100 Jumping Jacks", tagline: "Cardio warm-up.", type: "time", target: 90, xp: 30, tier: "EASY" },
+  {
+    id: "plank-1min",
+    name: "60-Second Plank",
+    tagline: "The entry test.",
+    type: "time",
+    target: 60,
+    xp: 40,
+    tier: "EASY",
+  },
+  {
+    id: "dead-hang",
+    name: "60s Dead Hang",
+    tagline: "Grip of steel.",
+    type: "time",
+    target: 60,
+    xp: 50,
+    tier: "EASY",
+  },
+  {
+    id: "squats-50",
+    name: "50 Squats Speed Run",
+    tagline: "Beat your clock.",
+    type: "time",
+    target: 90,
+    xp: 50,
+    tier: "EASY",
+  },
+  {
+    id: "pushups-30",
+    name: "30 Push-ups Unbroken",
+    tagline: "No stops. No drops.",
+    type: "reps",
+    target: 30,
+    xp: 40,
+    tier: "EASY",
+  },
+  {
+    id: "situps-50",
+    name: "50 Sit-ups",
+    tagline: "Core check.",
+    type: "reps",
+    target: 50,
+    xp: 40,
+    tier: "EASY",
+  },
+  {
+    id: "jumping-jacks-100",
+    name: "100 Jumping Jacks",
+    tagline: "Cardio warm-up.",
+    type: "time",
+    target: 90,
+    xp: 30,
+    tier: "EASY",
+  },
   // BEAST
-  { id: "plank-5min", name: "5-Minute Plank", tagline: "Brace. Breathe. Don't break.", type: "time", target: 300, xp: 150, tier: "BEAST" },
-  { id: "wall-sit-2min", name: "2-Minute Wall Sit", tagline: "Quads on fire.", type: "time", target: 120, xp: 80, tier: "BEAST" },
-  { id: "hollow-hold", name: "90s Hollow Hold", tagline: "Ab killer.", type: "time", target: 90, xp: 70, tier: "BEAST" },
-  { id: "pushups-max", name: "Max Push-ups", tagline: "One set. No rest. Go.", type: "reps", target: 50, xp: 60, tier: "BEAST" },
-  { id: "pullups-max", name: "Max Pull-ups", tagline: "Strict. No kipping.", type: "reps", target: 15, xp: 80, tier: "BEAST" },
-  { id: "burpees-50", name: "50 Burpees For Time", tagline: "Lungs vs legs.", type: "time", target: 300, xp: 100, tier: "BEAST" },
-  { id: "lunges-100", name: "100 Walking Lunges", tagline: "Glutes will hate you.", type: "reps", target: 100, xp: 90, tier: "BEAST" },
-  { id: "farmers-90s", name: "90s Farmer's Carry", tagline: "Grip + heart.", type: "time", target: 90, xp: 80, tier: "BEAST" },
+  {
+    id: "plank-5min",
+    name: "5-Minute Plank",
+    tagline: "Brace. Breathe. Don't break.",
+    type: "time",
+    target: 300,
+    xp: 150,
+    tier: "BEAST",
+  },
+  {
+    id: "wall-sit-2min",
+    name: "2-Minute Wall Sit",
+    tagline: "Quads on fire.",
+    type: "time",
+    target: 120,
+    xp: 80,
+    tier: "BEAST",
+  },
+  {
+    id: "hollow-hold",
+    name: "90s Hollow Hold",
+    tagline: "Ab killer.",
+    type: "time",
+    target: 90,
+    xp: 70,
+    tier: "BEAST",
+  },
+  {
+    id: "pushups-max",
+    name: "Max Push-ups",
+    tagline: "One set. No rest. Go.",
+    type: "reps",
+    target: 50,
+    xp: 60,
+    tier: "BEAST",
+  },
+  {
+    id: "pullups-max",
+    name: "Max Pull-ups",
+    tagline: "Strict. No kipping.",
+    type: "reps",
+    target: 15,
+    xp: 80,
+    tier: "BEAST",
+  },
+  {
+    id: "burpees-50",
+    name: "50 Burpees For Time",
+    tagline: "Lungs vs legs.",
+    type: "time",
+    target: 300,
+    xp: 100,
+    tier: "BEAST",
+  },
+  {
+    id: "lunges-100",
+    name: "100 Walking Lunges",
+    tagline: "Glutes will hate you.",
+    type: "reps",
+    target: 100,
+    xp: 90,
+    tier: "BEAST",
+  },
+  {
+    id: "farmers-90s",
+    name: "90s Farmer's Carry",
+    tagline: "Grip + heart.",
+    type: "time",
+    target: 90,
+    xp: 80,
+    tier: "BEAST",
+  },
   // GOD
-  { id: "plank-10min", name: "10-Minute Plank", tagline: "Legends only.", type: "time", target: 600, xp: 300, tier: "GOD" },
-  { id: "burpees-100", name: "100 Burpees", tagline: "Time attack. Survive.", type: "time", target: 600, xp: 120, tier: "GOD" },
-  { id: "pullups-30", name: "30 Strict Pull-ups", tagline: "Unbroken or bust.", type: "reps", target: 30, xp: 200, tier: "GOD" },
-  { id: "pushups-100", name: "100 Push-ups Unbroken", tagline: "No knee drops.", type: "reps", target: 100, xp: 180, tier: "GOD" },
-  { id: "deadhang-2min", name: "2-Minute Dead Hang", tagline: "Shoulders & soul.", type: "time", target: 120, xp: 150, tier: "GOD" },
-  { id: "murph", name: "Murph (Time)", tagline: "1mi · 100 pull · 200 push · 300 sq · 1mi", type: "time", target: 2700, xp: 500, tier: "GOD" },
+  {
+    id: "plank-10min",
+    name: "10-Minute Plank",
+    tagline: "Legends only.",
+    type: "time",
+    target: 600,
+    xp: 300,
+    tier: "GOD",
+  },
+  {
+    id: "burpees-100",
+    name: "100 Burpees",
+    tagline: "Time attack. Survive.",
+    type: "time",
+    target: 600,
+    xp: 120,
+    tier: "GOD",
+  },
+  {
+    id: "pullups-30",
+    name: "30 Strict Pull-ups",
+    tagline: "Unbroken or bust.",
+    type: "reps",
+    target: 30,
+    xp: 200,
+    tier: "GOD",
+  },
+  {
+    id: "pushups-100",
+    name: "100 Push-ups Unbroken",
+    tagline: "No knee drops.",
+    type: "reps",
+    target: 100,
+    xp: 180,
+    tier: "GOD",
+  },
+  {
+    id: "deadhang-2min",
+    name: "2-Minute Dead Hang",
+    tagline: "Shoulders & soul.",
+    type: "time",
+    target: 120,
+    xp: 150,
+    tier: "GOD",
+  },
+  {
+    id: "murph",
+    name: "Murph (Time)",
+    tagline: "1mi · 100 pull · 200 push · 300 sq · 1mi",
+    type: "time",
+    target: 2700,
+    xp: 500,
+    tier: "GOD",
+  },
 ];
-
 
 const TIER_COLOR: Record<Challenge["tier"], string> = {
   EASY: "#60a5fa",
@@ -84,7 +257,6 @@ function ChallengesPage() {
     return b && b.value >= c.target;
   }).length;
 
-
   return (
     <div style={{ paddingTop: "env(safe-area-inset-top)" }} className="pb-6">
       <header className="px-5 pt-6 pb-4 flex items-center justify-between">
@@ -119,7 +291,9 @@ function ChallengesPage() {
             key={f}
             onClick={() => setFilter(f)}
             className={`px-3 py-1.5 label-cap text-[10px] border whitespace-nowrap transition-colors ${
-              filter === f ? "bg-accent-red border-accent-red text-white" : "border-grit text-grit-dim"
+              filter === f
+                ? "bg-accent-red border-accent-red text-white"
+                : "border-grit text-grit-dim"
             }`}
           >
             {f}
@@ -150,7 +324,11 @@ function ChallengesPage() {
                   <div className="flex items-center gap-2 mb-1">
                     <span
                       className="label-cap text-[9px] px-1.5 py-0.5"
-                      style={{ background: tierColor + "22", border: `1px solid ${tierColor}`, color: tierColor }}
+                      style={{
+                        background: tierColor + "22",
+                        border: `1px solid ${tierColor}`,
+                        color: tierColor,
+                      }}
                     >
                       {c.tier}
                     </span>
@@ -160,7 +338,9 @@ function ChallengesPage() {
                       </span>
                     )}
                   </div>
-                  <p className="display text-lg font-extrabold uppercase text-grit leading-tight">{c.name}</p>
+                  <p className="display text-lg font-extrabold uppercase text-grit leading-tight">
+                    {c.name}
+                  </p>
                   <p className="text-[11px] text-grit-dim mt-0.5">{c.tagline}</p>
                 </div>
                 <div className="text-right flex-shrink-0 flex flex-col items-end gap-1">
@@ -172,7 +352,9 @@ function ChallengesPage() {
                       YOUR BEST: {c.type === "time" ? fmtTime(best.value) : `${best.value}`}
                     </span>
                   ) : (
-                    <p className="text-[10px] text-grit-dim mt-1 font-bold uppercase tracking-wider">NEW</p>
+                    <p className="text-[10px] text-grit-dim mt-1 font-bold uppercase tracking-wider">
+                      NEW
+                    </p>
                   )}
                 </div>
               </div>
@@ -205,18 +387,32 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
   useEffect(() => {
     if (running && isTime) {
       tickRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
-      return () => { if (tickRef.current) clearInterval(tickRef.current); };
+      return () => {
+        if (tickRef.current) clearInterval(tickRef.current);
+      };
     }
   }, [running, isTime]);
 
-  function start() { setRunning(true); }
-  function pause() { setRunning(false); }
-  function reset() { setRunning(false); setSeconds(0); setReps(0); setFinished(null); }
+  function start() {
+    setRunning(true);
+  }
+  function pause() {
+    setRunning(false);
+  }
+  function reset() {
+    setRunning(false);
+    setSeconds(0);
+    setReps(0);
+    setFinished(null);
+  }
 
   function finish() {
     setRunning(false);
     const value = isTime ? seconds : reps;
-    if (value <= 0) { onClose(); return; }
+    if (value <= 0) {
+      onClose();
+      return;
+    }
     const beat = value >= challenge.target;
     const record: ChallengeRecord = {
       challengeId: challenge.id,
@@ -237,12 +433,18 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
     : Math.min(100, (reps / challenge.target) * 100);
 
   return (
-    <div className="fixed inset-0 z-[200] bg-black/90 flex items-end sm:items-center justify-center p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-[200] bg-black/90 flex items-end sm:items-center justify-center p-4"
+      onClick={onClose}
+    >
       <div
         className="bg-grit-card border border-accent-red w-full max-w-md relative grid-bg"
         onClick={(e) => e.stopPropagation()}
       >
-        <button onClick={onClose} className="absolute top-3 right-3 text-grit-dim hover:text-grit z-10">
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 text-grit-dim hover:text-grit z-10"
+        >
           <X size={20} />
         </button>
 
@@ -254,7 +456,8 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
             {challenge.name}
           </h2>
           <p className="text-xs text-grit-dim mt-1">
-            Target: <span className="text-accent-red font-bold">{targetDisplay}</span> · {challenge.xp} XP
+            Target: <span className="text-accent-red font-bold">{targetDisplay}</span> ·{" "}
+            {challenge.xp} XP
           </p>
         </div>
 
@@ -334,16 +537,16 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
               onClick={async () => {
                 const score = isTime ? fmtTime(finished.value) : `${finished.value} reps`;
                 const shareData = {
-                  title: 'DEADSET Challenge',
+                  title: "DEADSET Challenge",
                   text: `I just completed the ${challenge.name} challenge on DEADSET! Score: ${score}`,
-                  url: 'https://deadsetfit.org',
+                  url: "https://deadsetfit.org",
                 };
                 try {
                   if (navigator.share) {
                     await navigator.share(shareData);
                   } else {
                     await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
-                    alert('Copied to clipboard!');
+                    alert("Copied to clipboard!");
                   }
                 } catch {
                   // user cancelled or blocked
@@ -357,7 +560,9 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
               <button onClick={reset} className="btn-ghost flex-1">
                 <RotateCcw size={14} className="mr-2" /> Retry
               </button>
-              <button onClick={onClose} className="btn-grit flex-1">Done</button>
+              <button onClick={onClose} className="btn-grit flex-1">
+                Done
+              </button>
             </div>
           </div>
         )}

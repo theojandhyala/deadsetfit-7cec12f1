@@ -23,7 +23,10 @@ export function currencyForCountry(country: string | null): SupportedCurrency {
   return "usd";
 }
 
-export const CURRENCY_META: Record<SupportedCurrency, { symbol: string; monthly: string; yearly: string }> = {
+export const CURRENCY_META: Record<
+  SupportedCurrency,
+  { symbol: string; monthly: string; yearly: string }
+> = {
   usd: { symbol: "$", monthly: "$4.99", yearly: "$39.99" },
   gbp: { symbol: "£", monthly: "£4.99", yearly: "£39.99" },
 };

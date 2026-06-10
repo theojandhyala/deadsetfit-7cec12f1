@@ -58,12 +58,14 @@ export function StateSync() {
       }
     }
 
-    withTimeout(supabase.auth.getSession(), { data: { session: null }, error: null }).then(({ data: { session } }) => {
-      if (session?.user?.id) {
-        activeUserId = session.user.id;
-        pull(session.user.id);
-      }
-    });
+    withTimeout(supabase.auth.getSession(), { data: { session: null }, error: null }).then(
+      ({ data: { session } }) => {
+        if (session?.user?.id) {
+          activeUserId = session.user.id;
+          pull(session.user.id);
+        }
+      },
+    );
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       const uid = session?.user?.id ?? null;
@@ -87,14 +89,18 @@ export function StateSync() {
     // Proactively refresh session when the user returns to the app
     const refresh = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         if (session) {
           const expiresIn = (session.expires_at ?? 0) - Math.floor(Date.now() / 1000);
           if (expiresIn < 300) {
             await supabase.auth.refreshSession();
           }
         }
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     };
 
     const handleVisibility = () => {

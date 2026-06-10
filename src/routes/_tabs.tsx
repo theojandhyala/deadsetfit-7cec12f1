@@ -18,7 +18,9 @@ class PageErrorBoundary extends React.Component<
   { error: Error | null }
 > {
   state = { error: null };
-  static getDerivedStateFromError(e: Error) { return { error: e }; }
+  static getDerivedStateFromError(e: Error) {
+    return { error: e };
+  }
   render() {
     if (this.state.error) {
       return (
@@ -28,7 +30,10 @@ class PageErrorBoundary extends React.Component<
             {(this.state.error as Error).message ?? "Unexpected error"}
           </p>
           <button
-            onClick={() => { this.setState({ error: null }); window.location.reload(); }}
+            onClick={() => {
+              this.setState({ error: null });
+              window.location.reload();
+            }}
             className="btn-grit px-6 py-3 label-cap"
           >
             Reload
@@ -61,7 +66,9 @@ function TabsLayout() {
 
     (async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         if (!session) {
           navRef.current({ to: "/auth", replace: true });
           return;
@@ -72,7 +79,11 @@ function TabsLayout() {
 
         // No local profile: fetch from DB and wait for remote state hydration in parallel.
         const [row] = await Promise.all([
-          withTimeout(getProfileRef.current().catch(() => null), null, 7000),
+          withTimeout(
+            getProfileRef.current().catch(() => null),
+            null,
+            7000,
+          ),
           withTimeout(waitForRemoteState(session.user.id), undefined, 5000),
         ]);
 
@@ -138,5 +149,4 @@ function TabsLayout() {
       <BottomNav />
     </div>
   );
-
 }

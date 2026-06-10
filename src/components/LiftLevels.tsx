@@ -8,8 +8,8 @@ import type { AppState } from "@/lib/types";
 const STANDARDS: Record<string, [number, number, number, number]> = {
   // multipliers of bodyweight: [novice, intermediate, advanced, elite]
   "bench-press": [0.75, 1.25, 1.75, 2.25],
-  "squat":       [1.0,  1.5,  2.25, 2.75],
-  "deadlift":    [1.25, 1.75, 2.5,  3.25],
+  squat: [1.0, 1.5, 2.25, 2.75],
+  deadlift: [1.25, 1.75, 2.5, 3.25],
 };
 
 const LIFTS = [
@@ -43,7 +43,7 @@ function bestE1RM(state: AppState, exerciseId: string): number {
   return best;
 }
 
-function classify(ratio: number, std: [number, number, number, number]): typeof LEVELS[number] {
+function classify(ratio: number, std: [number, number, number, number]): (typeof LEVELS)[number] {
   if (ratio >= std[3]) return "ELITE";
   if (ratio >= std[2]) return "ADVANCED";
   if (ratio >= std[1]) return "INTERMEDIATE";
@@ -81,7 +81,9 @@ export function LiftLevels({ state }: { state: AppState }) {
               <div>
                 <p className="display font-extrabold text-grit text-sm">{r.lift.label}</p>
                 <p className="text-[10px] text-grit-dim">
-                  {r.e1rm > 0 ? `${Math.round(r.e1rm)}kg e1RM · ${r.ratio.toFixed(2)}× BW` : "No data yet"}
+                  {r.e1rm > 0
+                    ? `${Math.round(r.e1rm)}kg e1RM · ${r.ratio.toFixed(2)}× BW`
+                    : "No data yet"}
                 </p>
               </div>
               <span
@@ -92,7 +94,10 @@ export function LiftLevels({ state }: { state: AppState }) {
               </span>
             </div>
             <div className="h-1 bg-grit overflow-hidden">
-              <div className="h-1 transition-all" style={{ width: `${r.pct}%`, background: LEVEL_COLOR[r.level] }} />
+              <div
+                className="h-1 transition-all"
+                style={{ width: `${r.pct}%`, background: LEVEL_COLOR[r.level] }}
+              />
             </div>
             {r.nextTarget && r.e1rm > 0 && (
               <p className="text-[9px] text-grit-dim mt-1 label-cap">

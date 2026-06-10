@@ -21,12 +21,27 @@ const STROKE = "#2a2a2a";
 const SHAPES: Record<string, { f?: string[]; b?: string[] }> = {
   chest: { f: ["M70 110 q30 -20 60 0 l-5 35 q-25 12 -50 0 z"] },
   "upper-chest": { f: ["M72 100 q28 -16 56 0 l-3 14 q-25 -10 -50 0 z"] },
-  "front-delts": { f: ["M55 100 q10 -18 22 -6 l-4 24 q-10 6 -18 -2z", "M145 100 q-10 -18 -22 -6 l4 24 q10 6 18 -2z"] },
-  "side-delts": { f: ["M48 100 q-6 14 0 28 q8 -2 12 -12 z", "M152 100 q6 14 0 28 q-8 -2 -12 -12 z"] },
-  "rear-delts": { b: ["M48 100 q-6 14 0 28 q8 -2 12 -12 z", "M152 100 q6 14 0 28 q-8 -2 -12 -12 z"] },
+  "front-delts": {
+    f: [
+      "M55 100 q10 -18 22 -6 l-4 24 q-10 6 -18 -2z",
+      "M145 100 q-10 -18 -22 -6 l4 24 q10 6 18 -2z",
+    ],
+  },
+  "side-delts": {
+    f: ["M48 100 q-6 14 0 28 q8 -2 12 -12 z", "M152 100 q6 14 0 28 q-8 -2 -12 -12 z"],
+  },
+  "rear-delts": {
+    b: ["M48 100 q-6 14 0 28 q8 -2 12 -12 z", "M152 100 q6 14 0 28 q-8 -2 -12 -12 z"],
+  },
   shoulders: {
-    f: ["M55 100 q10 -18 22 -6 l-4 24 q-10 6 -18 -2z", "M145 100 q-10 -18 -22 -6 l4 24 q10 6 18 -2z"],
-    b: ["M55 100 q10 -18 22 -6 l-4 24 q-10 6 -18 -2z", "M145 100 q-10 -18 -22 -6 l4 24 q10 6 18 -2z"],
+    f: [
+      "M55 100 q10 -18 22 -6 l-4 24 q-10 6 -18 -2z",
+      "M145 100 q-10 -18 -22 -6 l4 24 q10 6 18 -2z",
+    ],
+    b: [
+      "M55 100 q10 -18 22 -6 l-4 24 q-10 6 -18 -2z",
+      "M145 100 q-10 -18 -22 -6 l4 24 q10 6 18 -2z",
+    ],
   },
   biceps: { f: ["M44 130 q-8 25 0 50 q12 -4 14 -22 z", "M156 130 q8 25 0 50 q-12 -4 -14 -22 z"] },
   triceps: { b: ["M44 130 q-8 25 0 50 q12 -4 14 -22 z", "M156 130 q8 25 0 50 q-12 -4 -14 -22 z"] },
@@ -43,7 +58,9 @@ const SHAPES: Record<string, { f?: string[]; b?: string[] }> = {
   "mid-back": { b: ["M75 130 h50 v40 h-50 z"] },
   "upper-back": { b: ["M72 105 h56 v30 h-56 z"] },
   traps: { b: ["M85 80 q15 -16 30 0 l-5 30 h-20 z"] },
-  "rotator-cuff": { b: ["M58 110 q12 -6 18 4 l-4 14 q-10 2 -14 -4 z", "M142 110 q-12 -6 -18 4 l4 14 q10 2 14 -4 z"] },
+  "rotator-cuff": {
+    b: ["M58 110 q12 -6 18 4 l-4 14 q-10 2 -14 -4 z", "M142 110 q-12 -6 -18 4 l4 14 q10 2 14 -4 z"],
+  },
   glutes: { b: ["M75 210 q25 -6 50 0 l-4 40 q-22 8 -42 0 z"] },
   hamstrings: { b: ["M75 260 q12 -2 22 0 v70 l-18 -4 z", "M125 260 q-12 -2 -22 0 v70 l18 -4 z"] },
   quads: { f: ["M75 220 q12 -4 22 0 v80 l-18 -6 z", "M125 220 q-12 -4 -22 0 v80 l18 -6 z"] },
@@ -67,7 +84,13 @@ export function MuscleDiagram({ primary = [], secondary = [], size = 220 }: Prop
   const render = (side: "f" | "b") =>
     Object.entries(SHAPES).flatMap(([key, def]) =>
       (def[side] ?? []).map((d, i) => (
-        <path key={`${side}-${key}-${i}`} d={d} fill={fill(key)} stroke={STROKE} strokeWidth={0.5} />
+        <path
+          key={`${side}-${key}-${i}`}
+          d={d}
+          fill={fill(key)}
+          stroke={STROKE}
+          strokeWidth={0.5}
+        />
       )),
     );
 

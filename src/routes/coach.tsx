@@ -32,7 +32,9 @@ function loadThread(): Msg[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string");
+    return parsed.filter(
+      (m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string",
+    );
   } catch {
     return [];
   }
@@ -49,6 +51,21 @@ function CoachPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    } catch {
+      /* ignore */
+    }
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages]);
+
+  useEffect(() => {
+    if (!proLoading && isPro) {
+      inputRef.current?.focus();
+    }
+  }, [proLoading, isPro]);
+
   if (proLoading) {
     return (
       <div className="min-h-screen bg-grit-bg flex items-center justify-center">
@@ -59,13 +76,18 @@ function CoachPage() {
 
   if (!isPro) {
     return (
-      <div className="flex flex-col min-h-dvh bg-grit-bg" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+      <div
+        className="flex flex-col min-h-dvh bg-grit-bg"
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
+      >
         <header className="px-5 pt-4 pb-3 flex items-center gap-2 border-b border-grit">
           <button onClick={() => navigate({ to: "/profile" as never })} className="p-1 -ml-1">
             <ChevronLeft size={20} />
           </button>
           <Sparkles size={16} className="text-accent-red" />
-          <p className="display text-lg font-extrabold uppercase text-grit leading-none">DEADSET Coach</p>
+          <p className="display text-lg font-extrabold uppercase text-grit leading-none">
+            DEADSET Coach
+          </p>
         </header>
         <div className="flex-1 px-6 py-10">
           <div className="max-w-md mx-auto text-center">
@@ -76,7 +98,8 @@ function CoachPage() {
               AI Coach is Pro
             </h2>
             <p className="mt-3 text-sm text-grit">
-              Unlimited personalized coaching on lifts, recovery, programming, plateaus, and form — built around your real PRs and training history.
+              Unlimited personalized coaching on lifts, recovery, programming, plateaus, and form —
+              built around your real PRs and training history.
             </p>
             <ul className="mt-6 space-y-2 text-left text-sm text-grit-text">
               {[
@@ -103,13 +126,6 @@ function CoachPage() {
       </div>
     );
   }
-
-  useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(messages)); } catch { /* ignore */ }
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages]);
-
-  useEffect(() => { inputRef.current?.focus(); }, []);
 
   const p = state.profile;
   function getBest(id: string) {
@@ -154,7 +170,11 @@ function CoachPage() {
   function clearThread() {
     if (!confirm("Clear coach history?")) return;
     setMessages([]);
-    try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      /* ignore */
+    }
   }
 
   return (
@@ -164,16 +184,22 @@ function CoachPage() {
           <ChevronLeft size={20} />
         </button>
         <Sparkles size={16} className="text-accent-red" />
-        <p className="display text-lg font-extrabold uppercase text-grit leading-none">DEADSET Coach</p>
+        <p className="display text-lg font-extrabold uppercase text-grit leading-none">
+          DEADSET Coach
+        </p>
         {messages.length > 0 && (
-          <button onClick={clearThread} className="ml-auto label-cap text-[10px] text-grit-dim">Clear</button>
+          <button onClick={clearThread} className="ml-auto label-cap text-[10px] text-grit-dim">
+            Clear
+          </button>
         )}
       </header>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
         {messages.length === 0 && (
           <div className="text-center pt-6">
-            <p className="text-sm text-grit-dim mb-4">Ask anything about lifting, recovery, programming, or form.</p>
+            <p className="text-sm text-grit-dim mb-4">
+              Ask anything about lifting, recovery, programming, or form.
+            </p>
             <div className="flex flex-col gap-2">
               {SUGGESTIONS.map((s) => (
                 <button
@@ -195,16 +221,27 @@ function CoachPage() {
                 {m.content}
               </div>
             ) : (
-              <div className="text-grit text-sm whitespace-pre-wrap leading-relaxed">{m.content}</div>
+              <div className="text-grit text-sm whitespace-pre-wrap leading-relaxed">
+                {m.content}
+              </div>
             )}
           </div>
         ))}
 
         {sending && (
           <div className="flex items-center gap-1 py-1">
-            <span className="inline-block w-2 h-2 bg-accent-red animate-[typing-dot_1.2s_ease-in-out_infinite]" style={{ animationDelay: "0s" }} />
-            <span className="inline-block w-2 h-2 bg-accent-red animate-[typing-dot_1.2s_ease-in-out_infinite]" style={{ animationDelay: "0.2s" }} />
-            <span className="inline-block w-2 h-2 bg-accent-red animate-[typing-dot_1.2s_ease-in-out_infinite]" style={{ animationDelay: "0.4s" }} />
+            <span
+              className="inline-block w-2 h-2 bg-accent-red animate-[typing-dot_1.2s_ease-in-out_infinite]"
+              style={{ animationDelay: "0s" }}
+            />
+            <span
+              className="inline-block w-2 h-2 bg-accent-red animate-[typing-dot_1.2s_ease-in-out_infinite]"
+              style={{ animationDelay: "0.2s" }}
+            />
+            <span
+              className="inline-block w-2 h-2 bg-accent-red animate-[typing-dot_1.2s_ease-in-out_infinite]"
+              style={{ animationDelay: "0.4s" }}
+            />
             <style>{`
               @keyframes typing-dot {
                 0%, 60%, 100% { opacity: 0.2; transform: translateY(0); }
@@ -216,7 +253,10 @@ function CoachPage() {
       </div>
 
       <form
-        onSubmit={(e) => { e.preventDefault(); send(input); }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          send(input);
+        }}
         className="border-t border-grit p-3 flex items-end gap-2"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)" }}
       >

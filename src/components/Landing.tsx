@@ -14,7 +14,10 @@ const NAV = [
 
 function Logo() {
   return (
-    <span className="display font-extrabold text-2xl tracking-wider" style={{ fontStyle: "italic" }}>
+    <span
+      className="display font-extrabold text-2xl tracking-wider"
+      style={{ fontStyle: "italic" }}
+    >
       <span style={{ color: "#f5f5f0" }}>DEAD</span>
       <span style={{ color: "#e63222" }}>SET</span>
     </span>
@@ -23,12 +26,23 @@ function Logo() {
 
 function Nav() {
   return (
-    <header className="sticky top-0 z-50" style={{ background: "rgba(10,10,10,0.85)", backdropFilter: "blur(10px)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+    <header
+      className="sticky top-0 z-50"
+      style={{
+        background: "rgba(10,10,10,0.85)",
+        backdropFilter: "blur(10px)",
+        borderBottom: "1px solid rgba(255,255,255,0.05)",
+      }}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
         <Logo />
         <nav className="hidden md:flex items-center gap-7">
           {NAV.map((n) => (
-            <a key={n.id} href={`#${n.id}`} className="label-cap text-xs text-grit hover:text-accent-red transition-colors">
+            <a
+              key={n.id}
+              href={`#${n.id}`}
+              className="label-cap text-xs text-grit hover:text-accent-red transition-colors"
+            >
               {n.label}
             </a>
           ))}
@@ -45,7 +59,15 @@ function Nav() {
   );
 }
 
-function Section({ id, children, className = "" }: { id: string; children: React.ReactNode; className?: string }) {
+function Section({
+  id,
+  children,
+  className = "",
+}: {
+  id: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
     <section id={id} className={`relative py-20 sm:py-28 px-4 sm:px-6 ${className}`}>
       <div className="max-w-7xl mx-auto">{children}</div>
@@ -67,15 +89,21 @@ function Hero() {
       />
       <div className="grid lg:grid-cols-2 gap-12 items-center">
         <div>
-          <h1 className="display font-extrabold text-4xl sm:text-5xl lg:text-6xl leading-[1.05] tracking-tight" style={{ fontStyle: "italic" }}>
-            <span style={{ color: "#f5f5f0" }}>TRAIN SMARTER.</span><br />
-            <span style={{ color: "#f5f5f0" }}>TRACK EVERYTHING.</span><br />
+          <h1
+            className="display font-extrabold text-4xl sm:text-5xl lg:text-6xl leading-[1.05] tracking-tight animate-slide-up"
+            style={{ fontStyle: "italic" }}
+          >
+            <span style={{ color: "#f5f5f0" }}>TRAIN SMARTER.</span>
+            <br />
+            <span style={{ color: "#f5f5f0" }}>TRACK EVERYTHING.</span>
+            <br />
             <span style={{ color: "#e63222" }}>FORGE YOUR BODY.</span>
           </h1>
-          <p className="mt-6 text-grit-dim max-w-md leading-relaxed">
-            DEADSET is the all-in-one fitness app built to help you plan workouts, track progress, and stay motivated to reach your goals.
+          <p className="mt-6 text-grit-dim max-w-md leading-relaxed animate-slide-up delay-150">
+            DEADSET is the all-in-one fitness app built to help you plan workouts, track progress,
+            and stay motivated to reach your goals.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
+          <div className="mt-8 flex flex-wrap gap-3 animate-slide-up delay-250">
             <Link
               to="/auth"
               className="label-cap text-sm px-6 py-3 inline-flex items-center gap-2"
@@ -107,7 +135,10 @@ function Hero() {
             ))}
           </div>
 
-          <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 p-4" style={{ background: "rgba(20,20,20,0.7)", border: "1px solid rgba(230,50,34,0.2)" }}>
+          <div
+            className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 p-4"
+            style={{ background: "rgba(20,20,20,0.7)", border: "1px solid rgba(230,50,34,0.2)" }}
+          >
             {[
               { n: "0", l: "USERS SO FAR" },
               { n: "YOU", l: "COULD BE FIRST" },
@@ -137,12 +168,28 @@ function Features() {
   ];
   return (
     <Section id="features" className="bg-grit-card/30">
-      <h2 className="display font-extrabold text-4xl sm:text-5xl mb-3" style={{ fontStyle: "italic" }}>FEATURES</h2>
-      <p className="text-grit-dim mb-10">Everything you need to take your training to the next level.</p>
+      <h2
+        className="display font-extrabold text-4xl sm:text-5xl mb-3"
+        style={{ fontStyle: "italic" }}
+      >
+        FEATURES
+      </h2>
+      <p className="text-grit-dim mb-10">
+        Everything you need to take your training to the next level.
+      </p>
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {items.map((f, i) => (
-          <div key={i} className="p-5 flex gap-4" style={{ background: "rgba(20,20,20,0.7)", border: "1px solid rgba(255,255,255,0.05)" }}>
-            <div className="w-10 h-10 flex items-center justify-center shrink-0" style={{ background: "rgba(230,50,34,0.15)", color: "#e63222" }}>◆</div>
+          <div
+            key={i}
+            className="p-5 flex gap-4"
+            style={{ background: "rgba(20,20,20,0.7)", border: "1px solid rgba(255,255,255,0.05)" }}
+          >
+            <div
+              className="w-10 h-10 flex items-center justify-center shrink-0"
+              style={{ background: "rgba(230,50,34,0.15)", color: "#e63222" }}
+            >
+              ◆
+            </div>
             <div>
               <p className="label-cap text-sm text-grit">{f.t}</p>
               <p className="text-xs text-grit-dim mt-1 leading-relaxed">{f.d}</p>
@@ -159,19 +206,32 @@ function About() {
     <Section id="about" className="overflow-hidden">
       <div
         className="absolute inset-0 -z-10 opacity-50"
-        style={{ backgroundImage: `linear-gradient(90deg, #0a0a0a 0%, rgba(10,10,10,0.5) 100%), url(${aboutImg})`, backgroundSize: "cover", backgroundPosition: "center right" }}
+        style={{
+          backgroundImage: `linear-gradient(90deg, #0a0a0a 0%, rgba(10,10,10,0.5) 100%), url(${aboutImg})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center right",
+        }}
         aria-hidden="true"
       />
       <div className="max-w-xl">
-        <h2 className="display font-extrabold text-4xl sm:text-5xl mb-4" style={{ fontStyle: "italic" }}>
-          <span style={{ color: "#f5f5f0" }}>ABOUT </span><span style={{ color: "#e63222" }}>DEADSET</span>
+        <h2
+          className="display font-extrabold text-4xl sm:text-5xl mb-4"
+          style={{ fontStyle: "italic" }}
+        >
+          <span style={{ color: "#f5f5f0" }}>ABOUT </span>
+          <span style={{ color: "#e63222" }}>DEADSET</span>
         </h2>
-        <p className="label-cap text-sm text-grit mb-6">DeadSet was built by lifters, for lifters.</p>
+        <p className="label-cap text-sm text-grit mb-6">
+          DeadSet was built by lifters, for lifters.
+        </p>
         <p className="text-grit-dim leading-relaxed mb-4">
-          We know what it takes to stay consistent, push your limits, and see real progress. That's why we created DEADSET — a powerful yet simple fitness app to help you train smarter, not harder.
+          We know what it takes to stay consistent, push your limits, and see real progress. That's
+          why we created DEADSET — a powerful yet simple fitness app to help you train smarter, not
+          harder.
         </p>
         <p className="text-grit-dim leading-relaxed">
-          Our mission is to give you the tools and motivation to forge your body and become the strongest version of yourself.
+          Our mission is to give you the tools and motivation to forge your body and become the
+          strongest version of yourself.
         </p>
         <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-6">
           {[
@@ -203,16 +263,47 @@ function Benefits() {
     <Section id="benefits" className="bg-grit-card/30">
       <div className="grid lg:grid-cols-2 gap-10 items-center">
         <div className="relative aspect-square lg:aspect-auto lg:h-[500px] overflow-hidden">
-          <img src={benefitsImg} alt="Athlete training" loading="lazy" width={1024} height={1280} className="absolute inset-0 w-full h-full object-cover" />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, transparent 0%, rgba(10,10,10,0.4) 100%)" }} />
+          <img
+            src={benefitsImg}
+            alt="Athlete training"
+            loading="lazy"
+            width={1024}
+            height={1280}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background: "linear-gradient(90deg, transparent 0%, rgba(10,10,10,0.4) 100%)",
+            }}
+          />
         </div>
         <div>
-          <h2 className="display font-extrabold text-4xl sm:text-5xl mb-3" style={{ fontStyle: "italic" }}>BENEFITS</h2>
-          <p className="text-grit-dim mb-8">Designed to help you train better, stay consistent, and achieve more.</p>
+          <h2
+            className="display font-extrabold text-4xl sm:text-5xl mb-3"
+            style={{ fontStyle: "italic" }}
+          >
+            BENEFITS
+          </h2>
+          <p className="text-grit-dim mb-8">
+            Designed to help you train better, stay consistent, and achieve more.
+          </p>
           <div className="space-y-3">
             {items.map((b, i) => (
-              <div key={i} className="p-4 flex gap-4 items-start" style={{ background: "rgba(20,20,20,0.7)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                <div className="w-10 h-10 flex items-center justify-center shrink-0" style={{ background: "rgba(230,50,34,0.15)", color: "#e63222" }}>◆</div>
+              <div
+                key={i}
+                className="p-4 flex gap-4 items-start"
+                style={{
+                  background: "rgba(20,20,20,0.7)",
+                  border: "1px solid rgba(255,255,255,0.05)",
+                }}
+              >
+                <div
+                  className="w-10 h-10 flex items-center justify-center shrink-0"
+                  style={{ background: "rgba(230,50,34,0.15)", color: "#e63222" }}
+                >
+                  ◆
+                </div>
                 <div>
                   <p className="label-cap text-sm text-grit">{b.t}</p>
                   <p className="text-xs text-grit-dim mt-1 leading-relaxed">{b.d}</p>
@@ -230,15 +321,32 @@ function Reviews() {
   return (
     <Section id="reviews">
       <div className="text-center mb-12">
-        <h2 className="display font-extrabold text-4xl sm:text-5xl mb-3" style={{ fontStyle: "italic" }}>REVIEWS</h2>
+        <h2
+          className="display font-extrabold text-4xl sm:text-5xl mb-3"
+          style={{ fontStyle: "italic" }}
+        >
+          REVIEWS
+        </h2>
         <p className="text-grit-dim">No reviews yet — be the first to share your experience.</p>
       </div>
       <div className="grid sm:grid-cols-2 gap-4 max-w-3xl mx-auto">
         {[
-          { t: "Coming soon", b: "We're just getting started. Help shape DEADSET by being one of our first users.", a: "You?" },
-          { t: "Your voice matters", b: "Every feature we build is driven by real lifters. Drop us feedback any time.", a: "Founder" },
+          {
+            t: "Coming soon",
+            b: "We're just getting started. Help shape DEADSET by being one of our first users.",
+            a: "You?",
+          },
+          {
+            t: "Your voice matters",
+            b: "Every feature we build is driven by real lifters. Drop us feedback any time.",
+            a: "Founder",
+          },
         ].map((r, i) => (
-          <div key={i} className="p-5" style={{ background: "rgba(20,20,20,0.7)", border: "1px solid rgba(255,255,255,0.05)" }}>
+          <div
+            key={i}
+            className="p-5"
+            style={{ background: "rgba(20,20,20,0.7)", border: "1px solid rgba(255,255,255,0.05)" }}
+          >
             <div className="text-accent-red mb-2 text-sm">★★★★★</div>
             <p className="label-cap text-sm text-grit mb-2">{r.t}</p>
             <p className="text-xs text-grit-dim leading-relaxed mb-3">{r.b}</p>
@@ -247,7 +355,11 @@ function Reviews() {
         ))}
       </div>
       <div className="text-center mt-8">
-        <Link to="/auth" className="label-cap text-sm px-6 py-3 inline-block" style={{ background: "#e63222", color: "#0a0a0a" }}>
+        <Link
+          to="/auth"
+          className="label-cap text-sm px-6 py-3 inline-block"
+          style={{ background: "#e63222", color: "#0a0a0a" }}
+        >
           JOIN DEADSET
         </Link>
       </div>
@@ -257,40 +369,86 @@ function Reviews() {
 
 function FAQ() {
   const faqs = [
-    { q: "Is DEADSET free to use?", a: "Yes. You can start tracking workouts and progress for free, no card required." },
-    { q: "Can I use DEADSET on multiple devices?", a: "Absolutely. Your data syncs across every device you sign in on." },
-    { q: "Do I need an internet connection?", a: "You can log workouts offline and they'll sync when you're back online." },
-    { q: "Is my data secure?", a: "Yes. Your data is encrypted in transit and at rest. You own it." },
-    { q: "Can I import/export my data?", a: "You can export your full history and PRs whenever you want." },
-    { q: "How do I contact support?", a: "Reach out via the in-app help or the contact button below." },
+    {
+      q: "Is DEADSET free to use?",
+      a: "Yes. You can start tracking workouts and progress for free, no card required.",
+    },
+    {
+      q: "Can I use DEADSET on multiple devices?",
+      a: "Absolutely. Your data syncs across every device you sign in on.",
+    },
+    {
+      q: "Do I need an internet connection?",
+      a: "You can log workouts offline and they'll sync when you're back online.",
+    },
+    {
+      q: "Is my data secure?",
+      a: "Yes. Your data is encrypted in transit and at rest. You own it.",
+    },
+    {
+      q: "Can I import/export my data?",
+      a: "You can export your full history and PRs whenever you want.",
+    },
+    {
+      q: "How do I contact support?",
+      a: "Reach out via the in-app help or the contact button below.",
+    },
   ];
   const [open, setOpen] = useState<number | null>(0);
   return (
     <Section id="faq" className="bg-grit-card/30">
-      <h2 className="display font-extrabold text-4xl sm:text-5xl mb-3" style={{ fontStyle: "italic" }}>FAQ</h2>
+      <h2
+        className="display font-extrabold text-4xl sm:text-5xl mb-3"
+        style={{ fontStyle: "italic" }}
+      >
+        FAQ
+      </h2>
       <p className="text-grit-dim mb-10">Got questions? We've got answers.</p>
       <div className="space-y-3 max-w-3xl">
         {faqs.map((f, i) => (
           <button
             key={i}
             onClick={() => setOpen(open === i ? null : i)}
-            className="w-full text-left p-4 flex items-start justify-between gap-4"
-            style={{ background: "rgba(20,20,20,0.7)", border: "1px solid rgba(255,255,255,0.05)" }}
+            className="w-full text-left p-4 flex items-start justify-between gap-4 press"
+            style={{
+              background: open === i ? "rgba(230,50,34,0.05)" : "rgba(20,20,20,0.7)",
+              border: `1px solid ${open === i ? "rgba(230,50,34,0.25)" : "rgba(255,255,255,0.05)"}`,
+              transition: "background 0.2s ease, border-color 0.2s ease",
+            }}
           >
             <div className="flex-1">
               <p className="label-cap text-sm text-grit">{f.q}</p>
-              {open === i && <p className="text-xs text-grit-dim mt-2 leading-relaxed">{f.a}</p>}
+              {open === i && (
+                <p className="text-xs text-grit-dim mt-2 leading-relaxed animate-slide-down">
+                  {f.a}
+                </p>
+              )}
             </div>
-            <span className="text-accent-red text-xl leading-none shrink-0">{open === i ? "−" : "+"}</span>
+            <span
+              className="text-accent-red text-xl leading-none shrink-0"
+              style={{
+                transition: "transform 0.2s ease",
+                transform: open === i ? "rotate(0deg)" : "rotate(0deg)",
+              }}
+            >
+              {open === i ? "−" : "+"}
+            </span>
           </button>
         ))}
       </div>
-      <div className="mt-10 max-w-3xl p-5 flex items-center justify-between gap-4" style={{ background: "rgba(20,20,20,0.7)", border: "1px solid rgba(230,50,34,0.25)" }}>
+      <div
+        className="mt-10 max-w-3xl p-5 flex items-center justify-between gap-4"
+        style={{ background: "rgba(20,20,20,0.7)", border: "1px solid rgba(230,50,34,0.25)" }}
+      >
         <div>
           <p className="label-cap text-sm text-grit">STILL HAVE QUESTIONS?</p>
           <p className="text-xs text-grit-dim mt-1">We're here to help.</p>
         </div>
-        <Link to="/auth" className="label-cap text-xs px-4 py-2 shrink-0" style={{ border: "1px solid #e63222", color: "#e63222" }}>
+        <Link
+          to="/auth"
+          className="label-cap text-xs px-4 py-2 shrink-0"
+          style={{ border: "1px solid #e63222", color: "#e63222" }}
+        >
           CONTACT SUPPORT
         </Link>
       </div>

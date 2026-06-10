@@ -11,43 +11,148 @@ export const Route = createFileRoute("/_tabs/programs")({
 const DAYS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
 const SPLIT_TEMPLATES: { type: SplitType; name: string; days: Record<DayKey, string> }[] = [
-  { type: "PPL", name: "PUSH / PULL / LEGS", days: { MON: "PUSH", TUE: "PULL", WED: "LEGS", THU: "PUSH", FRI: "PULL", SAT: "LEGS", SUN: "REST" } },
-  { type: "UPPER_LOWER", name: "UPPER / LOWER", days: { MON: "UPPER", TUE: "LOWER", WED: "REST", THU: "UPPER", FRI: "LOWER", SAT: "REST", SUN: "REST" } },
-  { type: "BRO", name: "BRO SPLIT", days: { MON: "CHEST", TUE: "BACK", WED: "LEGS", THU: "SHOULDERS", FRI: "ARMS", SAT: "REST", SUN: "REST" } },
-  { type: "FULL_BODY", name: "FULL BODY 3x", days: { MON: "FULL BODY", TUE: "REST", WED: "FULL BODY", THU: "REST", FRI: "FULL BODY", SAT: "REST", SUN: "REST" } },
-  { type: "CUSTOM", name: "CUSTOM (BLANK)", days: { MON: "REST", TUE: "REST", WED: "REST", THU: "REST", FRI: "REST", SAT: "REST", SUN: "REST" } },
+  {
+    type: "PPL",
+    name: "PUSH / PULL / LEGS",
+    days: {
+      MON: "PUSH",
+      TUE: "PULL",
+      WED: "LEGS",
+      THU: "PUSH",
+      FRI: "PULL",
+      SAT: "LEGS",
+      SUN: "REST",
+    },
+  },
+  {
+    type: "UPPER_LOWER",
+    name: "UPPER / LOWER",
+    days: {
+      MON: "UPPER",
+      TUE: "LOWER",
+      WED: "REST",
+      THU: "UPPER",
+      FRI: "LOWER",
+      SAT: "REST",
+      SUN: "REST",
+    },
+  },
+  {
+    type: "BRO",
+    name: "BRO SPLIT",
+    days: {
+      MON: "CHEST",
+      TUE: "BACK",
+      WED: "LEGS",
+      THU: "SHOULDERS",
+      FRI: "ARMS",
+      SAT: "REST",
+      SUN: "REST",
+    },
+  },
+  {
+    type: "FULL_BODY",
+    name: "FULL BODY 3x",
+    days: {
+      MON: "FULL BODY",
+      TUE: "REST",
+      WED: "FULL BODY",
+      THU: "REST",
+      FRI: "FULL BODY",
+      SAT: "REST",
+      SUN: "REST",
+    },
+  },
+  {
+    type: "CUSTOM",
+    name: "CUSTOM (BLANK)",
+    days: {
+      MON: "REST",
+      TUE: "REST",
+      WED: "REST",
+      THU: "REST",
+      FRI: "REST",
+      SAT: "REST",
+      SUN: "REST",
+    },
+  },
 ];
 
-const FEATURED_PROGRAMS: { name: string; tagline: string; level: string; days: Record<DayKey, string> }[] = [
+const FEATURED_PROGRAMS: {
+  name: string;
+  tagline: string;
+  level: string;
+  days: Record<DayKey, string>;
+}[] = [
   {
     name: "5/3/1 BBB",
     tagline: "Wendler's classic strength builder",
     level: "INTERMEDIATE",
-    days: { MON: "OHP DAY", TUE: "DEADLIFT DAY", WED: "REST", THU: "BENCH DAY", FRI: "SQUAT DAY", SAT: "REST", SUN: "REST" },
+    days: {
+      MON: "OHP DAY",
+      TUE: "DEADLIFT DAY",
+      WED: "REST",
+      THU: "BENCH DAY",
+      FRI: "SQUAT DAY",
+      SAT: "REST",
+      SUN: "REST",
+    },
   },
   {
     name: "STRONGLIFTS 5x5",
     tagline: "Linear progression for beginners",
     level: "BEGINNER",
-    days: { MON: "WORKOUT A", TUE: "REST", WED: "WORKOUT B", THU: "REST", FRI: "WORKOUT A", SAT: "REST", SUN: "REST" },
+    days: {
+      MON: "WORKOUT A",
+      TUE: "REST",
+      WED: "WORKOUT B",
+      THU: "REST",
+      FRI: "WORKOUT A",
+      SAT: "REST",
+      SUN: "REST",
+    },
   },
   {
     name: "PHUL",
     tagline: "Power Hypertrophy Upper Lower",
     level: "INTERMEDIATE",
-    days: { MON: "UPPER POWER", TUE: "LOWER POWER", WED: "REST", THU: "UPPER HYPER", FRI: "LOWER HYPER", SAT: "REST", SUN: "REST" },
+    days: {
+      MON: "UPPER POWER",
+      TUE: "LOWER POWER",
+      WED: "REST",
+      THU: "UPPER HYPER",
+      FRI: "LOWER HYPER",
+      SAT: "REST",
+      SUN: "REST",
+    },
   },
   {
     name: "ARNOLD SPLIT",
     tagline: "6-day high volume bodybuilding",
     level: "ADVANCED",
-    days: { MON: "CHEST/BACK", TUE: "SHOULDERS/ARMS", WED: "LEGS", THU: "CHEST/BACK", FRI: "SHOULDERS/ARMS", SAT: "LEGS", SUN: "REST" },
+    days: {
+      MON: "CHEST/BACK",
+      TUE: "SHOULDERS/ARMS",
+      WED: "LEGS",
+      THU: "CHEST/BACK",
+      FRI: "SHOULDERS/ARMS",
+      SAT: "LEGS",
+      SUN: "REST",
+    },
   },
   {
     name: "nSUNS 5/3/1",
     tagline: "High-frequency strength variant",
     level: "ADVANCED",
-    days: { MON: "BENCH/OHP", TUE: "SQUAT/DEADLIFT", WED: "OHP/BENCH", THU: "REST", FRI: "BENCH/CLOSE GRIP", SAT: "DEADLIFT/FRONT SQUAT", SUN: "REST" },
+    days: {
+      MON: "BENCH/OHP",
+      TUE: "SQUAT/DEADLIFT",
+      WED: "OHP/BENCH",
+      THU: "REST",
+      FRI: "BENCH/CLOSE GRIP",
+      SAT: "DEADLIFT/FRONT SQUAT",
+      SUN: "REST",
+    },
   },
 ];
 
@@ -101,7 +206,9 @@ function ProgramsPage() {
     <div className="px-5 pt-6 pb-4" style={{ paddingTop: "env(safe-area-inset-top)" }}>
       <div className="flex items-center justify-between mb-1">
         <h1 className="display text-3xl font-extrabold uppercase text-grit">Programs</h1>
-        <Link to="/train" className="label-cap text-grit-dim text-xs">DONE</Link>
+        <Link to="/train" className="label-cap text-grit-dim text-xs">
+          DONE
+        </Link>
       </div>
       <p className="label-cap text-grit-dim text-xs mb-5">Build your own splits</p>
 
@@ -118,7 +225,11 @@ function ProgramsPage() {
           const trainingDays = DAYS.filter((d) => p.days[d].label !== "REST").length;
           const isActive = p.id === state.activeProgramId;
           return (
-            <li key={p.id} className="bg-grit-card border" style={{ borderColor: isActive ? "#e63222" : "#262626" }}>
+            <li
+              key={p.id}
+              className="bg-grit-card border"
+              style={{ borderColor: isActive ? "#e63222" : "#262626" }}
+            >
               <div className="flex items-stretch">
                 <Link
                   to="/programs/$programId"
@@ -126,8 +237,14 @@ function ProgramsPage() {
                   className="flex-1 p-4 min-w-0"
                 >
                   <div className="flex items-center gap-2 mb-1">
-                    {isActive && <span className="text-[9px] px-1.5 py-0.5 bg-accent-red text-white label-cap">ACTIVE</span>}
-                    <span className="display text-lg font-extrabold uppercase text-grit truncate">{p.name}</span>
+                    {isActive && (
+                      <span className="text-[9px] px-1.5 py-0.5 bg-accent-red text-white label-cap">
+                        ACTIVE
+                      </span>
+                    )}
+                    <span className="display text-lg font-extrabold uppercase text-grit truncate">
+                      {p.name}
+                    </span>
                   </div>
                   <p className="label-cap text-grit-dim text-[10px]">
                     {trainingDays} DAYS · {filled} EXERCISES
@@ -135,11 +252,19 @@ function ProgramsPage() {
                 </Link>
                 <div className="flex flex-col border-l border-grit">
                   {!isActive && (
-                    <button onClick={() => activate(p.id)} className="px-3 flex-1 flex items-center justify-center" title="Set active">
+                    <button
+                      onClick={() => activate(p.id)}
+                      className="px-3 flex-1 flex items-center justify-center"
+                      title="Set active"
+                    >
                       <Check size={18} className="text-grit-dim" />
                     </button>
                   )}
-                  <button onClick={() => remove(p.id)} className="px-3 flex-1 flex items-center justify-center border-t border-grit" title="Delete">
+                  <button
+                    onClick={() => remove(p.id)}
+                    className="px-3 flex-1 flex items-center justify-center border-t border-grit"
+                    title="Delete"
+                  >
                     <Trash2 size={16} className="text-grit-dim" />
                   </button>
                 </div>
@@ -159,8 +284,12 @@ function ProgramsPage() {
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className="display uppercase font-extrabold text-grit text-base truncate">{p.name}</span>
-                  <span className="text-[9px] px-1.5 py-0.5 border border-grit text-grit-dim label-cap">{p.level}</span>
+                  <span className="display uppercase font-extrabold text-grit text-base truncate">
+                    {p.name}
+                  </span>
+                  <span className="text-[9px] px-1.5 py-0.5 border border-grit text-grit-dim label-cap">
+                    {p.level}
+                  </span>
                 </div>
                 <div className="text-xs text-grit-dim truncate">{p.tagline}</div>
               </div>

@@ -62,7 +62,9 @@ function SettingsPage() {
 
       {/* Units */}
       <section className="px-5 mb-6">
-        <p className="label-cap mb-2 flex items-center gap-1.5"><Scale size={12} className="text-accent-red" /> Units</p>
+        <p className="label-cap mb-2 flex items-center gap-1.5">
+          <Scale size={12} className="text-accent-red" /> Units
+        </p>
         <div className="bg-grit-card border border-grit grid grid-cols-2">
           {(["kg", "lb"] as const).map((u) => (
             <button
@@ -74,12 +76,16 @@ function SettingsPage() {
             </button>
           ))}
         </div>
-        <p className="text-[10px] text-grit-dim mt-2">Affects new entries you log. Existing data is preserved.</p>
+        <p className="text-[10px] text-grit-dim mt-2">
+          Affects new entries you log. Existing data is preserved.
+        </p>
       </section>
 
       {/* Notifications */}
       <section className="px-5 mb-6">
-        <p className="label-cap mb-2 flex items-center gap-1.5"><Bell size={12} className="text-accent-red" /> Notifications</p>
+        <p className="label-cap mb-2 flex items-center gap-1.5">
+          <Bell size={12} className="text-accent-red" /> Notifications
+        </p>
         <div className="bg-grit-card border border-grit divide-y divide-[#262626]">
           <Toggle
             label="Workout Reminders"
@@ -96,7 +102,9 @@ function SettingsPage() {
 
       {/* Hydration target */}
       <section className="px-5 mb-6">
-        <p className="label-cap mb-2 flex items-center gap-1.5"><Droplets size={12} className="text-accent-red" /> Daily Water Target</p>
+        <p className="label-cap mb-2 flex items-center gap-1.5">
+          <Droplets size={12} className="text-accent-red" /> Daily Water Target
+        </p>
         <div className="bg-grit-card border border-grit p-4">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-bold text-grit">{(waterTarget / 1000).toFixed(1)} L</span>
@@ -118,10 +126,16 @@ function SettingsPage() {
       <section className="px-5 mb-6">
         <p className="label-cap mb-2">Your Data</p>
         <div className="flex flex-col gap-2">
-          <button onClick={exportData} className="btn-grit w-full inline-flex items-center justify-center">
+          <button
+            onClick={exportData}
+            className="btn-grit w-full inline-flex items-center justify-center"
+          >
             <Download size={14} className="mr-2" /> Export All Data (JSON)
           </button>
-          <button onClick={() => fileRef.current?.click()} className="btn-ghost w-full inline-flex items-center justify-center">
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="btn-ghost w-full inline-flex items-center justify-center"
+          >
             <Upload size={14} className="mr-2" /> Import From File
           </button>
           <input
@@ -133,16 +147,28 @@ function SettingsPage() {
           />
         </div>
         <p className="text-[10px] text-grit-dim mt-2">
-          Export a full backup of your local training data. Import will overwrite current device state.
+          Export a full backup of your local training data. Import will overwrite current device
+          state.
         </p>
       </section>
     </div>
   );
 }
 
-function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange: (v: boolean) => void }) {
+function Toggle({
+  label,
+  on,
+  onChange,
+}: {
+  label: string;
+  on: boolean;
+  onChange: (v: boolean) => void;
+}) {
   return (
-    <button onClick={() => onChange(!on)} className="w-full flex items-center justify-between px-4 py-3">
+    <button
+      onClick={() => onChange(!on)}
+      className="w-full flex items-center justify-between px-4 py-3"
+    >
       <span className="label-cap">{label}</span>
       <span
         className={`relative inline-block w-10 h-6 rounded-full transition-colors ${on ? "bg-accent-red" : "bg-[#2a2a2a]"}`}

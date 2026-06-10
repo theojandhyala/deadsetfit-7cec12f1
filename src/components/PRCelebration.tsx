@@ -17,13 +17,18 @@ export function PRCelebration({
   onShare?: () => void;
 }) {
   useEffect(() => {
-    try { navigator.vibrate?.([100, 50, 100, 50, 200]); } catch { /* noop */ }
+    try {
+      navigator.vibrate?.([100, 50, 100, 50, 200]);
+    } catch {
+      /* noop */
+    }
     const t = setTimeout(onClose, 5000);
     return () => clearTimeout(t);
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[400] flex items-center justify-center px-6 overflow-hidden"
+    <div
+      className="fixed inset-0 z-[400] flex items-center justify-center px-6 overflow-hidden"
       style={{ background: "radial-gradient(circle at center, #2a0d0a 0%, #0a0a0a 70%)" }}
     >
       {/* confetti */}
@@ -61,21 +66,28 @@ export function PRCelebration({
       </button>
 
       <div className="relative text-center animate-[pr-pop_0.5s_ease-out]">
-        <Trophy size={64} className="text-accent-red mx-auto mb-4 drop-shadow-lg" strokeWidth={2.5} />
-        <p className="label-cap text-sm tracking-[0.4em] animate-[pr-flash_0.8s_ease-in-out_3]" style={{ color: "#e63222" }}>NEW PR</p>
+        <Trophy
+          size={64}
+          className="text-accent-red mx-auto mb-4 drop-shadow-lg"
+          strokeWidth={2.5}
+        />
+        <p
+          className="label-cap text-sm tracking-[0.4em] animate-[pr-flash_0.8s_ease-in-out_3]"
+          style={{ color: "#e63222" }}
+        >
+          NEW PR
+        </p>
         <h1 className="display text-5xl sm:text-6xl font-extrabold uppercase text-grit leading-none mt-3">
           {exerciseName}
         </h1>
         <p className="display text-7xl sm:text-8xl font-extrabold text-grit mt-6 leading-none">
-          {weight}<span className="text-3xl text-grit-dim ml-2">kg</span>
+          {weight}
+          <span className="text-3xl text-grit-dim ml-2">kg</span>
         </p>
         <p className="label-cap text-grit-dim mt-2">× {reps} REPS</p>
 
         {onShare && (
-          <button
-            onClick={onShare}
-            className="btn-grit mt-8 inline-flex items-center"
-          >
+          <button onClick={onShare} className="btn-grit mt-8 inline-flex items-center">
             <Share2 size={16} className="mr-2" /> Share This PR
           </button>
         )}

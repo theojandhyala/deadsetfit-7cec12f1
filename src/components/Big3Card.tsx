@@ -56,8 +56,13 @@ export function Big3Card({ state }: { state: AppState }) {
           let delta = 0;
           if (recent && prior) {
             delta = recent - prior;
-            if (delta > 0) { trendIcon = <TrendingUp size={12} />; trendColor = "#3a8a3a"; }
-            else if (delta < 0) { trendIcon = <TrendingDown size={12} />; trendColor = "#e63222"; }
+            if (delta > 0) {
+              trendIcon = <TrendingUp size={12} />;
+              trendColor = "#3a8a3a";
+            } else if (delta < 0) {
+              trendIcon = <TrendingDown size={12} />;
+              trendColor = "#e63222";
+            }
           }
           return (
             <Link
@@ -76,7 +81,10 @@ export function Big3Card({ state }: { state: AppState }) {
                 style={{ color: trendColor }}
               >
                 {trendIcon}
-                <span>{delta > 0 ? "+" : ""}{delta || 0}</span>
+                <span>
+                  {delta > 0 ? "+" : ""}
+                  {delta || 0}
+                </span>
               </div>
             </Link>
           );

@@ -37,8 +37,7 @@ export function FifaCard({
       className={"relative border-2 overflow-hidden " + (compact ? "p-3" : "p-5")}
       style={{
         borderColor: badgeC,
-        background:
-          "linear-gradient(135deg, #0d0d0d 0%, #1a0a08 45%, #2a0d0a 100%)",
+        background: "linear-gradient(135deg, #0d0d0d 0%, #1a0a08 45%, #2a0d0a 100%)",
         boxShadow: `0 0 24px -8px ${badgeC}`,
       }}
     >
@@ -75,9 +74,7 @@ export function FifaCard({
           <p className="display font-extrabold text-grit text-lg leading-none truncate uppercase">
             {name || "Athlete"}
           </p>
-          {username && (
-            <p className="text-[11px] text-grit-dim truncate">@{username}</p>
-          )}
+          {username && <p className="text-[11px] text-grit-dim truncate">@{username}</p>}
           <div className="text-[10px] text-grit-dim mt-1 flex gap-2 flex-wrap label-cap">
             {goal && <span>{goal}</span>}
             {experience && <span>· {experience}</span>}
@@ -97,7 +94,17 @@ export function FifaCard({
   );
 }
 
-function PRTile({ label, value, unit, color }: { label: string; value: number; unit: string; color: string }) {
+function PRTile({
+  label,
+  value,
+  unit,
+  color,
+}: {
+  label: string;
+  value: number;
+  unit: string;
+  color: string;
+}) {
   const hasValue = value > 0;
   return (
     <div className="border border-[#262626] bg-black/40 px-2 py-2">

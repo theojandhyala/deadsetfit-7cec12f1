@@ -8,7 +8,6 @@ import { blockUser, unblockUser, isBlocked, reportContent } from "@/lib/account.
 import { FifaCard } from "@/components/FifaCard";
 import { gritBadge, badgeColor } from "@/lib/calc";
 
-
 export const Route = createFileRoute("/_tabs/athlete/$id")({
   head: () => ({ meta: [{ title: "DEADSET — Athlete" }] }),
   component: AthletePage,
@@ -36,27 +35,37 @@ function AthletePage() {
         toast.error(e instanceof Error ? e.message : "Failed");
         navigate({ to: "/friends" });
       });
-    _isBlocked({ data: { userId: id } }).then((r) => setBlocked(r.blocked)).catch(() => {});
+    _isBlocked({ data: { userId: id } })
+      .then((r) => setBlocked(r.blocked))
+      .catch(() => {});
   }, [id]);
-
 
   async function follow() {
     if (!card || card.isMe) return;
     setBusy(true);
     const next = !card.following;
     setCard({ ...card, following: next, followerCount: card.followerCount + (next ? 1 : -1) });
-    try { await _toggle({ data: { userId: id } }); }
-    catch (e) {
+    try {
+      await _toggle({ data: { userId: id } });
+    } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
       setCard({ ...card, following: !next, followerCount: card.followerCount });
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function toggleBlock() {
     if (!card || card.isMe) return;
     const next = !blocked;
     const verb = next ? "Block" : "Unblock";
-    if (next && !confirm(`${verb} ${card.username || "this athlete"}? They won't appear in your feed or search.`)) return;
+    if (
+      next &&
+      !confirm(
+        `${verb} ${card.username || "this athlete"}? They won't appear in your feed or search.`,
+      )
+    )
+      return;
     setBlocked(next);
     try {
       if (next) await _block({ data: { userId: id } });
@@ -85,20 +94,25 @@ function AthletePage() {
     }
   }
 
-
-  if (!card) return <div className="flex items-center justify-center pt-20"><Loader2 className="animate-spin text-accent-red" /></div>;
+  if (!card)
+    return (
+      <div className="flex items-center justify-center pt-20">
+        <Loader2 className="animate-spin text-accent-red" />
+      </div>
+    );
 
   const stats = (card.public_stats as Record<string, unknown>) || {};
   const overall = Number(stats.overall) || 0;
-  const topPRs = (stats.topPRs as Array<{ id: string; label: string; value: number; unit: string }>) || [];
+  const topPRs =
+    (stats.topPRs as Array<{ id: string; label: string; value: number; unit: string }>) || [];
   // Fallback to empty 6-tile shape if profile hasn't pushed stats yet.
   const HEADLINE_FALLBACK = [
     { id: "bench-press", label: "BENCH", unit: "kg" },
-    { id: "squat",       label: "SQUAT", unit: "kg" },
-    { id: "deadlift",    label: "DEAD",  unit: "kg" },
-    { id: "ohp",         label: "OHP",   unit: "kg" },
-    { id: "pull-ups",    label: "PULL",  unit: "reps" },
-    { id: "push-ups",    label: "PUSH",  unit: "reps" },
+    { id: "squat", label: "SQUAT", unit: "kg" },
+    { id: "deadlift", label: "DEAD", unit: "kg" },
+    { id: "ohp", label: "OHP", unit: "kg" },
+    { id: "pull-ups", label: "PULL", unit: "reps" },
+    { id: "push-ups", label: "PUSH", unit: "reps" },
   ];
   const prs = HEADLINE_FALLBACK.map((h) => {
     const found = topPRs.find((p) => p.id === h.id);
@@ -110,7 +124,11 @@ function AthletePage() {
   return (
     <div style={{ paddingTop: "env(safe-area-inset-top)" }} className="pb-10">
       <header className="px-5 pt-4 pb-2 flex items-center gap-3">
-        <button onClick={() => navigate({ to: "/friends" })} aria-label="Back" className="p-1.5 -ml-1.5">
+        <button
+          onClick={() => navigate({ to: "/friends" })}
+          aria-label="Back"
+          className="p-1.5 -ml-1.5"
+        >
           <ArrowLeft size={20} className="text-grit" />
         </button>
         <p className="label-cap">ATHLETE</p>
@@ -143,10 +161,23 @@ function AthletePage() {
           <button
             onClick={follow}
             disabled={busy}
-            className={card.following ? "btn-ghost w-full py-3 flex items-center justify-center gap-2" : "btn-grit w-full py-3 flex items-center justify-center gap-2"}
+            className={
+              card.following
+                ? "btn-ghost w-full py-3 flex items-center justify-center gap-2"
+                : "btn-grit w-full py-3 flex items-center justify-center gap-2"
+            }
           >
-            {busy ? <Loader2 size={14} className="animate-spin" /> :
-              card.following ? <><UserCheck size={14} /> FOLLOWING</> : <><UserPlus size={14} /> FOLLOW</>}
+            {busy ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : card.following ? (
+              <>
+                <UserCheck size={14} /> FOLLOWING
+              </>
+            ) : (
+              <>
+                <UserPlus size={14} /> FOLLOW
+              </>
+            )}
           </button>
           <div className="flex gap-2 mt-2">
             <button
@@ -169,10 +200,11 @@ function AthletePage() {
         </section>
       )}
 
-
       {/* Headline PRs + head-to-head vs you */}
       <section className="px-5 mb-5">
-        <p className="label-cap mb-2 flex items-center gap-2"><Trophy size={12} className="text-accent-red" /> Personal Records</p>
+        <p className="label-cap mb-2 flex items-center gap-2">
+          <Trophy size={12} className="text-accent-red" /> Personal Records
+        </p>
         {topPRs.length === 0 ? (
           <div className="bg-grit-card border border-grit p-5 text-center text-sm text-grit-dim">
             No PRs shared yet.
@@ -183,7 +215,8 @@ function AthletePage() {
               <div key={pr.id} className="bg-grit-card border border-grit p-3">
                 <p className="label-cap text-[9px] truncate">{pr.label}</p>
                 <p className="display text-2xl font-extrabold text-grit leading-none mt-1">
-                  {pr.value}<span className="text-xs ml-1 text-grit-dim">{pr.unit}</span>
+                  {pr.value}
+                  <span className="text-xs ml-1 text-grit-dim">{pr.unit}</span>
                 </p>
               </div>
             ))}
@@ -191,7 +224,14 @@ function AthletePage() {
         ) : (
           <PRHeadToHead
             them={topPRs}
-            mine={((card.my_public_stats as Record<string, unknown> | null)?.topPRs as Array<{ id: string; label: string; value: number; unit: string }>) || []}
+            mine={
+              ((card.my_public_stats as Record<string, unknown> | null)?.topPRs as Array<{
+                id: string;
+                label: string;
+                value: number;
+                unit: string;
+              }>) || []
+            }
             themName={card.username || card.display_name || "them"}
           />
         )}
@@ -204,7 +244,9 @@ function AthletePage() {
       )}
 
       <div className="px-5 mt-6">
-        <Link to="/friends" className="block text-center label-cap text-grit-dim">← Back to Friends</Link>
+        <Link to="/friends" className="block text-center label-cap text-grit-dim">
+          ← Back to Friends
+        </Link>
       </div>
     </div>
   );
@@ -245,7 +287,9 @@ function PRHeadToHead({ them, mine, themName }: { them: PR[]; mine: PR[]; themNa
         </div>
         <div>
           <p className="display font-extrabold text-grit text-xl leading-none">{theirWins}</p>
-          <p className="label-cap text-[9px] text-grit-dim mt-1 truncate">{themName.toUpperCase()}</p>
+          <p className="label-cap text-[9px] text-grit-dim mt-1 truncate">
+            {themName.toUpperCase()}
+          </p>
         </div>
       </div>
       <div className="space-y-1.5">
@@ -255,11 +299,15 @@ function PRHeadToHead({ them, mine, themName }: { them: PR[]; mine: PR[]; themNa
           return (
             <div key={r.id} className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-sm">
               <p className={`text-right font-bold ${youWin ? "text-accent-red" : "text-grit-dim"}`}>
-                {r.myV}<span className="text-[10px] ml-1 text-grit-dim">{r.unit}</span>
+                {r.myV}
+                <span className="text-[10px] ml-1 text-grit-dim">{r.unit}</span>
               </p>
               <p className="label-cap text-[9px] text-grit-dim px-1.5">{r.label}</p>
-              <p className={`text-left font-bold ${!youWin && !tie ? "text-accent-red" : "text-grit-dim"}`}>
-                {r.theirV}<span className="text-[10px] ml-1 text-grit-dim">{r.unit}</span>
+              <p
+                className={`text-left font-bold ${!youWin && !tie ? "text-accent-red" : "text-grit-dim"}`}
+              >
+                {r.theirV}
+                <span className="text-[10px] ml-1 text-grit-dim">{r.unit}</span>
               </p>
             </div>
           );
