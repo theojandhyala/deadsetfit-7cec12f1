@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { BottomNav } from "@/components/BottomNav";
 import { TopBar } from "@/components/TopBar";
@@ -12,6 +12,33 @@ import { defaultSchedule } from "@/lib/calc";
 export const Route = createFileRoute("/_tabs")({
   component: TabsLayout,
 });
+
+class PageErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { error: Error | null }
+> {
+  state = { error: null };
+  static getDerivedStateFromError(e: Error) { return { error: e }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="flex flex-col items-center justify-center px-6 pt-20 gap-4 text-center">
+          <p className="label-cap text-accent-red">Something went wrong</p>
+          <p className="text-xs text-grit-dim">
+            {(this.state.error as Error).message ?? "Unexpected error"}
+          </p>
+          <button
+            onClick={() => { this.setState({ error: null }); window.location.reload(); }}
+            className="btn-grit px-6 py-3 label-cap"
+          >
+            Reload
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function TabsLayout() {
   const navigate = useNavigate();
@@ -105,7 +132,9 @@ function TabsLayout() {
       }}
     >
       <TopBar />
-      <Outlet />
+      <PageErrorBoundary>
+        <Outlet />
+      </PageErrorBoundary>
       <BottomNav />
     </div>
   );

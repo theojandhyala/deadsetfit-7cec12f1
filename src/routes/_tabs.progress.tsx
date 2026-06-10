@@ -179,7 +179,7 @@ function ProgressPage() {
       if (new Date(s.startedAt).getTime() < cutoff) return;
       s.exercises.forEach((e) => {
         const vol = e.sets.reduce((a, x) => a + x.weight * x.reps, 0);
-        const parts = e.primary_muscles.length ? e.primary_muscles : ["OTHER"];
+        const parts = e.primary_muscles?.length ? e.primary_muscles : ["OTHER"];
         parts.forEach((p) => { map[p.toUpperCase()] = (map[p.toUpperCase()] || 0) + vol / parts.length; });
       });
     });
@@ -214,7 +214,7 @@ function ProgressPage() {
       .slice(0, 3);
   }, [state.logs, state.sessions]);
 
-  const latestScan = state.physiqueScans[state.physiqueScans.length - 1];
+  const latestScan = state.physiqueScans?.length ? state.physiqueScans[state.physiqueScans.length - 1] : undefined;
 
   return (
     <div style={{ paddingTop: "env(safe-area-inset-top)" }}>

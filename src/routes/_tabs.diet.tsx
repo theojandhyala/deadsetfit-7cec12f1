@@ -181,7 +181,7 @@ function DietPage() {
   const waterPct = Math.min(1, waterToday / Math.max(state.waterTargetMl, 1));
 
   // BMI + per-meal breakdown
-  const bmi = profile ? profile.weightKg / Math.pow(profile.heightCm / 100, 2) : 0;
+  const bmi = profile && profile.heightCm > 0 ? profile.weightKg / Math.pow(profile.heightCm / 100, 2) : 0;
   const bmiBand =
     bmi < 18.5 ? "UNDER" :
     bmi < 25 ? "HEALTHY" :
