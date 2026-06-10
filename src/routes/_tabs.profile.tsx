@@ -111,10 +111,12 @@ function ProfilePage() {
   const score = calculateGritScore(state);
   const badge = gritBadge(score.total);
   const badgeC = badgeColor(badge);
-  const fifa = computeFifaStats(state);
+  let fifa: ReturnType<typeof computeFifaStats>;
+  try { fifa = computeFifaStats(state); } catch { fifa = computeFifaStats({ ...state, logs: [], sessions: [], manualPRs: {} }); }
   const startW = p.startingWeightKg ?? p.weightKg;
   const delta = p.weightKg - startW;
-  const bmi = (p.weightKg / Math.pow(p.heightCm / 100, 2)).toFixed(1);
+  const heightM = (p.heightCm ?? 170) / 100;
+  const bmi = heightM > 0 ? (p.weightKg / Math.pow(heightM, 2)).toFixed(1) : "—";
 
   async function save() {
     if (!p) return;
