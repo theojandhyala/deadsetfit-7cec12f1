@@ -73,8 +73,8 @@ function ProfilePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     state.manualPRs && JSON.stringify(state.manualPRs),
-    state.logs.length,
-    state.sessions.length,
+    state.logs?.length ?? 0,
+    state.sessions?.length ?? 0,
     p?.weightKg,
     p?.heightCm,
     p?.goal,

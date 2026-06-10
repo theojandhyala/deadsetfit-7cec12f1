@@ -70,17 +70,16 @@ function TabsLayout() {
         // Already rendering? Only trust local app state when it belongs to this signed-in account.
         if (getState().profile && localOwner === session.user.id) return;
 
-        // No local profile: fetch from server fast, in parallel with remote state.
-        const [, row] = await Promise.all([
-          withTimeout(waitForRemoteState(session.user.id), undefined, 1500),
-          withTimeout(getProfileRef.current().catch(() => null), null, 2000),
+        // No local profile: fetch from DB and wait for remote state hydration in parallel.
+        const [row] = await Promise.all([
+          withTimeout(getProfileRef.current().catch(() => null), null, 7000),
+          withTimeout(waitForRemoteState(session.user.id), undefined, 5000),
         ]);
+
+        // StateSync may have hydrated while we were waiting — check again.
         if (getState().profile && getLocalStateOwner() === session.user.id) return;
-        if (!profileQuestionsComplete(row)) {
-          navRef.current({ to: "/onboarding", replace: true });
-          return;
-        }
-        if (!getState().profile || localOwner !== session.user.id) {
+
+        if (row && profileQuestionsComplete(row)) {
           const accountProfile = profileFromAccount(row);
           if (accountProfile) {
             setState((current) => ({
@@ -89,10 +88,13 @@ function TabsLayout() {
               schedule: current.schedule ?? defaultSchedule(accountProfile),
             }));
           }
-        }
-        if (!getState().profile) {
-          navRef.current({ to: "/onboarding", replace: true });
           return;
+        }
+
+        // Only redirect to onboarding when DB confirms the profile is genuinely incomplete.
+        // If row is null it means a network/auth error — don't redirect, show the app.
+        if (row !== null && !profileQuestionsComplete(row)) {
+          navRef.current({ to: "/onboarding", replace: true });
         }
       } catch (e) {
         console.warn("tabs bootstrap failed", e);
@@ -101,7 +103,7 @@ function TabsLayout() {
       }
     })();
 
-    const safety = setTimeout(finish, 3000);
+    const safety = setTimeout(finish, 8000);
 
     const { data } = supabase.auth.onAuthStateChange((event, s) => {
       if (event === "SIGNED_OUT" && !s) navRef.current({ to: "/auth", replace: true });
@@ -115,8 +117,9 @@ function TabsLayout() {
 
   if (!ready) {
     return (
-      <div className="min-h-screen bg-grit flex items-center justify-center">
-        <span className="label-cap text-grit-dim text-xs animate-pulse">Loading…</span>
+      <div className="min-h-screen bg-grit flex flex-col items-center justify-center gap-3">
+        <div className="w-8 h-8 border-2 border-accent-red border-t-transparent rounded-full animate-spin" />
+        <span className="label-cap text-grit text-xs">Loading your profile…</span>
       </div>
     );
   }

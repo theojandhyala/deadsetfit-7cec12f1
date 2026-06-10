@@ -11,6 +11,8 @@ interface RunMapProps {
   thumbnail?: boolean;
   /** Use topo tiles that expose paths/trails/contours for run detail/live tracking. */
   mapStyle?: "dark" | "trail";
+  /** Override the trail colour (default #e63222). */
+  activityColor?: string;
 }
 
 /**
@@ -23,12 +25,15 @@ export function RunMap(props: RunMapProps) {
   return <LeafletRoute {...props} />;
 }
 
+const DEFAULT_COLOR = "#e63222";
+
 /* ------------------------ SVG thumbnail ------------------------ */
 function SvgRoute({
   samples,
   height = 80,
   showMarkers = false,
   live = false,
+  activityColor = DEFAULT_COLOR,
 }: RunMapProps) {
   const { d, start, end } = samplesToSvgPath(samples);
   return (
@@ -36,12 +41,7 @@ function SvgRoute({
       className="relative w-full bg-grit-card border border-grit overflow-hidden"
       style={{ height }}
     >
-      <svg
-        viewBox="0 0 100 100"
-        preserveAspectRatio="none"
-        className="absolute inset-0 w-full h-full"
-        aria-hidden
-      >
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full" aria-hidden>
         <defs>
           <pattern id="rmgrid" width="10" height="10" patternUnits="userSpaceOnUse">
             <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#1a1a1a" strokeWidth="0.3" />
@@ -49,32 +49,26 @@ function SvgRoute({
         </defs>
         <rect width="100" height="100" fill="url(#rmgrid)" />
       </svg>
-      <svg
-        viewBox="0 0 100 100"
-        preserveAspectRatio="xMidYMid meet"
-        className="absolute inset-0 w-full h-full overflow-visible"
-      >
+      <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" className="absolute inset-0 w-full h-full overflow-visible">
         {d && (
           <>
-            <path d={d} fill="none" stroke="#e63222" strokeOpacity={0.4}
-              strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"
-              style={{ filter: "blur(1.5px)" }} />
-            <path d={d} fill="none" stroke="#e63222"
-              strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
+            <path d={d} fill="none" stroke={activityColor} strokeOpacity={0.35}
+              strokeWidth={4} strokeLinecap="round" strokeLinejoin="round"
+              style={{ filter: "blur(2px)" }} />
+            <path d={d} fill="none" stroke={activityColor}
+              strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
             {showMarkers && start && (
-              <circle cx={start.x} cy={start.y} r={1.6} fill="#0a0a0a" stroke="#ffffff" strokeWidth={0.6} />
+              <circle cx={start.x} cy={start.y} r={2} fill="#0a0a0a" stroke="#ffffff" strokeWidth={0.8} />
             )}
             {showMarkers && end && (
-              <circle cx={end.x} cy={end.y} r={1.6} fill="#e63222" stroke="#ffffff" strokeWidth={0.6} />
+              <circle cx={end.x} cy={end.y} r={2} fill={activityColor} stroke="#ffffff" strokeWidth={0.8} />
             )}
           </>
         )}
       </svg>
       {samples.length < 2 && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <p className="label-cap text-grit-dim text-[10px]">
-            {live ? "GPS…" : "—"}
-          </p>
+          <p className="label-cap text-grit-dim text-[10px]">{live ? "GPS…" : "—"}</p>
         </div>
       )}
     </div>
@@ -87,6 +81,7 @@ function LeafletRoute({
   height = 280,
   live = false,
   mapStyle = "trail",
+  activityColor = DEFAULT_COLOR,
 }: RunMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -165,9 +160,10 @@ function LeafletRoute({
 
     if (polylineRef.current) {
       polylineRef.current.setLatLngs(latlngs);
+      polylineRef.current.setStyle({ color: activityColor });
     } else if (latlngs.length >= 2) {
       polylineRef.current = L.polyline(latlngs, {
-        color: "#e63222",
+        color: activityColor,
         weight: 5,
         opacity: 0.95,
         lineCap: "round",
@@ -178,9 +174,9 @@ function LeafletRoute({
     // Glow underlay
     if (!polylineRef.current?._glow && latlngs.length >= 2) {
       const glow = L.polyline(latlngs, {
-        color: "#e63222",
-        weight: 12,
-        opacity: 0.18,
+        color: activityColor,
+        weight: 14,
+        opacity: 0.2,
       }).addTo(map);
       if (polylineRef.current) polylineRef.current._glow = glow;
     } else if (polylineRef.current?._glow) {
@@ -207,10 +203,10 @@ function LeafletRoute({
       const last = latlngs[latlngs.length - 1];
       if (!endMarkerRef.current) {
         endMarkerRef.current = L.circleMarker(last, {
-          radius: 8,
+          radius: 9,
           color: "#ffffff",
-          weight: 2,
-          fillColor: "#e63222",
+          weight: 2.5,
+          fillColor: activityColor,
           fillOpacity: 1,
           className: live ? "animate-pulse" : "",
         }).addTo(map);
