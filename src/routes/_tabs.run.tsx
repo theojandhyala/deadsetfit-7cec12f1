@@ -3,15 +3,18 @@ import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   Activity,
+  Bike,
   ChevronLeft,
   ChevronRight,
   Flame,
+  Footprints,
   MapPinned,
+  Mountain,
   Pause,
   Play,
-  Settings,
   Share2,
   Square,
+  Timer,
   Trash2,
   Trophy,
   Users,
@@ -31,14 +34,71 @@ import {
   haversine,
   smoothGpsFix,
 } from "@/lib/run";
-import type { Run, RunSample } from "@/lib/types";
+import type { ActivityType, Run, RunSample } from "@/lib/types";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_tabs/run")({
-  head: () => ({ meta: [{ title: "DEADSET — Run" }] }),
+  head: () => ({ meta: [{ title: "DEADSET — Cardio" }] }),
   component: RunPage,
 });
 
-type View = "hub" | "live" | "detail";
+type View = "hub" | "live" | "summary" | "detail";
+
+const ACTIVITY_CONFIG: Record<ActivityType, {
+  label: string;
+  icon: ReactNode;
+  color: string;
+  metricLabel: string;
+  calMult: number; // kcal per kg per km (approx)
+  maxSpeedMps: number;
+  description: string;
+}> = {
+  run: {
+    label: "Run",
+    icon: <Activity size={22} />,
+    color: "#e63222",
+    metricLabel: "Pace /km",
+    calMult: 1.0,
+    maxSpeedMps: 12.5,
+    description: "Road · Trail · Treadmill",
+  },
+  walk: {
+    label: "Walk",
+    icon: <Footprints size={22} />,
+    color: "#fbbf24",
+    metricLabel: "Pace /km",
+    calMult: 0.55,
+    maxSpeedMps: 3.5,
+    description: "Power walk · Stroll",
+  },
+  cycle: {
+    label: "Cycle",
+    icon: <Bike size={22} />,
+    color: "#22c55e",
+    metricLabel: "Speed km/h",
+    calMult: 0.45,
+    maxSpeedMps: 25,
+    description: "Road · MTB · Commute",
+  },
+  hike: {
+    label: "Hike",
+    icon: <Mountain size={22} />,
+    color: "#a78bfa",
+    metricLabel: "Pace /km",
+    calMult: 0.8,
+    maxSpeedMps: 2.8,
+    description: "Trail · Summit · Bush",
+  },
+  trail: {
+    label: "Trail Run",
+    icon: <MapPinned size={22} />,
+    color: "#fb923c",
+    metricLabel: "Pace /km",
+    calMult: 1.1,
+    maxSpeedMps: 7,
+    description: "Off-road · Ultra",
+  },
+};
 
 function RunPage() {
   const [state, setState] = useAppState();
@@ -48,18 +108,40 @@ function RunPage() {
 
   const [view, setView] = useState<View>("hub");
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [pendingRun, setPendingRun] = useState<Run | null>(null);
+  const [selectedActivity, setSelectedActivity] = useState<ActivityType>("run");
 
   if (view === "live") {
     return (
       <LiveRunner
+        activityType={selectedActivity}
+        weightKg={state.profile?.weightKg ?? 70}
         onFinish={(run) => {
           if (run) {
-            setState((s) => ({ ...s, runs: [...(s.runs ?? []), run] }));
-            setDetailId(run.id);
-            setView("detail");
+            setPendingRun(run);
+            setView("summary");
           } else {
             setView("hub");
           }
+        }}
+      />
+    );
+  }
+
+  if (view === "summary" && pendingRun) {
+    return (
+      <RunSummary
+        run={pendingRun}
+        onSave={(named) => {
+          setState((s) => ({ ...s, runs: [...(s.runs ?? []), named] }));
+          setDetailId(named.id);
+          setPendingRun(null);
+          setView("detail");
+          toast.success("Activity saved 🔥");
+        }}
+        onDiscard={() => {
+          setPendingRun(null);
+          setView("hub");
         }}
       />
     );
@@ -88,6 +170,8 @@ function RunPage() {
   return (
     <RunHub
       runs={runs}
+      selectedActivity={selectedActivity}
+      onSelectActivity={setSelectedActivity}
       onStart={() => setView("live")}
       onOpen={(id) => {
         setDetailId(id);
@@ -101,10 +185,14 @@ function RunPage() {
 
 function RunHub({
   runs,
+  selectedActivity,
+  onSelectActivity,
   onStart,
   onOpen,
 }: {
   runs: Run[];
+  selectedActivity: ActivityType;
+  onSelectActivity: (t: ActivityType) => void;
   onStart: () => void;
   onOpen: (id: string) => void;
 }) {
@@ -113,108 +201,94 @@ function RunHub({
       acc.distance += r.distanceM;
       acc.duration += r.durationSec;
       acc.count += 1;
+      acc.calories += r.calories ?? 0;
       return acc;
     },
-    { distance: 0, duration: 0, count: 0 },
+    { distance: 0, duration: 0, count: 0, calories: 0 },
   );
 
-  // Weekly distance
   const now = Date.now();
   const weekStart = now - 7 * 24 * 3600 * 1000;
   const weekRuns = runs.filter((r) => new Date(r.date).getTime() >= weekStart);
   const weekDist = weekRuns.reduce((s, r) => s + r.distanceM, 0);
-  const latestRun = runs[0];
-  const bestRun = runs.reduce<Run | null>((best, r) => !best || r.distanceM > best.distanceM ? r : best, null);
+  const cfg = ACTIVITY_CONFIG[selectedActivity];
 
   return (
     <div className="px-4 pt-6 pb-24 max-w-screen-sm mx-auto space-y-5">
       <header className="space-y-1">
-        <p className="label-cap text-[10px] text-grit-dim">RUN · GPS TRACKER</p>
+        <p className="label-cap text-[10px] text-grit-dim">CARDIO · GPS TRACKER</p>
         <h1 className="display text-3xl font-extrabold uppercase text-grit tracking-tight">
-          Lace up.
+          Get moving.
         </h1>
         <p className="text-sm text-grit-dim">
-          Track every step, chase routes, and push it to the crew.
+          GPS tracks every move. Strava-style trail, splits and stats.
         </p>
       </header>
+
+      {/* Activity type picker */}
+      <div className="grid grid-cols-5 gap-1.5">
+        {(Object.entries(ACTIVITY_CONFIG) as [ActivityType, typeof cfg][]).map(([type, c]) => (
+          <button
+            key={type}
+            onClick={() => onSelectActivity(type)}
+            className="flex flex-col items-center gap-1.5 p-2.5 border transition-all"
+            style={{
+              borderColor: selectedActivity === type ? c.color : "#262626",
+              background: selectedActivity === type ? `${c.color}15` : "#0f0f0f",
+            }}
+          >
+            <span style={{ color: selectedActivity === type ? c.color : "#8a8a8a" }}>{c.icon}</span>
+            <span className="label-cap text-[9px]" style={{ color: selectedActivity === type ? c.color : "#8a8a8a" }}>
+              {c.label}
+            </span>
+          </button>
+        ))}
+      </div>
 
       {/* Start CTA */}
       <button
         onClick={onStart}
-        className="w-full bg-accent-red text-white py-5 flex items-center justify-center gap-3 font-extrabold uppercase tracking-widest text-sm hover:bg-accent-red/90 transition-colors border border-accent-red"
-        style={{ boxShadow: "0 0 24px rgba(230,50,34,0.35)" }}
+        className="w-full text-white py-5 flex items-center justify-center gap-3 font-extrabold uppercase tracking-widest text-sm transition-colors border"
+        style={{
+          background: cfg.color,
+          borderColor: cfg.color,
+          boxShadow: `0 0 24px ${cfg.color}40`,
+        }}
       >
         <Play size={20} strokeWidth={3} fill="currentColor" />
-        Start a run
+        Start {cfg.label}
       </button>
 
-      {/* Totals grid */}
+      {/* This week summary */}
       <div className="grid grid-cols-3 gap-2">
         <StatBlock label="This week" value={formatDistance(weekDist)} />
-        <StatBlock label="Total runs" value={String(totals.count)} />
+        <StatBlock label="Total" value={String(totals.count)} suffix="sessions" />
         <StatBlock label="All-time" value={formatDistance(totals.distance)} />
       </div>
 
-      <section className="bg-grit-card border border-grit p-4 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="label-cap text-[10px] text-accent-red">SOCIAL RUNNING</p>
-            <h2 className="display text-xl font-extrabold uppercase text-grit leading-none mt-1">
-              Your next route matters.
-            </h2>
-          </div>
-          <Link to="/friends" className="btn-grit px-3 py-2 text-[10px] gap-1">
-            <Users size={14} /> Crew
-          </Link>
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          <MiniCue icon={<MapPinned size={14} />} label="Trail map" value="Topo" />
-          <MiniCue icon={<Flame size={14} />} label="Best route" value={bestRun ? formatDistance(bestRun.distanceM) : "—"} />
-          <MiniCue icon={<Share2 size={14} />} label="Share" value={latestRun ? "Ready" : "After run"} />
-        </div>
-      </section>
-
-      {/* Run Stats Summary — shown when 3+ runs */}
-      {runs.length >= 3 && (() => {
-        const now2 = Date.now();
-        const weekStart2 = now2 - 7 * 24 * 3600 * 1000;
-        const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
-        const weekDist2 = runs.filter(r => new Date(r.date).getTime() >= weekStart2).reduce((s, r) => s + r.distanceM, 0);
-        const monthCount = runs.filter(r => new Date(r.date) >= monthStart).length;
-        const pbDist = Math.max(...runs.map(r => r.distanceM));
-        const pbPace = runs.reduce((best, r) => r.avgPaceSecPerKm < best ? r.avgPaceSecPerKm : best, runs[0].avgPaceSecPerKm);
+      {/* History by type */}
+      {Object.entries(ACTIVITY_CONFIG).map(([type, c]) => {
+        const typed = runs.filter((r) => (r.activityType ?? "run") === type);
+        if (typed.length === 0) return null;
         return (
-          <section className="bg-grit-card border border-[#262626] p-4 space-y-3">
-            <p className="label-cap text-[10px] text-accent-red">RUN STATS SUMMARY</p>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="border border-[#262626] p-3">
-                <p className="text-[9px] uppercase tracking-widest text-grit-dim">This week</p>
-                <p className="display text-lg font-extrabold text-grit leading-none mt-1">{(weekDist2 / 1000).toFixed(1)} <span className="text-[10px] text-grit-dim">KM</span></p>
-              </div>
-              <div className="border border-[#262626] p-3">
-                <p className="text-[9px] uppercase tracking-widest text-grit-dim">This month</p>
-                <p className="display text-lg font-extrabold text-grit leading-none mt-1">{monthCount} <span className="text-[10px] text-grit-dim">RUNS</span></p>
-              </div>
-              <div className="border border-[#262626] p-3">
-                <p className="text-[9px] uppercase tracking-widest text-grit-dim">PB distance</p>
-                <p className="display text-lg font-extrabold text-accent-red leading-none mt-1">{(pbDist / 1000).toFixed(2)} <span className="text-[10px] text-grit-dim">KM</span></p>
-              </div>
-              <div className="border border-[#262626] p-3">
-                <p className="text-[9px] uppercase tracking-widest text-grit-dim">PB pace</p>
-                <p className="display text-lg font-extrabold text-accent-red leading-none mt-1">{formatPace(pbPace)} <span className="text-[10px] text-grit-dim">/KM</span></p>
-              </div>
+          <div key={type} className="flex items-center gap-3 p-3 border border-grit bg-grit-card">
+            <span style={{ color: c.color }}>{c.icon}</span>
+            <div className="flex-1 min-w-0">
+              <p className="label-cap text-[10px]" style={{ color: c.color }}>{c.label.toUpperCase()}</p>
+              <p className="text-sm font-bold text-grit">{formatDistance(typed.reduce((s, r) => s + r.distanceM, 0))}</p>
             </div>
-          </section>
+            <span className="label-cap text-[10px] text-grit-dim">{typed.length} sessions</span>
+          </div>
         );
-      })()}
+      })}
 
-      {/* History */}
+      {/* History list */}
       <section className="space-y-2">
         <div className="flex items-center justify-between">
-          <h2 className="label-cap text-xs text-grit">History</h2>
+          <h2 className="label-cap text-xs text-grit">Recent Activity</h2>
           {runs.length > 0 && (
             <span className="text-[10px] uppercase tracking-wider text-grit-dim">
-              {runs.length} {runs.length === 1 ? "run" : "runs"}
+              {runs.length} total
             </span>
           )}
         </div>
@@ -224,93 +298,92 @@ function RunHub({
             <div className="p-4 border border-grit text-grit-dim">
               <Activity size={32} />
             </div>
-            <p className="display text-lg font-extrabold uppercase text-grit tracking-wide">
-              No runs yet
+            <p className="display text-lg font-extrabold uppercase text-grit">
+              No activities yet
             </p>
             <p className="text-xs text-grit-dim uppercase tracking-wider">
-              Hit start. Your route will appear here.
+              Hit start. Your route appears here.
             </p>
           </div>
         ) : (
           <ul className="space-y-2">
-            {runs.map((r) => (
-              <li key={r.id}>
-                <button
-                  onClick={() => onOpen(r.id)}
-                  className="w-full bg-grit-card border border-grit hover:border-accent-red transition-colors text-left p-3 space-y-2"
-                >
-                  <div className="flex gap-3">
-                    <div className="w-20 flex-shrink-0 space-y-1">
-                      <div className="h-20">
-                        <RunMap samples={r.samples} height={80} showMarkers={false} thumbnail />
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0 flex flex-col justify-between">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="display text-sm font-extrabold uppercase text-grit tracking-wide truncate">
-                            {labelRun(r)}
-                          </p>
-                          <p className="text-[10px] uppercase tracking-wider text-grit-dim mt-0.5">
-                            {formatRunDate(r.date)}
-                          </p>
+            {runs.map((r) => {
+              const actCfg = ACTIVITY_CONFIG[r.activityType ?? "run"];
+              return (
+                <li key={r.id}>
+                  <button
+                    onClick={() => onOpen(r.id)}
+                    className="w-full bg-grit-card border border-grit hover:border-accent-red transition-colors text-left p-3 space-y-2"
+                  >
+                    <div className="flex gap-3">
+                      <div className="w-20 flex-shrink-0">
+                        <div className="h-20">
+                          <RunMap samples={r.samples} height={80} showMarkers={false} thumbnail />
                         </div>
-                        <ChevronRight size={16} className="text-grit-dim flex-shrink-0" />
                       </div>
-                      <div className="flex items-baseline gap-3">
-                        <span className="display text-lg font-extrabold text-accent-red leading-none">
-                          {(r.distanceM / 1000).toFixed(2)}
-                          <span className="text-[10px] font-bold text-grit-dim uppercase ml-0.5">km</span>
-                        </span>
-                        <span className="text-[10px] uppercase tracking-wider text-grit-dim">
-                          {formatDuration(r.durationSec)}
-                        </span>
+                      <div className="flex-1 min-w-0 flex flex-col justify-between">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              <span style={{ color: actCfg.color }}>{actCfg.icon}</span>
+                              <p className="display text-sm font-extrabold uppercase text-grit tracking-wide truncate">
+                                {r.name || labelRun(r)}
+                              </p>
+                            </div>
+                            <p className="text-[10px] uppercase tracking-wider text-grit-dim">
+                              {formatRunDate(r.date)}
+                            </p>
+                          </div>
+                          <ChevronRight size={16} className="text-grit-dim flex-shrink-0" />
+                        </div>
+                        <div className="flex items-baseline gap-3">
+                          <span className="display text-lg font-extrabold leading-none" style={{ color: actCfg.color }}>
+                            {(r.distanceM / 1000).toFixed(2)}
+                            <span className="text-[10px] font-bold text-grit-dim uppercase ml-0.5">km</span>
+                          </span>
+                          <span className="text-[10px] uppercase tracking-wider text-grit-dim">
+                            {formatDuration(r.durationSec)}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-1 border-t border-[#262626] pt-2">
-                    <div>
-                      <p className="text-[9px] uppercase tracking-widest text-grit-dim">Pace</p>
-                      <p className="text-[11px] font-bold text-grit tabular-nums">{formatPace(r.avgPaceSecPerKm)}/km</p>
+                    <div className="grid grid-cols-3 gap-1 border-t border-[#262626] pt-2">
+                      <div>
+                        <p className="text-[9px] uppercase tracking-widest text-grit-dim">
+                          {r.activityType === "cycle" ? "Speed" : "Pace"}
+                        </p>
+                        <p className="text-[11px] font-bold text-grit tabular-nums">
+                          {r.activityType === "cycle"
+                            ? `${speedKmh(r.distanceM, r.durationSec)} km/h`
+                            : `${formatPace(r.avgPaceSecPerKm)}/km`}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] uppercase tracking-widest text-grit-dim">Duration</p>
+                        <p className="text-[11px] font-bold text-grit tabular-nums">{formatDuration(r.durationSec)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] uppercase tracking-widest text-grit-dim">Calories</p>
+                        <p className="text-[11px] font-bold text-grit tabular-nums">{r.calories ?? estimateCalories(r)} kcal</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-[9px] uppercase tracking-widest text-grit-dim">Duration</p>
-                      <p className="text-[11px] font-bold text-grit tabular-nums">{formatDuration(r.durationSec)}</p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] uppercase tracking-widest text-grit-dim">Calories</p>
-                      <p className="text-[11px] font-bold text-grit tabular-nums">{estimateCalories(r)} kcal</p>
-                    </div>
-                  </div>
-                </button>
-              </li>
-            ))}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
-
-      <p className="text-[10px] uppercase tracking-wider text-grit-dim text-center pt-2">
-        <Link to="/train" className="hover:text-accent-red">← Back to Train</Link>
-      </p>
     </div>
   );
 }
 
-function StatBlock({ label, value }: { label: string; value: string }) {
+function StatBlock({ label, value, suffix }: { label: string; value: string; suffix?: string }) {
   return (
     <div className="bg-grit-card border border-grit p-3 flex flex-col gap-1">
       <span className="text-[9px] uppercase tracking-widest text-grit-dim">{label}</span>
       <span className="display text-lg font-extrabold text-grit leading-none">{value}</span>
-    </div>
-  );
-}
-
-function MiniCue({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
-  return (
-    <div className="border border-grit bg-[#0f0f0f] p-2 min-w-0">
-      <div className="text-accent-red mb-2">{icon}</div>
-      <p className="text-[8px] uppercase tracking-widest text-grit-dim truncate">{label}</p>
-      <p className="display text-sm font-extrabold uppercase text-grit truncate">{value}</p>
+      {suffix && <span className="text-[9px] text-grit-dim uppercase tracking-wider">{suffix}</span>}
     </div>
   );
 }
@@ -320,7 +393,16 @@ function MiniCue({ icon, label, value }: { icon: ReactNode; label: string; value
 type Status = "ready" | "running" | "paused" | "finished";
 type LocationPermission = "checking" | "prompt" | "granted" | "denied" | "unknown";
 
-function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
+function LiveRunner({
+  activityType,
+  weightKg,
+  onFinish,
+}: {
+  activityType: ActivityType;
+  weightKg: number;
+  onFinish: (run: Run | null) => void;
+}) {
+  const cfg = ACTIVITY_CONFIG[activityType];
   const [status, setStatus] = useState<Status>("ready");
   const [permission, setPermission] = useState<LocationPermission>("checking");
   const [samples, setSamples] = useState<RunSample[]>([]);
@@ -328,34 +410,28 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
   const [error, setError] = useState<string | null>(null);
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [previewPos, setPreviewPos] = useState<{ lat: number; lng: number } | null>(null);
-  const [debugOpen, setDebugOpen] = useState(false);
+  const [mapExpanded, setMapExpanded] = useState(false);
 
-  // GPS quality metrics
-  const [fixCount, setFixCount] = useState(0);
   const [rejectCount, setRejectCount] = useState(0);
-  const [speedAnomaly, setSpeedAnomaly] = useState(false);
   const [rawSpeed, setRawSpeed] = useState<number | null>(null);
   const [lastFixTime, setLastFixTime] = useState<number | null>(null);
 
-  // Refs to avoid stale closures inside watchPosition
   const statusRef = useRef<Status>(status);
   statusRef.current = status;
   const samplesRef = useRef<RunSample[]>([]);
   samplesRef.current = samples;
   const startedAtRef = useRef<number>(0);
-  const pausedAccumRef = useRef<number>(0); // total paused ms
+  const pausedAccumRef = useRef<number>(0);
   const pausedAtRef = useRef<number>(0);
   const watchIdRef = useRef<number | null>(null);
   const previewWatchRef = useRef<number | null>(null);
-  const fixCountRef = useRef(0);
-  const rejectCountRef = useRef(0);
   const lastRawPosRef = useRef<{ lat: number; lng: number; time: number } | null>(null);
+  const rejectCountRef = useRef(0);
 
   const handleGpsError = (err: GeolocationPositionError) => {
     if (err.code === err.PERMISSION_DENIED) {
       setPermission("denied");
-      setError("Location is blocked. Enable location for this site, then retry GPS.");
-      if (statusRef.current === "running" && samplesRef.current.length <= 1) setStatus("ready");
+      setError("Location blocked — enable in browser settings.");
       return;
     }
     setError(err.message || "GPS error");
@@ -381,13 +457,12 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
   useEffect(() => {
     if (status !== "running") return;
     const id = setInterval(() => {
-      const totalElapsed = (Date.now() - startedAtRef.current - pausedAccumRef.current) / 1000;
-      setElapsedSec(Math.max(0, totalElapsed));
+      setElapsedSec(Math.max(0, (Date.now() - startedAtRef.current - pausedAccumRef.current) / 1000));
     }, 250);
     return () => clearInterval(id);
   }, [status]);
 
-  // Acquire GPS in ready state so user sees their position before starting
+  // Preview GPS (before starting)
   useEffect(() => {
     if (status !== "ready") return;
     if (!("geolocation" in navigator)) {
@@ -412,31 +487,8 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
     };
   }, [status]);
 
-  const retryGps = () => {
-    if (!("geolocation" in navigator)) {
-      setError("GPS not supported on this device.");
-      return;
-    }
-    setPermission("prompt");
-    setError(null);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setPermission("granted");
-        setGpsAccuracy(pos.coords.accuracy);
-        setPreviewPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setLastFixTime(Date.now());
-      },
-      handleGpsError,
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 12000 },
-    );
-  };
-
   const start = () => {
-    if (!("geolocation" in navigator)) {
-      setError("GPS not supported on this device.");
-      return;
-    }
-    // Clear preview watch
+    if (!("geolocation" in navigator)) { setError("GPS not supported."); return; }
     if (previewWatchRef.current !== null) {
       navigator.geolocation.clearWatch(previewWatchRef.current);
       previewWatchRef.current = null;
@@ -444,19 +496,15 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
     setError(null);
     startedAtRef.current = Date.now();
     pausedAccumRef.current = 0;
-    const initialSamples: RunSample[] = previewPos
+    const initial: RunSample[] = previewPos
       ? [{ t: 0, lat: previewPos.lat, lng: previewPos.lng, d: 0, total: 0, acc: gpsAccuracy ?? undefined }]
       : [];
-    samplesRef.current = initialSamples;
-    setSamples(initialSamples);
+    samplesRef.current = initial;
+    setSamples(initial);
     setElapsedSec(0);
-    setFixCount(0);
-    setRejectCount(0);
-    fixCountRef.current = 0;
     rejectCountRef.current = 0;
+    setRejectCount(0);
     lastRawPosRef.current = null;
-    setSpeedAnomaly(false);
-    setRawSpeed(null);
     setStatus("running");
 
     watchIdRef.current = navigator.geolocation.watchPosition(
@@ -466,14 +514,10 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
         const now = Date.now();
         setGpsAccuracy(accuracy);
         setLastFixTime(now);
-
-        // Raw speed from device (m/s)
         const deviceSpeed = typeof speed === "number" && speed >= 0 ? speed : null;
-
         const t = now - startedAtRef.current - pausedAccumRef.current;
         const prev = samplesRef.current[samplesRef.current.length - 1];
 
-        // Compute raw instantaneous speed for anomaly detection
         let instantSpeed: number | null = null;
         if (lastRawPosRef.current) {
           const rawDist = haversine(
@@ -486,52 +530,35 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
         lastRawPosRef.current = { lat: latitude, lng: longitude, time: now };
         setRawSpeed(deviceSpeed ?? instantSpeed);
 
-        const result = smoothGpsFix(prev, {
-          lat: latitude,
-          lng: longitude,
-          accuracy: accuracy ?? undefined,
-          altitude,
-          speed: deviceSpeed,
-          timeMs: t,
-        }, {
-          maxAccuracyM: 90,
-          maxSpeedMps: 12.5,
-          minDeltaM: 0.5,
-        });
-        // Skip point if speed anomaly (impossibly fast GPS jump > 10 m/s)
-        if (instantSpeed != null && instantSpeed > 10) {
+        if (instantSpeed != null && instantSpeed > cfg.maxSpeedMps * 1.5) {
           rejectCountRef.current += 1;
           setRejectCount(rejectCountRef.current);
-          setSpeedAnomaly(true);
-          setTimeout(() => setSpeedAnomaly(false), 3000);
           return;
         }
+
+        const result = smoothGpsFix(prev, {
+          lat: latitude, lng: longitude,
+          accuracy: accuracy ?? undefined,
+          altitude, speed: deviceSpeed, timeMs: t,
+        }, { maxAccuracyM: 90, maxSpeedMps: cfg.maxSpeedMps, minDeltaM: 0.5 });
+
         if (!result.accepted) {
           rejectCountRef.current += 1;
           setRejectCount(rejectCountRef.current);
           return;
         }
-        fixCountRef.current += 1;
-        setFixCount(fixCountRef.current);
         const next: RunSample = {
-          t,
-          lat: result.lat,
-          lng: result.lng,
-          d: result.d,
-          total: result.total,
-          acc: result.acc,
-          alt: result.alt,
+          t, lat: result.lat, lng: result.lng,
+          d: result.d, total: result.total,
+          acc: result.acc, alt: result.alt,
         };
         setSamples((s) => [...s, next]);
       },
       handleGpsError,
       { enableHighAccuracy: true, maximumAge: 0, timeout: 12000 },
     );
-
-    // Keep screen awake if supported
     requestWakeLock();
   };
-
 
   const pause = () => {
     if (status !== "running") return;
@@ -554,14 +581,11 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
     setStatus("finished");
   };
 
-  const save = () => {
+  const buildRun = (): Run | null => {
     const distanceM = samples.length ? samples[samples.length - 1].total : 0;
-    if (distanceM < 3) {
-      // Discard runs with no meaningful distance
-      onFinish(null);
-      return;
-    }
-    const run: Run = {
+    if (distanceM < 10) return null;
+    const calories = Math.round((distanceM / 1000) * weightKg * cfg.calMult);
+    return {
       id: `run-${Date.now()}`,
       date: new Date(startedAtRef.current).toISOString(),
       durationSec: Math.round(elapsedSec),
@@ -571,7 +595,18 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
       elevGainM: elevationGain(samples),
       samples,
       splits: computeSplits(samples),
+      activityType,
+      calories,
     };
+  };
+
+  const finish = () => {
+    const run = buildRun();
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    releaseWakeLock();
     onFinish(run);
   };
 
@@ -580,40 +615,30 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
     }
+    if (previewWatchRef.current !== null) {
+      navigator.geolocation.clearWatch(previewWatchRef.current);
+      previewWatchRef.current = null;
+    }
     releaseWakeLock();
     onFinish(null);
   };
 
   useEffect(() => {
     return () => {
-      if (watchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-      }
-      if (previewWatchRef.current !== null) {
-        navigator.geolocation.clearWatch(previewWatchRef.current);
-      }
+      if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
+      if (previewWatchRef.current !== null) navigator.geolocation.clearWatch(previewWatchRef.current);
       releaseWakeLock();
     };
   }, []);
 
-  // Synthetic samples for preview map (single point so map can center)
   const mapSamples: RunSample[] = samples.length > 0
     ? samples
     : previewPos
       ? [{ t: 0, lat: previewPos.lat, lng: previewPos.lng, d: 0, total: 0, acc: gpsAccuracy ?? undefined }]
       : [];
 
-  const gpsStrength = gpsAccuracy == null
-    ? { label: "SEARCHING", color: "#8a8a8a" }
-    : gpsAccuracy <= 15
-      ? { label: "STRONG", color: "#22c55e" }
-      : gpsAccuracy <= 35
-        ? { label: "OK", color: "#fbbf24" }
-        : { label: "WEAK", color: "#e63222" };
-
   const distanceM = samples.length ? samples[samples.length - 1].total : 0;
   const pace = avgPace(distanceM, elapsedSec);
-  // Current pace = last ~30 seconds
   const cutoff = (elapsedSec - 30) * 1000;
   const recent = samples.filter((s) => s.t >= cutoff);
   let currentPace = pace;
@@ -625,71 +650,102 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
     if (dt > 0 && dd > 0) currentPace = dt / (dd / 1000);
   }
 
+  const gpsStrength = gpsAccuracy == null
+    ? { label: "SEARCHING", color: "#8a8a8a" }
+    : gpsAccuracy <= 15 ? { label: "STRONG", color: "#22c55e" }
+    : gpsAccuracy <= 35 ? { label: "OK", color: "#fbbf24" }
+    : { label: "WEAK", color: "#e63222" };
+
+  const isCycle = activityType === "cycle";
+  const speedKmhNow = elapsedSec > 0 ? (distanceM / elapsedSec) * 3.6 : 0;
+  const currentSpeedKmhNow = recent.length >= 2
+    ? (() => {
+        const f = recent[0]; const l = recent[recent.length - 1];
+        const dt = (l.t - f.t) / 1000; const dd = l.total - f.total;
+        return dt > 0 ? (dd / dt) * 3.6 : 0;
+      })()
+    : speedKmhNow;
+
+  const mapHeight = mapExpanded ? 380 : 240;
+
   return (
-    <div className="px-4 pt-6 pb-24 max-w-screen-sm mx-auto space-y-4">
+    <div className="px-4 pt-4 pb-24 max-w-screen-sm mx-auto space-y-3">
       <header className="flex items-center justify-between">
         <button
           onClick={discard}
           className="flex items-center gap-1 text-grit-dim hover:text-grit text-xs uppercase tracking-wider font-bold"
-          aria-label="Cancel run"
         >
           <ChevronLeft size={16} />
           Cancel
         </button>
+        <div className="flex items-center gap-2">
+          <span style={{ color: cfg.color }}>{cfg.icon}</span>
+          <span className="label-cap text-[11px]" style={{ color: cfg.color }}>{cfg.label.toUpperCase()}</span>
+        </div>
         <div className="flex items-center gap-1.5">
-          <span
-            className="w-1.5 h-1.5 rounded-full"
-            style={{
-              background: gpsStrength.color,
-              animation: status === "running" ? "pulse 1.5s ease-in-out infinite" : undefined,
-            }}
-          />
+          <span className="w-2 h-2 rounded-full" style={{ background: gpsStrength.color, boxShadow: `0 0 6px ${gpsStrength.color}` }} />
           <span className="label-cap text-[10px]" style={{ color: gpsStrength.color }}>
-            GPS {gpsStrength.label}
-            {gpsAccuracy != null && ` · ±${Math.round(gpsAccuracy)}m`}
+            {gpsAccuracy != null ? `±${Math.round(gpsAccuracy)}m` : "GPS"}
           </span>
         </div>
       </header>
 
-      {/* Hero distance */}
-      <div className="bg-grit-card border border-grit p-6 text-center">
-        <p className="label-cap text-[10px] text-grit-dim mb-2">
-          {status === "ready" ? "READY TO RUN" : "DISTANCE"}
+      {/* Hero metric */}
+      <div className="bg-grit-card border p-5 text-center" style={{ borderColor: status === "running" ? cfg.color : "#262626" }}>
+        <p className="label-cap text-[10px] text-grit-dim mb-1">
+          {status === "ready" ? "READY" : "DISTANCE"}
         </p>
-        <p className="display text-6xl font-extrabold text-accent-red leading-none tracking-tight">
+        <p className="display text-6xl font-extrabold leading-none tracking-tight" style={{ color: cfg.color }}>
           {(distanceM / 1000).toFixed(2)}
         </p>
-        <p className="label-cap text-xs text-grit-dim mt-2">
-          KILOMETERS · {Math.round(distanceM)}M EXACT
-        </p>
+        <p className="label-cap text-xs text-grit-dim mt-1">KILOMETRES</p>
       </div>
 
-      {/* Stats grid */}
+      {/* Stats row */}
       <div className="grid grid-cols-3 gap-2">
         <BigStat label="Time" value={formatDuration(elapsedSec)} />
-        <BigStat label="Avg pace" value={formatPace(pace)} suffix="/km" />
-        <BigStat
-          label="Pace"
-          value={formatPace(currentPace)}
-          suffix="/km"
-          accent={status === "running"}
-        />
+        {isCycle ? (
+          <>
+            <BigStat label="Avg km/h" value={speedKmhNow.toFixed(1)} />
+            <BigStat label="Now km/h" value={currentSpeedKmhNow.toFixed(1)} accent={status === "running"} />
+          </>
+        ) : (
+          <>
+            <BigStat label="Avg pace" value={formatPace(pace)} suffix="/km" />
+            <BigStat label="Now" value={formatPace(currentPace)} suffix="/km" accent={status === "running"} />
+          </>
+        )}
       </div>
 
-      {/* Map */}
-      <RunMap samples={mapSamples} live={status === "running" || status === "paused"} mapStyle="trail" />
+      {/* Map — tap to expand */}
+      <div className="relative">
+        <RunMap
+          samples={mapSamples}
+          height={mapHeight}
+          live={status === "running" || status === "paused"}
+          mapStyle="trail"
+          activityColor={cfg.color}
+        />
+        <button
+          onClick={() => setMapExpanded((v) => !v)}
+          className="absolute bottom-2 right-2 bg-black/80 border border-grit px-2 py-1 z-[400] label-cap text-[9px] text-grit"
+        >
+          {mapExpanded ? "⊟ SHRINK" : "⊞ EXPAND"}
+        </button>
+        {status === "running" && samples.length >= 2 && (
+          <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-black/80 border border-accent-red px-2 py-1 z-[400]">
+            <span className="w-1.5 h-1.5 bg-accent-red rounded-full animate-pulse" />
+            <span className="label-cap text-[9px] text-accent-red">LIVE · {samples.length} pts</span>
+          </div>
+        )}
+      </div>
 
       {permission === "denied" && (
-        <div className="bg-grit-card border border-accent-red p-4 space-y-3">
-          <div>
-            <p className="label-cap text-[10px] text-accent-red">GPS BLOCKED</p>
-            <p className="text-xs text-grit-dim mt-1">
-              Allow location access in your browser/site settings so the tracker can record your live route.
-            </p>
-          </div>
-          <button onClick={retryGps} className="btn-grit w-full py-3 text-xs">
-            Retry GPS
-          </button>
+        <div className="bg-grit-card border border-accent-red p-4 space-y-2">
+          <p className="label-cap text-[10px] text-accent-red">GPS BLOCKED</p>
+          <p className="text-xs text-grit-dim">Enable location in browser settings to record your route.</p>
+          <button onClick={() => { setPermission("prompt"); setError(null); navigator.geolocation.getCurrentPosition(() => setPermission("granted"), handleGpsError, { enableHighAccuracy: true }); }}
+            className="btn-grit w-full py-2.5 text-xs">Retry GPS</button>
         </div>
       )}
 
@@ -699,126 +755,34 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
         </div>
       )}
 
-      {/* GPS Quality HUD */}
-      <div className="bg-grit-card border border-grit p-3 space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span
-              className="w-2 h-2 rounded-full"
-              style={{
-                background: gpsStrength.color,
-                boxShadow: `0 0 6px ${gpsStrength.color}`,
-              }}
-            />
-            <span className="label-cap text-[10px]" style={{ color: gpsStrength.color }}>
-              {gpsStrength.label}
-            </span>
-            {speedAnomaly && (
-              <span className="label-cap text-[10px] text-accent-red bg-accent-red/10 px-1.5 py-0.5 border border-accent-red">
-                SPEED JUMP
-              </span>
-            )}
+      {/* Live stats bar */}
+      {status === "running" && (
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="bg-grit-card border border-grit p-2">
+            <p className="text-[9px] uppercase tracking-wider text-grit-dim">Calories</p>
+            <p className="text-sm font-bold text-grit">{Math.round((distanceM / 1000) * weightKg * cfg.calMult)}</p>
           </div>
-          <button
-            onClick={() => setDebugOpen((v) => !v)}
-            className={`flex items-center gap-1 text-[10px] uppercase tracking-wider font-bold px-2 py-1 border transition-colors ${
-              debugOpen
-                ? "text-accent-red border-accent-red bg-accent-red/10"
-                : "text-grit-dim border-grit hover:text-grit"
-            }`}
-          >
-            <Settings size={12} />
-            {debugOpen ? "Hide" : "Debug"}
-          </button>
-        </div>
-
-        {/* Accuracy bar */}
-        <div className="flex items-center gap-2">
-          <span className="text-[9px] uppercase tracking-wider text-grit-dim w-12">Acc</span>
-          <div className="flex-1 h-2 bg-[#0e0e0e] border border-grit overflow-hidden">
-            <div
-              className="h-full transition-all duration-300"
-              style={{
-                width: gpsAccuracy == null ? "0%" : `${Math.min(100, (gpsAccuracy / 50) * 100)}%`,
-                background: gpsAccuracy != null && gpsAccuracy <= 15
-                  ? "#22c55e"
-                  : gpsAccuracy != null && gpsAccuracy <= 35
-                    ? "#fbbf24"
-                    : "#e63222",
-              }}
-            />
+          <div className="bg-grit-card border border-grit p-2">
+            <p className="text-[9px] uppercase tracking-wider text-grit-dim">Fixes</p>
+            <p className="text-sm font-bold text-grit">{samples.length}</p>
           </div>
-          <span className="text-[10px] font-bold tabular-nums w-14 text-right">
-            {gpsAccuracy != null ? `±${Math.round(gpsAccuracy)}m` : "—"}
-          </span>
-        </div>
-
-        {/* Fix staleness */}
-        <div className="flex items-center gap-2">
-          <span className="text-[9px] uppercase tracking-wider text-grit-dim w-12">Fix</span>
-          <span className="text-[10px] font-bold tabular-nums">
-            {lastFixTime == null
-              ? "—"
-              : Date.now() - lastFixTime < 2000
-                ? "< 1s ago"
-                : `${Math.round((Date.now() - lastFixTime) / 1000)}s ago`}
-          </span>
-        </div>
-
-        {debugOpen && (
-          <div className="border-t border-grit pt-2 space-y-1">
-            <div className="grid grid-cols-2 gap-2 text-[10px]">
-              <div>
-                <span className="text-grit-dim uppercase tracking-wider">Samples</span>
-                <span className="block font-bold tabular-nums text-grit">{samples.length}</span>
-              </div>
-              <div>
-                <span className="text-grit-dim uppercase tracking-wider">Fixes</span>
-                <span className="block font-bold tabular-nums text-grit">{fixCount}</span>
-              </div>
-              <div>
-                <span className="text-grit-dim uppercase tracking-wider">Rejects</span>
-                <span className="block font-bold tabular-nums text-grit">{rejectCount}</span>
-              </div>
-              <div>
-                <span className="text-grit-dim uppercase tracking-wider">Accept %</span>
-                <span className="block font-bold tabular-nums text-grit">
-                  {fixCount + rejectCount > 0
-                    ? `${Math.round((fixCount / (fixCount + rejectCount)) * 100)}%`
-                    : "—"}
-                </span>
-              </div>
-              <div>
-                <span className="text-grit-dim uppercase tracking-wider">Raw speed</span>
-                <span className="block font-bold tabular-nums text-grit">
-                  {rawSpeed != null ? `${rawSpeed.toFixed(1)} m/s` : "—"}
-                </span>
-              </div>
-              <div>
-                <span className="text-grit-dim uppercase tracking-wider">Coords</span>
-                <span className="block font-bold tabular-nums text-grit">
-                  {previewPos
-                    ? `${previewPos.lat.toFixed(5)}, ${previewPos.lng.toFixed(5)}`
-                    : samples.length > 0
-                      ? `${samples[samples.length - 1].lat.toFixed(5)}, ${samples[samples.length - 1].lng.toFixed(5)}`
-                      : "—"}
-                </span>
-              </div>
-            </div>
+          <div className="bg-grit-card border border-grit p-2">
+            <p className="text-[9px] uppercase tracking-wider text-grit-dim">Elevation</p>
+            <p className="text-sm font-bold text-grit">+{elevationGain(samples)}m</p>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Controls */}
-      <div className="pt-2">
+      <div className="pt-1">
         {status === "ready" && (
           <button
             onClick={start}
-            className="w-full bg-accent-red text-white py-5 flex items-center justify-center gap-3 font-extrabold uppercase tracking-widest text-sm hover:bg-accent-red/90 transition-colors"
-            style={{ boxShadow: "0 0 24px rgba(230,50,34,0.35)" }}
+            className="w-full text-white py-5 flex items-center justify-center gap-3 font-extrabold uppercase tracking-widest text-sm transition-colors"
+            style={{ background: cfg.color, boxShadow: `0 0 24px ${cfg.color}40` }}
           >
             <Play size={20} strokeWidth={3} fill="currentColor" />
-            Start
+            Start {cfg.label}
           </button>
         )}
         {status === "running" && (
@@ -834,7 +798,8 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={resume}
-              className="bg-accent-red text-white py-5 flex items-center justify-center gap-2 font-extrabold uppercase tracking-widest text-xs hover:bg-accent-red/90 transition-colors"
+              className="text-white py-5 flex items-center justify-center gap-2 font-extrabold uppercase tracking-widest text-xs transition-colors"
+              style={{ background: cfg.color }}
             >
               <Play size={18} strokeWidth={3} fill="currentColor" />
               Resume
@@ -858,12 +823,12 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
               Discard
             </button>
             <button
-              onClick={save}
-              className="bg-accent-red text-white py-5 flex items-center justify-center gap-2 font-extrabold uppercase tracking-widest text-xs hover:bg-accent-red/90 transition-colors"
-              style={{ boxShadow: "0 0 24px rgba(230,50,34,0.35)" }}
+              onClick={finish}
+              className="text-white py-5 flex items-center justify-center gap-2 font-extrabold uppercase tracking-widest text-xs transition-colors"
+              style={{ background: cfg.color, boxShadow: `0 0 24px ${cfg.color}40` }}
             >
               <Trophy size={18} strokeWidth={3} />
-              Save run
+              Save
             </button>
           </div>
         )}
@@ -873,32 +838,161 @@ function LiveRunner({ onFinish }: { onFinish: (run: Run | null) => void }) {
 }
 
 function BigStat({
-  label,
-  value,
-  suffix,
-  accent,
+  label, value, suffix, accent,
 }: {
-  label: string;
-  value: string;
-  suffix?: string;
-  accent?: boolean;
+  label: string; value: string; suffix?: string; accent?: boolean;
 }) {
   return (
     <div className="bg-grit-card border border-grit p-3 flex flex-col gap-1">
       <span className="text-[9px] uppercase tracking-widest text-grit-dim">{label}</span>
       <div className="flex items-baseline gap-1">
-        <span
-          className="display text-xl font-extrabold leading-none"
-          style={{ color: accent ? "#e63222" : "var(--grit-text, #e5e5e5)" }}
-        >
+        <span className="display text-xl font-extrabold leading-none" style={{ color: accent ? "#e63222" : "var(--grit-text, #e5e5e5)" }}>
           {value}
         </span>
-        {suffix && (
-          <span className="text-[9px] font-bold uppercase tracking-wider text-grit-dim">
-            {suffix}
-          </span>
+        {suffix && <span className="text-[9px] font-bold uppercase tracking-wider text-grit-dim">{suffix}</span>}
+      </div>
+    </div>
+  );
+}
+
+/* ====================== POST-RUN SUMMARY ====================== */
+
+function RunSummary({
+  run,
+  onSave,
+  onDiscard,
+}: {
+  run: Run;
+  onSave: (named: Run) => void;
+  onDiscard: () => void;
+}) {
+  const cfg = ACTIVITY_CONFIG[run.activityType ?? "run"];
+  const [name, setName] = useState(labelRun(run));
+  const [notes, setNotes] = useState("");
+  const [hr, setHr] = useState("");
+
+  function save() {
+    onSave({
+      ...run,
+      name: name.trim() || labelRun(run),
+      notes: notes.trim() || undefined,
+      heartRateAvg: hr ? Number(hr) : undefined,
+    });
+  }
+
+  async function share() {
+    const text = `${name} · ${(run.distanceM / 1000).toFixed(2)} km · ${formatDuration(run.durationSec)} · ${run.calories ?? estimateCalories(run)} kcal 🔥 via DEADSET`;
+    if (navigator.share) {
+      try { await navigator.share({ title: "DEADSET Activity", text }); return; } catch { /* cancelled */ }
+    }
+    await navigator.clipboard.writeText(text);
+    toast.success("Copied to clipboard");
+  }
+
+  return (
+    <div className="px-4 pt-6 pb-24 max-w-screen-sm mx-auto space-y-4">
+      <header className="flex items-center justify-between">
+        <button onClick={onDiscard} className="flex items-center gap-1 text-grit-dim text-xs uppercase tracking-wider font-bold">
+          <Trash2 size={14} /> Discard
+        </button>
+        <div className="flex items-center gap-2">
+          <span style={{ color: cfg.color }}>{cfg.icon}</span>
+          <span className="label-cap text-[11px]" style={{ color: cfg.color }}>ACTIVITY COMPLETE</span>
+        </div>
+        <button onClick={share} className="flex items-center gap-1 text-xs uppercase tracking-wider font-bold" style={{ color: cfg.color }}>
+          <Share2 size={14} /> Share
+        </button>
+      </header>
+
+      {/* Map */}
+      <RunMap samples={run.samples} height={280} mapStyle="trail" activityColor={cfg.color} />
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="border p-4 text-center" style={{ borderColor: cfg.color }}>
+          <p className="label-cap text-[9px]" style={{ color: cfg.color }}>DISTANCE</p>
+          <p className="display text-3xl font-extrabold text-grit leading-none mt-1">{(run.distanceM / 1000).toFixed(2)}</p>
+          <p className="label-cap text-[9px] text-grit-dim">km</p>
+        </div>
+        <div className="border border-grit p-4 text-center bg-grit-card">
+          <p className="label-cap text-[9px] text-grit-dim">TIME</p>
+          <p className="display text-3xl font-extrabold text-grit leading-none mt-1">{formatDuration(run.durationSec)}</p>
+          <p className="label-cap text-[9px] text-grit-dim">duration</p>
+        </div>
+        <div className="border border-grit p-3 bg-grit-card text-center">
+          <p className="label-cap text-[9px] text-grit-dim">
+            {run.activityType === "cycle" ? "AVG SPEED" : "AVG PACE"}
+          </p>
+          <p className="display text-xl font-extrabold text-grit leading-none mt-1">
+            {run.activityType === "cycle"
+              ? `${speedKmh(run.distanceM, run.durationSec)} km/h`
+              : `${formatPace(run.avgPaceSecPerKm)}/km`}
+          </p>
+        </div>
+        <div className="border border-grit p-3 bg-grit-card text-center">
+          <p className="label-cap text-[9px] text-grit-dim">CALORIES</p>
+          <p className="display text-xl font-extrabold text-grit leading-none mt-1">{run.calories ?? estimateCalories(run)}</p>
+          <p className="label-cap text-[9px] text-grit-dim">kcal</p>
+        </div>
+        {(run.elevGainM ?? 0) > 0 && (
+          <div className="border border-grit p-3 bg-grit-card text-center">
+            <p className="label-cap text-[9px] text-grit-dim">ELEVATION</p>
+            <p className="display text-xl font-extrabold text-grit leading-none mt-1">+{run.elevGainM}m</p>
+          </div>
+        )}
+        {run.splits.length > 0 && (
+          <div className="border border-grit p-3 bg-grit-card text-center">
+            <p className="label-cap text-[9px] text-grit-dim">BEST KM</p>
+            <p className="display text-xl font-extrabold text-grit leading-none mt-1">{formatPace(run.bestPaceSecPerKm ?? 0)}/km</p>
+          </div>
         )}
       </div>
+
+      {/* Name + notes */}
+      <div className="space-y-3">
+        <div>
+          <label className="label-cap text-[10px] text-grit-dim block mb-1">Activity name</label>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={60}
+            className="input-grit w-full"
+            placeholder="Morning Run"
+          />
+        </div>
+        <div>
+          <label className="label-cap text-[10px] text-grit-dim block mb-1">Notes (optional)</label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={2}
+            maxLength={500}
+            className="input-grit w-full resize-none"
+            placeholder="How did it feel?"
+          />
+        </div>
+        <div>
+          <label className="label-cap text-[10px] text-grit-dim block mb-1">Avg heart rate (optional)</label>
+          <input
+            value={hr}
+            onChange={(e) => setHr(e.target.value)}
+            inputMode="numeric"
+            maxLength={3}
+            className="input-grit w-32"
+            placeholder="e.g. 155"
+          />
+          <span className="label-cap text-[9px] text-grit-dim ml-2">bpm</span>
+        </div>
+      </div>
+
+      <button
+        onClick={save}
+        className="w-full text-white py-5 flex items-center justify-center gap-3 font-extrabold uppercase tracking-widest text-sm"
+        style={{ background: cfg.color, boxShadow: `0 0 24px ${cfg.color}40` }}
+      >
+        <Trophy size={20} strokeWidth={3} />
+        Save Activity
+      </button>
     </div>
   );
 }
@@ -917,82 +1011,63 @@ function RunDetail({
   onDelete: () => void;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const cfg = ACTIVITY_CONFIG[run.activityType ?? "run"];
   const maxSplit = run.splits.length ? Math.max(...run.splits) : 0;
   const minSplit = run.splits.length ? Math.min(...run.splits) : 0;
-  const routePoints = run.samples.length;
-  const accuracySamples = run.samples.filter((s) => s.acc != null);
-  const avgAccuracy = accuracySamples.length
-    ? accuracySamples.reduce((sum, s) => sum + (s.acc ?? 0), 0) / accuracySamples.length
-    : 0;
-  const segmentCount = Math.max(1, Math.ceil(run.distanceM / 1000));
+
+  async function share() {
+    const text = `${run.name || labelRun(run)} · ${(run.distanceM / 1000).toFixed(2)} km · ${formatDuration(run.durationSec)} · ${run.calories ?? estimateCalories(run)} kcal 🔥 via DEADSET`;
+    if (navigator.share) {
+      try { await navigator.share({ title: "DEADSET Activity", text }); return; } catch { /* cancelled */ }
+    }
+    await navigator.clipboard.writeText(text);
+    toast.success("Copied");
+  }
 
   return (
     <div className="px-4 pt-6 pb-24 max-w-screen-sm mx-auto space-y-4">
       <header className="flex items-center justify-between">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1 text-grit-dim hover:text-grit text-xs uppercase tracking-wider font-bold"
-        >
-          <ChevronLeft size={16} />
-          Back
+        <button onClick={onBack} className="flex items-center gap-1 text-grit-dim hover:text-grit text-xs uppercase tracking-wider font-bold">
+          <ChevronLeft size={16} /> Back
         </button>
-        <button
-          onClick={() => (confirmDelete ? onDelete() : setConfirmDelete(true))}
-          className={`flex items-center gap-1 text-xs uppercase tracking-wider font-bold ${
-            confirmDelete ? "text-accent-red" : "text-grit-dim hover:text-accent-red"
-          }`}
-        >
-          <Trash2 size={14} />
-          {confirmDelete ? "Confirm" : "Delete"}
-        </button>
+        <div className="flex items-center gap-3">
+          <button onClick={share} className="text-grit-dim hover:text-grit"><Share2 size={16} /></button>
+          <button
+            onClick={() => confirmDelete ? onDelete() : setConfirmDelete(true)}
+            className={`flex items-center gap-1 text-xs uppercase tracking-wider font-bold ${confirmDelete ? "text-accent-red" : "text-grit-dim hover:text-accent-red"}`}
+          >
+            <Trash2 size={14} />
+            {confirmDelete ? "Confirm" : "Delete"}
+          </button>
+        </div>
       </header>
 
       <div>
-        <p className="label-cap text-[10px] text-grit-dim">
-          {formatRunDate(run.date)}
-        </p>
+        <div className="flex items-center gap-2 mb-1">
+          <span style={{ color: cfg.color }}>{cfg.icon}</span>
+          <p className="label-cap text-[10px]" style={{ color: cfg.color }}>{formatRunDate(run.date)}</p>
+        </div>
         <h1 className="display text-2xl font-extrabold uppercase text-grit tracking-tight">
-          {labelRun(run)}
+          {run.name || labelRun(run)}
         </h1>
+        {run.notes && <p className="text-sm text-grit-dim mt-1 italic">"{run.notes}"</p>}
       </div>
 
-      <RunMap samples={run.samples} height={340} mapStyle="trail" />
-
-      <section className="bg-grit-card border border-grit p-4 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="label-cap text-[10px] text-accent-red">ROUTE</p>
-            <h2 className="display text-xl font-extrabold uppercase text-grit leading-none mt-1">
-              Trail effort saved.
-            </h2>
-          </div>
-          <Link to="/friends" className="btn-ghost px-3 py-2 text-[10px] gap-1">
-            <Share2 size={14} /> Share
-          </Link>
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          <MiniCue icon={<MapPinned size={14} />} label="Points" value={String(routePoints)} />
-          <MiniCue icon={<Zap size={14} />} label="Segments" value={String(segmentCount)} />
-          <MiniCue icon={<Activity size={14} />} label="GPS" value={avgAccuracy ? `±${Math.round(avgAccuracy)}m` : "—"} />
-        </div>
-      </section>
+      {/* Full route map */}
+      <RunMap samples={run.samples} height={340} mapStyle="trail" activityColor={cfg.color} />
 
       <div className="grid grid-cols-2 gap-2">
         <DetailStat label="Distance" value={`${(run.distanceM / 1000).toFixed(2)} km`} big />
         <DetailStat label="Time" value={formatDuration(run.durationSec)} big />
-        <DetailStat label="Avg pace" value={`${formatPace(run.avgPaceSecPerKm)}/km`} />
-        <DetailStat
-          label="Best km"
-          value={run.bestPaceSecPerKm ? `${formatPace(run.bestPaceSecPerKm)}/km` : "—"}
-        />
-        <DetailStat
-          label="Elevation"
-          value={run.elevGainM ? `+${run.elevGainM} m` : "—"}
-        />
-        <DetailStat
-          label="Calories"
-          value={`${estimateCalories(run)} kcal`}
-        />
+        <DetailStat label={run.activityType === "cycle" ? "Avg speed" : "Avg pace"}
+          value={run.activityType === "cycle" ? `${speedKmh(run.distanceM, run.durationSec)} km/h` : `${formatPace(run.avgPaceSecPerKm)}/km`} />
+        <DetailStat label={run.activityType === "cycle" ? "Top speed est." : "Best km"}
+          value={run.activityType === "cycle"
+            ? `${run.bestPaceSecPerKm ? (3600 / run.bestPaceSecPerKm).toFixed(1) : "—"} km/h`
+            : (run.bestPaceSecPerKm ? `${formatPace(run.bestPaceSecPerKm)}/km` : "—")} />
+        <DetailStat label="Elevation" value={run.elevGainM ? `+${run.elevGainM} m` : "—"} />
+        <DetailStat label="Calories" value={`${run.calories ?? estimateCalories(run)} kcal`} />
+        {run.heartRateAvg && <DetailStat label="Avg HR" value={`${run.heartRateAvg} bpm`} />}
       </div>
 
       {/* Splits */}
@@ -1000,7 +1075,7 @@ function RunDetail({
         <section className="bg-grit-card border border-grit p-3 space-y-2">
           <div className="flex items-center gap-2">
             <Zap size={14} className="text-accent-red" />
-            <h2 className="label-cap text-xs text-grit">Splits</h2>
+            <h2 className="label-cap text-xs text-grit">Km Splits</h2>
           </div>
           <ul className="space-y-1">
             {run.splits.map((sec, i) => {
@@ -1009,29 +1084,17 @@ function RunDetail({
               const pct = maxSplit > 0 ? (sec / maxSplit) * 100 : 0;
               return (
                 <li key={i} className="flex items-center gap-2 text-xs">
-                  <span className="w-6 text-grit-dim font-bold tabular-nums">
-                    {i + 1}
-                  </span>
+                  <span className="w-6 text-grit-dim font-bold tabular-nums">{i + 1}</span>
                   <div className="flex-1 h-5 bg-grit relative overflow-hidden">
                     <div
                       className="absolute inset-y-0 left-0"
-                      style={{
-                        width: `${pct}%`,
-                        background: isBest
-                          ? "#e63222"
-                          : isWorst
-                          ? "#404040"
-                          : "#2a2a2a",
-                      }}
+                      style={{ width: `${pct}%`, background: isBest ? cfg.color : isWorst ? "#404040" : "#2a2a2a" }}
                     />
                   </div>
-                  <span
-                    className={`w-16 text-right tabular-nums font-bold ${
-                      isBest ? "text-accent-red" : "text-grit"
-                    }`}
-                  >
+                  <span className={`w-16 text-right tabular-nums font-bold ${isBest ? "text-accent-red" : "text-grit"}`}>
                     {formatPace(sec)}
                   </span>
+                  {isBest && <span className="label-cap text-[9px] text-accent-red">BEST</span>}
                 </li>
               );
             })}
@@ -1040,29 +1103,26 @@ function RunDetail({
       )}
 
       <RunAdvanced run={run} allRuns={allRuns} />
+
+      {/* Share / Social */}
+      <section className="border border-grit bg-grit-card p-4 space-y-3">
+        <p className="label-cap text-[10px] text-accent-red">SHARE WITH CREW</p>
+        <button onClick={share} className="btn-grit w-full py-3 flex items-center justify-center gap-2">
+          <Share2 size={14} /> Share this {cfg.label.toLowerCase()}
+        </button>
+        <Link to="/friends" className="block text-center label-cap text-[10px] text-grit-dim hover:text-accent-red">
+          Post to feed → <Users size={10} className="inline" />
+        </Link>
+      </section>
     </div>
   );
 }
 
-function DetailStat({
-  label,
-  value,
-  big = false,
-}: {
-  label: string;
-  value: string;
-  big?: boolean;
-}) {
+function DetailStat({ label, value, big = false }: { label: string; value: string; big?: boolean }) {
   return (
     <div className="bg-grit-card border border-grit p-3 flex flex-col gap-1">
       <span className="text-[9px] uppercase tracking-widest text-grit-dim">{label}</span>
-      <span
-        className={`display font-extrabold text-grit leading-none ${
-          big ? "text-2xl" : "text-lg"
-        }`}
-      >
-        {value}
-      </span>
+      <span className={`display font-extrabold text-grit leading-none ${big ? "text-2xl" : "text-lg"}`}>{value}</span>
     </div>
   );
 }
@@ -1070,37 +1130,28 @@ function DetailStat({
 /* ====================== HELPERS ====================== */
 
 function labelRun(r: Run): string {
+  const cfg = ACTIVITY_CONFIG[r.activityType ?? "run"];
   const h = new Date(r.date).getHours();
-  if (h < 5) return "Late night run";
-  if (h < 12) return "Morning run";
-  if (h < 17) return "Afternoon run";
-  if (h < 21) return "Evening run";
-  return "Night run";
+  const time = h < 5 ? "Late night" : h < 12 ? "Morning" : h < 17 ? "Afternoon" : h < 21 ? "Evening" : "Night";
+  return `${time} ${cfg.label}`;
 }
 
 function formatRunDate(iso: string): string {
   const d = new Date(iso);
   const today = new Date();
-  const sameDay =
-    d.getFullYear() === today.getFullYear() &&
-    d.getMonth() === today.getMonth() &&
-    d.getDate() === today.getDate();
-  const time = d.toLocaleTimeString(undefined, {
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  const sameDay = d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
+  const time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
   if (sameDay) return `Today · ${time}`;
-  return `${d.toLocaleDateString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  })} · ${time}`;
+  return `${d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })} · ${time}`;
 }
 
 function estimateCalories(run: Run): number {
-  // Rough estimate: ~1 kcal per kg per km for running, assume 70kg if unknown
-  const km = run.distanceM / 1000;
-  return Math.round(km * 70);
+  return Math.round((run.distanceM / 1000) * 70);
+}
+
+function speedKmh(distanceM: number, durationSec: number): string {
+  if (durationSec <= 0) return "0.0";
+  return ((distanceM / durationSec) * 3.6).toFixed(1);
 }
 
 /* ====================== WAKE LOCK ====================== */
@@ -1109,27 +1160,14 @@ let wakeLockSentinel: WakeLockSentinel | null = null;
 
 async function requestWakeLock() {
   try {
-    const nav = navigator as Navigator & {
-      wakeLock?: { request: (type: "screen") => Promise<WakeLockSentinel> };
-    };
-    if (nav.wakeLock) {
-      wakeLockSentinel = await nav.wakeLock.request("screen");
-    }
-  } catch {
-    // ignore
-  }
+    const nav = navigator as Navigator & { wakeLock?: { request: (type: "screen") => Promise<WakeLockSentinel> } };
+    if (nav.wakeLock) wakeLockSentinel = await nav.wakeLock.request("screen");
+  } catch { /* ignore */ }
 }
 
 function releaseWakeLock() {
-  try {
-    wakeLockSentinel?.release();
-  } catch {
-    // ignore
-  }
+  try { wakeLockSentinel?.release(); } catch { /* ignore */ }
   wakeLockSentinel = null;
 }
 
-interface WakeLockSentinel {
-  release: () => Promise<void>;
-}
-
+interface WakeLockSentinel { release: () => Promise<void>; }
