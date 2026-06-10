@@ -67,15 +67,15 @@ function Hero() {
       />
       <div className="grid lg:grid-cols-2 gap-12 items-center">
         <div>
-          <h1 className="display font-extrabold text-4xl sm:text-5xl lg:text-6xl leading-[1.05] tracking-tight" style={{ fontStyle: "italic" }}>
+          <h1 className="display font-extrabold text-4xl sm:text-5xl lg:text-6xl leading-[1.05] tracking-tight animate-slide-up" style={{ fontStyle: "italic" }}>
             <span style={{ color: "#f5f5f0" }}>TRAIN SMARTER.</span><br />
             <span style={{ color: "#f5f5f0" }}>TRACK EVERYTHING.</span><br />
             <span style={{ color: "#e63222" }}>FORGE YOUR BODY.</span>
           </h1>
-          <p className="mt-6 text-grit-dim max-w-md leading-relaxed">
+          <p className="mt-6 text-grit-dim max-w-md leading-relaxed animate-slide-up delay-150">
             DEADSET is the all-in-one fitness app built to help you plan workouts, track progress, and stay motivated to reach your goals.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
+          <div className="mt-8 flex flex-wrap gap-3 animate-slide-up delay-250">
             <Link
               to="/auth"
               className="label-cap text-sm px-6 py-3 inline-flex items-center gap-2"
@@ -274,14 +274,14 @@ function FAQ() {
           <button
             key={i}
             onClick={() => setOpen(open === i ? null : i)}
-            className="w-full text-left p-4 flex items-start justify-between gap-4"
-            style={{ background: "rgba(20,20,20,0.7)", border: "1px solid rgba(255,255,255,0.05)" }}
+            className="w-full text-left p-4 flex items-start justify-between gap-4 press"
+            style={{ background: open === i ? "rgba(230,50,34,0.05)" : "rgba(20,20,20,0.7)", border: `1px solid ${open === i ? "rgba(230,50,34,0.25)" : "rgba(255,255,255,0.05)"}`, transition: "background 0.2s ease, border-color 0.2s ease" }}
           >
             <div className="flex-1">
               <p className="label-cap text-sm text-grit">{f.q}</p>
-              {open === i && <p className="text-xs text-grit-dim mt-2 leading-relaxed">{f.a}</p>}
+              {open === i && <p className="text-xs text-grit-dim mt-2 leading-relaxed animate-slide-down">{f.a}</p>}
             </div>
-            <span className="text-accent-red text-xl leading-none shrink-0">{open === i ? "−" : "+"}</span>
+            <span className="text-accent-red text-xl leading-none shrink-0" style={{ transition: "transform 0.2s ease", transform: open === i ? "rotate(0deg)" : "rotate(0deg)" }}>{open === i ? "−" : "+"}</span>
           </button>
         ))}
       </div>

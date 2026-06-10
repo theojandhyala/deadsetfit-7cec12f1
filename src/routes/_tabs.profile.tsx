@@ -226,8 +226,8 @@ function ProfilePage() {
 
 
   return (
-    <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
-      <header className="px-5 pt-6 pb-4 flex items-start justify-between">
+    <div style={{ paddingTop: "env(safe-area-inset-top)" }} className="animate-fade-in">
+      <header className="px-5 pt-6 pb-4 flex items-start justify-between animate-slide-down">
         <p className="label-cap">YOUR CARD</p>
         <button onClick={() => editing ? save() : setEditing(true)} disabled={savingProfile} className="label-cap text-accent-red disabled:opacity-50 mt-1">
           {editing ? (savingProfile ? "..." : "Save") : "Edit"}
@@ -235,7 +235,7 @@ function ProfilePage() {
       </header>
 
       {/* === FIFA card === */}
-      <section className="px-5 mb-5 relative">
+      <section className="px-5 mb-5 relative animate-scale-in delay-100">
         <button onClick={() => fileRef.current?.click()} className="absolute top-1 right-7 z-10 bg-accent-red rounded-full p-1.5 shadow" aria-label="Change photo">
           <Pencil size={10} />
         </button>

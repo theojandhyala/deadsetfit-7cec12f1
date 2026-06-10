@@ -135,8 +135,8 @@ function TrainPage() {
   }
 
   return (
-    <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
-      <header className="px-5 pt-6 pb-4 flex items-center justify-between">
+    <div style={{ paddingTop: "env(safe-area-inset-top)" }} className="animate-fade-in">
+      <header className="px-5 pt-6 pb-4 flex items-center justify-between animate-slide-down">
         <Link to="/profile" className="flex items-center gap-2.5">
           <div className="flex flex-col leading-tight">
             <span className="label-cap text-[9px]">PWR</span>
@@ -160,8 +160,8 @@ function TrainPage() {
       <ProBanner />
       <Reminders />
 
-      <div className="px-5 mb-5"><Big3Card state={state} /></div>
-      <div className="px-5 mb-5"><WeeklyRecap state={state} /></div>
+      <div className="px-5 mb-5 animate-slide-up delay-100"><Big3Card state={state} /></div>
+      <div className="px-5 mb-5 animate-slide-up delay-150"><WeeklyRecap state={state} /></div>
 
 
 

@@ -199,15 +199,15 @@ function DietPage() {
   };
 
   return (
-    <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
-      <header className="px-5 pt-6 pb-2">
+    <div style={{ paddingTop: "env(safe-area-inset-top)" }} className="animate-fade-in">
+      <header className="px-5 pt-6 pb-2 animate-slide-down">
         <p className="label-cap">Daily Target</p>
         <div className="display text-6xl font-extrabold text-grit leading-none mt-1">{calories}<span className="text-2xl text-[#8a8a8a] ml-2">KCAL</span></div>
         <p className="text-xs text-[#8a8a8a] mt-1">{totals.c} eaten · {Math.max(0, calories - totals.c)} remaining</p>
       </header>
 
       {/* ===== QUICK ACTIONS — log a meal fast ===== */}
-      <div className="px-5 mt-3">
+      <div className="px-5 mt-3 animate-slide-up delay-100">
         <p className="label-cap text-[10px] text-[#8a8a8a] mb-2">Log a meal</p>
         <div className="grid grid-cols-3 gap-2">
           <button

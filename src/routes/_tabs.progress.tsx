@@ -217,14 +217,14 @@ function ProgressPage() {
   const latestScan = state.physiqueScans?.length ? state.physiqueScans[state.physiqueScans.length - 1] : undefined;
 
   return (
-    <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
-      <header className="px-5 pt-6 pb-4">
+    <div style={{ paddingTop: "env(safe-area-inset-top)" }} className="animate-fade-in">
+      <header className="px-5 pt-6 pb-4 animate-slide-down">
         <p className="label-cap">Progress</p>
         <h1 className="display text-3xl font-extrabold uppercase text-grit">Track The Work</h1>
       </header>
 
       {/* Hero stats */}
-      <section className="px-5 mb-6 grid grid-cols-2 gap-3">
+      <section className="px-5 mb-6 grid grid-cols-2 gap-3 animate-slide-up delay-50">
         <Stat label="STREAK" value={`${streak}`} sub="DAYS" accent={streak > 0} icon={<Flame size={14} />} />
         <Stat label="SESSIONS" value={`${totalSessions}`} sub="LOGGED" />
         <Stat label="VOLUME" value={`${Math.round(totalVolume).toLocaleString()}`} sub="KG" />

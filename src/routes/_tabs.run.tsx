@@ -214,8 +214,8 @@ function RunHub({
   const cfg = ACTIVITY_CONFIG[selectedActivity];
 
   return (
-    <div className="px-4 pt-6 pb-24 max-w-screen-sm mx-auto space-y-5">
-      <header className="space-y-1">
+    <div className="px-4 pt-6 pb-24 max-w-screen-sm mx-auto space-y-5 animate-fade-in">
+      <header className="space-y-1 animate-slide-down">
         <p className="label-cap text-[10px] text-grit-dim">CARDIO · GPS TRACKER</p>
         <h1 className="display text-3xl font-extrabold uppercase text-grit tracking-tight">
           Get moving.

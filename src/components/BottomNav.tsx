@@ -58,10 +58,13 @@ export function BottomNav() {
             <li key={to} className="flex-1">
               <Link
                 to={to}
-                className="flex flex-col items-center justify-center gap-1 py-3 relative"
-                style={{ color: active ? "#e63222" : "#8a8a8a" }}
+                className="flex flex-col items-center justify-center gap-1 py-3 relative press"
+                style={{
+                  color: active ? "#e63222" : "#8a8a8a",
+                  transition: "color 0.18s ease, transform 0.1s ease",
+                }}
               >
-                <span className="relative">
+                <span className="relative" style={{ transform: active ? "scale(1.12)" : "scale(1)", transition: "transform 0.2s cubic-bezier(0.22,1,0.36,1)" }}>
                   <Icon size={20} strokeWidth={2.5} />
                   {showBadge && (
                     <span
@@ -70,7 +73,7 @@ export function BottomNav() {
                     />
                   )}
                 </span>
-                <span className="text-[9px] font-bold uppercase tracking-widest">{label}</span>
+                <span className="text-[9px] font-bold uppercase tracking-widest" style={{ opacity: active ? 1 : 0.7, transition: "opacity 0.2s ease" }}>{label}</span>
               </Link>
             </li>
           );
