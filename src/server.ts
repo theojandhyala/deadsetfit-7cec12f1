@@ -29,7 +29,8 @@ async function spaFallback(env: CloudflareEnv): Promise<Response> {
   try {
     const assets = env?.ASSETS;
     if (assets) {
-      const resp = await assets.fetch(new Request("https://deadsetfit.org/app-shell.html"));
+      // Use a stable placeholder host — ASSETS binding ignores the host
+      const resp = await assets.fetch(new Request("http://localhost/app-shell.html"));
       if (resp.ok) {
         return new Response(resp.body, {
           status: 200,
@@ -51,16 +52,17 @@ async function normalizeCatastrophicSsrResponse(
   env: CloudflareEnv,
 ): Promise<Response> {
   if (response.status < 500) return response;
-  const contentType = response.headers.get("content-type") ?? "";
-  if (!contentType.includes("application/json")) return response;
-
-  const body = await response.clone().text();
-  if (!body.includes('"unhandled":true') || !body.includes('"message":"HTTPError"')) {
-    return response;
-  }
-
-  console.error(consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${body}`));
+  // Any 5xx from SSR — serve the SPA shell so React boots client-side.
+  const err = consumeLastCapturedError();
+  if (err) console.error(err);
   return spaFallback(env);
+}
+
+function isPageRequest(request: Request): boolean {
+  const url = new URL(request.url);
+  const ext = url.pathname.split(".").pop() ?? "";
+  // Only intercept navigation requests (no file extension, or .html)
+  return !ext || ext === "html" || url.pathname === "/";
 }
 
 export default {
@@ -68,10 +70,14 @@ export default {
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response, env);
+      if (isPageRequest(request)) {
+        return await normalizeCatastrophicSsrResponse(response, env);
+      }
+      return response;
     } catch (error) {
       console.error(error);
-      return spaFallback(env);
+      if (isPageRequest(request)) return spaFallback(env);
+      return new Response("Internal Server Error", { status: 500 });
     }
   },
 };
