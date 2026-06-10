@@ -191,6 +191,8 @@ export interface RunSample {
   alt?: number;
 }
 
+export type ActivityType = "run" | "walk" | "cycle" | "hike" | "trail";
+
 export interface Run {
   id: string;
   /** ISO start */
@@ -209,6 +211,12 @@ export interface Run {
   /** seconds-per-km for each completed kilometer */
   splits: number[];
   notes?: string;
+  name?: string;
+  activityType?: ActivityType;
+  /** calories burned (kcal) */
+  calories?: number;
+  /** avg heart rate if user manually enters */
+  heartRateAvg?: number;
 }
 
 export interface AppState {

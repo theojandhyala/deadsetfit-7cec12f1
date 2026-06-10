@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Dumbbell, Route, Apple, User, Users } from "lucide-react";
+import { Dumbbell, Activity, Apple, User, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyFollowStats } from "@/lib/social.functions";
@@ -8,7 +8,7 @@ const STORAGE_KEY = "deadset_last_seen_followers";
 
 const tabs = [
   { to: "/train", label: "Train", Icon: Dumbbell },
-  { to: "/run", label: "Run", Icon: Route },
+  { to: "/run", label: "Cardio", Icon: Activity },
   { to: "/friends", label: "Friends", Icon: Users },
   { to: "/diet", label: "Diet", Icon: Apple },
   { to: "/profile", label: "Profile", Icon: User },
