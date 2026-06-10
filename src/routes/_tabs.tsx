@@ -43,40 +43,32 @@ function TabsLayout() {
         // Already rendering? Only trust local app state when it belongs to this signed-in account.
         if (getState().profile && localOwner === session.user.id) return;
 
-        // No local profile: fetch from server and wait for remote state in parallel.
-        // Use generous timeouts — a slow first-load is better than a wrong redirect.
-        let row = await withTimeout(getProfileRef.current().catch(() => null), null, 6000);
-        if (!row) {
-          // Retry once in case of transient server error
-          row = await withTimeout(getProfileRef.current().catch(() => null), null, 6000);
-        }
-        // Also wait up to 5s for StateSync to hydrate localStorage from the DB
-        await withTimeout(waitForRemoteState(session.user.id), undefined, 5000);
+        // No local profile: fetch from DB and wait for remote state hydration in parallel.
+        const [row] = await Promise.all([
+          withTimeout(getProfileRef.current().catch(() => null), null, 7000),
+          withTimeout(waitForRemoteState(session.user.id), undefined, 5000),
+        ]);
 
+        // StateSync may have hydrated while we were waiting — check again.
         if (getState().profile && getLocalStateOwner() === session.user.id) return;
+
         if (row && profileQuestionsComplete(row)) {
-          // Build profile from DB row regardless of remote state timing
-          if (!getState().profile || localOwner !== session.user.id) {
-            const accountProfile = profileFromAccount(row);
-            if (accountProfile) {
-              setState((current) => ({
-                ...current,
-                profile: accountProfile,
-                schedule: current.schedule ?? defaultSchedule(accountProfile),
-              }));
-            }
+          const accountProfile = profileFromAccount(row);
+          if (accountProfile) {
+            setState((current) => ({
+              ...current,
+              profile: accountProfile,
+              schedule: current.schedule ?? defaultSchedule(accountProfile),
+            }));
           }
           return;
         }
-        // Only redirect to onboarding when we have a confirmed DB row with incomplete data
+
+        // Only redirect to onboarding when DB confirms the profile is genuinely incomplete.
+        // If row is null it means a network/auth error — don't redirect, show the app.
         if (row !== null && !profileQuestionsComplete(row)) {
           navRef.current({ to: "/onboarding", replace: true });
-          return;
         }
-        // row was null (network/auth error) — don't redirect, let safety timeout show the app
-        if (getState().profile) return;
-        // Truly no profile anywhere — new user
-        if (row === null) return; // stay and let user see the app; StateSync may still arrive
       } catch (e) {
         console.warn("tabs bootstrap failed", e);
       } finally {
@@ -84,7 +76,7 @@ function TabsLayout() {
       }
     })();
 
-    const safety = setTimeout(finish, 14000);
+    const safety = setTimeout(finish, 8000);
 
     const { data } = supabase.auth.onAuthStateChange((event, s) => {
       if (event === "SIGNED_OUT" && !s) navRef.current({ to: "/auth", replace: true });
@@ -98,8 +90,9 @@ function TabsLayout() {
 
   if (!ready) {
     return (
-      <div className="min-h-screen bg-grit flex items-center justify-center">
-        <span className="label-cap text-grit-dim text-xs animate-pulse">Loading…</span>
+      <div className="min-h-screen bg-grit flex flex-col items-center justify-center gap-3">
+        <div className="w-8 h-8 border-2 border-accent-red border-t-transparent rounded-full animate-spin" />
+        <span className="label-cap text-grit text-xs">Loading your profile…</span>
       </div>
     );
   }
