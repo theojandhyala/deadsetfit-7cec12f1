@@ -11,4 +11,16 @@ export default defineConfig({
     tsconfigPaths(),
     tailwindcss(),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        // Stable entry filename so public/app-shell.html can hardcode the path.
+        // Code-split chunks and CSS assets keep content hashes for cache-busting.
+        entryFileNames: (chunk) =>
+          chunk.isEntry && chunk.name === "index" ? "assets/index.js" : "assets/[name]-[hash].js",
+        assetFileNames: (asset) =>
+          asset.name === "styles.css" ? "assets/styles.css" : "assets/[name]-[hash].[ext]",
+      },
+    },
+  },
 });
