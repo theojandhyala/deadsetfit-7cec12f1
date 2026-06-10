@@ -282,7 +282,7 @@ function RunHub({
         );
       })}
 
-      {/* History list */} origin/main
+      {/* History list */}
       <section className="space-y-2">
         <div className="flex items-center justify-between">
           <h2 className="label-cap text-xs text-grit">Recent Activity</h2>
