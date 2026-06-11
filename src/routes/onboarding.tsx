@@ -63,6 +63,7 @@ function Onboarding() {
   const [mode, setMode] = useState<Mode | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Partial<Profile>>({});
+  const [submitting, setSubmitting] = useState(false);
   const save = useServerFn(saveProfile);
   const getProfile = useServerFn(getMyProfile);
   const ORDER = useMemo(() => orderFor(mode), [mode]);
@@ -102,43 +103,71 @@ function Onboarding() {
     };
   }, [getProfile, navigate]);
 
+  async function finalize(merged: Partial<Profile>) {
+    const p = {
+      ...merged,
+      startingWeightKg: merged.startingWeightKg ?? merged.weightKg,
+    } as Profile;
+    const sched = mode === "BUILD" ? emptySchedule() : defaultSchedule(p);
+    if (userId) setLocalStateOwner(userId);
+    setState((s) => ({ ...s, profile: p, schedule: sched }));
+    const publicStats = buildPublicStats(getState());
+
+    setSubmitting(true);
+    // Retry the save up to 3 times so a transient network blip doesn't
+    // silently leave the account un-onboarded.
+    let lastErr: Error | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await save({
+          data: {
+            username: p.username,
+            display_name: p.username,
+            goal: p.goal,
+            experience: p.experience,
+            gender: p.gender,
+            age: p.age,
+            weight_kg: p.weightKg,
+            height_cm: p.heightCm,
+            days_per_week: p.daysPerWeek,
+            equipment: p.equipment,
+            avatar_url: p.avatarDataUrl,
+            public_stats: publicStats,
+            onboarded: true,
+          },
+        });
+        setSubmitting(false);
+        navigate({ to: "/train", replace: true });
+        return;
+      } catch (e) {
+        lastErr = e instanceof Error ? e : new Error("Save failed");
+        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+      }
+    }
+    setSubmitting(false);
+    toast.error(
+      lastErr?.message ||
+        "Couldn't save your details. Check your connection and tap Finish again.",
+    );
+  }
+
   function next(patch: Partial<Profile>) {
     const merged = { ...draft, ...patch };
     setDraft(merged);
     if (idx === ORDER.length - 1) {
-      const p = {
-        ...merged,
-        startingWeightKg: merged.startingWeightKg ?? merged.weightKg,
-      } as Profile;
-      const sched = mode === "BUILD" ? emptySchedule() : defaultSchedule(p);
-      if (userId) setLocalStateOwner(userId);
-      setState((s) => ({ ...s, profile: p, schedule: sched }));
-      const publicStats = buildPublicStats(getState());
-      save({
-        data: {
-          username: p.username,
-          display_name: p.username,
-          goal: p.goal,
-          experience: p.experience,
-          gender: p.gender,
-          age: p.age,
-          weight_kg: p.weightKg,
-          height_cm: p.heightCm,
-          days_per_week: p.daysPerWeek,
-          equipment: p.equipment,
-          avatar_url: p.avatarDataUrl,
-          public_stats: publicStats,
-          onboarded: true,
-        },
-      })
-        .then(() => navigate({ to: "/train", replace: true }))
-        .catch((e: Error) => {
-          toast.error(e.message || "Couldn't save profile");
-          navigate({ to: "/train", replace: true });
-        });
+      void finalize(merged);
     } else {
       setIdx(idx + 1);
     }
+  }
+
+  if (submitting) {
+    return (
+      <div className="min-h-screen bg-grit flex flex-col items-center justify-center px-6">
+        <GritLogo className="text-3xl mb-6" />
+        <p className="label-cap text-grit-dim">Saving your setup…</p>
+      </div>
+    );
   }
 
   return (
