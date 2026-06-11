@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
-import { getMyProfile, signInWithUsername } from "@/lib/profile.functions";
+import { getMyProfile, signInWithUsername, signUpUser } from "@/lib/profile.functions";
 import { profileQuestionsComplete } from "@/lib/account-restore";
 
 import { toast } from "sonner";
@@ -22,6 +22,7 @@ export function AuthPage() {
   const [forgotEmail, setForgotEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const usernameSignIn = useServerFn(signInWithUsername);
+  const signUp = useServerFn(signUpUser);
   const getProfile = useServerFn(getMyProfile);
 
   async function routeAfterAuth() {
@@ -58,15 +59,14 @@ export function AuthPage() {
     try {
       if (mode === "signup") {
         if (!identifier.includes("@")) throw new Error("Enter a valid email to sign up");
-        const { data, error } = await supabase.auth.signUp({
-          email: identifier,
-          password,
-          options: { emailRedirectTo: window.location.origin },
+        const result = await signUp({ data: { email: identifier.trim().toLowerCase(), password } });
+        const { error } = await supabase.auth.setSession({
+          access_token: result.access_token,
+          refresh_token: result.refresh_token,
         });
         if (error) throw error;
         toast.success("Welcome to DEADSET");
-        if (data.session) navigate({ to: "/onboarding", replace: true });
-        else toast.success("Check your email, then finish your questions after signing in");
+        navigate({ to: "/onboarding", replace: true });
       } else {
         const id = identifier.trim();
         if (id.includes("@")) {

@@ -26,6 +26,49 @@ const ProfileSchema = z.object({
   public_stats: z.record(z.string(), z.any()).optional(),
 });
 
+/**
+ * Sign up a new user using the admin API so the account is immediately
+ * confirmed and the user can sign in straight away without checking email.
+ * Returns session tokens on success.
+ */
+export const signUpUser = createServerFn({ method: "POST" })
+  .inputValidator((input) =>
+    z.object({ email: z.string().email(), password: z.string().min(6).max(128) }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    // Check if email is already registered
+    const { data: existing } = await supabaseAdmin.auth.admin.listUsers();
+    const alreadyExists = existing.users.some(
+      (u) => u.email?.toLowerCase() === data.email.toLowerCase(),
+    );
+    if (alreadyExists) throw new Error("An account with this email already exists");
+
+    // Create user with email pre-confirmed so they can sign in immediately
+    const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
+      email: data.email,
+      password: data.password,
+      email_confirm: true,
+    });
+    if (error) throw new Error(error.message);
+
+    // Sign in immediately and return session tokens
+    const anon = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data: signIn, error: signInErr } = await anon.auth.signInWithPassword({
+      email: data.email,
+      password: data.password,
+    });
+    if (signInErr || !signIn.session) throw new Error("Account created but sign-in failed — try signing in manually");
+
+    return {
+      ok: true as const,
+      userId: created.user.id,
+      access_token: signIn.session.access_token,
+      refresh_token: signIn.session.refresh_token,
+    };
+  });
+
 export const saveProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => ProfileSchema.parse(input))

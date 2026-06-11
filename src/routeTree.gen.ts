@@ -36,6 +36,13 @@ import { Route as TabsProgramsProgramIdRouteImport } from './routes/_tabs.progra
 import { Route as TabsLiftExerciseIdRouteImport } from './routes/_tabs.lift.$exerciseId'
 import { Route as TabsAthleteIdRouteImport } from './routes/_tabs.athlete.$id'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
+import { Route as AdminDeleteUsersRouteImport } from './routes/admin-delete-users'
+
+const AdminDeleteUsersRoute = AdminDeleteUsersRouteImport.update({
+  id: '/admin-delete-users',
+  path: '/admin-delete-users',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 const UpgradeRoute = UpgradeRouteImport.update({
   id: '/upgrade',
@@ -243,6 +250,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
   '/upgrade': typeof UpgradeRoute
+  '/admin-delete-users': typeof AdminDeleteUsersRoute
   '/_tabs/challenges': typeof TabsChallengesRoute
   '/_tabs/diet': typeof TabsDietRoute
   '/_tabs/friends': typeof TabsFriendsRoute
@@ -363,10 +371,18 @@ export interface RootRouteChildren {
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   WorkoutLiveRoute: typeof WorkoutLiveRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
+  AdminDeleteUsersRoute: typeof AdminDeleteUsersRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/admin-delete-users': {
+      id: '/admin-delete-users'
+      path: '/admin-delete-users'
+      fullPath: '/admin-delete-users'
+      preLoaderRoute: typeof AdminDeleteUsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/upgrade': {
       id: '/upgrade'
       path: '/upgrade'
@@ -617,6 +633,7 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutReturnRoute: CheckoutReturnRoute,
   WorkoutLiveRoute: WorkoutLiveRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
+  AdminDeleteUsersRoute: AdminDeleteUsersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
