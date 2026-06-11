@@ -28,7 +28,7 @@ import {
   getLeaderboard,
   getMyReferralInfo,
   redeemReferral,
-  updateMyProfile,
+
   searchAthletes,
   getSuggestedAthletes,
   toggleFollow,
@@ -800,12 +800,10 @@ function leagueColor(l: string) {
 function Invite() {
   const _info = useServerFn(getMyReferralInfo);
   const _redeem = useServerFn(redeemReferral);
-  const _profile = useServerFn(updateMyProfile);
   const [info, setInfo] = useState<Awaited<ReturnType<typeof getMyReferralInfo>> | null>(null);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [username, setUsername] = useState("");
 
   useEffect(() => {
     _info()
@@ -835,22 +833,6 @@ function Invite() {
     }
   }
 
-  async function saveUsername() {
-    if (!/^[a-zA-Z0-9_]{3,24}$/.test(username)) {
-      toast.error("3-24 letters, numbers, underscore");
-      return;
-    }
-    setBusy(true);
-    try {
-      await _profile({ data: { username } });
-      toast.success("Username saved");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   if (!info)
     return (
       <div className="px-5 pt-10 flex justify-center">
@@ -873,26 +855,6 @@ function Invite() {
         ) : (
           <p className="text-sm text-[#8a8a8a]">Free tier. Earn Pro by inviting mates.</p>
         )}
-      </div>
-
-      {/* Username */}
-      <div className="bg-grit-card border border-grit p-5">
-        <p className="label-cap mb-2 flex items-center gap-2">
-          <Users size={12} /> Public username
-        </p>
-        <div className="flex gap-2">
-          <input
-            value={username}
-            onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ""))}
-            placeholder="yourname"
-            maxLength={24}
-            className="input-grit flex-1"
-          />
-          <button onClick={saveUsername} disabled={busy || !username} className="btn-grit px-3">
-            Save
-          </button>
-        </div>
-        <p className="text-[10px] text-[#8a8a8a] mt-1">Shown on your posts and league entries.</p>
       </div>
 
       {/* Your invite code */}
