@@ -48,12 +48,7 @@ class PageErrorBoundary extends React.Component<
 function TabsLayout() {
   const navigate = useNavigate();
   const getProfile = useServerFn(getMyProfile);
-  // Start ready=true immediately if local state already has a profile so the
-  // app renders instantly on revisit without showing the loading spinner again.
-  const [ready, setReady] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return !!getState().profile;
-  });
+  const [ready, setReady] = useState(false);
   const navRef = useRef(navigate);
   const getProfileRef = useRef(getProfile);
   navRef.current = navigate;
