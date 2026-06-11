@@ -10,7 +10,7 @@ import { getExercise } from "@/lib/exercises";
 import { getMyProfile, saveProfile } from "@/lib/profile.functions";
 import { profileFromAccount, profileQuestionsComplete, withTimeout } from "@/lib/account-restore";
 import type { Equipment, Experience, Gender, Goal, Profile, Weakness } from "@/lib/types";
-import { buildPublicStats } from "@/lib/fifa-stats";
+import { buildPublicStats, PR_CATALOG } from "@/lib/fifa-stats";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "DEADSET — Onboarding" }] }),
@@ -588,68 +588,17 @@ function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
   );
 }
 
-const ONBOARDING_PRS: Array<{
-  id: string;
-  label: string;
-  unit: string;
-  placeholder: string;
-  desc: string;
-}> = [
-  {
-    id: "bench-press",
-    label: "Bench Press",
-    unit: "kg",
-    placeholder: "80",
-    desc: "Flat barbell bench press. Bar to mid-chest, drive straight up.",
-  },
-  {
-    id: "squat",
-    label: "Back Squat",
-    unit: "kg",
-    placeholder: "100",
-    desc: "Barbell on upper back. Break at hips & knees, depth at parallel.",
-  },
-  {
-    id: "deadlift",
-    label: "Deadlift",
-    unit: "kg",
-    placeholder: "120",
-    desc: "Conventional barbell deadlift from the floor. Lock out hips at top.",
-  },
-  {
-    id: "ohp",
-    label: "Overhead Press",
-    unit: "kg",
-    placeholder: "50",
-    desc: "Standing strict barbell press. No leg drive, bar finishes overhead.",
-  },
-  {
-    id: "pull-ups",
-    label: "Pull-Ups (max)",
-    unit: "reps",
-    placeholder: "10",
-    desc: "Strict bodyweight pull-ups, full hang to chin over bar. Max in one set.",
-  },
-  {
-    id: "push-ups",
-    label: "Push-Ups (max)",
-    unit: "reps",
-    placeholder: "30",
-    desc: "Strict push-ups, chest to floor, full lockout. Max unbroken.",
-  },
-];
-
 function PRStep({ onContinue }: { onContinue: () => void }) {
   const [vals, setVals] = useState<Record<string, string>>({});
 
   function commit() {
     const today = new Date().toISOString().slice(0, 10);
     const manualPRs: Record<string, { value: number; reps?: number; date: string }> = {};
-    for (const pr of ONBOARDING_PRS) {
-      const n = Number(vals[pr.id]);
+    for (const def of PR_CATALOG) {
+      const n = Number(vals[def.id]);
       if (n > 0) {
-        manualPRs[pr.id] =
-          pr.unit === "kg" ? { value: n, reps: 1, date: today } : { value: n, date: today };
+        manualPRs[def.id] =
+          def.kind === "1RM" ? { value: n, reps: 1, date: today } : { value: n, date: today };
       }
     }
     if (Object.keys(manualPRs).length) {
@@ -661,31 +610,31 @@ function PRStep({ onContinue }: { onContinue: () => void }) {
   return (
     <>
       <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">Your PRs</h1>
-      <p className="text-sm text-[#8a8a8a] mb-6">
+      <p className="text-sm text-[#8a8a8a] mb-4">
         Drop your best lifts. Powers your athlete card. Leave blank to skip.
       </p>
-      <div className="flex flex-col gap-2 mb-6">
-        {ONBOARDING_PRS.map((pr) => (
-          <div key={pr.id} className="bg-grit-card border border-grit px-3 py-2.5">
-            <div className="flex items-center gap-3">
+      <div className="bg-grit-card border border-grit divide-y divide-[#262626] mb-6 overflow-y-auto" style={{ maxHeight: "55vh" }}>
+        {PR_CATALOG.map((def) => {
+          const unit = def.kind === "1RM" ? "kg" : def.kind === "REPS" ? "reps" : "sec";
+          return (
+            <div key={def.id} className="flex items-center justify-between px-4 py-2.5 gap-3">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-grit truncate">{pr.label}</p>
-                <p className="label-cap text-[9px] text-grit-dim">
-                  {pr.unit === "kg" ? "1-rep max" : "max reps"}
-                </p>
+                <p className="text-sm font-bold text-grit truncate">{def.label}</p>
+                <p className="text-[10px] text-grit-dim leading-snug">{def.desc}</p>
               </div>
-              <input
-                value={vals[pr.id] ?? ""}
-                onChange={(e) => setVals((v) => ({ ...v, [pr.id]: e.target.value }))}
-                inputMode="decimal"
-                placeholder={pr.placeholder}
-                className="input-grit w-20 text-right"
-              />
-              <span className="label-cap text-[10px] text-grit-dim w-8">{pr.unit}</span>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <input
+                  value={vals[def.id] ?? ""}
+                  onChange={(e) => setVals((v) => ({ ...v, [def.id]: e.target.value }))}
+                  inputMode="decimal"
+                  placeholder="—"
+                  className="input-grit w-20 text-right py-1.5"
+                />
+                <span className="label-cap text-[10px] text-grit-dim w-8">{unit}</span>
+              </div>
             </div>
-            <p className="text-[11px] text-[#8a8a8a] mt-1.5 leading-snug">{pr.desc}</p>
-          </div>
-        ))}
+          );
+        })}
       </div>
       <div className="mt-auto flex flex-col gap-3">
         <button onClick={commit} className="btn-grit">
