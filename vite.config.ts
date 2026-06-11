@@ -11,4 +11,14 @@ export default defineConfig({
     tsconfigPaths(),
     tailwindcss(),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        entryFileNames: (chunk) =>
+          chunk.isEntry && chunk.name === "index" ? "assets/index.js" : "assets/[name]-[hash].js",
+        assetFileNames: (asset) =>
+          asset.name === "styles.css" ? "assets/styles.css" : "assets/[name]-[hash].[ext]",
+      },
+    },
+  },
 });
