@@ -64,6 +64,35 @@ export const deleteMyAccount = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/**
+ * Admin-only: delete ALL auth users and their data. Protected by a secret
+ * token that must match the ADMIN_DELETE_SECRET env var.
+ */
+export const adminDeleteAllUsers = createServerFn({ method: "POST" })
+  .inputValidator((input) =>
+    z.object({ secret: z.string().min(1) }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const secret = process.env.ADMIN_DELETE_SECRET;
+    if (!secret || data.secret !== secret) throw new Error("Unauthorized");
+
+    // List all users (paginated, max 1000 per request)
+    let page = 1;
+    let total = 0;
+    let hasMore = true;
+    while (hasMore) {
+      const { data: users, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 });
+      if (error) throw new Error(error.message);
+      hasMore = users.users.length === 1000;
+      page++;
+      for (const user of users.users) {
+        await supabaseAdmin.auth.admin.deleteUser(user.id).catch(() => {});
+        total++;
+      }
+    }
+    return { deleted: total };
+  });
+
 const BlockInput = z.object({ userId: z.string().uuid() });
 export const blockUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

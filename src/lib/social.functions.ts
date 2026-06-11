@@ -515,6 +515,33 @@ export const getMyLocation = createServerFn({ method: "GET" })
     };
   });
 
+// === My following list ===
+export const getMyFollowing = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { data: follows } = await supabase
+      .from("follows")
+      .select("following_id")
+      .eq("follower_id", userId)
+      .order("created_at", { ascending: false });
+    const ids = (follows ?? []).map((f) => f.following_id).filter(Boolean) as string[];
+    if (ids.length === 0) return [];
+    const { data: profiles } = await supabaseAdmin
+      .from("public_profiles")
+      .select("id, username, display_name, avatar_url, level, grit_points")
+      .in("id", ids);
+    return (profiles ?? []).map((p) => ({
+      id: p.id as string,
+      username: p.username,
+      display_name: p.display_name,
+      avatar_url: p.avatar_url,
+      level: p.level,
+      grit_points: p.grit_points,
+      following: true,
+    }));
+  });
+
 // === Nearby athletes (same city, then same country) ===
 export const getNearbyAthletes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

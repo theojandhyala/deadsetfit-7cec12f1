@@ -33,6 +33,7 @@ import {
   getSuggestedAthletes,
   toggleFollow,
   getMyFollowStats,
+  getMyFollowing,
   updateMyLocation,
   getMyLocation,
   getNearbyAthletes,
@@ -943,6 +944,8 @@ function Invite() {
 type SearchHit = Awaited<ReturnType<typeof searchAthletes>>[number];
 type Suggested = Awaited<ReturnType<typeof getSuggestedAthletes>>[number];
 
+type FollowingUser = Awaited<ReturnType<typeof getMyFollowing>>[number];
+
 function Friends() {
   const _search = useServerFn(searchAthletes);
   const _suggest = useServerFn(getSuggestedAthletes);
@@ -951,10 +954,12 @@ function Friends() {
   const _nearby = useServerFn(getNearbyAthletes);
   const _getLoc = useServerFn(getMyLocation);
   const _setLoc = useServerFn(updateMyLocation);
+  const _getFollowing = useServerFn(getMyFollowing);
 
   const [q, setQ] = useState("");
   const [results, setResults] = useState<SearchHit[] | null>(null);
   const [suggested, setSuggested] = useState<Suggested[] | null>(null);
+  const [following, setFollowing] = useState<FollowingUser[] | null>(null);
   const [stats, setStats] = useState<{ following: number; followers: number } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [nearby, setNearby] = useState<Awaited<ReturnType<typeof getNearbyAthletes>> | null>(null);
@@ -970,6 +975,9 @@ function Friends() {
     _stats()
       .then(setStats)
       .catch(() => {});
+    _getFollowing()
+      .then(setFollowing)
+      .catch(() => setFollowing([]));
     _getLoc()
       .then((l) => {
         setMyLoc({ city: l.city, country: l.country });
@@ -997,13 +1005,23 @@ function Friends() {
     return () => clearTimeout(id);
   }, [q]);
 
-  async function follow(id: string, currentlyFollowing: boolean) {
+  async function follow(id: string, currentlyFollowing: boolean, userData?: { username: string | null; display_name: string | null; avatar_url: string | null; level: string | null; grit_points?: number | null }) {
     setBusy(id);
     setResults(
       (arr) =>
         arr?.map((r) => (r.id === id ? { ...r, following: !currentlyFollowing } : r)) ?? null,
     );
-    setSuggested((arr) => arr?.filter((r) => r.id !== id) ?? null);
+    if (!currentlyFollowing) {
+      setSuggested((arr) => arr?.filter((r) => r.id !== id) ?? null);
+      if (userData) {
+        setFollowing((arr) => [...(arr ?? []), { id, following: true, ...userData, grit_points: userData.grit_points ?? null }]);
+      } else {
+        _getFollowing().then(setFollowing).catch(() => {});
+      }
+    } else {
+      setFollowing((arr) => arr?.filter((r) => r.id !== id) ?? null);
+      setSuggested((arr) => arr ?? []);
+    }
     setNearby((n) =>
       n
         ? {
@@ -1158,7 +1176,7 @@ function Friends() {
                   key={a.id}
                   a={a}
                   busy={busy === a.id}
-                  onToggle={() => follow(a.id, a.following)}
+                  onToggle={() => follow(a.id, a.following, a)}
                 />
               ))}
             </div>
@@ -1188,12 +1206,35 @@ function Friends() {
             key={r.id}
             a={r}
             busy={busy === r.id}
-            onToggle={() => follow(r.id, r.following)}
+            onToggle={() => follow(r.id, r.following, r)}
           />
         ))}
 
       {!results && (
         <>
+          {/* Following list */}
+          {(following === null || following.length > 0) && (
+            <div className="mb-5">
+              <p className="label-cap text-[#8a8a8a] mb-2 flex items-center gap-1.5">
+                <UserCheck size={10} /> Following
+              </p>
+              {following === null && (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="animate-spin text-accent-red" size={18} />
+                </div>
+              )}
+              {following && following.map((r) => (
+                <AthleteRow
+                  key={r.id}
+                  a={r}
+                  busy={busy === r.id}
+                  onToggle={() => follow(r.id, true, r)}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Suggested rivals */}
           <p className="label-cap text-[#8a8a8a] mb-2 mt-2">Suggested rivals</p>
           {!suggested && (
             <div className="flex justify-center py-6">
@@ -1211,7 +1252,7 @@ function Friends() {
                 key={r.id}
                 a={{ ...r, following: false }}
                 busy={busy === r.id}
-                onToggle={() => follow(r.id, false)}
+                onToggle={() => follow(r.id, false, r)}
               />
             ))}
         </>
