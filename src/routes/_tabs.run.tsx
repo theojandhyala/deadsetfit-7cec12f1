@@ -428,7 +428,10 @@ function LiveRunner({
   const [error, setError] = useState<string | null>(null);
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [previewPos, setPreviewPos] = useState<{ lat: number; lng: number } | null>(null);
-  const [mapExpanded, setMapExpanded] = useState(false);
+
+  // hold-to-finish state
+  const [holdProgress, setHoldProgress] = useState(0);
+  const holdIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [rejectCount, setRejectCount] = useState(0);
   const [rawSpeed, setRawSpeed] = useState<number | null>(null);
@@ -729,216 +732,195 @@ function LiveRunner({
         })()
       : speedKmhNow;
 
-  const mapHeight = mapExpanded ? 380 : 240;
+  // hold-to-finish handlers
+  const startHold = () => {
+    if (status !== "paused") return;
+    holdIntervalRef.current = setInterval(() => {
+      setHoldProgress((p) => {
+        if (p >= 100) {
+          clearInterval(holdIntervalRef.current!);
+          holdIntervalRef.current = null;
+          stop();
+          return 100;
+        }
+        return p + 5;
+      });
+    }, 50);
+  };
+  const endHold = () => {
+    if (holdIntervalRef.current) {
+      clearInterval(holdIntervalRef.current);
+      holdIntervalRef.current = null;
+    }
+    setHoldProgress(0);
+  };
 
   return (
-    <div className="px-4 pt-4 pb-24 max-w-screen-sm mx-auto space-y-3">
-      <header className="flex items-center justify-between">
+    <div className="fixed inset-0 flex flex-col" style={{ background: "#0A0A0A" }}>
+      {/* Full-bleed map */}
+      <div className="absolute inset-0">
+        <RunMap
+          samples={mapSamples}
+          height={window.innerHeight}
+          live={status === "running" || status === "paused"}
+          mapStyle="dark"
+          activityColor={cfg.color}
+        />
+      </div>
+
+      {/* Top bar overlay */}
+      <div className="relative z-10 flex items-center justify-between px-4 pt-10 pb-3"
+        style={{ background: "linear-gradient(to bottom, rgba(10,10,10,0.9) 0%, transparent 100%)" }}>
         <button
           onClick={discard}
-          className="flex items-center gap-1 text-grit-dim hover:text-grit text-xs uppercase tracking-wider font-bold"
+          className="flex items-center gap-1 text-xs uppercase tracking-wider font-bold"
+          style={{ color: "#8A8A8A" }}
         >
-          <ChevronLeft size={16} />
-          Cancel
+          <ChevronLeft size={16} /> Cancel
         </button>
         <div className="flex items-center gap-2">
           <span style={{ color: cfg.color }}>{cfg.icon}</span>
-          <span className="label-cap text-[11px]" style={{ color: cfg.color }}>
+          <span className="label-cap text-[11px] font-bold" style={{ color: cfg.color }}>
             {cfg.label.toUpperCase()}
           </span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span
-            className="w-2 h-2 rounded-full"
-            style={{ background: gpsStrength.color, boxShadow: `0 0 6px ${gpsStrength.color}` }}
-          />
+          <span className="w-2 h-2 rounded-full"
+            style={{ background: gpsStrength.color, boxShadow: `0 0 6px ${gpsStrength.color}` }} />
           <span className="label-cap text-[10px]" style={{ color: gpsStrength.color }}>
             {gpsAccuracy != null ? `±${Math.round(gpsAccuracy)}m` : "GPS"}
           </span>
         </div>
-      </header>
-
-      {/* Hero metric */}
-      <div
-        className="bg-grit-card border p-5 text-center"
-        style={{ borderColor: status === "running" ? cfg.color : "#262626" }}
-      >
-        <p className="label-cap text-[10px] text-grit-dim mb-1">
-          {status === "ready" ? "READY" : "DISTANCE"}
-        </p>
-        <p
-          className="display text-6xl font-extrabold leading-none tracking-tight"
-          style={{ color: cfg.color }}
-        >
-          {(distanceM / 1000).toFixed(2)}
-        </p>
-        <p className="label-cap text-xs text-grit-dim mt-1">KILOMETRES</p>
       </div>
 
-      {/* Stats row */}
-      <div className="grid grid-cols-3 gap-2">
-        <BigStat label="Time" value={formatDuration(elapsedSec)} />
-        {isCycle ? (
-          <>
-            <BigStat label="Avg km/h" value={speedKmhNow.toFixed(1)} />
-            <BigStat
-              label="Now km/h"
-              value={currentSpeedKmhNow.toFixed(1)}
-              accent={status === "running"}
-            />
-          </>
-        ) : (
-          <>
-            <BigStat label="Avg pace" value={formatPace(pace)} suffix="/km" />
-            <BigStat
-              label="Now"
-              value={formatPace(currentPace)}
-              suffix="/km"
-              accent={status === "running"}
-            />
-          </>
-        )}
-      </div>
+      {/* LIVE badge */}
+      {status === "running" && samples.length >= 2 && (
+        <div className="absolute top-20 left-4 z-10 flex items-center gap-1.5 px-2 py-1"
+          style={{ background: "rgba(0,0,0,0.8)", border: "1px solid #E10600" }}>
+          <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#FF1A1A" }} />
+          <span className="label-cap text-[9px]" style={{ color: "#FF1A1A" }}>LIVE · {samples.length} pts</span>
+        </div>
+      )}
 
-      {/* Map — tap to expand */}
-      <div className="relative">
-        <RunMap
-          samples={mapSamples}
-          height={mapHeight}
-          live={status === "running" || status === "paused"}
-          mapStyle="trail"
-          activityColor={cfg.color}
-        />
-        <button
-          onClick={() => setMapExpanded((v) => !v)}
-          className="absolute bottom-2 right-2 bg-black/80 border border-grit px-2 py-1 z-[400] label-cap text-[9px] text-grit"
-        >
-          {mapExpanded ? "⊟ SHRINK" : "⊞ EXPAND"}
-        </button>
-        {status === "running" && samples.length >= 2 && (
-          <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-black/80 border border-accent-red px-2 py-1 z-[400]">
-            <span className="w-1.5 h-1.5 bg-accent-red rounded-full animate-pulse" />
-            <span className="label-cap text-[9px] text-accent-red">
-              LIVE · {samples.length} pts
-            </span>
+      {/* Bottom stats + controls overlay */}
+      <div className="relative z-10 mt-auto px-4 pb-8 pt-4 space-y-3"
+        style={{ background: "linear-gradient(to top, rgba(10,10,10,0.97) 60%, transparent 100%)" }}>
+
+        {/* Error / GPS denied */}
+        {permission === "denied" && (
+          <div className="px-3 py-2 text-xs font-bold uppercase tracking-wider"
+            style={{ background: "rgba(225,6,0,0.15)", border: "1px solid #E10600", color: "#FF1A1A" }}>
+            GPS BLOCKED — enable location in browser settings
           </div>
         )}
-      </div>
+        {error && !permission.includes("denied") && (
+          <div className="px-3 py-2 text-xs uppercase tracking-wider"
+            style={{ background: "rgba(225,6,0,0.1)", border: "1px solid #E10600", color: "#FF1A1A" }}>
+            {error}
+          </div>
+        )}
 
-      {permission === "denied" && (
-        <div className="bg-grit-card border border-accent-red p-4 space-y-2">
-          <p className="label-cap text-[10px] text-accent-red">GPS BLOCKED</p>
-          <p className="text-xs text-grit-dim">
-            Enable location in browser settings to record your route.
+        {/* Hero distance */}
+        <div className="text-center">
+          <p className="label-cap text-[10px]" style={{ color: "#8A8A8A" }}>
+            {status === "ready" ? "READY TO GO" : "DISTANCE"}
           </p>
-          <button
-            onClick={() => {
-              setPermission("prompt");
-              setError(null);
-              navigator.geolocation.getCurrentPosition(
-                () => setPermission("granted"),
-                handleGpsError,
-                { enableHighAccuracy: true },
-              );
-            }}
-            className="btn-grit w-full py-2.5 text-xs"
-          >
-            Retry GPS
-          </button>
+          <p className="display font-extrabold leading-none tracking-tight"
+            style={{ fontSize: 72, color: cfg.color }}>
+            {(distanceM / 1000).toFixed(2)}
+          </p>
+          <p className="label-cap text-xs" style={{ color: "#8A8A8A" }}>KILOMETRES</p>
         </div>
-      )}
 
-      {error && (
-        <div className="bg-accent-red/10 border border-accent-red text-accent-red text-xs px-3 py-2 uppercase tracking-wider">
-          {error}
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-2">
+          <OverlayStat label="Time" value={formatDuration(elapsedSec)} />
+          {isCycle ? (
+            <>
+              <OverlayStat label="Avg km/h" value={speedKmhNow.toFixed(1)} />
+              <OverlayStat label="Now km/h" value={currentSpeedKmhNow.toFixed(1)} accent={status === "running"} />
+            </>
+          ) : (
+            <>
+              <OverlayStat label="Avg pace" value={formatPace(pace)} suffix="/km" />
+              <OverlayStat label="Now" value={formatPace(currentPace)} suffix="/km" accent={status === "running"} />
+            </>
+          )}
         </div>
-      )}
 
-      {/* Live stats bar */}
-      {status === "running" && (
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="bg-grit-card border border-grit p-2">
-            <p className="text-[9px] uppercase tracking-wider text-grit-dim">Calories</p>
-            <p className="text-sm font-bold text-grit">
-              {Math.round((distanceM / 1000) * weightKg * cfg.calMult)}
-            </p>
+        {/* Secondary stats when running */}
+        {(status === "running" || status === "paused") && (
+          <div className="grid grid-cols-3 gap-2">
+            <OverlayStat label="kcal" value={String(Math.round((distanceM / 1000) * weightKg * cfg.calMult))} />
+            <OverlayStat label="fixes" value={String(samples.length)} />
+            <OverlayStat label="elev" value={`+${elevationGain(samples)}m`} />
           </div>
-          <div className="bg-grit-card border border-grit p-2">
-            <p className="text-[9px] uppercase tracking-wider text-grit-dim">Fixes</p>
-            <p className="text-sm font-bold text-grit">{samples.length}</p>
-          </div>
-          <div className="bg-grit-card border border-grit p-2">
-            <p className="text-[9px] uppercase tracking-wider text-grit-dim">Elevation</p>
-            <p className="text-sm font-bold text-grit">+{elevationGain(samples)}m</p>
-          </div>
+        )}
+
+        {/* Controls */}
+        <div className="pt-1">
+          {status === "ready" && (
+            <button onClick={start}
+              className="w-full text-white py-5 flex items-center justify-center gap-3 font-extrabold uppercase tracking-widest text-sm"
+              style={{ background: cfg.color, boxShadow: `0 0 32px ${cfg.color}60` }}>
+              <Play size={20} strokeWidth={3} fill="currentColor" />
+              Start {cfg.label}
+            </button>
+          )}
+          {status === "running" && (
+            <button onClick={pause}
+              className="w-full py-5 flex items-center justify-center gap-3 font-extrabold uppercase tracking-widest text-sm"
+              style={{ background: "#141414", border: "1px solid #262626", color: "#FAFAFA" }}>
+              <Pause size={20} strokeWidth={3} />
+              Pause
+            </button>
+          )}
+          {status === "paused" && (
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={resume}
+                  className="text-white py-4 flex items-center justify-center gap-2 font-extrabold uppercase tracking-widest text-xs"
+                  style={{ background: cfg.color }}>
+                  <Play size={18} strokeWidth={3} fill="currentColor" /> Resume
+                </button>
+                {/* Hold to finish */}
+                <div className="relative overflow-hidden"
+                  style={{ background: "#141414", border: "1px solid #262626" }}
+                  onPointerDown={startHold}
+                  onPointerUp={endHold}
+                  onPointerLeave={endHold}>
+                  <div className="absolute inset-y-0 left-0 transition-all"
+                    style={{ width: `${holdProgress}%`, background: "rgba(225,6,0,0.3)" }} />
+                  <div className="relative py-4 flex items-center justify-center gap-2 font-extrabold uppercase tracking-widest text-xs select-none"
+                    style={{ color: holdProgress > 0 ? "#E10600" : "#8A8A8A" }}>
+                    <Square size={16} strokeWidth={3} fill={holdProgress > 0 ? "currentColor" : "none"} />
+                    {holdProgress > 0 ? "Hold…" : "Hold to finish"}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          {status === "finished" && (
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={discard}
+                className="py-5 flex items-center justify-center gap-2 font-extrabold uppercase tracking-widest text-xs"
+                style={{ background: "#141414", border: "1px solid #262626", color: "#8A8A8A" }}>
+                <Trash2 size={16} strokeWidth={3} /> Discard
+              </button>
+              <button onClick={finish}
+                className="text-white py-5 flex items-center justify-center gap-2 font-extrabold uppercase tracking-widest text-xs"
+                style={{ background: cfg.color, boxShadow: `0 0 24px ${cfg.color}40` }}>
+                <Trophy size={18} strokeWidth={3} /> Save
+              </button>
+            </div>
+          )}
         </div>
-      )}
-
-      {/* Controls */}
-      <div className="pt-1">
-        {status === "ready" && (
-          <button
-            onClick={start}
-            className="w-full text-white py-5 flex items-center justify-center gap-3 font-extrabold uppercase tracking-widest text-sm transition-colors"
-            style={{ background: cfg.color, boxShadow: `0 0 24px ${cfg.color}40` }}
-          >
-            <Play size={20} strokeWidth={3} fill="currentColor" />
-            Start {cfg.label}
-          </button>
-        )}
-        {status === "running" && (
-          <button
-            onClick={pause}
-            className="w-full bg-grit-card border border-grit text-grit py-5 flex items-center justify-center gap-3 font-extrabold uppercase tracking-widest text-sm hover:border-accent-red transition-colors"
-          >
-            <Pause size={20} strokeWidth={3} />
-            Pause
-          </button>
-        )}
-        {status === "paused" && (
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={resume}
-              className="text-white py-5 flex items-center justify-center gap-2 font-extrabold uppercase tracking-widest text-xs transition-colors"
-              style={{ background: cfg.color }}
-            >
-              <Play size={18} strokeWidth={3} fill="currentColor" />
-              Resume
-            </button>
-            <button
-              onClick={stop}
-              className="bg-grit-card border border-grit text-grit py-5 flex items-center justify-center gap-2 font-extrabold uppercase tracking-widest text-xs hover:border-accent-red transition-colors"
-            >
-              <Square size={18} strokeWidth={3} fill="currentColor" />
-              Finish
-            </button>
-          </div>
-        )}
-        {status === "finished" && (
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={discard}
-              className="bg-grit-card border border-grit text-grit-dim py-5 flex items-center justify-center gap-2 font-extrabold uppercase tracking-widest text-xs hover:text-accent-red hover:border-accent-red transition-colors"
-            >
-              <Trash2 size={16} strokeWidth={3} />
-              Discard
-            </button>
-            <button
-              onClick={finish}
-              className="text-white py-5 flex items-center justify-center gap-2 font-extrabold uppercase tracking-widest text-xs transition-colors"
-              style={{ background: cfg.color, boxShadow: `0 0 24px ${cfg.color}40` }}
-            >
-              <Trophy size={18} strokeWidth={3} />
-              Save
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
 }
 
-function BigStat({
+function OverlayStat({
   label,
   value,
   suffix,
@@ -950,23 +932,27 @@ function BigStat({
   accent?: boolean;
 }) {
   return (
-    <div className="bg-grit-card border border-grit p-3 flex flex-col gap-1">
-      <span className="text-[9px] uppercase tracking-widest text-grit-dim">{label}</span>
-      <div className="flex items-baseline gap-1">
-        <span
-          className="display text-xl font-extrabold leading-none"
-          style={{ color: accent ? "#E10600" : "var(--grit-text, #e5e5e5)" }}
-        >
+    <div className="p-2.5 flex flex-col gap-0.5 text-center"
+      style={{ background: "rgba(20,20,20,0.85)", border: "1px solid #262626" }}>
+      <span className="text-[9px] uppercase tracking-widest" style={{ color: "#8A8A8A" }}>{label}</span>
+      <div className="flex items-baseline justify-center gap-1">
+        <span className="display text-lg font-extrabold leading-none"
+          style={{ color: accent ? "#FF1A1A" : "#FAFAFA" }}>
           {value}
         </span>
         {suffix && (
-          <span className="text-[9px] font-bold uppercase tracking-wider text-grit-dim">
+          <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "#8A8A8A" }}>
             {suffix}
           </span>
         )}
       </div>
     </div>
   );
+}
+
+// kept for backwards compat within file
+function BigStat({ label, value, suffix, accent }: { label: string; value: string; suffix?: string; accent?: boolean }) {
+  return <OverlayStat label={label} value={value} suffix={suffix} accent={accent} />;
 }
 
 /* ====================== POST-RUN SUMMARY ====================== */
