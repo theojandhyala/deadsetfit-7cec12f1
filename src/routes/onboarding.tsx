@@ -650,3 +650,48 @@ function PRStep({ onContinue }: { onContinue: () => void }) {
     </>
   );
 }
+
+function TourStep({ onContinue }: { onContinue: () => void }) {
+  const tools = [
+    { Icon: Camera, t: "AI MEAL SCAN", d: "Snap your plate — get calories and macros in seconds.", where: "Diet tab" },
+    { Icon: MessageSquare, t: "AI COACH", d: "24/7 strength coach. Ask anything, get a real answer.", where: "Profile → Coach" },
+    { Icon: Scan, t: "PHYSIQUE SCANNER", d: "AI grades body fat, muscle and symmetry from a photo.", where: "Progress tab" },
+    { Icon: Images, t: "PROGRESS PICTURES", d: "Side-by-side check-ins to see the transformation.", where: "Progress tab" },
+    { Icon: Activity, t: "AI RUN COACH", d: "Live tracking with pacing tips and your next session.", where: "Cardio tab" },
+  ];
+  return (
+    <>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">Your AI toolkit</h1>
+      <p className="text-sm text-[#8a8a8a] mb-6">
+        Built in. Always on. Find them anywhere you see the spark.
+      </p>
+      <div className="flex flex-col gap-3 mb-8">
+        {tools.map(({ Icon, t, d, where }) => (
+          <div
+            key={t}
+            className="p-4 flex gap-3"
+            style={{
+              background: "rgba(20,20,20,0.85)",
+              border: "1px solid rgba(255,255,255,0.06)",
+            }}
+          >
+            <div
+              className="w-10 h-10 flex items-center justify-center shrink-0"
+              style={{ background: "rgba(225,6,0,0.15)", color: "#E10600" }}
+            >
+              <Icon size={18} />
+            </div>
+            <div className="min-w-0">
+              <p className="label-cap text-sm text-grit">{t}</p>
+              <p className="text-xs text-grit-dim mt-1 leading-relaxed">{d}</p>
+              <p className="text-[10px] text-accent-red mt-1 label-cap">{where}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <button onClick={onContinue} className="btn-grit mt-auto">
+        Let's go
+      </button>
+    </>
+  );
+}
