@@ -160,11 +160,14 @@ function Hero() {
 function Features() {
   const items = [
     { t: "WORKOUT TRACKING", d: "Log sets, reps, and weights with ease." },
+    { t: "AI MEAL SCAN", d: "Snap a photo of your plate — instant calories and macros." },
+    { t: "AI COACH", d: "24/7 strength coach in your pocket. Ask anything, get answers." },
+    { t: "PHYSIQUE SCANNER", d: "AI-powered body analysis: body fat, muscle, symmetry." },
+    { t: "PROGRESS PICTURES", d: "Track your transformation with side-by-side check-ins." },
+    { t: "AI RUN COACH", d: "Get tips on pacing, splits and your next session." },
     { t: "PROGRESS OVER TIME", d: "Visualise your gains and stay on track." },
     { t: "CUSTOM WORKOUTS", d: "Create and save your own workout plans." },
-    { t: "DETAILED ANALYTICS", d: "Break down performance and identify areas to improve." },
     { t: "CLOUD SYNC", d: "Access your data anywhere, anytime, on any device." },
-    { t: "DARK MODE", d: "Sleek design built for focus in and out of the gym." },
   ];
   return (
     <Section id="features" className="bg-grit-card/30">
