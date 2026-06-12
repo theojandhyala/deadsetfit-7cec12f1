@@ -32,7 +32,8 @@ type Step =
   | "weakness"
   | "prs"
   | "username"
-  | "photo";
+  | "photo"
+  | "tour";
 
 type Mode = "GENERATE" | "BUILD";
 
