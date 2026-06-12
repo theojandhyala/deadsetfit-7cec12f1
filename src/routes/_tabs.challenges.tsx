@@ -1,23 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import {
-  Trophy,
-  Timer,
-  Flame,
-  Play,
-  Pause,
-  RotateCcw,
-  Check,
-  X,
-  Plus,
-  Minus,
-  Zap,
-  ArrowLeft,
-  Share2,
+  Trophy, Flame, Play, Pause, RotateCcw, Check, X, Plus, Minus,
+  Zap, ArrowLeft, Swords, TrendingUp, Crown,
+  ChevronRight, Search,
 } from "lucide-react";
 import { useAppState } from "@/lib/storage";
 import { isoDay } from "@/lib/calc";
 import type { ChallengeRecord } from "@/lib/types";
+import { createPost, searchAthletes } from "@/lib/social.functions";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_tabs/challenges")({
   head: () => ({ meta: [{ title: "DEADSET — Challenges" }] }),
@@ -29,202 +22,36 @@ type Challenge = {
   name: string;
   tagline: string;
   type: "time" | "reps";
-  target: number; // seconds or reps to "beat the boss"
+  target: number;
   xp: number;
   tier: "EASY" | "BEAST" | "GOD";
 };
 
 const CHALLENGES: Challenge[] = [
-  // EASY
-  {
-    id: "plank-1min",
-    name: "60-Second Plank",
-    tagline: "The entry test.",
-    type: "time",
-    target: 60,
-    xp: 40,
-    tier: "EASY",
-  },
-  {
-    id: "dead-hang",
-    name: "60s Dead Hang",
-    tagline: "Grip of steel.",
-    type: "time",
-    target: 60,
-    xp: 50,
-    tier: "EASY",
-  },
-  {
-    id: "squats-50",
-    name: "50 Squats Speed Run",
-    tagline: "Beat your clock.",
-    type: "time",
-    target: 90,
-    xp: 50,
-    tier: "EASY",
-  },
-  {
-    id: "pushups-30",
-    name: "30 Push-ups Unbroken",
-    tagline: "No stops. No drops.",
-    type: "reps",
-    target: 30,
-    xp: 40,
-    tier: "EASY",
-  },
-  {
-    id: "situps-50",
-    name: "50 Sit-ups",
-    tagline: "Core check.",
-    type: "reps",
-    target: 50,
-    xp: 40,
-    tier: "EASY",
-  },
-  {
-    id: "jumping-jacks-100",
-    name: "100 Jumping Jacks",
-    tagline: "Cardio warm-up.",
-    type: "time",
-    target: 90,
-    xp: 30,
-    tier: "EASY",
-  },
-  // BEAST
-  {
-    id: "plank-5min",
-    name: "5-Minute Plank",
-    tagline: "Brace. Breathe. Don't break.",
-    type: "time",
-    target: 300,
-    xp: 150,
-    tier: "BEAST",
-  },
-  {
-    id: "wall-sit-2min",
-    name: "2-Minute Wall Sit",
-    tagline: "Quads on fire.",
-    type: "time",
-    target: 120,
-    xp: 80,
-    tier: "BEAST",
-  },
-  {
-    id: "hollow-hold",
-    name: "90s Hollow Hold",
-    tagline: "Ab killer.",
-    type: "time",
-    target: 90,
-    xp: 70,
-    tier: "BEAST",
-  },
-  {
-    id: "pushups-max",
-    name: "Max Push-ups",
-    tagline: "One set. No rest. Go.",
-    type: "reps",
-    target: 50,
-    xp: 60,
-    tier: "BEAST",
-  },
-  {
-    id: "pullups-max",
-    name: "Max Pull-ups",
-    tagline: "Strict. No kipping.",
-    type: "reps",
-    target: 15,
-    xp: 80,
-    tier: "BEAST",
-  },
-  {
-    id: "burpees-50",
-    name: "50 Burpees For Time",
-    tagline: "Lungs vs legs.",
-    type: "time",
-    target: 300,
-    xp: 100,
-    tier: "BEAST",
-  },
-  {
-    id: "lunges-100",
-    name: "100 Walking Lunges",
-    tagline: "Glutes will hate you.",
-    type: "reps",
-    target: 100,
-    xp: 90,
-    tier: "BEAST",
-  },
-  {
-    id: "farmers-90s",
-    name: "90s Farmer's Carry",
-    tagline: "Grip + heart.",
-    type: "time",
-    target: 90,
-    xp: 80,
-    tier: "BEAST",
-  },
-  // GOD
-  {
-    id: "plank-10min",
-    name: "10-Minute Plank",
-    tagline: "Legends only.",
-    type: "time",
-    target: 600,
-    xp: 300,
-    tier: "GOD",
-  },
-  {
-    id: "burpees-100",
-    name: "100 Burpees",
-    tagline: "Time attack. Survive.",
-    type: "time",
-    target: 600,
-    xp: 120,
-    tier: "GOD",
-  },
-  {
-    id: "pullups-30",
-    name: "30 Strict Pull-ups",
-    tagline: "Unbroken or bust.",
-    type: "reps",
-    target: 30,
-    xp: 200,
-    tier: "GOD",
-  },
-  {
-    id: "pushups-100",
-    name: "100 Push-ups Unbroken",
-    tagline: "No knee drops.",
-    type: "reps",
-    target: 100,
-    xp: 180,
-    tier: "GOD",
-  },
-  {
-    id: "deadhang-2min",
-    name: "2-Minute Dead Hang",
-    tagline: "Shoulders & soul.",
-    type: "time",
-    target: 120,
-    xp: 150,
-    tier: "GOD",
-  },
-  {
-    id: "murph",
-    name: "Murph (Time)",
-    tagline: "1mi · 100 pull · 200 push · 300 sq · 1mi",
-    type: "time",
-    target: 2700,
-    xp: 500,
-    tier: "GOD",
-  },
+  { id: "plank-1min", name: "60-Second Plank", tagline: "The entry test.", type: "time", target: 60, xp: 40, tier: "EASY" },
+  { id: "dead-hang", name: "60s Dead Hang", tagline: "Grip of steel.", type: "time", target: 60, xp: 50, tier: "EASY" },
+  { id: "squats-50", name: "50 Squats Speed Run", tagline: "Beat your clock.", type: "time", target: 90, xp: 50, tier: "EASY" },
+  { id: "pushups-30", name: "30 Push-ups Unbroken", tagline: "No stops. No drops.", type: "reps", target: 30, xp: 40, tier: "EASY" },
+  { id: "situps-50", name: "50 Sit-ups", tagline: "Core check.", type: "reps", target: 50, xp: 40, tier: "EASY" },
+  { id: "jumping-jacks-100", name: "100 Jumping Jacks", tagline: "Cardio warm-up.", type: "time", target: 90, xp: 30, tier: "EASY" },
+  { id: "plank-5min", name: "5-Minute Plank", tagline: "Brace. Breathe. Don't break.", type: "time", target: 300, xp: 150, tier: "BEAST" },
+  { id: "wall-sit-2min", name: "2-Minute Wall Sit", tagline: "Quads on fire.", type: "time", target: 120, xp: 80, tier: "BEAST" },
+  { id: "hollow-hold", name: "90s Hollow Hold", tagline: "Ab killer.", type: "time", target: 90, xp: 70, tier: "BEAST" },
+  { id: "pushups-max", name: "Max Push-ups", tagline: "One set. No rest. Go.", type: "reps", target: 50, xp: 60, tier: "BEAST" },
+  { id: "pullups-max", name: "Max Pull-ups", tagline: "Strict. No kipping.", type: "reps", target: 15, xp: 80, tier: "BEAST" },
+  { id: "burpees-50", name: "50 Burpees For Time", tagline: "Lungs vs legs.", type: "time", target: 300, xp: 100, tier: "BEAST" },
+  { id: "lunges-100", name: "100 Walking Lunges", tagline: "Glutes will hate you.", type: "reps", target: 100, xp: 90, tier: "BEAST" },
+  { id: "farmers-90s", name: "90s Farmer's Carry", tagline: "Grip + heart.", type: "time", target: 90, xp: 80, tier: "BEAST" },
+  { id: "plank-10min", name: "10-Minute Plank", tagline: "Legends only.", type: "time", target: 600, xp: 300, tier: "GOD" },
+  { id: "burpees-100", name: "100 Burpees", tagline: "Time attack. Survive.", type: "time", target: 600, xp: 120, tier: "GOD" },
+  { id: "pullups-30", name: "30 Strict Pull-ups", tagline: "Unbroken or bust.", type: "reps", target: 30, xp: 200, tier: "GOD" },
+  { id: "pushups-100", name: "100 Push-ups Unbroken", tagline: "No knee drops.", type: "reps", target: 100, xp: 180, tier: "GOD" },
+  { id: "deadhang-2min", name: "2-Minute Dead Hang", tagline: "Shoulders & soul.", type: "time", target: 120, xp: 150, tier: "GOD" },
+  { id: "murph", name: "Murph (Time)", tagline: "1mi · 100 pull · 200 push · 300 sq · 1mi", type: "time", target: 2700, xp: 500, tier: "GOD" },
 ];
 
-const TIER_COLOR: Record<Challenge["tier"], string> = {
-  EASY: "#60a5fa",
-  BEAST: "#fbbf24",
-  GOD: "#e63222",
-};
+const TIER_COLOR = { EASY: "#60a5fa", BEAST: "#fbbf24", GOD: "#FC4C02" };
+const TIER_LABEL = { EASY: "Entry", BEAST: "Beast", GOD: "God Tier" };
 
 function bestRecord(records: ChallengeRecord[] | undefined, id: string) {
   const list = (records || []).filter((r) => r.challengeId === id);
@@ -238,9 +65,25 @@ function fmtTime(s: number) {
   return `${m}:${sec.toString().padStart(2, "0")}`;
 }
 
+function getWeekBounds(offsetWeeks = 0) {
+  const now = new Date();
+  const dow = now.getDay();
+  const toMon = dow === 0 ? -6 : 1 - dow;
+  const mon = new Date(now);
+  mon.setDate(now.getDate() + toMon + offsetWeeks * 7);
+  mon.setHours(0, 0, 0, 0);
+  const sun = new Date(mon);
+  sun.setDate(mon.getDate() + 6);
+  sun.setHours(23, 59, 59, 999);
+  return { start: mon, end: sun };
+}
+
+type Tab = "GRIND" | "H2H" | "WARS";
+
 function ChallengesPage() {
   const [state] = useAppState();
   const [active, setActive] = useState<Challenge | null>(null);
+  const [tab, setTab] = useState<Tab>("GRIND");
   const [filter, setFilter] = useState<"ALL" | "EASY" | "BEAST" | "GOD" | "BEATEN">("ALL");
 
   const filtered = CHALLENGES.filter((c) => {
@@ -257,118 +100,601 @@ function ChallengesPage() {
     return b && b.value >= c.target;
   }).length;
 
+  const TABS: { id: Tab; icon: typeof Flame; label: string }[] = [
+    { id: "GRIND", icon: Flame, label: "Grind" },
+    { id: "H2H", icon: Swords, label: "Head-2-Head" },
+    { id: "WARS", icon: TrendingUp, label: "Weekly Wars" },
+  ];
+
   return (
-    <div style={{ paddingTop: "env(safe-area-inset-top)" }} className="pb-6">
+    <div className="pb-6">
       <header className="px-5 pt-6 pb-4 flex items-center justify-between">
-        <Link to="/train" className="flex items-center gap-1.5 text-grit-dim hover:text-grit">
+        <Link to="/train" className="flex items-center gap-1.5 press" style={{ color: "#9EA3AE" }}>
           <ArrowLeft size={16} />
-          <span className="label-cap text-[10px]">BACK</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider">Back</span>
         </Link>
-        <p className="label-cap text-[10px] flex items-center gap-1.5 text-accent-red">
-          <Trophy size={12} /> CHALLENGES
-        </p>
-        <div className="w-12" />
+        <div className="flex items-center gap-1.5" style={{ color: "#FC4C02" }}>
+          <Trophy size={14} />
+          <span className="text-[11px] font-bold uppercase tracking-wider">Challenges</span>
+        </div>
+        <div className="w-16" />
       </header>
 
+      {/* Hero */}
       <div className="px-5 mb-5">
-        <div className="neon-card grid-bg p-4">
-          <p className="label-cap text-[9px]">PROVE IT</p>
-          <h1 className="display text-3xl font-extrabold uppercase text-grit leading-tight mt-1">
-            Daily <span className="text-accent-red text-glow-red">Challenge</span>
+        <div
+          className="p-5 rounded-2xl overflow-hidden relative"
+          style={{ background: "linear-gradient(135deg, rgba(252,76,2,0.15) 0%, #1C1D21 100%)", border: "1.5px solid rgba(252,76,2,0.3)" }}
+        >
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "#FC4C02" }}>Prove It</p>
+          <h1 className="display text-3xl font-extrabold text-white leading-tight">
+            Daily <span style={{ color: "#FC4C02" }}>Challenges</span>
           </h1>
-          <p className="text-sm text-grit-dim mt-2">
-            Pick a challenge. Hit the target. Earn XP. Brag forever.
+          <p className="text-sm mt-2 mb-3" style={{ color: "#9EA3AE" }}>
+            Hit targets. Earn XP. Challenge your crew.
           </p>
-          <p className="label-cap text-[10px] mt-3 text-accent-red">
-            {beatenCount} / {CHALLENGES.length} BEATEN
-          </p>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5">
+              <Trophy size={12} style={{ color: "#FFB800" }} />
+              <span className="text-xs font-bold text-white">{beatenCount}/{CHALLENGES.length} beaten</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Zap size={12} style={{ color: "#FC4C02" }} />
+              <span className="text-xs font-bold text-white">
+                {CHALLENGES.filter(c => { const b = bestRecord(state.challengeRecords, c.id); return b; }).reduce((s, c) => s + c.xp, 0)} XP earned
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="px-5 mb-3 flex gap-1.5 overflow-x-auto no-scrollbar">
-        {(["ALL", "EASY", "BEAST", "GOD", "BEATEN"] as const).map((f) => (
+      {/* Tab switcher */}
+      <div
+        className="mx-5 mb-5 flex rounded-xl p-1"
+        style={{ background: "#1C1D21", border: "1.5px solid #2C2D33" }}
+      >
+        {TABS.map(({ id, icon: Icon, label }) => (
           <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-3 py-1.5 label-cap text-[10px] border whitespace-nowrap transition-colors ${
-              filter === f
-                ? "bg-accent-red border-accent-red text-white"
-                : "border-grit text-grit-dim"
-            }`}
+            key={id}
+            onClick={() => setTab(id)}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg press"
+            style={{
+              background: tab === id ? "#FC4C02" : "transparent",
+              color: tab === id ? "#fff" : "#6B7280",
+              transition: "all 0.2s ease",
+            }}
           >
-            {f}
+            <Icon size={13} />
+            <span className="text-[11px] font-bold uppercase tracking-wider">{label}</span>
           </button>
         ))}
       </div>
 
-      <div className="px-5 flex flex-col gap-2.5">
+      {tab === "GRIND" && (
+        <GrindTab
+          filtered={filtered}
+          filter={filter}
+          setFilter={setFilter}
+          state={state}
+          setActive={setActive}
+        />
+      )}
+      {tab === "H2H" && <H2HTab state={state} />}
+      {tab === "WARS" && <WarsTab state={state} />}
+
+      {active && <ChallengeRunner challenge={active} onClose={() => setActive(null)} />}
+    </div>
+  );
+}
+
+function GrindTab({ filtered, filter, setFilter, state, setActive }: {
+  filtered: Challenge[];
+  filter: string;
+  setFilter: (f: "ALL" | "EASY" | "BEAST" | "GOD" | "BEATEN") => void;
+  state: ReturnType<typeof useAppState>[0];
+  setActive: (c: Challenge) => void;
+}) {
+  return (
+    <>
+      <div className="px-5 mb-3 flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+        {(["ALL", "EASY", "BEAST", "GOD", "BEATEN"] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider border rounded-full whitespace-nowrap press"
+            style={{
+              background: filter === f ? "#FC4C02" : "transparent",
+              borderColor: filter === f ? "#FC4C02" : "#2C2D33",
+              color: filter === f ? "#fff" : "#9EA3AE",
+            }}
+          >
+            {f === "BEATEN" ? "✓ Beaten" : f}
+          </button>
+        ))}
+      </div>
+
+      <div className="px-5 flex flex-col gap-3">
         {filtered.length === 0 && (
-          <div className="bg-grit-card border border-grit p-6 text-center text-sm text-grit-dim">
-            No challenges in this filter yet.
+          <div className="p-8 text-center rounded-2xl" style={{ background: "#1C1D21", border: "1.5px solid #2C2D33" }}>
+            <p className="text-sm" style={{ color: "#9EA3AE" }}>No challenges in this filter.</p>
           </div>
         )}
         {filtered.map((c) => {
           const best = bestRecord(state.challengeRecords, c.id);
-
           const beat = best && best.value >= c.target;
           const tierColor = TIER_COLOR[c.tier];
           const pct = best ? Math.min(100, (best.value / c.target) * 100) : 0;
+
           return (
             <button
               key={c.id}
               onClick={() => setActive(c)}
-              className="bg-grit-card border border-grit p-3 text-left hover:border-accent-red transition-colors relative overflow-hidden"
+              className="text-left rounded-2xl p-4 press relative overflow-hidden"
+              style={{ background: "#1C1D21", border: `1.5px solid ${beat ? "#FC4C02" : "#2C2D33"}` }}
             >
+              {beat && (
+                <div
+                  className="absolute top-0 right-0 w-16 h-16"
+                  style={{
+                    background: "linear-gradient(135deg, transparent 50%, rgba(252,76,2,0.15) 50%)",
+                  }}
+                />
+              )}
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-2">
                     <span
-                      className="label-cap text-[9px] px-1.5 py-0.5"
-                      style={{
-                        background: tierColor + "22",
-                        border: `1px solid ${tierColor}`,
-                        color: tierColor,
-                      }}
+                      className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                      style={{ background: `${tierColor}18`, color: tierColor, border: `1px solid ${tierColor}40` }}
                     >
-                      {c.tier}
+                      {TIER_LABEL[c.tier]}
                     </span>
                     {beat && (
-                      <span className="label-cap text-[9px] px-1.5 py-0.5 bg-accent-red text-white flex items-center gap-1">
-                        <Check size={10} /> BEATEN
+                      <span
+                        className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full flex items-center gap-1"
+                        style={{ background: "rgba(252,76,2,0.15)", color: "#FC4C02", border: "1px solid rgba(252,76,2,0.3)" }}
+                      >
+                        <Check size={9} /> Beaten
                       </span>
                     )}
                   </div>
-                  <p className="display text-lg font-extrabold uppercase text-grit leading-tight">
-                    {c.name}
-                  </p>
-                  <p className="text-[11px] text-grit-dim mt-0.5">{c.tagline}</p>
+                  <p className="display text-lg font-extrabold text-white uppercase leading-tight">{c.name}</p>
+                  <p className="text-[11px] mt-0.5" style={{ color: "#9EA3AE" }}>{c.tagline}</p>
                 </div>
-                <div className="text-right flex-shrink-0 flex flex-col items-end gap-1">
-                  <p className="label-cap text-[9px] flex items-center justify-end gap-0.5 text-accent-red">
-                    <Zap size={9} /> {c.xp} XP
-                  </p>
-                  {best ? (
-                    <span className="label-cap text-[9px] px-1.5 py-0.5 border border-accent-red text-accent-red">
-                      YOUR BEST: {c.type === "time" ? fmtTime(best.value) : `${best.value}`}
-                    </span>
-                  ) : (
-                    <p className="text-[10px] text-grit-dim mt-1 font-bold uppercase tracking-wider">
-                      NEW
-                    </p>
+                <div className="text-right flex-shrink-0">
+                  <div
+                    className="flex items-center gap-1 justify-end mb-1"
+                    style={{ color: "#FC4C02" }}
+                  >
+                    <Zap size={11} />
+                    <span className="text-xs font-bold">{c.xp} XP</span>
+                  </div>
+                  {best && (
+                    <div
+                      className="text-[10px] font-bold px-2 py-1 rounded-lg"
+                      style={{ background: "rgba(252,76,2,0.1)", color: "#FC4C02" }}
+                    >
+                      {c.type === "time" ? fmtTime(best.value) : best.value}
+                    </div>
+                  )}
+                  {!best && (
+                    <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#6B7280" }}>
+                      New
+                    </div>
                   )}
                 </div>
               </div>
+
               {best && (
-                <div className="xp-bar mt-2.5" style={{ height: 4 }}>
-                  <div className="fill" style={{ width: `${Math.max(2, pct)}%` }} />
+                <div className="mt-3">
+                  <div className="h-1 rounded-full overflow-hidden" style={{ background: "#2C2D33" }}>
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${Math.max(2, pct)}%`,
+                        background: beat ? "#FC4C02" : tierColor,
+                        transition: "width 600ms ease",
+                      }}
+                    />
+                  </div>
+                  <div className="flex justify-between mt-1">
+                    <span className="text-[9px]" style={{ color: "#9EA3AE" }}>
+                      Your best: {c.type === "time" ? fmtTime(best.value) : `${best.value} reps`}
+                    </span>
+                    <span className="text-[9px]" style={{ color: "#9EA3AE" }}>
+                      Target: {c.type === "time" ? fmtTime(c.target) : `${c.target} reps`}
+                    </span>
+                  </div>
                 </div>
               )}
             </button>
           );
         })}
       </div>
+    </>
+  );
+}
 
-      {active && <ChallengeRunner challenge={active} onClose={() => setActive(null)} />}
+function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<{ id: string; display_name?: string | null; username?: string | null; avatar_url?: string | null; following?: boolean; level?: string | null }[] | null>(null);
+  const [selected, setSelected] = useState<{ id: string; username?: string | null; display_name?: string | null } | null>(null);
+  const [challenge, setChallenge] = useState<Challenge | null>(null);
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const _search = useServerFn(searchAthletes);
+  const _createPost = useServerFn(createPost);
+
+  useEffect(() => {
+    if (query.trim().length < 2) { setResults(null); return; }
+    const t = setTimeout(async () => {
+      try { setResults(await _search({ data: { q: query.trim() } })); }
+      catch { /* ignore */ }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  async function sendChallenge() {
+    if (!selected || !challenge) return;
+    setSending(true);
+    try {
+      const targetName = selected.display_name || selected.username || "friend";
+      const content = `@${targetName} I challenge you: ${challenge.name} (${challenge.tier} — ${challenge.xp} XP). Think you can beat it? 🔥`;
+      await _createPost({
+        data: {
+          kind: "text",
+          content,
+          metadata: { h2h: true, challengeId: challenge.id, targetUserId: selected.id },
+        },
+      });
+      setSent(true);
+      toast.success("Challenge sent to your feed!");
+    } catch (e) {
+      toast.error("Couldn't send challenge");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  if (sent) {
+    return (
+      <div className="px-5 text-center py-12">
+        <div
+          className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"
+          style={{ background: "rgba(252,76,2,0.15)", border: "2px solid #FC4C02" }}
+        >
+          <Swords size={32} style={{ color: "#FC4C02" }} />
+        </div>
+        <h2 className="display text-2xl font-extrabold text-white uppercase">Challenge Issued</h2>
+        <p className="text-sm mt-2 mb-6" style={{ color: "#9EA3AE" }}>
+          Your challenge post is live. Now go do it first.
+        </p>
+        <button
+          onClick={() => { setSent(false); setSelected(null); setChallenge(null); setQuery(""); }}
+          className="btn-grit px-8"
+        >
+          New Challenge
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-5 flex flex-col gap-4">
+      {/* Step 1: Search for opponent */}
+      <div
+        className="p-4 rounded-2xl"
+        style={{ background: "#1C1D21", border: `1.5px solid ${selected ? "#4CAF50" : "#2C2D33"}` }}
+      >
+        <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: "#9EA3AE" }}>
+          1 — Pick Your Opponent
+        </p>
+        {selected ? (
+          <div className="flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center font-extrabold display text-white text-sm flex-shrink-0"
+              style={{ background: "#FC4C02" }}
+            >
+              {(selected.display_name || selected.username || "A")[0].toUpperCase()}
+            </div>
+            <div className="flex-1">
+              <p className="font-bold text-white text-sm">{selected.display_name || selected.username}</p>
+              {selected.username && <p className="text-xs" style={{ color: "#9EA3AE" }}>@{selected.username}</p>}
+            </div>
+            <button onClick={() => setSelected(null)} style={{ color: "#9EA3AE" }}>
+              <X size={16} />
+            </button>
+          </div>
+        ) : (
+          <div className="relative">
+            <div
+              className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
+              style={{ background: "#25262B", border: "1px solid #2C2D33" }}
+            >
+              <Search size={14} style={{ color: "#9EA3AE" }} />
+              <input
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Search by username..."
+                className="flex-1 bg-transparent text-sm text-white placeholder:text-[#6B7280] outline-none"
+              />
+            </div>
+            {results && results.length > 0 && (
+              <div
+                className="absolute left-0 right-0 top-full mt-1 rounded-xl overflow-hidden z-20"
+                style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}
+              >
+                {results.slice(0, 6).map(r => (
+                  <button
+                    key={r.id}
+                    onClick={() => { setSelected(r); setQuery(""); setResults(null); }}
+                    className="flex items-center gap-3 px-3 py-2.5 w-full text-left press"
+                    style={{ borderBottom: "1px solid #2C2D33" }}
+                  >
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                      style={{ background: "#FC4C02" }}
+                    >
+                      {(r.display_name || r.username || "A")[0]}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white">{r.display_name || r.username}</p>
+                      {r.username && <p className="text-xs" style={{ color: "#9EA3AE" }}>@{r.username}</p>}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            {results && results.length === 0 && (
+              <div
+                className="absolute left-0 right-0 top-full mt-1 rounded-xl p-4 text-center z-20"
+                style={{ background: "#1C1D21", border: "1.5px solid #2C2D33" }}
+              >
+                <p className="text-sm" style={{ color: "#9EA3AE" }}>No athletes found</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Step 2: Pick challenge */}
+      <div
+        className="p-4 rounded-2xl"
+        style={{ background: "#1C1D21", border: `1.5px solid ${challenge ? "#4CAF50" : "#2C2D33"}` }}
+      >
+        <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: "#9EA3AE" }}>
+          2 — Pick The Challenge
+        </p>
+        {challenge ? (
+          <div className="flex items-center gap-3">
+            <div
+              className="flex items-center justify-center rounded-xl flex-shrink-0"
+              style={{ width: 40, height: 40, background: `${TIER_COLOR[challenge.tier]}18` }}
+            >
+              <Trophy size={18} style={{ color: TIER_COLOR[challenge.tier] }} />
+            </div>
+            <div className="flex-1">
+              <p className="font-bold text-white text-sm">{challenge.name}</p>
+              <p className="text-xs" style={{ color: "#9EA3AE" }}>{challenge.xp} XP · {challenge.tier}</p>
+            </div>
+            <button onClick={() => setChallenge(null)} style={{ color: "#9EA3AE" }}>
+              <X size={16} />
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2 max-h-64 overflow-y-auto no-scrollbar">
+            {CHALLENGES.map(c => (
+              <button
+                key={c.id}
+                onClick={() => setChallenge(c)}
+                className="flex items-center justify-between px-3 py-2.5 rounded-xl text-left press"
+                style={{ background: "#25262B" }}
+              >
+                <div>
+                  <p className="text-sm font-bold text-white">{c.name}</p>
+                  <p className="text-[10px]" style={{ color: "#9EA3AE" }}>{c.tagline}</p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span
+                    className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                    style={{ background: `${TIER_COLOR[c.tier]}18`, color: TIER_COLOR[c.tier] }}
+                  >
+                    {c.tier}
+                  </span>
+                  <span className="text-[10px] font-bold" style={{ color: "#FC4C02" }}>{c.xp} XP</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Send */}
+      <button
+        onClick={sendChallenge}
+        disabled={!selected || !challenge || sending}
+        className="btn-grit w-full flex items-center justify-center gap-2 py-4"
+        style={{ opacity: !selected || !challenge ? 0.4 : 1 }}
+      >
+        {sending ? (
+          <span className="text-sm font-bold">Sending…</span>
+        ) : (
+          <>
+            <Swords size={16} />
+            <span>Issue the Challenge</span>
+          </>
+        )}
+      </button>
+
+      <p className="text-center text-xs" style={{ color: "#6B7280" }}>
+        This posts a challenge to your feed and tags your opponent.
+      </p>
+    </div>
+  );
+}
+
+function WarsTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
+  const thisWeek = getWeekBounds(0);
+  const lastWeek = getWeekBounds(-1);
+
+  const thisWeekSessions = (state.sessions ?? []).filter(s => {
+    const dt = new Date(s.date);
+    return dt >= thisWeek.start && dt <= thisWeek.end;
+  });
+  const lastWeekSessions = (state.sessions ?? []).filter(s => {
+    const dt = new Date(s.date);
+    return dt >= lastWeek.start && dt <= lastWeek.end;
+  });
+
+  const thisVol = thisWeekSessions.reduce((sum, s) => sum + (s.totalVolume ?? 0), 0);
+  const lastVol = lastWeekSessions.reduce((sum, s) => sum + (s.totalVolume ?? 0), 0);
+  const volDelta = lastVol > 0 ? Math.round(((thisVol - lastVol) / lastVol) * 100) : null;
+
+  const thisPRs = thisWeekSessions.reduce((sum, s) => sum + (s.prCount ?? 0), 0);
+  const lastPRs = lastWeekSessions.reduce((sum, s) => sum + (s.prCount ?? 0), 0);
+
+  const totalBeaten = (state.challengeRecords ?? []).reduce((set, r) => {
+    const c = CHALLENGES.find(c => c.id === r.challengeId);
+    if (c && r.value >= c.target) set.add(r.challengeId);
+    return set;
+  }, new Set<string>()).size;
+
+  const p = state.profile;
+
+  const weeks = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const weekSessionMap = new Map<string, number>();
+  thisWeekSessions.forEach(s => {
+    const d = new Date(s.date);
+    const key = weeks[d.getDay() === 0 ? 6 : d.getDay() - 1];
+    weekSessionMap.set(key, (weekSessionMap.get(key) ?? 0) + 1);
+  });
+
+  return (
+    <div className="px-5 flex flex-col gap-4">
+      {/* Weekly summary card */}
+      <div
+        className="p-5 rounded-2xl"
+        style={{ background: "linear-gradient(135deg, rgba(252,76,2,0.1) 0%, #1C1D21 100%)", border: "1.5px solid rgba(252,76,2,0.25)" }}
+      >
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "#FC4C02" }}>This Week</p>
+        <h2 className="display text-2xl font-extrabold text-white">
+          {thisWeekSessions.length} <span className="text-base font-semibold" style={{ color: "#9EA3AE" }}>sessions</span>
+        </h2>
+        <div className="flex items-center gap-1 mt-1">
+          {volDelta !== null && (
+            <span
+              className="text-[10px] font-bold flex items-center gap-0.5"
+              style={{ color: volDelta >= 0 ? "#4CAF50" : "#FF5252" }}
+            >
+              {volDelta >= 0 ? <TrendingUp size={10} /> : null}
+              {volDelta >= 0 ? "+" : ""}{volDelta}% volume vs last week
+            </span>
+          )}
+        </div>
+
+        {/* Daily bar chart */}
+        <div className="flex items-end gap-1.5 mt-4 h-14">
+          {weeks.map(day => {
+            const count = weekSessionMap.get(day) ?? 0;
+            const today = new Date();
+            const todayKey = weeks[today.getDay() === 0 ? 6 : today.getDay() - 1];
+            const isToday = day === todayKey;
+            return (
+              <div key={day} className="flex-1 flex flex-col items-center gap-1">
+                <div className="w-full flex flex-col justify-end" style={{ height: 40 }}>
+                  <div
+                    className="w-full rounded-t-md"
+                    style={{
+                      height: count > 0 ? Math.min(40, count * 20) : 4,
+                      background: isToday ? "#FC4C02" : count > 0 ? "rgba(252,76,2,0.4)" : "#2C2D33",
+                      transition: "height 400ms ease",
+                    }}
+                  />
+                </div>
+                <span className="text-[9px] font-bold" style={{ color: isToday ? "#FC4C02" : "#6B7280" }}>
+                  {day[0]}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Stats grid */}
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { label: "Sessions This Week", value: thisWeekSessions.length, sub: `${lastWeekSessions.length} last week`, color: "#FC4C02" },
+          { label: "Volume This Week", value: `${Math.round(thisVol / 1000)}t`, sub: `${Math.round(lastVol / 1000)}t last week`, color: "#FC4C02" },
+          { label: "PRs This Week", value: thisPRs, sub: `${lastPRs} last week`, color: "#FFB800" },
+          { label: "Challenges Beaten", value: totalBeaten, sub: `of ${CHALLENGES.length} total`, color: "#4CAF50" },
+        ].map(s => (
+          <div key={s.label} className="p-4 rounded-2xl" style={{ background: "#1C1D21", border: "1.5px solid #2C2D33" }}>
+            <p className="display text-2xl font-extrabold" style={{ color: s.color }}>{s.value}</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider mt-0.5 text-white">{s.label}</p>
+            <p className="text-[10px] mt-0.5" style={{ color: "#6B7280" }}>{s.sub}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Leagues CTA */}
+      <Link
+        to="/friends"
+        className="p-4 rounded-2xl flex items-center gap-4 press"
+        style={{ background: "#1C1D21", border: "1.5px solid #2C2D33" }}
+      >
+        <div
+          className="flex items-center justify-center rounded-xl flex-shrink-0"
+          style={{ width: 44, height: 44, background: "rgba(252,76,2,0.12)" }}
+        >
+          <Crown size={20} style={{ color: "#FC4C02" }} />
+        </div>
+        <div className="flex-1">
+          <p className="font-bold text-white text-sm">See Your League Rank</p>
+          <p className="text-xs mt-0.5" style={{ color: "#9EA3AE" }}>
+            Compete with your friends this week
+          </p>
+        </div>
+        <ChevronRight size={16} style={{ color: "#6B7280" }} />
+      </Link>
+
+      {/* Best challenge scores */}
+      {CHALLENGES.filter(c => bestRecord(state.challengeRecords, c.id)).length > 0 && (
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{ background: "#1C1D21", border: "1.5px solid #2C2D33" }}
+        >
+          <p className="px-4 py-3 text-xs font-bold uppercase tracking-wider" style={{ color: "#9EA3AE", borderBottom: "1px solid #2C2D33" }}>
+            Your Challenge Records
+          </p>
+          {CHALLENGES.filter(c => bestRecord(state.challengeRecords, c.id)).slice(0, 5).map((c, i) => {
+            const best = bestRecord(state.challengeRecords, c.id)!;
+            const beat = best.value >= c.target;
+            return (
+              <div
+                key={c.id}
+                className="flex items-center justify-between px-4 py-3"
+                style={{ borderTop: i > 0 ? "1px solid #2C2D33" : "none" }}
+              >
+                <div>
+                  <p className="text-sm font-bold text-white">{c.name}</p>
+                  <span
+                    className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full"
+                    style={{ background: `${TIER_COLOR[c.tier]}15`, color: TIER_COLOR[c.tier] }}
+                  >
+                    {c.tier}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-bold" style={{ color: beat ? "#FC4C02" : "#9EA3AE" }}>
+                    {c.type === "time" ? fmtTime(best.value) : `${best.value} reps`}
+                  </p>
+                  {beat && <p className="text-[9px]" style={{ color: "#FC4C02" }}>✓ beaten</p>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -376,8 +702,6 @@ function ChallengesPage() {
 function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose: () => void }) {
   const [, set] = useAppState();
   const isTime = challenge.type === "time";
-
-  // Time mode: count UP (hold as long as possible). Rep mode: tap counter.
   const [seconds, setSeconds] = useState(0);
   const [reps, setReps] = useState(0);
   const [running, setRunning] = useState(false);
@@ -387,185 +711,166 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
   useEffect(() => {
     if (running && isTime) {
       tickRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
-      return () => {
-        if (tickRef.current) clearInterval(tickRef.current);
-      };
+      return () => { if (tickRef.current) clearInterval(tickRef.current); };
     }
   }, [running, isTime]);
-
-  function start() {
-    setRunning(true);
-  }
-  function pause() {
-    setRunning(false);
-  }
-  function reset() {
-    setRunning(false);
-    setSeconds(0);
-    setReps(0);
-    setFinished(null);
-  }
 
   function finish() {
     setRunning(false);
     const value = isTime ? seconds : reps;
-    if (value <= 0) {
-      onClose();
-      return;
-    }
+    if (value <= 0) { onClose(); return; }
     const beat = value >= challenge.target;
-    const record: ChallengeRecord = {
-      challengeId: challenge.id,
-      value,
-      date: isoDay(),
-    };
     set((s) => ({
       ...s,
-      challengeRecords: [...(s.challengeRecords || []), record],
+      challengeRecords: [...(s.challengeRecords || []), { challengeId: challenge.id, value, date: isoDay() }],
     }));
     setFinished({ value, beat });
   }
 
   const display = isTime ? fmtTime(seconds) : `${reps}`;
-  const targetDisplay = isTime ? fmtTime(challenge.target) : `${challenge.target}`;
   const pct = isTime
     ? Math.min(100, (seconds / challenge.target) * 100)
     : Math.min(100, (reps / challenge.target) * 100);
+  const tierColor = TIER_COLOR[challenge.tier];
+
+  const size = 180;
+  const sw = 8;
+  const r = (size - sw) / 2;
+  const circ = 2 * Math.PI * r;
 
   return (
-    <div
-      className="fixed inset-0 z-[200] bg-black/90 flex items-end sm:items-center justify-center p-4"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center" onClick={onClose}
+      style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}>
       <div
-        className="bg-grit-card border border-accent-red w-full max-w-md relative grid-bg"
-        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md relative rounded-t-3xl sm:rounded-3xl"
+        style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderTop: `3px solid ${tierColor}` }}
+        onClick={e => e.stopPropagation()}
       >
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-3 text-grit-dim hover:text-grit z-10"
-        >
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 sm:hidden">
+          <div className="w-10 h-1 rounded-full" style={{ background: "#2C2D33" }} />
+        </div>
+
+        <button onClick={onClose} className="absolute top-4 right-4" style={{ color: "#9EA3AE" }}>
           <X size={20} />
         </button>
 
-        <div className="p-5 pb-3 border-b border-grit">
-          <p className="label-cap text-[9px] text-accent-red flex items-center gap-1.5">
-            {isTime ? <Timer size={11} /> : <Flame size={11} />} CHALLENGE
-          </p>
-          <h2 className="display text-2xl font-extrabold uppercase text-grit leading-tight mt-1">
+        <div className="p-6 pb-3">
+          <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: tierColor }}>
+            {TIER_LABEL[challenge.tier]} Challenge
+          </span>
+          <h2 className="display text-2xl font-extrabold text-white uppercase leading-tight mt-1">
             {challenge.name}
           </h2>
-          <p className="text-xs text-grit-dim mt-1">
-            Target: <span className="text-accent-red font-bold">{targetDisplay}</span> ·{" "}
-            {challenge.xp} XP
-          </p>
+          <p className="text-xs mt-0.5" style={{ color: "#9EA3AE" }}>{challenge.tagline}</p>
         </div>
 
-        {!finished ? (
-          <>
-            <div className="p-8 text-center">
-              <p
-                className="display font-extrabold leading-none text-glow-red text-accent-red"
-                style={{ fontSize: "5.5rem" }}
-              >
-                {display}
-              </p>
-              <p className="label-cap text-[10px] mt-2">{isTime ? "SECONDS HELD" : "REPS DONE"}</p>
-              <div className="xp-bar mt-4">
-                <div className="fill" style={{ width: `${Math.max(2, pct)}%` }} />
+        {/* Ring timer for time challenges */}
+        {isTime ? (
+          <div className="flex flex-col items-center py-4">
+            <div className="relative" style={{ width: size, height: size }}>
+              <svg width={size} height={size} className="-rotate-90 absolute inset-0">
+                <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#2C2D33" strokeWidth={sw} />
+                <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={tierColor} strokeWidth={sw}
+                  strokeDasharray={`${circ * pct / 100} ${circ}`} strokeLinecap="round"
+                  style={{ transition: "stroke-dasharray 200ms linear" }} />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="display font-extrabold text-white" style={{ fontSize: 44 }}>{display}</span>
+                <span className="text-xs font-bold uppercase tracking-wider mt-1" style={{ color: "#9EA3AE" }}>
+                  Target: {fmtTime(challenge.target)}
+                </span>
               </div>
             </div>
-
-            <div className="p-4 pt-0">
-              {isTime ? (
-                <div className="flex gap-2">
-                  {!running ? (
-                    <button onClick={start} className="btn-grit flex-1">
-                      <Play size={16} className="mr-2" /> {seconds > 0 ? "Resume" : "Start"}
-                    </button>
-                  ) : (
-                    <button onClick={pause} className="btn-ghost flex-1">
-                      <Pause size={16} className="mr-2" /> Pause
-                    </button>
-                  )}
-                  <button onClick={reset} className="btn-ghost px-4" aria-label="Reset">
-                    <RotateCcw size={16} />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex gap-2 mb-2">
-                  <button
-                    onClick={() => setReps((r) => Math.max(0, r - 1))}
-                    className="btn-ghost px-4"
-                    aria-label="Minus rep"
-                  >
-                    <Minus size={18} />
-                  </button>
-                  <button
-                    onClick={() => setReps((r) => r + 1)}
-                    className="btn-grit flex-1 text-base py-4"
-                  >
-                    <Plus size={18} className="mr-2" /> Tap to count
-                  </button>
-                  <button onClick={reset} className="btn-ghost px-4" aria-label="Reset">
-                    <RotateCcw size={16} />
-                  </button>
-                </div>
-              )}
-              <button onClick={finish} className="btn-ghost w-full mt-2">
-                <Check size={16} className="mr-2" /> Save Attempt
-              </button>
-            </div>
-          </>
+          </div>
         ) : (
-          <div className="p-6 text-center">
-            <div
-              className="display font-extrabold text-glow-red text-accent-red leading-none"
-              style={{ fontSize: "3rem" }}
-            >
-              {finished.beat ? "BEATEN!" : "LOGGED"}
-            </div>
-            <p className="text-sm text-grit-dim mt-2">
-              {finished.beat
-                ? `You smashed the target. +${challenge.xp} XP earned.`
-                : `Good effort. Hit ${targetDisplay} to claim the badge.`}
-            </p>
-            <p className="display text-3xl font-extrabold text-grit mt-4">
-              {isTime ? fmtTime(finished.value) : `${finished.value}`}
-            </p>
-            <button
-              onClick={async () => {
-                const score = isTime ? fmtTime(finished.value) : `${finished.value} reps`;
-                const shareData = {
-                  title: "DEADSET Challenge",
-                  text: `I just completed the ${challenge.name} challenge on DEADSET! Score: ${score}`,
-                  url: "https://deadsetfit.org",
-                };
-                try {
-                  if (navigator.share) {
-                    await navigator.share(shareData);
-                  } else {
-                    await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`);
-                    alert("Copied to clipboard!");
-                  }
-                } catch {
-                  // user cancelled or blocked
-                }
-              }}
-              className="w-full mt-4 border border-[#262626] text-grit-dim py-3 flex items-center justify-center gap-2 label-cap text-[10px] hover:border-accent-red hover:text-accent-red transition-colors"
-            >
-              <Share2 size={14} /> Share Result
-            </button>
-            <div className="flex gap-2 mt-3">
-              <button onClick={reset} className="btn-ghost flex-1">
-                <RotateCcw size={14} className="mr-2" /> Retry
+          <div className="flex flex-col items-center py-6 gap-4">
+            <span className="display font-extrabold text-white" style={{ fontSize: 72 }}>{reps}</span>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setReps(r => Math.max(0, r - 1))}
+                className="w-12 h-12 rounded-full flex items-center justify-center press"
+                style={{ background: "#25262B", border: "1.5px solid #2C2D33" }}
+              >
+                <Minus size={20} style={{ color: "#9EA3AE" }} />
               </button>
-              <button onClick={onClose} className="btn-grit flex-1">
-                Done
+              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#9EA3AE" }}>
+                Target: {challenge.target} reps
+              </span>
+              <button
+                onClick={() => setReps(r => r + 1)}
+                className="w-12 h-12 rounded-full flex items-center justify-center press"
+                style={{ background: tierColor }}
+              >
+                <Plus size={20} color="#fff" />
               </button>
             </div>
           </div>
         )}
+
+        {/* Result */}
+        {finished && (
+          <div
+            className="mx-5 mb-4 p-4 rounded-2xl text-center"
+            style={{
+              background: finished.beat ? "rgba(252,76,2,0.1)" : "rgba(44,45,51,0.5)",
+              border: `1.5px solid ${finished.beat ? "#FC4C02" : "#2C2D33"}`,
+            }}
+          >
+            <p className="display text-xl font-extrabold" style={{ color: finished.beat ? "#FC4C02" : "#9EA3AE" }}>
+              {finished.beat ? "🔥 BEATEN!" : "Not yet"}
+            </p>
+            <p className="text-sm mt-1" style={{ color: "#9EA3AE" }}>
+              {isTime ? fmtTime(finished.value) : `${finished.value} reps`}
+              {" · "}
+              Target: {isTime ? fmtTime(challenge.target) : `${challenge.target} reps`}
+            </p>
+            {finished.beat && (
+              <p className="text-xs mt-1 font-bold" style={{ color: "#FC4C02" }}>+{challenge.xp} XP earned!</p>
+            )}
+          </div>
+        )}
+
+        {/* Controls */}
+        <div className="px-5 pb-6 flex gap-3">
+          {finished ? (
+            <button onClick={onClose} className="btn-grit flex-1 py-3">Done</button>
+          ) : (
+            <>
+              {isTime ? (
+                <>
+                  <button
+                    onClick={() => running ? setRunning(false) : setRunning(true)}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm press"
+                    style={{ background: running ? "#2C2D33" : tierColor, color: "#fff" }}
+                  >
+                    {running ? <><Pause size={16} /> Pause</> : <><Play size={16} /> {seconds > 0 ? "Resume" : "Start"}</>}
+                  </button>
+                  <button
+                    onClick={finish}
+                    className="flex-1 py-3 rounded-2xl font-bold text-sm press"
+                    style={{ background: "#2C2D33", color: "#9EA3AE" }}
+                  >
+                    Finish
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => { setReps(0); setFinished(null); }}
+                    className="py-3 px-4 rounded-2xl press"
+                    style={{ background: "#2C2D33", color: "#9EA3AE" }}
+                  >
+                    <RotateCcw size={16} />
+                  </button>
+                  <button onClick={finish} className="btn-grit flex-1 py-3">
+                    Log {reps} reps
+                  </button>
+                </>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

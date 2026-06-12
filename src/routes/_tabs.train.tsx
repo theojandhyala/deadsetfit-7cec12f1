@@ -24,6 +24,7 @@ import { EXERCISES, getExercise } from "@/lib/exercises";
 import { calculateGritScore, calculateStreak, defaultSchedule, isoDay, todayKey } from "@/lib/calc";
 import { generateSchedule } from "@/lib/ai.functions";
 import { ProBanner } from "@/components/ProBanner";
+import { InsightsWidget } from "@/components/InsightsWidget";
 import type { DayKey, Schedule, Program } from "@/lib/types";
 
 const DAY_KEYS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
@@ -227,6 +228,12 @@ function TrainPage() {
           </div>
         </div>
 
+      </div>
+
+      {/* Weekly insights widget */}
+      <InsightsWidget />
+
+      <div className="px-5">
         {/* Quick-start CTA */}
         {(() => {
           const today = todayKey();
