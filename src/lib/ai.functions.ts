@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { chatJSON } from "./ai-gateway.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requirePro } from "@/lib/require-pro.server";
 
 const ScheduleInput = z.object({
   goal: z.string(),
@@ -38,7 +39,7 @@ const MealsInput = z.object({
 });
 
 export const generateMeals = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requirePro])
   .inputValidator((d: unknown) => MealsInput.parse(d))
   .handler(async ({ data }) => {
     const sys = `You are a sports nutritionist. Reply with strict JSON only:
@@ -65,7 +66,7 @@ const SwapInput = z.object({
 });
 
 export const swapMeal = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requirePro])
   .inputValidator((d: unknown) => SwapInput.parse(d))
   .handler(async ({ data }) => {
     const sys = `Reply with strict JSON only: {"name":"...","calories":0,"protein":0,"carbs":0,"fats":0}. Suggest one alternative meal with matching macros (±10%).`;

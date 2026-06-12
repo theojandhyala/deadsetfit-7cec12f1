@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Loader2,
@@ -18,6 +18,7 @@ import { calculateCalories, calculateMacros, isoDay } from "@/lib/calc";
 import { generateMeals, swapMeal } from "@/lib/ai.functions";
 import { analyzeFoodPhoto, lookupBarcode, weeklyNutritionReport } from "@/lib/diet.functions";
 import type { Meal, MealPlan, FoodLogItem } from "@/lib/types";
+import { usePro } from "@/hooks/usePro";
 
 export const Route = createFileRoute("/_tabs/diet")({
   head: () => ({ meta: [{ title: "DEADSET — Diet" }] }),
@@ -27,6 +28,7 @@ export const Route = createFileRoute("/_tabs/diet")({
 type WeeklyReport = Awaited<ReturnType<typeof weeklyNutritionReport>>;
 
 function DietPage() {
+  const { isPro } = usePro();
   const [state, set] = useAppState();
   const gen = useServerFn(generateMeals);
   const swap = useServerFn(swapMeal);
@@ -218,6 +220,14 @@ function DietPage() {
     });
   }
 
+  function handleProFeature(action: () => void) {
+    if (isPro) {
+      action();
+    } else {
+      setError("Upgrade to DEADSET Pro to unlock this feature →");
+    }
+  }
+
   async function generateReport() {
     if (!profile) return;
     setReportLoad(true);
@@ -287,7 +297,7 @@ function DietPage() {
         <p className="label-cap text-[10px] text-[#8a8a8a] mb-2">Log a meal</p>
         <div className="grid grid-cols-3 gap-2">
           <button
-            onClick={() => fileRef.current?.click()}
+            onClick={() => handleProFeature(() => fileRef.current?.click())}
             disabled={analyzing}
             className="btn-grit py-3 flex flex-col items-center justify-center gap-1 text-[10px]"
           >
@@ -295,7 +305,7 @@ function DietPage() {
             <span className="label-cap">{analyzing ? "…" : "Scan Photo"}</span>
           </button>
           <button
-            onClick={() => setBarcodeOpen((v) => !v)}
+            onClick={() => handleProFeature(() => setBarcodeOpen((v) => !v))}
             className="btn-ghost py-3 flex flex-col items-center justify-center gap-1 text-[10px]"
           >
             <ScanBarcode size={16} />
@@ -312,7 +322,15 @@ function DietPage() {
             <span className="label-cap">Manual</span>
           </button>
         </div>
-        {error && <p className="text-xs text-accent-red mt-2">{error}</p>}
+        {error && (
+          error.includes("Pro") ? (
+            <p className="text-xs text-accent-red mt-2">
+              <Link to="/upgrade" className="underline">{error}</Link>
+            </p>
+          ) : (
+            <p className="text-xs text-accent-red mt-2">{error}</p>
+          )
+        )}
       </div>
 
       {/* BMI + per-meal breakdown */}
@@ -451,22 +469,42 @@ function DietPage() {
       <section className="px-5 mb-6">
         <div className="flex items-center justify-between mb-2">
           <p className="label-cap">Today's Meals</p>
-          <button onClick={loadMeals} disabled={loading} className="label-cap text-accent-red">
-            {loading ? <Loader2 size={12} className="inline animate-spin" /> : "Generate"}
+          <button
+            onClick={() => handleProFeature(loadMeals)}
+            disabled={loading || !isPro}
+            className="label-cap text-accent-red"
+          >
+            {loading ? (
+              <Loader2 size={12} className="inline animate-spin" />
+            ) : isPro ? (
+              "Generate"
+            ) : (
+              "Pro"
+            )}
           </button>
         </div>
-        <div className="mb-3">
-          <input
-            value={mealConstraints}
-            onChange={(e) => setMealConstraints(e.target.value)}
-            placeholder="e.g. no dairy, high protein, quick meals"
-            className="input-grit w-full text-xs"
-          />
-          <p className="text-[9px] uppercase tracking-widest text-[#8a8a8a] mt-1">
-            Any preferences or restrictions?
-          </p>
-        </div>
-        {!state.mealPlan && !loading && (
+        {!isPro && (
+          <div className="bg-grit-card border border-grit p-5 text-sm text-[#8a8a8a] mb-3">
+            <span className="text-grit font-bold">AI Meals is Pro</span> —{" "}
+            <Link to="/upgrade" className="text-accent-red underline">
+              Upgrade to unlock
+            </Link>
+          </div>
+        )}
+        {isPro && (
+          <div className="mb-3">
+            <input
+              value={mealConstraints}
+              onChange={(e) => setMealConstraints(e.target.value)}
+              placeholder="e.g. no dairy, high protein, quick meals"
+              className="input-grit w-full text-xs"
+            />
+            <p className="text-[9px] uppercase tracking-widest text-[#8a8a8a] mt-1">
+              Any preferences or restrictions?
+            </p>
+          </div>
+        )}
+        {isPro && !state.mealPlan && !loading && (
           <div className="bg-grit-card border border-grit p-5 text-sm text-[#8a8a8a]">
             Tap Generate to get AI meal suggestions tuned to your goal.
           </div>
@@ -531,7 +569,7 @@ function DietPage() {
           {/* Photo + Barcode actions */}
           <div className="grid grid-cols-2 gap-2 mb-3">
             <button
-              onClick={() => fileRef.current?.click()}
+              onClick={() => handleProFeature(() => fileRef.current?.click())}
               disabled={analyzing}
               className="btn-ghost py-2.5 flex items-center justify-center gap-2 text-xs"
             >
@@ -539,7 +577,7 @@ function DietPage() {
               {analyzing ? "Analyzing…" : "Photo log"}
             </button>
             <button
-              onClick={() => setBarcodeOpen((v) => !v)}
+              onClick={() => handleProFeature(() => setBarcodeOpen((v) => !v))}
               className="btn-ghost py-2.5 flex items-center justify-center gap-2 text-xs"
             >
               <ScanBarcode size={14} /> Barcode
@@ -616,16 +654,18 @@ function DietPage() {
             <FileBarChart size={12} /> Weekly Report
           </p>
           <button
-            onClick={generateReport}
-            disabled={reportLoad}
+            onClick={() => handleProFeature(generateReport)}
+            disabled={reportLoad || !isPro}
             className="label-cap text-accent-red"
           >
-            {reportLoad ? <Loader2 size={12} className="inline animate-spin" /> : "Run"}
+            {reportLoad ? <Loader2 size={12} className="inline animate-spin" /> : isPro ? "Run" : "Pro"}
           </button>
         </div>
         {!weekly && (
           <div className="bg-grit-card border border-grit p-4 text-xs text-[#8a8a8a]">
-            Generate a 7-day nutrition + hydration grade with wins, misses and one focused action.
+            {isPro
+              ? "Generate a 7-day nutrition + hydration grade with wins, misses and one focused action."
+              : <><span className="text-grit font-bold">Weekly Report is Pro</span> — <Link to="/upgrade" className="text-accent-red underline">Upgrade to unlock</Link>.</>}
           </div>
         )}
         {weekly && (
