@@ -52,13 +52,23 @@ export function avgPace(distanceM: number, durationSec: number): number {
 export function computeSplits(samples: RunSample[]): number[] {
   const splits: number[] = [];
   let lastKm = 0;
-  let lastT = 0;
-  for (const s of samples) {
+  let lastT = 0; // seconds at which we last crossed a km boundary
+  for (let i = 0; i < samples.length; i++) {
+    const s = samples[i];
     const km = Math.floor(s.total / 1000);
     while (km > lastKm) {
-      // interpolate time when total crossed (lastKm+1)*1000 — approximate as s.t
-      splits.push(Math.max(1, Math.round(s.t / 1000) - lastT));
-      lastT = Math.round(s.t / 1000);
+      const targetDist = (lastKm + 1) * 1000;
+      // Interpolate crossing time between previous sample and this one
+      const prev = i > 0 ? samples[i - 1] : null;
+      let crossT: number;
+      if (prev && s.total > prev.total) {
+        const frac = (targetDist - prev.total) / (s.total - prev.total);
+        crossT = (prev.t + frac * (s.t - prev.t)) / 1000;
+      } else {
+        crossT = s.t / 1000;
+      }
+      splits.push(Math.max(1, Math.round(crossT - lastT)));
+      lastT = crossT;
       lastKm += 1;
     }
   }
