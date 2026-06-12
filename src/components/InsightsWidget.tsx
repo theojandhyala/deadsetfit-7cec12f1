@@ -95,7 +95,7 @@ export function InsightsWidget() {
             </div>
           </div>
 
-          <Link to="/friends" className="flex-shrink-0 press" aria-label="See league">
+          <Link to="/progress" className="flex-shrink-0 press" aria-label="See progress">
             <ChevronRight size={18} style={{ color: "#6B7280" }} />
           </Link>
         </div>
