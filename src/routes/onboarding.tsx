@@ -55,6 +55,7 @@ function orderFor(mode: Mode | null): Step[] {
     "prs",
     "username",
     "photo",
+    "tour",
   ];
 }
 
