@@ -110,37 +110,39 @@ function ProfilePage() {
 
   if (!p || !session) {
     return (
-      <div style={{ paddingTop: "env(safe-area-inset-top)" }} className="px-6 pt-10">
-        <header className="mb-8">
-          <p className="label-cap">PROFILE</p>
-          <h1 className="display text-5xl font-extrabold text-grit leading-none mt-1">
-            YOUR
-            <br />
-            STATS.
-          </h1>
-        </header>
-        <div className="bg-grit-card border border-grit p-6 mb-4">
-          <p className="text-sm text-[#8a8a8a] mb-4">
-            Sign in to save your profile, sync across devices, and compete on the leaderboard.
-          </p>
-          <button
-            onClick={() => navigate({ to: "/auth" })}
-            className="btn-grit w-full py-3 label-cap"
-          >
-            Sign in / Create account
-          </button>
-        </div>
+      <div className="px-5 pt-8 animate-fade-in">
+        <h1 className="display text-4xl font-extrabold text-white leading-none mb-2">
+          YOUR<br /><span style={{ color: "#FC4C02" }}>PROFILE</span>
+        </h1>
+        <p className="text-sm mb-6" style={{ color: "#9EA3AE" }}>
+          Sign in to track your progress, compete, and build your legacy.
+        </p>
+        <button
+          onClick={() => navigate({ to: "/auth" })}
+          className="btn-grit w-full mb-4"
+        >
+          Sign In / Create Account
+        </button>
         <button
           onClick={() => navigate({ to: "/friends" })}
-          className="w-full bg-grit-card border border-accent-red p-4 flex items-center gap-3 text-left hover:bg-[#1a1a1a]"
+          className="w-full flex items-center gap-3 p-4 press"
+          style={{
+            background: "rgba(252,76,2,0.08)",
+            border: "1.5px solid rgba(252,76,2,0.3)",
+            borderRadius: 14,
+          }}
         >
-          <div className="w-10 h-10 bg-accent-red flex items-center justify-center">
-            <Sparkles size={18} className="text-grit-bg" />
+          <div
+            className="flex items-center justify-center rounded-full flex-shrink-0"
+            style={{ width: 40, height: 40, background: "#FC4C02" }}
+          >
+            <Sparkles size={18} color="#fff" />
           </div>
-          <div className="flex-1">
-            <p className="label-cap text-accent-red">FIND YOUR CREW</p>
-            <p className="text-xs text-[#8a8a8a] mt-0.5">Add mates, climb leagues, share PRs.</p>
+          <div className="flex-1 text-left">
+            <p className="text-sm font-bold text-white">Find Your Crew</p>
+            <p className="text-xs mt-0.5" style={{ color: "#9EA3AE" }}>Add mates, climb leagues, share PRs.</p>
           </div>
+          <span className="text-lg" style={{ color: "#FC4C02" }}>›</span>
         </button>
       </div>
     );
@@ -291,34 +293,131 @@ function ProfilePage() {
   }
 
   return (
-    <div style={{ paddingTop: "env(safe-area-inset-top)" }} className="animate-fade-in">
-      <header className="px-5 pt-6 pb-4 flex items-start justify-between animate-slide-down">
-        <p className="label-cap">YOUR CARD</p>
-        <button
-          onClick={() => (editing ? save() : setEditing(true))}
-          disabled={savingProfile}
-          className="label-cap text-accent-red disabled:opacity-50 mt-1"
-        >
-          {editing ? (savingProfile ? "..." : "Save") : "Edit"}
-        </button>
-      </header>
+    <div className="animate-fade-in">
+      {/* Strava-style profile hero */}
+      <div
+        className="relative mb-0"
+        style={{
+          background: "linear-gradient(180deg, #1C1D21 0%, #111215 100%)",
+          borderBottom: "1px solid #2C2D33",
+        }}
+      >
+        {/* Cover area */}
+        <div
+          className="w-full"
+          style={{
+            height: 80,
+            background: `linear-gradient(135deg, rgba(252,76,2,0.2) 0%, rgba(252,76,2,0.05) 100%)`,
+          }}
+        />
+
+        {/* Avatar + edit */}
+        <div className="px-5 pb-5">
+          <div className="flex items-end justify-between -mt-10 mb-3">
+            <div className="relative">
+              <button onClick={() => fileRef.current?.click()} className="relative press">
+                <div
+                  className="flex items-center justify-center overflow-hidden"
+                  style={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: "50%",
+                    background: "#25262B",
+                    border: `3px solid #111215`,
+                    boxShadow: `0 0 0 2px ${badgeC}`,
+                  }}
+                >
+                  {p.avatarDataUrl ? (
+                    <img src={p.avatarDataUrl} alt={p.username} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="display font-extrabold text-white text-3xl">
+                      {(p.username || "A").slice(0, 1).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div
+                  className="absolute bottom-0 right-0 flex items-center justify-center rounded-full"
+                  style={{ width: 24, height: 24, background: "#FC4C02" }}
+                >
+                  <Pencil size={11} color="#fff" />
+                </div>
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && changePhoto(e.target.files[0])}
+              />
+            </div>
+            <button
+              onClick={() => (editing ? save() : setEditing(true))}
+              disabled={savingProfile}
+              className="press"
+              style={{
+                padding: "8px 20px",
+                borderRadius: 100,
+                background: editing ? "#FC4C02" : "transparent",
+                border: `1.5px solid ${editing ? "#FC4C02" : "#2C2D33"}`,
+                color: editing ? "#fff" : "#ffffff",
+                fontSize: "0.82rem",
+                fontWeight: 700,
+                opacity: savingProfile ? 0.6 : 1,
+              }}
+            >
+              {editing ? (savingProfile ? "Saving…" : "Save") : "Edit Profile"}
+            </button>
+          </div>
+
+          {/* Name + badge */}
+          <h1 className="display text-2xl font-extrabold text-white leading-tight">
+            {p.username || "Athlete"}
+          </h1>
+          <div className="flex items-center gap-2 mt-1">
+            <span
+              className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
+              style={{ background: `${badgeC}20`, color: badgeC, border: `1px solid ${badgeC}50` }}
+            >
+              {badge}
+            </span>
+            <span className="text-[11px]" style={{ color: "#9EA3AE" }}>
+              {p.goal?.replace("_", " ")} · {p.experience}
+            </span>
+          </div>
+
+          {/* Stats row — Strava style */}
+          <div
+            className="flex mt-4 rounded-xl overflow-hidden"
+            style={{ border: "1.5px solid #2C2D33" }}
+          >
+            {[
+              { label: "Streak", value: `${streak}`, unit: "days" },
+              { label: "Score", value: `${score.total}`, unit: "pts" },
+              { label: "Sessions", value: `${(state.sessions ?? []).length}`, unit: "total" },
+            ].map((s, i) => (
+              <div
+                key={s.label}
+                className="flex-1 py-3 flex flex-col items-center"
+                style={{
+                  background: "#1C1D21",
+                  borderRight: i < 2 ? "1px solid #2C2D33" : "none",
+                }}
+              >
+                <div className="flex items-baseline gap-1">
+                  <span className="display text-xl font-extrabold text-white">{s.value}</span>
+                  <span className="text-[10px] font-semibold" style={{ color: "#9EA3AE" }}>{s.unit}</span>
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider mt-0.5" style={{ color: "#9EA3AE" }}>
+                  {s.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* === FIFA card === */}
-      <section className="px-5 mb-5 relative animate-scale-in delay-100">
-        <button
-          onClick={() => fileRef.current?.click()}
-          className="absolute top-1 right-7 z-10 bg-accent-red rounded-full p-1.5 shadow"
-          aria-label="Change photo"
-        >
-          <Pencil size={10} />
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => e.target.files?.[0] && changePhoto(e.target.files[0])}
-        />
+      <section className="px-4 mb-4 mt-4 animate-scale-in delay-100">
         <FifaCard
           name={p.username || "Athlete"}
           username={p.username}
@@ -337,22 +436,27 @@ function ProfilePage() {
       {/* Share Profile */}
       {p.username && <ShareProfileCard username={p.username} />}
 
-      {/* Streak */}
-      <section className="px-5 mb-5">
-        <div className="bg-grit-card border border-grit p-4 flex items-center gap-4">
-          <Flame size={28} className="text-accent-red" />
-          <div>
-            <p className="label-cap">Current Streak</p>
-            <p className="display text-2xl font-extrabold text-grit leading-none">
-              {streak}
-              <span className="text-sm ml-2 text-grit-dim">days</span>
-            </p>
+      {/* Streak + score card (compact) */}
+      <section className="px-4 mb-4">
+        <div
+          className="flex items-center gap-4 p-4"
+          style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 14 }}
+        >
+          <div className="flex items-center gap-2">
+            <Flame size={22} style={{ color: "#FC4C02" }} />
+            <div>
+              <p className="display text-2xl font-extrabold text-white leading-none">
+                {streak}<span className="text-xs ml-1" style={{ color: "#9EA3AE" }}>days</span>
+              </p>
+              <p className="label-cap mt-0.5">Streak</p>
+            </div>
           </div>
+          <div style={{ width: 1, height: 36, background: "#2C2D33" }} />
           <div className="ml-auto text-right">
-            <p className="label-cap">DEADSET Score</p>
             <p className="display text-2xl font-extrabold leading-none" style={{ color: badgeC }}>
               {score.total}
             </p>
+            <p className="label-cap mt-0.5">Score</p>
           </div>
         </div>
       </section>
@@ -361,26 +465,36 @@ function ProfilePage() {
       <LiftLevels state={state} />
       <TrophyCase state={state} />
 
-      {/* === Personal Records — flat list === */}
-      <section className="px-5 mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <p className="label-cap flex items-center gap-1.5">
-            <Trophy size={12} className="text-accent-red" /> Personal Records
+      {/* === Personal Records === */}
+      <section className="px-4 mb-5">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm font-bold text-white flex items-center gap-2">
+            <Trophy size={14} style={{ color: "#FFB800" }} /> Personal Records
           </p>
-          <span className="text-[10px] text-grit-dim">Type your best</span>
+          <span className="text-[10px] font-semibold" style={{ color: "#9EA3AE" }}>Tap to update</span>
         </div>
-        <div className="bg-grit-card border border-grit divide-y divide-[#262626]">
-          {PR_CATALOG.map((def) => {
+        <div
+          className="overflow-hidden"
+          style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 14 }}
+        >
+          {PR_CATALOG.map((def, i) => {
             const pr = state.manualPRs?.[def.id];
-            return <PRRow key={def.id} def={def} pr={pr} onSave={(v, r) => savePR(def, v, r)} />;
+            return (
+              <div key={def.id} style={{ borderTop: i > 0 ? "1px solid #2C2D33" : "none" }}>
+                <PRRow def={def} pr={pr} onSave={(v, r) => savePR(def, v, r)} />
+              </div>
+            );
           })}
         </div>
       </section>
 
       {/* === Athlete Stats === */}
-      <section className="px-5 mb-6">
-        <p className="label-cap mb-2">Athlete Stats</p>
-        <div className="bg-grit-card border border-grit divide-y divide-[#262626]">
+      <section className="px-4 mb-5">
+        <p className="text-sm font-bold text-white mb-3">Athlete Stats</p>
+        <div
+          className="overflow-hidden"
+          style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 14 }}
+        >
           {editing ? (
             <>
               <Field label="Username">
@@ -434,12 +548,11 @@ function ProfilePage() {
               <Stat label="Days / Week" v={String(p.daysPerWeek)} />
               <Stat label="Current Weight" v={`${p.weightKg} kg`} />
               <div className="flex justify-between items-center px-4 py-3">
-                <span className="label-cap">Start → Now</span>
-                <span className="text-sm font-bold uppercase text-grit">
+                <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9EA3AE" }}>Weight Journey</span>
+                <span className="text-sm font-semibold text-white">
                   {startW} → {p.weightKg} kg{" "}
-                  <span style={{ color: delta === 0 ? "#8a8a8a" : "#e63222" }}>
-                    ({delta > 0 ? "+" : ""}
-                    {delta.toFixed(1)})
+                  <span style={{ color: delta === 0 ? "#9EA3AE" : "#FC4C02" }}>
+                    ({delta > 0 ? "+" : ""}{delta.toFixed(1)})
                   </span>
                 </span>
               </div>
@@ -456,50 +569,109 @@ function ProfilePage() {
       </section>
 
       {/* DEADSET Pro */}
-      <section className="px-5 mb-6">
+      <section className="px-4 mb-5">
         <div
-          className="border border-accent-red p-5 relative overflow-hidden"
-          style={{ background: "linear-gradient(135deg, #1a1a1a 0%, #2a0d0a 100%)" }}
+          className="p-5 relative overflow-hidden"
+          style={{
+            background: "linear-gradient(135deg, rgba(252,76,2,0.15) 0%, rgba(252,76,2,0.05) 100%)",
+            border: "1.5px solid rgba(252,76,2,0.4)",
+            borderRadius: 14,
+          }}
         >
-          <Crown size={20} className="text-accent-red mb-2" />
-          <p className="display text-2xl font-extrabold uppercase text-grit">DEADSET Pro</p>
-          <p className="text-xs text-[#8a8a8a] mt-1 mb-4">
-            AI coach, advanced analytics, custom splits, video form review.
+          <Crown size={20} style={{ color: "#FC4C02", marginBottom: 8 }} />
+          <p className="display text-xl font-extrabold uppercase text-white">DEADSET Pro</p>
+          <p className="text-sm mt-1 mb-4" style={{ color: "#9EA3AE" }}>
+            AI coach · Advanced analytics · Custom splits · Video form review
           </p>
-          <button className="btn-grit w-full">Upgrade — $9.99 / mo</button>
+          <button className="btn-grit w-full" style={{ borderRadius: 10 }}>
+            Upgrade — $9.99 / mo
+          </button>
         </div>
       </section>
 
-      <section className="px-5 mb-6 flex flex-col gap-2">
-        <Link to="/coach" className="btn-grit w-full inline-flex items-center justify-center">
-          <Sparkles size={14} className="mr-2" /> Ask DEADSET Coach
+      {/* Action buttons */}
+      <section className="px-4 mb-5 flex flex-col gap-2.5">
+        <Link
+          to="/coach"
+          className="flex items-center gap-3 p-4 press"
+          style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 12 }}
+        >
+          <div
+            className="flex items-center justify-center rounded-full flex-shrink-0"
+            style={{ width: 36, height: 36, background: "rgba(252,76,2,0.12)" }}
+          >
+            <Sparkles size={16} style={{ color: "#FC4C02" }} />
+          </div>
+          <span className="font-semibold text-white text-sm">Ask DEADSET Coach</span>
+          <span className="ml-auto text-lg" style={{ color: "#9EA3AE" }}>›</span>
         </Link>
-        <Link to="/recovery" className="btn-ghost w-full inline-flex items-center justify-center">
-          <Heart size={14} className="mr-2" /> Recovery & Mobility
+        <Link
+          to="/recovery"
+          className="flex items-center gap-3 p-4 press"
+          style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 12 }}
+        >
+          <div
+            className="flex items-center justify-center rounded-full flex-shrink-0"
+            style={{ width: 36, height: 36, background: "rgba(252,76,2,0.12)" }}
+          >
+            <Heart size={16} style={{ color: "#FC4C02" }} />
+          </div>
+          <span className="font-semibold text-white text-sm">Recovery & Mobility</span>
+          <span className="ml-auto text-lg" style={{ color: "#9EA3AE" }}>›</span>
         </Link>
-        <Link to="/settings" className="btn-ghost w-full inline-flex items-center justify-center">
-          <Settings size={14} className="mr-2" /> Settings
+        <Link
+          to="/settings"
+          className="flex items-center gap-3 p-4 press"
+          style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 12 }}
+        >
+          <div
+            className="flex items-center justify-center rounded-full flex-shrink-0"
+            style={{ width: 36, height: 36, background: "#25262B" }}
+          >
+            <Settings size={16} style={{ color: "#9EA3AE" }} />
+          </div>
+          <span className="font-semibold text-white text-sm">Settings</span>
+          <span className="ml-auto text-lg" style={{ color: "#9EA3AE" }}>›</span>
         </Link>
 
         <button
           onClick={logout}
-          className="btn-grit w-full inline-flex items-center justify-center"
+          className="flex items-center gap-3 p-4 w-full text-left press"
+          style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 12 }}
         >
-          <LogOut size={14} className="mr-2" /> Log Out (saves your data)
+          <div
+            className="flex items-center justify-center rounded-full flex-shrink-0"
+            style={{ width: 36, height: 36, background: "#25262B" }}
+          >
+            <LogOut size={16} style={{ color: "#9EA3AE" }} />
+          </div>
+          <span className="font-semibold text-white text-sm">Sign Out</span>
         </button>
-        <button onClick={reset} className="btn-ghost w-full">
+
+        <button
+          onClick={reset}
+          className="py-3 text-sm font-semibold press"
+          style={{ color: "#9EA3AE", background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 12, width: "100%" }}
+        >
           Reset This Device
         </button>
 
         <button
           onClick={deleteAccount}
-          className="w-full mt-2 py-3 label-cap text-sm inline-flex items-center justify-center border border-accent-red text-accent-red hover:bg-accent-red/10 transition-colors"
+          className="py-3 text-sm font-semibold flex items-center justify-center gap-2 press"
+          style={{
+            color: "#ff4444",
+            background: "rgba(255,68,68,0.05)",
+            border: "1.5px solid rgba(255,68,68,0.3)",
+            borderRadius: 12,
+            width: "100%",
+          }}
         >
-          <Trash2 size={14} className="mr-2" /> Delete My Account
+          <Trash2 size={14} /> Delete Account
         </button>
       </section>
 
-      <section className="px-5 pb-10 flex justify-center gap-4 label-cap text-[10px] text-grit-dim">
+      <section className="px-4 pb-10 flex justify-center gap-4 text-[10px] font-semibold" style={{ color: "#6B7280" }}>
         <Link to="/privacy">Privacy</Link>
         <span>·</span>
         <Link to="/terms">Terms</Link>
@@ -540,9 +712,16 @@ function PRRow({
   }
 
   return (
-    <div className="flex items-center justify-between px-4 py-2.5 gap-3">
-      <p className="text-sm font-bold text-grit truncate">{def.label}</p>
-      <div className="flex items-center gap-1.5 shrink-0">
+    <div className="flex items-center justify-between px-4 py-3 gap-3">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-white truncate">{def.label}</p>
+        {pr && (
+          <p className="text-[10px] mt-0.5" style={{ color: "#9EA3AE" }}>
+            Current: {pr.value} {unit}
+          </p>
+        )}
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
         <input
           value={val}
           onChange={(e) => setVal(e.target.value)}
@@ -552,9 +731,15 @@ function PRRow({
           }}
           inputMode="decimal"
           placeholder="—"
-          className="input-grit w-20 text-right py-1.5"
+          className="input-grit w-20 text-right py-2"
+          style={{ borderRadius: 8 }}
         />
-        <span className="label-cap text-[10px] text-grit-dim w-8">{unit}</span>
+        <span
+          className="text-[10px] font-bold uppercase tracking-wider w-8"
+          style={{ color: "#9EA3AE" }}
+        >
+          {unit}
+        </span>
       </div>
     </div>
   );
@@ -563,8 +748,8 @@ function PRRow({
 function Stat({ label, v }: { label: string; v: string }) {
   return (
     <div className="flex justify-between items-center px-4 py-3">
-      <span className="label-cap">{label}</span>
-      <span className="text-sm font-bold uppercase text-grit">{v}</span>
+      <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9EA3AE" }}>{label}</span>
+      <span className="text-sm font-semibold text-white">{v}</span>
     </div>
   );
 }
@@ -572,7 +757,7 @@ function Stat({ label, v }: { label: string; v: string }) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="px-4 py-3 grid grid-cols-[120px_1fr] items-center gap-3">
-      <span className="label-cap">{label}</span>
+      <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9EA3AE" }}>{label}</span>
       <div>{children}</div>
     </div>
   );
@@ -626,28 +811,32 @@ function ShareProfileCard({ username }: { username: string }) {
   }
 
   return (
-    <section className="px-5 mb-5">
-      <div className="bg-grit-card border border-grit p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Share2 size={14} className="text-accent-red" />
-          <p className="label-cap text-accent-red text-[11px]">Share Your Profile</p>
-        </div>
+    <section className="px-4 mb-4">
+      <div
+        className="p-4"
+        style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 14 }}
+      >
+        <p className="text-[11px] font-bold uppercase tracking-wider mb-3" style={{ color: "#9EA3AE" }}>
+          Share Profile
+        </p>
         <button
           onClick={copyLink}
-          className="w-full flex items-center justify-between px-3 py-2 mb-3 border border-grit bg-[#0a0a0a] text-left"
+          className="w-full flex items-center justify-between px-3 py-2.5 mb-3 text-left press"
+          style={{ background: "#25262B", borderRadius: 10, border: "1px solid #2C2D33" }}
         >
-          <span className="text-xs text-grit-dim truncate flex-1">{profileUrl}</span>
+          <span className="text-xs truncate flex-1" style={{ color: "#9EA3AE" }}>{profileUrl}</span>
           {copied ? (
-            <Check size={12} className="text-accent-red ml-2 shrink-0" />
+            <Check size={13} style={{ color: "#FC4C02", marginLeft: 8, flexShrink: 0 }} />
           ) : (
-            <Copy size={12} className="text-grit-dim ml-2 shrink-0" />
+            <Copy size={13} style={{ color: "#6B7280", marginLeft: 8, flexShrink: 0 }} />
           )}
         </button>
         <button
           onClick={share}
-          className="w-full py-2.5 btn-grit flex items-center justify-center gap-2 label-cap text-xs"
+          className="btn-grit w-full flex items-center justify-center gap-2 text-sm"
+          style={{ borderRadius: 10 }}
         >
-          <Share2 size={12} /> Share Profile
+          <Share2 size={14} /> Share Profile
         </button>
       </div>
     </section>
