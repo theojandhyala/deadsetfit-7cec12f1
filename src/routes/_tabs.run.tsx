@@ -6,7 +6,6 @@ import {
   Bike,
   ChevronLeft,
   ChevronRight,
-  Flame,
   Footprints,
   MapPinned,
   Mountain,
@@ -14,7 +13,6 @@ import {
   Play,
   Share2,
   Square,
-  Timer,
   Trash2,
   Trophy,
   Users,
@@ -434,9 +432,8 @@ function LiveRunner({
   const [holdProgress, setHoldProgress] = useState(0);
   const holdIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const [rejectCount, setRejectCount] = useState(0);
-  const [rawSpeed, setRawSpeed] = useState<number | null>(null);
-  const [lastFixTime, setLastFixTime] = useState<number | null>(null);
+  const rejectCountRef2 = useRef(0); // renamed to avoid shadow
+  const lastFixTimeRef = useRef<number | null>(null);
 
   const statusRef = useRef<Status>(status);
   statusRef.current = status;
@@ -500,7 +497,7 @@ function LiveRunner({
       (pos) => {
         setGpsAccuracy(pos.coords.accuracy);
         setPreviewPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setLastFixTime(Date.now());
+        lastFixTimeRef.current = Date.now();
         setError(null);
       },
       handleGpsError,
@@ -542,7 +539,7 @@ function LiveRunner({
     setSamples(initial);
     setElapsedSec(0);
     rejectCountRef.current = 0;
-    setRejectCount(0);
+    rejectCountRef2.current = 0;
     lastRawPosRef.current = null;
     setStatus("running");
 
@@ -552,7 +549,7 @@ function LiveRunner({
         const { latitude, longitude, accuracy, altitude, speed } = pos.coords;
         const now = Date.now();
         setGpsAccuracy(accuracy);
-        setLastFixTime(now);
+        lastFixTimeRef.current = now;
         const deviceSpeed = typeof speed === "number" && speed >= 0 ? speed : null;
         const t = now - startedAtRef.current - pausedAccumRef.current;
         const prev = samplesRef.current[samplesRef.current.length - 1];
@@ -567,11 +564,10 @@ function LiveRunner({
           if (dt > 0) instantSpeed = rawDist / dt;
         }
         lastRawPosRef.current = { lat: latitude, lng: longitude, time: now };
-        setRawSpeed(deviceSpeed ?? instantSpeed);
 
         if (instantSpeed != null && instantSpeed > cfg.maxSpeedMps * 1.5) {
           rejectCountRef.current += 1;
-          setRejectCount(rejectCountRef.current);
+          rejectCountRef2.current += 1;
           return;
         }
 
@@ -590,7 +586,7 @@ function LiveRunner({
 
         if (!result.accepted) {
           rejectCountRef.current += 1;
-          setRejectCount(rejectCountRef.current);
+          rejectCountRef2.current += 1;
           return;
         }
         const next: RunSample = {
@@ -757,12 +753,12 @@ function LiveRunner({
   };
 
   return (
-    <div className="fixed inset-0 flex flex-col" style={{ background: "#0A0A0A" }}>
+    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: "#0A0A0A" }}>
       {/* Full-bleed map */}
       <div className="absolute inset-0">
         <RunMap
           samples={mapSamples}
-          height={window.innerHeight}
+          height={800}
           live={status === "running" || status === "paused"}
           mapStyle="dark"
           activityColor={cfg.color}

@@ -209,7 +209,7 @@ function MapLibreRoute({
   }, [samples, ready, live, activityColor]);
 
   return (
-    <div className="relative w-full overflow-hidden" style={{ height }}>
+    <div className="relative w-full h-full overflow-hidden" style={{ minHeight: height }}>
       <div ref={containerRef} className="absolute inset-0" />
       {samples.length < 2 && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ background: "rgba(10,10,10,0.6)" }}>
