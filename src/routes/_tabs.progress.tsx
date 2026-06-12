@@ -275,10 +275,10 @@ function ProgressPage() {
     : undefined;
 
   return (
-    <div style={{ paddingTop: "env(safe-area-inset-top)" }} className="animate-fade-in">
+    <div style={{ paddingTop: "env(safe-area-inset-top)", background: "#111215", minHeight: "100vh" }} className="animate-fade-in">
       <header className="px-5 pt-6 pb-4 animate-slide-down">
-        <p className="label-cap">Progress</p>
-        <h1 className="display text-3xl font-extrabold uppercase text-grit">Track The Work</h1>
+        <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "#FC4C02" }}>DEADSET</p>
+        <h1 className="display text-3xl font-extrabold uppercase text-white">Track The Work</h1>
       </header>
 
       {/* Hero stats */}
@@ -300,9 +300,9 @@ function ProgressPage() {
         <section className="px-5 mb-6">
           <div className="flex items-center justify-between mb-2">
             <p className="label-cap flex items-center gap-1.5">
-              <Activity size={12} className="text-accent-red" /> Cardio
+              <Activity size={12} className="text-[#FC4C02]" /> Cardio
             </p>
-            <Link to="/run" className="label-cap text-[10px] text-accent-red">
+            <Link to="/run" className="label-cap text-[10px] text-[#FC4C02]">
               View all →
             </Link>
           </div>
@@ -321,18 +321,18 @@ function ProgressPage() {
               <Link
                 key={r.id}
                 to="/run"
-                className="flex gap-3 bg-grit-card border border-grit p-2.5 items-center"
+                className="flex gap-3 rounded-2xl p-2.5 items-center"
               >
                 <div className="w-14 h-14 flex-shrink-0">
                   <RunMap samples={r.samples} height={56} thumbnail />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-grit truncate">
+                  <p className="text-xs font-bold text-white truncate">
                     {r.name ||
                       `${(r.activityType ?? "run").charAt(0).toUpperCase() + (r.activityType ?? "run").slice(1)}`}
                   </p>
-                  <p className="text-[10px] text-grit-dim">{r.date.slice(0, 10)}</p>
-                  <p className="label-cap text-[9px] text-accent-red mt-0.5">
+                  <p className="text-[10px] text-[#9EA3AE]">{r.date.slice(0, 10)}</p>
+                  <p className="label-cap text-[9px] text-[#FC4C02] mt-0.5">
                     {(r.distanceM / 1000).toFixed(2)} km · {formatDuration(r.durationSec)}
                   </p>
                 </div>
@@ -342,7 +342,7 @@ function ProgressPage() {
                       ? `${((r.distanceM / r.durationSec) * 3.6).toFixed(1)} km/h`
                       : `${formatPace(r.avgPaceSecPerKm)}/km`}
                   </p>
-                  <p className="text-[9px] text-grit-dim">{r.calories ?? 0} kcal</p>
+                  <p className="text-[9px] text-[#9EA3AE]">{r.calories ?? 0} kcal</p>
                 </div>
               </Link>
             ))}
@@ -353,7 +353,7 @@ function ProgressPage() {
       {/* Calendar streak */}
       <section className="px-5 mb-6">
         <p className="label-cap mb-2">Last 12 Weeks</p>
-        <div className="bg-grit-card border border-grit p-4 overflow-x-auto">
+        <div className="rounded-2xl p-4 overflow-x-auto">
           <StreakCalendar completedDates={state.completedDates} />
         </div>
       </section>
@@ -361,7 +361,7 @@ function ProgressPage() {
       {/* Training Consistency Heatmap */}
       <section className="px-5 mb-6">
         <p className="label-cap mb-2">Training Consistency</p>
-        <div className="bg-grit-card border border-grit p-4 overflow-x-auto">
+        <div className="rounded-2xl p-4 overflow-x-auto">
           <ConsistencyHeatmap completedDates={state.completedDates} />
         </div>
       </section>
@@ -386,15 +386,15 @@ function ProgressPage() {
         {latestScan ? (
           <button
             onClick={() => setViewScan(latestScan)}
-            className="bg-grit-card border border-grit p-4 w-full text-left flex gap-4"
+            className="rounded-2xl p-4 w-full text-left flex gap-4"
           >
             <img
               src={latestScan.photoDataUrl}
               alt=""
-              className="w-20 h-28 object-cover border border-grit"
+              className="w-20 h-28 object-cover rounded-2xl"
             />
             <div className="flex-1 min-w-0">
-              <p className="label-cap text-[10px] text-grit-dim">
+              <p className="label-cap text-[10px] text-[#9EA3AE]">
                 LATEST {latestScan.date.slice(0, 10)}
               </p>
               <div className="flex gap-3 mt-1">
@@ -402,7 +402,7 @@ function ProgressPage() {
                 <ScoreChip label="MUS" value={`${latestScan.analysis.muscleScore}`} />
                 <ScoreChip label="SYM" value={`${latestScan.analysis.symmetryScore}`} />
               </div>
-              <p className="text-xs uppercase font-bold text-grit mt-2 line-clamp-2">
+              <p className="text-xs uppercase font-bold text-white mt-2 line-clamp-2">
                 {latestScan.analysis.verdict}
               </p>
             </div>
@@ -420,7 +420,7 @@ function ProgressPage() {
           )}
           {scanning ? "Analyzing..." : latestScan ? "New Scan" : "Take Physique Scan"}
         </button>
-        {scanError && <p className="text-sm text-accent-red mt-2">{scanError}</p>}
+        {scanError && <p className="text-sm text-[#FC4C02] mt-2">{scanError}</p>}
         {state.physiqueScans.length > 1 && (
           <div className="grid grid-cols-4 gap-1 mt-3">
             {state.physiqueScans
@@ -428,7 +428,7 @@ function ProgressPage() {
               .reverse()
               .slice(0, 8)
               .map((p) => (
-                <div key={p.id} className="relative border border-grit group">
+                <div key={p.id} className="relative rounded-2xl group">
                   <button onClick={() => setViewScan(p)} className="block w-full">
                     <img src={p.photoDataUrl} alt="" className="w-full aspect-[3/4] object-cover" />
                   </button>
@@ -438,7 +438,7 @@ function ProgressPage() {
                       deleteScan(p.id);
                     }}
                     aria-label="Delete scan"
-                    className="absolute top-1 right-1 bg-black/80 border border-accent-red text-accent-red p-1 hover:bg-accent-red hover:text-black"
+                    className="absolute top-1 right-1 bg-black/80 rounded-2xl text-[#FC4C02] p-1 hover:bg-[#FC4C02] hover:text-black"
                   >
                     <Trash2 size={11} />
                   </button>
@@ -454,12 +454,12 @@ function ProgressPage() {
           <p className="label-cap mb-2">Strength Curves</p>
           <div className="flex flex-col gap-3">
             {strengthCurves.map((c) => (
-              <div key={c.name} className="bg-grit-card border border-grit p-4">
+              <div key={c.name} className="rounded-2xl p-4" style={{ background: "#1C1D21", border: "1.5px solid #2C2D33" }}>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="display text-sm uppercase font-extrabold text-grit truncate">
+                  <p className="display text-sm uppercase font-extrabold text-white truncate">
                     {c.name}
                   </p>
-                  <p className="display text-lg font-extrabold text-accent-red">
+                  <p className="display text-lg font-extrabold text-[#FC4C02]">
                     {Math.max(...c.points.map((p) => p.weight))}KG
                   </p>
                 </div>
@@ -474,18 +474,18 @@ function ProgressPage() {
       {bodyParts.length > 0 && (
         <section className="px-5 mb-6">
           <p className="label-cap mb-2">Body Part Volume (30d)</p>
-          <div className="bg-grit-card border border-grit p-4 flex flex-col gap-2">
+          <div className="rounded-2xl p-4 flex flex-col gap-2">
             {(() => {
               const max = Math.max(...bodyParts.map((b) => b[1]));
               return bodyParts.map(([name, vol]) => (
                 <div key={name}>
                   <div className="flex justify-between text-xs uppercase font-bold tracking-wider mb-1">
-                    <span className="text-grit">{name}</span>
-                    <span className="text-grit-dim">{Math.round(vol).toLocaleString()}kg</span>
+                    <span className="text-white">{name}</span>
+                    <span className="text-[#9EA3AE]">{Math.round(vol).toLocaleString()}kg</span>
                   </div>
                   <div className="h-2 bg-[#0a0a0a]">
                     <div
-                      className="h-full bg-accent-red"
+                      className="h-full bg-[#FC4C02]"
                       style={{ width: `${(vol / max) * 100}%` }}
                     />
                   </div>
@@ -499,7 +499,7 @@ function ProgressPage() {
       {/* Weight */}
       <section className="px-5 mb-6">
         <p className="label-cap mb-2">Weight Log</p>
-        <div className="bg-grit-card border border-grit p-4">
+        <div className="rounded-2xl p-4" style={{ background: "#1C1D21", border: "1.5px solid #2C2D33" }}>
           <div className="flex gap-2 mb-3">
             <input
               inputMode="decimal"
@@ -521,12 +521,12 @@ function ProgressPage() {
                 .reverse()
                 .map((w) => (
                   <div key={w.date} className="flex items-center justify-between py-1 text-xs">
-                    <span className="text-grit-dim">{w.date}</span>
+                    <span className="text-[#9EA3AE]">{w.date}</span>
                     <div className="flex items-center gap-3">
                       <span className="font-bold text-grit">{w.weight} kg</span>
                       <button
                         onClick={() => deleteWeight(w.date)}
-                        className="text-grit-dim hover:text-accent-red"
+                        className="text-[#9EA3AE] hover:text-[#FC4C02]"
                         aria-label="Delete entry"
                       >
                         <Trash2 size={12} />
@@ -542,7 +542,7 @@ function ProgressPage() {
       {/* Measurements */}
       <section className="px-5 mb-6">
         <p className="label-cap mb-2">Measurements (cm)</p>
-        <div className="bg-grit-card border border-grit p-4 grid grid-cols-2 gap-3">
+        <div className="rounded-2xl p-4 grid grid-cols-2 gap-3">
           <Input label="Chest" v={chest} set={setChest} />
           <Input label="Waist" v={waist} set={setWaist} />
           <Input label="Arms" v={arms} set={setArms} />
@@ -581,13 +581,13 @@ function ProgressPage() {
                 .reverse()
                 .map((m) => (
                   <div key={m.date} className="flex items-center justify-between py-1 text-[11px]">
-                    <span className="text-grit-dim">{m.date}</span>
-                    <span className="text-grit">
+                    <span className="text-[#9EA3AE]">{m.date}</span>
+                    <span className="text-white">
                       C{m.chest} W{m.waist} A{m.arms} L{m.legs}
                     </span>
                     <button
                       onClick={() => deleteMeasurement(m.date)}
-                      className="text-grit-dim hover:text-accent-red"
+                      className="text-[#9EA3AE] hover:text-[#FC4C02]"
                       aria-label="Delete entry"
                     >
                       <Trash2 size={12} />
@@ -622,7 +622,7 @@ function ProgressPage() {
             {compare.map((d) => {
               const p = state.checkIns.find((c) => c.date === d);
               return (
-                <div key={d} className="border border-accent-red">
+                <div key={d} className="rounded-2xl">
                   <img src={p?.photoDataUrl} alt="" className="w-full aspect-[3/4] object-cover" />
                   <div className="text-[10px] p-1 label-cap text-center">
                     {p?.date.slice(0, 10)}
@@ -648,7 +648,7 @@ function ProgressPage() {
                       <button
                         onClick={() => togglePhoto(c.date)}
                         className="relative border block w-full"
-                        style={{ borderColor: sel ? "#e63222" : "#262626" }}
+                        style={{ borderColor: sel ? "#e63222" : "#2C2D33" }}
                       >
                         <img
                           src={c.photoDataUrl}
@@ -665,7 +665,7 @@ function ProgressPage() {
                       <button
                         onClick={() => deleteCheckIn(c.date)}
                         aria-label="Delete photo"
-                        className="absolute top-1 right-1 bg-black/80 border border-accent-red text-accent-red p-1 hover:bg-accent-red hover:text-black"
+                        className="absolute top-1 right-1 bg-black/80 rounded-2xl text-[#FC4C02] p-1 hover:bg-[#FC4C02] hover:text-black"
                       >
                         <Trash2 size={10} />
                       </button>
@@ -711,27 +711,27 @@ function Stat({
   icon?: React.ReactNode;
 }) {
   return (
-    <div className="bg-grit-card border border-grit p-3">
-      <p className="label-cap text-[10px] text-grit-dim flex items-center gap-1">
+    <div className="p-3 rounded-2xl" style={{ background: "#1C1D21", border: "1.5px solid #2C2D33" }}>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-[#9EA3AE] flex items-center gap-1">
         {icon}
         {label}
       </p>
       <p
         className="display text-3xl font-extrabold leading-none mt-1"
-        style={{ color: accent ? "#e63222" : "#f5f5f0" }}
+        style={{ color: accent ? "#FC4C02" : "#ffffff" }}
       >
         {value}
       </p>
-      {sub && <p className="text-[10px] text-grit-dim uppercase tracking-wider mt-1">{sub}</p>}
+      {sub && <p className="text-[10px] text-[#9EA3AE] uppercase tracking-wider mt-1">{sub}</p>}
     </div>
   );
 }
 
 function ScoreChip({ label, value }: { label: string; value: string }) {
   return (
-    <div className="border border-grit px-2 py-1">
-      <p className="text-[8px] uppercase tracking-wider text-grit-dim">{label}</p>
-      <p className="display text-sm font-extrabold text-grit leading-none">{value}</p>
+    <div className="rounded-2xl px-2 py-1">
+      <p className="text-[8px] uppercase tracking-wider text-[#9EA3AE]">{label}</p>
+      <p className="display text-sm font-extrabold text-white leading-none">{value}</p>
     </div>
   );
 }
@@ -793,7 +793,7 @@ function ConsistencyHeatmap({ completedDates }: { completedDates: string[] }) {
             <div key={w} style={{ width: CELL, flexShrink: 0 }}>
               {label && (
                 <span
-                  className="text-[8px] label-cap text-grit-dim"
+                  className="text-[8px] label-cap text-[#9EA3AE]"
                   style={{ whiteSpace: "nowrap" }}
                 >
                   {label.label}
@@ -815,7 +815,7 @@ function ConsistencyHeatmap({ completedDates }: { completedDates: string[] }) {
                   width: CELL,
                   height: CELL,
                   background:
-                    cell.count === 0 ? "#1a1a1a" : cell.count === 1 ? "#7a1410" : "#e63222",
+                    cell.count === 0 ? "#111215" : cell.count === 1 ? "#7a1410" : "#e63222",
                   flexShrink: 0,
                 }}
               />
@@ -825,11 +825,11 @@ function ConsistencyHeatmap({ completedDates }: { completedDates: string[] }) {
       </div>
       {/* Legend */}
       <div className="flex items-center gap-2 mt-2">
-        <span className="text-[9px] label-cap text-grit-dim">Less</span>
-        {["#1a1a1a", "#7a1410", "#e63222"].map((c) => (
+        <span className="text-[9px] label-cap text-[#9EA3AE]">Less</span>
+        {["#111215", "#7a1410", "#e63222"].map((c) => (
           <div key={c} style={{ width: CELL, height: CELL, background: c, flexShrink: 0 }} />
         ))}
-        <span className="text-[9px] label-cap text-grit-dim">More</span>
+        <span className="text-[9px] label-cap text-[#9EA3AE]">More</span>
       </div>
     </div>
   );
@@ -863,7 +863,7 @@ function StreakCalendar({ completedDates }: { completedDates: string[] }) {
               title={c.date}
               className="w-3 h-3"
               style={{
-                background: c.done ? "#e63222" : "#1a1a1a",
+                background: c.done ? "#e63222" : "#111215",
                 outline: c.isToday ? "1px solid #f5f5f0" : undefined,
               }}
             />
@@ -891,7 +891,7 @@ function LineChart({ points }: { points: number[] }) {
     .join(" ");
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-20" preserveAspectRatio="none">
-      <polyline points={pts} fill="none" stroke="#e63222" strokeWidth="2" />
+      <polyline points={pts} fill="none" stroke="#FC4C02" strokeWidth="2" />
     </svg>
   );
 }
@@ -915,7 +915,7 @@ function WeightChart({ entries }: { entries: { date: string; weight: number }[] 
     .join(" ");
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-24">
-      <polyline points={pts} fill="none" stroke="#e63222" strokeWidth="2" />
+      <polyline points={pts} fill="none" stroke="#FC4C02" strokeWidth="2" />
       {entries.map((e, i) => {
         const x = pad + (i * (w - pad * 2)) / (entries.length - 1);
         const y = h - pad - ((e.weight - min) / range) * (h - pad * 2);
@@ -954,19 +954,19 @@ function ScanModal({
       <div className="min-h-screen max-w-md mx-auto p-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-3">
           <p className="label-cap">SCAN {scan.date.slice(0, 10)}</p>
-          <button onClick={onClose} className="text-grit">
+          <button onClick={onClose} className="text-white">
             <X size={22} />
           </button>
         </div>
-        <img src={scan.photoDataUrl} alt="" className="w-full border border-grit mb-4" />
+        <img src={scan.photoDataUrl} alt="" className="w-full rounded-2xl mb-4" />
         <div className="grid grid-cols-3 gap-2 mb-4">
           <Stat label="BF%" value={`${a.bodyFatEstimate}`} accent />
           <Stat label="MUSCLE" value={`${a.muscleScore}`} />
           <Stat label="SYMMETRY" value={`${a.symmetryScore}`} />
         </div>
-        <div className="bg-grit-card border border-accent-red p-4 mb-4">
-          <p className="label-cap text-accent-red text-[10px]">VERDICT</p>
-          <p className="display text-base uppercase font-extrabold text-grit mt-1">{a.verdict}</p>
+        <div className="bg-grit-card rounded-2xl p-4 mb-4">
+          <p className="label-cap text-[#FC4C02] text-[10px]">VERDICT</p>
+          <p className="display text-base uppercase font-extrabold text-white mt-1">{a.verdict}</p>
         </div>
         <div className="grid grid-cols-1 gap-3 mb-4">
           <Block title="STRENGTHS" items={a.strengths} color="#7acc7a" />
@@ -974,11 +974,11 @@ function ScanModal({
           <Block title="FOCUS NEXT" items={a.focus} color="#f5f5f0" />
         </div>
         {a.leanMassNote && (
-          <p className="text-xs text-grit-dim uppercase tracking-wider mb-4">{a.leanMassNote}</p>
+          <p className="text-xs text-[#9EA3AE] uppercase tracking-wider mb-4">{a.leanMassNote}</p>
         )}
         <button
           onClick={onDelete}
-          className="w-full border border-accent-red text-accent-red py-2 label-cap text-xs flex items-center justify-center gap-2 hover:bg-accent-red hover:text-black mb-6"
+          className="w-full rounded-2xl text-[#FC4C02] py-2 label-cap text-xs flex items-center justify-center gap-2 hover:bg-[#FC4C02] hover:text-black mb-6"
         >
           <Trash2 size={14} /> Delete Scan
         </button>
@@ -997,7 +997,7 @@ function MeasurementsChart({
     pad = 8;
   const keys: { k: "chest" | "waist" | "arms" | "legs"; color: string }[] = [
     { k: "chest", color: "#e63222" },
-    { k: "waist", color: "#f5f5f0" },
+    { k: "waist", color: "#ffffff" },
     { k: "arms", color: "#7acc7a" },
     { k: "legs", color: "#7aa3cc" },
   ];
@@ -1023,7 +1023,7 @@ function MeasurementsChart({
 
 function Block({ title, items, color }: { title: string; items: string[]; color: string }) {
   return (
-    <div className="bg-grit-card border border-grit p-3">
+    <div className="rounded-2xl p-3">
       <p className="label-cap text-[10px]" style={{ color }}>
         {title}
       </p>
