@@ -206,7 +206,15 @@ function UpgradePage() {
                   <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "#8A8A8A" }}>{f.desc}</p>
                 </div>
               </div>
-            ))}
+              <div className="flex items-center gap-1.5">
+                <Star size={13} style={{ color: "#FFB800" }} />
+                <span className="text-xs font-bold text-white">4.9 rating</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Flame size={13} style={{ color: "#FC4C02" }} />
+                <span className="text-xs font-bold text-white">Top 1% gains</span>
+              </div>
+            </div>
           </div>
 
           {/* Comparison table toggle */}
