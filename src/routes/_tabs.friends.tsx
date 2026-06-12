@@ -126,7 +126,7 @@ function FriendsPage() {
   if (session === "loading") {
     return (
       <div className="flex items-center justify-center pt-20">
-        <Loader2 className="animate-spin text-accent-red" />
+        <Loader2 className="animate-spin text-[#FC4C02]" />
       </div>
     );
   }
@@ -136,13 +136,13 @@ function FriendsPage() {
       <div style={{ paddingTop: "env(safe-area-inset-top)" }} className="px-6 pt-10">
         <header className="mb-8">
           <p className="label-cap">FRIENDS</p>
-          <h1 className="display text-5xl font-extrabold text-grit leading-none mt-1">
+          <h1 className="display text-5xl font-extrabold text-white leading-none mt-1">
             FIND YOUR
             <br />
             FRIENDS.
           </h1>
         </header>
-        <div className="bg-grit-card border border-grit p-6">
+        <div className="rounded-2xl p-6">
           <p className="text-sm text-[#8a8a8a] mb-4">
             Sign in to share lifts, climb leagues and invite mates.
           </p>
@@ -161,18 +161,18 @@ function FriendsPage() {
     <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
       <header className="px-5 pt-6 pb-2">
         <p className="label-cap">FRIENDS</p>
-        <h1 className="display text-4xl font-extrabold text-grit leading-none mt-1">YOUR CREW</h1>
+        <h1 className="display text-4xl font-extrabold text-white leading-none mt-1">YOUR CREW</h1>
       </header>
 
       {/* Prominent global search — always visible above tabs */}
       <div className="px-5 mt-4 relative">
-        <div className="flex items-center gap-2 border border-grit bg-grit-card px-3 py-2.5">
-          <Search size={16} className="text-accent-red shrink-0" />
+        <div className="flex items-center gap-2 rounded-2xl bg-grit-card px-3 py-2.5">
+          <Search size={16} className="text-[#FC4C02] shrink-0" />
           <input
             value={globalQ}
             onChange={(e) => setGlobalQ(e.target.value)}
             placeholder="Search athletes by username..."
-            className="flex-1 bg-transparent text-sm text-grit placeholder:text-grit-dim outline-none"
+            className="flex-1 bg-transparent text-sm text-white placeholder:text-[#9EA3AE] outline-none"
             maxLength={40}
           />
           {globalQ && (
@@ -181,14 +181,14 @@ function FriendsPage() {
                 setGlobalQ("");
                 setGlobalResults(null);
               }}
-              className="text-grit-dim hover:text-grit"
+              className="text-[#9EA3AE] hover:text-grit"
             >
               ✕
             </button>
           )}
         </div>
         {globalResults && globalResults.length > 0 && (
-          <div className="absolute left-5 right-5 top-full z-20 border border-grit border-t-0 bg-[#0a0a0a] shadow-xl">
+          <div className="absolute left-5 right-5 top-full z-20 rounded-2xl border-t-0 bg-[#0a0a0a] shadow-xl">
             {globalResults.slice(0, 8).map((r) => (
               <div
                 key={r.id}
@@ -203,7 +203,7 @@ function FriendsPage() {
                   }}
                   className="flex items-center gap-3 flex-1 min-w-0"
                 >
-                  <div className="w-8 h-8 bg-[#1a1a1a] border border-grit flex items-center justify-center display font-extrabold text-grit text-xs overflow-hidden shrink-0">
+                  <div className="w-8 h-8 bg-[#111215] rounded-2xl flex items-center justify-center display font-extrabold text-white text-xs overflow-hidden shrink-0">
                     {r.avatar_url ? (
                       <img src={r.avatar_url} alt="" className="w-full h-full object-cover" />
                     ) : (
@@ -211,10 +211,10 @@ function FriendsPage() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-grit truncate">
+                    <p className="text-sm font-bold text-white truncate">
                       {r.display_name || r.username || "Athlete"}
                     </p>
-                    <p className="text-[10px] label-cap text-grit-dim truncate">
+                    <p className="text-[10px] label-cap text-[#9EA3AE] truncate">
                       {r.username ? `@${r.username} · ` : ""}
                       {r.level}
                     </p>
@@ -236,7 +236,7 @@ function FriendsPage() {
                       }
                     }
                   }}
-                  className={`label-cap text-[9px] px-2 py-1 border shrink-0 ${r.following || globalFollowed.has(r.id) ? "border-grit text-grit-dim" : "border-accent-red text-accent-red"}`}
+                  className={`label-cap text-[9px] px-2 py-1 border shrink-0 ${r.following || globalFollowed.has(r.id) ? "border-grit text-[#9EA3AE]" : "border-[#FC4C02] text-[#FC4C02]"}`}
                 >
                   {r.following || globalFollowed.has(r.id) ? "Following ✓" : "+ Follow"}
                 </button>
@@ -245,13 +245,13 @@ function FriendsPage() {
           </div>
         )}
         {globalResults && globalResults.length === 0 && (
-          <div className="absolute left-5 right-5 top-full z-20 border border-grit border-t-0 bg-[#0a0a0a] p-4 text-sm text-grit-dim text-center">
+          <div className="absolute left-5 right-5 top-full z-20 rounded-2xl border-t-0 bg-[#0a0a0a] p-4 text-sm text-[#9EA3AE] text-center">
             No athletes found for "{globalQ}"
           </div>
         )}
       </div>
 
-      <div className="px-5 mt-4 flex gap-2 border-b border-grit overflow-x-auto">
+      <div className="px-5 mt-4 flex gap-2 overflow-x-auto" style={{ borderBottom: "1px solid #2C2D33" }}>
         {(["FRIENDS", "FEED", "LEAGUE", "INVITE"] as Tab[]).map((t) => (
           <button
             key={t}
@@ -259,7 +259,7 @@ function FriendsPage() {
             className="label-cap pb-3 pt-1 border-b-2 whitespace-nowrap"
             style={{
               borderColor: tab === t ? "#e63222" : "transparent",
-              color: tab === t ? "#f5f5f0" : "#8a8a8a",
+              color: tab === t ? "#f5f5f0" : "#9EA3AE",
             }}
           >
             {t}
@@ -407,7 +407,7 @@ function Feed({ userId }: { userId: string }) {
   if (!posts)
     return (
       <div className="px-5 pt-10 flex justify-center">
-        <Loader2 className="animate-spin text-accent-red" />
+        <Loader2 className="animate-spin text-[#FC4C02]" />
       </div>
     );
 
@@ -416,15 +416,15 @@ function Feed({ userId }: { userId: string }) {
       {!composing ? (
         <button
           onClick={() => setComposing(true)}
-          className="w-full mb-4 bg-grit-card border border-grit p-4 flex items-center gap-3 text-left"
+          className="w-full mb-4 rounded-2xl p-4 flex items-center gap-3 text-left"
         >
-          <div className="w-9 h-9 bg-accent-red flex items-center justify-center">
-            <Plus size={16} className="text-grit" />
+          <div className="w-9 h-9 bg-[#FC4C02] flex items-center justify-center">
+            <Plus size={16} className="text-white" />
           </div>
           <span className="text-sm text-[#8a8a8a]">Drop a lift, PR or thought…</span>
         </button>
       ) : (
-        <div className="mb-4 bg-grit-card border border-grit p-4">
+        <div className="mb-4 rounded-2xl p-4">
           <div className="flex gap-2 mb-3">
             {(["text", "pr"] as const).map((k) => (
               <button
@@ -432,8 +432,8 @@ function Feed({ userId }: { userId: string }) {
                 onClick={() => setPostKind(k)}
                 className="label-cap px-3 py-1 border"
                 style={{
-                  borderColor: postKind === k ? "#e63222" : "#262626",
-                  color: postKind === k ? "#e63222" : "#8a8a8a",
+                  borderColor: postKind === k ? "#e63222" : "#2C2D33",
+                  color: postKind === k ? "#FC4C02" : "#9EA3AE",
                 }}
               >
                 {k === "text" ? "POST" : "NEW PR"}
@@ -499,32 +499,32 @@ function Feed({ userId }: { userId: string }) {
       )}
 
       {posts.length === 0 && (
-        <div className="bg-grit-card border border-grit p-6 text-center text-sm text-[#8a8a8a]">
+        <div className="rounded-2xl p-6 text-center text-sm text-[#8a8a8a]">
           Feed is empty. Be the first to post.
         </div>
       )}
 
       {posts.map((p) => (
-        <article key={p.id} className="bg-grit-card border border-grit p-4 mb-3">
+        <article key={p.id} className="rounded-2xl p-4 mb-3">
           <header className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-[#1a1a1a] border border-grit flex items-center justify-center display font-extrabold text-grit">
+            <div className="w-10 h-10 bg-[#111215] rounded-2xl flex items-center justify-center display font-extrabold text-grit">
               {(p.author.display_name || "A")[0]}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <p className="font-bold text-grit text-sm truncate">
+                <p className="font-bold text-white text-sm truncate">
                   {p.author.display_name || "Athlete"}
                 </p>
                 {p.author.id !== userId && !followedIds.has(p.author.id) && (
                   <button
                     onClick={() => followFromFeed(p.author.id)}
-                    className="label-cap text-[9px] px-2 py-0.5 border border-accent-red text-accent-red flex items-center gap-1"
+                    className="label-cap text-[9px] px-2 py-0.5 rounded-2xl text-[#FC4C02] flex items-center gap-1"
                   >
                     <UserPlus size={9} /> FOLLOW
                   </button>
                 )}
                 {p.author.id !== userId && followedIds.has(p.author.id) && (
-                  <span className="label-cap text-[9px] px-2 py-0.5 border border-grit text-grit-dim">
+                  <span className="label-cap text-[9px] px-2 py-0.5 rounded-2xl text-[#9EA3AE]">
                     Following ✓
                   </span>
                 )}
@@ -535,24 +535,24 @@ function Feed({ userId }: { userId: string }) {
               </p>
             </div>
             {p.kind !== "text" && (
-              <span className="label-cap text-[9px] px-2 py-0.5 border border-accent-red text-accent-red">
+              <span className="label-cap text-[9px] px-2 py-0.5 rounded-2xl text-[#FC4C02]">
                 {p.kind}
               </span>
             )}
           </header>
           {p.image_url && (
-            <img src={p.image_url} alt="" className="w-full mb-3 border border-grit" />
+            <img src={p.image_url} alt="" className="w-full mb-3 rounded-2xl" />
           )}
-          {p.content && <p className="text-sm text-grit mb-3 whitespace-pre-wrap">{p.content}</p>}
+          {p.content && <p className="text-sm text-white mb-3 whitespace-pre-wrap">{p.content}</p>}
           {p.kind === "pr" &&
             p.metadata &&
             typeof p.metadata === "object" &&
             "lift" in p.metadata && (
-              <div className="border border-accent-red p-3 mb-3 flex items-center gap-3">
-                <Trophy className="text-accent-red" size={20} />
+              <div className="rounded-2xl p-3 mb-3 flex items-center gap-3">
+                <Trophy className="text-[#FC4C02]" size={20} />
                 <div>
-                  <p className="label-cap text-accent-red">NEW PR</p>
-                  <p className="display font-extrabold text-grit text-xl leading-none">
+                  <p className="label-cap text-[#FC4C02]">NEW PR</p>
+                  <p className="display font-extrabold text-white text-xl leading-none">
                     {String((p.metadata as { lift?: string }).lift)} ·{" "}
                     {String((p.metadata as { weight?: number }).weight)}kg
                   </p>
@@ -568,7 +568,7 @@ function Feed({ userId }: { userId: string }) {
               <span>{p.likeCount}</span>
             </button>
             {pickerFor === p.id && (
-              <div className="absolute -top-12 left-0 bg-grit-card border border-accent-red px-2 py-1.5 flex gap-2 z-10 shadow-lg">
+              <div className="absolute -top-12 left-0 bg-grit-card rounded-2xl px-2 py-1.5 flex gap-2 z-10 shadow-lg">
                 {(["fire", "beast", "respect", "goat"] as const).map((r) => (
                   <button
                     key={r}
@@ -691,7 +691,7 @@ function League({ userId }: { userId: string }) {
   if (!data)
     return (
       <div className="px-5 pt-10 flex justify-center">
-        <Loader2 className="animate-spin text-accent-red" />
+        <Loader2 className="animate-spin text-[#FC4C02]" />
       </div>
     );
 
@@ -699,18 +699,18 @@ function League({ userId }: { userId: string }) {
     <div className="px-5 pb-6">
       {/* My league card */}
       {data.me && (
-        <div className="bg-grit-card border border-grit p-5 mb-4 flex items-center gap-4">
+        <div className="rounded-2xl p-5 mb-4 flex items-center gap-4">
           <div
             className="w-16 h-16 flex items-center justify-center"
             style={{ background: leagueColor(data.me.league) }}
           >
-            <Crown size={28} className="text-grit-bg" style={{ color: "#0a0a0a" }} />
+            <Crown size={28} className="text-grit-bg" style={{ color: "#111215" }} />
           </div>
           <div className="flex-1">
             <p className="label-cap" style={{ color: leagueColor(data.me.league) }}>
               {data.me.league} LEAGUE
             </p>
-            <p className="display font-extrabold text-grit text-3xl leading-none">
+            <p className="display font-extrabold text-white text-3xl leading-none">
               #{data.me.rank || "—"}
             </p>
             <p className="text-xs text-[#8a8a8a]">{data.me.grit_points} DS pts</p>
@@ -737,19 +737,19 @@ function League({ userId }: { userId: string }) {
 
       <Link
         to="/leaderboard"
-        className="bg-grit-card border border-accent-red mb-3 px-4 py-3 flex items-center gap-3 hover:bg-[#1a1a1a] transition-colors"
+        className="bg-grit-card rounded-2xl mb-3 px-4 py-3 flex items-center gap-3 hover:bg-[#111215] transition-colors"
       >
-        <Trophy size={18} className="text-accent-red" />
+        <Trophy size={18} className="text-[#FC4C02]" />
         <div className="flex-1">
-          <p className="label-cap text-accent-red text-[11px]">STRENGTH LEADERBOARD</p>
-          <p className="text-xs text-grit-dim">
+          <p className="label-cap text-[#FC4C02] text-[11px]">STRENGTH LEADERBOARD</p>
+          <p className="text-xs text-[#9EA3AE]">
             Ranked by Overall · Bench · Squat · Deadlift · Total
           </p>
         </div>
-        <span className="label-cap text-grit-dim text-[10px]">VIEW →</span>
+        <span className="label-cap text-[#9EA3AE] text-[10px]">VIEW →</span>
       </Link>
 
-      <div className="bg-grit-card border border-grit">
+      <div className="rounded-2xl">
         {data.top.length === 0 && (
           <p className="p-5 text-sm text-[#8a8a8a] text-center">No athletes yet.</p>
         )}
@@ -758,20 +758,20 @@ function League({ userId }: { userId: string }) {
             key={p.id}
             to="/athlete/$id"
             params={{ id: p.id }}
-            className="flex items-center gap-3 px-4 py-3 border-b border-grit last:border-b-0 hover:bg-[#1a1a1a]"
+            className="flex items-center gap-3 px-4 py-3 border-b border-grit last:border-b-0 hover:bg-[#111215]"
             style={{ background: p.id === userId ? "rgba(230,50,34,0.08)" : undefined }}
           >
-            <div className="display font-extrabold text-grit text-lg w-7 text-center">
+            <div className="display font-extrabold text-white text-lg w-7 text-center">
               {p.rank === 1 ? "🥇" : p.rank === 2 ? "🥈" : p.rank === 3 ? "🥉" : p.rank}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-grit text-sm truncate">{p.display_name || "Athlete"}</p>
+              <p className="font-bold text-white text-sm truncate">{p.display_name || "Athlete"}</p>
               <p className="text-[10px] text-[#8a8a8a] label-cap">
                 {p.username ? `@${p.username} · ` : ""}
                 <span style={{ color: leagueColor(p.league) }}>{p.league}</span>
               </p>
             </div>
-            <span className="display font-extrabold text-accent-red text-base">
+            <span className="display font-extrabold text-[#FC4C02] text-base">
               {p.grit_points}
             </span>
           </Link>
@@ -836,18 +836,18 @@ function Invite() {
   if (!info)
     return (
       <div className="px-5 pt-10 flex justify-center">
-        <Loader2 className="animate-spin text-accent-red" />
+        <Loader2 className="animate-spin text-[#FC4C02]" />
       </div>
     );
 
   return (
     <div className="px-5 pb-6 space-y-4">
       {/* Pro status */}
-      <div className="bg-grit-card border border-grit p-5">
-        <p className="label-cap text-accent-red mb-1">DEADSET PRO</p>
+      <div className="rounded-2xl p-5">
+        <p className="label-cap text-[#FC4C02] mb-1">DEADSET PRO</p>
         {info.proUntil && new Date(info.proUntil) > new Date() ? (
           <>
-            <p className="display font-extrabold text-grit text-3xl leading-none">ACTIVE</p>
+            <p className="display font-extrabold text-white text-3xl leading-none">ACTIVE</p>
             <p className="text-xs text-[#8a8a8a] mt-1">
               Until {new Date(info.proUntil).toLocaleDateString()}
             </p>
@@ -858,12 +858,12 @@ function Invite() {
       </div>
 
       {/* Your invite code */}
-      <div className="bg-grit-card border border-accent-red p-5">
+      <div className="bg-grit-card rounded-2xl p-5">
         <div className="flex items-center gap-2 mb-2">
-          <Gift size={14} className="text-accent-red" />
-          <p className="label-cap text-accent-red">Invite a mate, both get 30 days Pro</p>
+          <Gift size={14} className="text-[#FC4C02]" />
+          <p className="label-cap text-[#FC4C02]">Invite a mate, both get 30 days Pro</p>
         </div>
-        <div className="display font-extrabold text-grit text-4xl leading-none my-3 tracking-wider">
+        <div className="display font-extrabold text-white text-4xl leading-none my-3 tracking-wider">
           {info.code}
         </div>
         <button
@@ -879,7 +879,7 @@ function Invite() {
       </div>
 
       {/* Redeem */}
-      <div className="bg-grit-card border border-grit p-5">
+      <div className="rounded-2xl p-5">
         <p className="label-cap mb-2">Got a code from a mate?</p>
         <div className="flex gap-2">
           <input
@@ -1062,14 +1062,14 @@ function Friends() {
     <div className="px-5 pb-6">
       {/* stats */}
       <div className="grid grid-cols-2 gap-2 mb-4">
-        <div className="bg-grit-card border border-grit p-3 text-center">
-          <p className="display font-extrabold text-grit text-2xl leading-none">
+        <div className="rounded-2xl p-3 text-center">
+          <p className="display font-extrabold text-white text-2xl leading-none">
             {stats?.following ?? "—"}
           </p>
           <p className="label-cap text-[10px] text-[#8a8a8a] mt-1">Following</p>
         </div>
-        <div className="bg-grit-card border border-grit p-3 text-center">
-          <p className="display font-extrabold text-grit text-2xl leading-none">
+        <div className="rounded-2xl p-3 text-center">
+          <p className="display font-extrabold text-white text-2xl leading-none">
             {stats?.followers ?? "—"}
           </p>
           <p className="label-cap text-[10px] text-[#8a8a8a] mt-1">Followers</p>
@@ -1077,12 +1077,12 @@ function Friends() {
       </div>
 
       {/* Location card */}
-      <div className="bg-grit-card border border-grit p-4 mb-4">
+      <div className="rounded-2xl p-4 mb-4">
         <p className="label-cap mb-2 flex items-center gap-2">
-          <MapPin size={12} className="text-accent-red" /> Your city
+          <MapPin size={12} className="text-[#FC4C02]" /> Your city
         </p>
         {myLoc?.city ? (
-          <p className="text-sm text-grit mb-3">
+          <p className="text-sm text-white mb-3">
             <span className="font-bold">{myLoc.city}</span>
             {myLoc.country ? `, ${myLoc.country}` : ""}
           </p>
@@ -1128,7 +1128,7 @@ function Friends() {
             <MapPin size={10} /> In {nearby.myCity}
           </p>
           {nearby.athletes.length === 0 ? (
-            <p className="bg-grit-card border border-grit p-4 text-xs text-[#8a8a8a] text-center mb-4">
+            <p className="rounded-2xl p-4 text-xs text-[#8a8a8a] text-center mb-4">
               No one else here yet — invite a gym mate.
             </p>
           ) : (
@@ -1147,7 +1147,7 @@ function Friends() {
       )}
 
       {/* search */}
-      <div className="bg-grit-card border border-grit p-3 mb-4 flex items-center gap-2">
+      <div className="rounded-2xl p-3 mb-4 flex items-center gap-2">
         <Search size={16} className="text-[#8a8a8a]" />
         <input
           value={q}
@@ -1182,7 +1182,7 @@ function Friends() {
               </p>
               {following === null && (
                 <div className="flex justify-center py-4">
-                  <Loader2 className="animate-spin text-accent-red" size={18} />
+                  <Loader2 className="animate-spin text-[#FC4C02]" size={18} />
                 </div>
               )}
               {following && following.map((r) => (
@@ -1200,7 +1200,7 @@ function Friends() {
           <p className="label-cap text-[#8a8a8a] mb-2 mt-2">Suggested rivals</p>
           {!suggested && (
             <div className="flex justify-center py-6">
-              <Loader2 className="animate-spin text-accent-red" />
+              <Loader2 className="animate-spin text-[#FC4C02]" />
             </div>
           )}
           {suggested && suggested.length === 0 && (
@@ -1244,14 +1244,14 @@ function AthleteRow({
   mutuals?: number;
 }) {
   return (
-    <div className="bg-grit-card border border-grit p-3 mb-2">
+    <div className="rounded-2xl p-3 mb-2">
       <div className="flex items-center gap-3">
         <Link
           to="/athlete/$id"
           params={{ id: a.id }}
           className="flex items-center gap-3 flex-1 min-w-0"
         >
-          <div className="w-10 h-10 bg-[#1a1a1a] border border-grit flex items-center justify-center display font-extrabold text-grit overflow-hidden">
+          <div className="w-10 h-10 bg-[#111215] rounded-2xl flex items-center justify-center display font-extrabold text-white overflow-hidden">
             {a.avatar_url ? (
               <img src={a.avatar_url} alt="" className="w-full h-full object-cover" />
             ) : (
@@ -1259,7 +1259,7 @@ function AthleteRow({
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-bold text-grit text-sm truncate">
+            <p className="font-bold text-white text-sm truncate">
               {a.display_name || a.username || "Athlete"}
             </p>
             <p className="text-[10px] text-[#8a8a8a] label-cap truncate">
@@ -1268,7 +1268,7 @@ function AthleteRow({
               {a.grit_points ? ` · ${a.grit_points} DS` : ""}
             </p>
             {mutuals && mutuals > 0 ? (
-              <p className="text-[10px] text-accent-red label-cap mt-0.5">
+              <p className="text-[10px] text-[#FC4C02] label-cap mt-0.5">
                 {mutuals} mutual{mutuals > 1 ? "s" : ""}
               </p>
             ) : null}
@@ -1298,9 +1298,9 @@ function AthleteRow({
       </div>
       {a.topPR && a.topPR.value > 0 && (
         <div className="mt-2 flex items-center justify-between">
-          <span className="label-cap text-[9px] text-grit-dim">
+          <span className="label-cap text-[9px] text-[#9EA3AE]">
             Top PR:{" "}
-            <span className="text-grit">
+            <span className="text-white">
               {a.topPR.label} {a.topPR.value}
               {a.topPR.unit}
             </span>
@@ -1308,7 +1308,7 @@ function AthleteRow({
           <Link
             to="/athlete/$id"
             params={{ id: a.id }}
-            className="label-cap text-[9px] text-accent-red"
+            className="label-cap text-[9px] text-[#FC4C02]"
           >
             View Profile →
           </Link>
@@ -1319,7 +1319,7 @@ function AthleteRow({
           <Link
             to="/athlete/$id"
             params={{ id: a.id }}
-            className="label-cap text-[9px] text-grit-dim"
+            className="label-cap text-[9px] text-[#9EA3AE]"
           >
             View Profile →
           </Link>
