@@ -181,6 +181,10 @@ function LeafletRoute({
         mapRef.current.remove();
         mapRef.current = null;
       }
+      polylineRef.current = null;
+      startMarkerRef.current = null;
+      endMarkerRef.current = null;
+      LRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -216,6 +220,7 @@ function LeafletRoute({
       if (polylineRef.current) polylineRef.current._glow = glow;
     } else if (polylineRef.current?._glow) {
       polylineRef.current._glow.setLatLngs(latlngs);
+      polylineRef.current._glow.setStyle({ color: activityColor });
     }
 
     // Start marker
@@ -262,7 +267,7 @@ function LeafletRoute({
     } else if (latlngs.length === 1) {
       map.setView(latlngs[0], 16);
     }
-  }, [samples, ready, live]);
+  }, [samples, ready, live, activityColor]);
 
   return (
     <div
