@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useAppState } from "@/lib/storage";
 import { calculateGritScore, gritBadge, badgeColor } from "@/lib/calc";
+import { Bell, Settings } from "lucide-react";
 
 const TIERS: { name: string; min: number }[] = [
   { name: "RAW", min: 0 },
@@ -35,65 +36,75 @@ export function TopBar() {
   const color = badgeColor(badge);
   const { pct } = progressToNext(score);
 
-  // Ring math
-  const size = 44;
-  const stroke = 3;
+  const size = 36;
+  const stroke = 2.5;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const dash = c * pct;
 
   const initial = (state.profile.username || "U").slice(0, 1).toUpperCase();
   const avatar = state.profile.avatarDataUrl;
+  const displayName = state.profile.username || "Athlete";
 
   return (
-    <Link
-      to="/profile"
-      className="fixed z-40 flex items-center gap-2 bg-grit-card/90 backdrop-blur border border-grit pl-2 pr-3 py-1.5 rounded-full hover:border-accent-red transition-colors"
+    <header
+      className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4"
       style={{
-        top: "calc(env(safe-area-inset-top) + 10px)",
-        right: 12,
+        background: "rgba(17,18,21,0.95)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        borderBottom: "1px solid #2C2D33",
+        paddingTop: "calc(env(safe-area-inset-top) + 8px)",
+        paddingBottom: "10px",
+        height: "calc(env(safe-area-inset-top) + 56px)",
       }}
-      aria-label={`Profile · ${score} XP · ${badge}`}
     >
-      <div className="relative" style={{ width: size, height: size }}>
-        <svg width={size} height={size} className="-rotate-90 absolute inset-0">
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={r}
-            fill="none"
-            stroke="#262626"
-            strokeWidth={stroke}
-          />
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={r}
-            fill="none"
-            stroke={color}
-            strokeWidth={stroke}
-            strokeDasharray={`${dash} ${c}`}
-            strokeLinecap="round"
-            style={{ transition: "stroke-dasharray 400ms ease" }}
-          />
-        </svg>
-        <div
-          className="absolute inset-[5px] rounded-full overflow-hidden bg-grit flex items-center justify-center"
-          style={{ borderColor: color }}
+      <div className="flex items-center gap-2">
+        <span
+          className="display font-extrabold text-xl tracking-widest"
+          style={{ fontStyle: "italic", letterSpacing: "0.12em" }}
         >
-          {avatar ? (
-            <img src={avatar} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <span className="display font-extrabold text-grit text-sm">{initial}</span>
-          )}
-        </div>
-      </div>
-      <div className="flex flex-col leading-tight">
-        <span className="display text-[10px] font-extrabold uppercase" style={{ color }}>
-          {badge}
+          <span style={{ color: "#ffffff" }}>DEAD</span>
+          <span style={{ color: "#FC4C02" }}>SET</span>
         </span>
-        <span className="label-cap text-[9px] text-grit-dim">{score} XP</span>
       </div>
-    </Link>
+
+      <div className="flex items-center gap-3">
+        <div
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+          style={{ background: "#1C1D21", border: "1px solid #2C2D33" }}
+        >
+          <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color }}>
+            {badge}
+          </span>
+          <span className="text-[10px] font-bold" style={{ color: "#9EA3AE" }}>
+            {score}
+          </span>
+        </div>
+
+        <Link to="/profile" aria-label={`Profile · ${score} XP`}>
+          <div className="relative" style={{ width: size, height: size }}>
+            <svg width={size} height={size} className="-rotate-90 absolute inset-0">
+              <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#2C2D33" strokeWidth={stroke} />
+              <circle
+                cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color}
+                strokeWidth={stroke} strokeDasharray={`${dash} ${c}`} strokeLinecap="round"
+                style={{ transition: "stroke-dasharray 400ms ease" }}
+              />
+            </svg>
+            <div
+              className="absolute flex items-center justify-center overflow-hidden"
+              style={{ inset: stroke + 2, borderRadius: "50%", background: "#25262B" }}
+            >
+              {avatar ? (
+                <img src={avatar} alt={displayName} className="w-full h-full object-cover" />
+              ) : (
+                <span className="display font-extrabold text-white" style={{ fontSize: 13 }}>{initial}</span>
+              )}
+            </div>
+          </div>
+        </Link>
+      </div>
+    </header>
   );
 }
