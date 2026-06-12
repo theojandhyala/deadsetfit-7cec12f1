@@ -1,121 +1,97 @@
-// Server-only helper for calling OpenAI-compatible AI API directly via fetch.
-// Kept simple (no AI SDK dependency) for plain JSON requests.
+import Anthropic from "@anthropic-ai/sdk";
 
-const BASE = process.env.AI_BASE_URL ?? "https://api.openai.com/v1";
+function getClient() {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("Missing ANTHROPIC_API_KEY — add it to your environment.");
+  return new Anthropic({ apiKey });
+}
+
+const MODEL = "claude-opus-4-8";
 
 export async function chatJSON<T = unknown>(opts: {
-  model?: string;
   system: string;
   user: string;
 }): Promise<T> {
-  const key = process.env.OPENAI_API_KEY ?? process.env.AI_API_KEY;
-  if (!key) throw new Error("Missing OPENAI_API_KEY");
-
-  const res = await fetch(`${BASE}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${key}`,
-    },
-    body: JSON.stringify({
-      model: opts.model ?? "gpt-4o-mini",
-      messages: [
-        { role: "system", content: opts.system },
-        { role: "user", content: opts.user },
-      ],
-      response_format: { type: "json_object" },
-    }),
+  const client = getClient();
+  const msg = await client.messages.create({
+    model: MODEL,
+    max_tokens: 1024,
+    thinking: { type: "adaptive" },
+    system: opts.system + "\nIMPORTANT: Respond with valid JSON only, no markdown, no prose.",
+    messages: [{ role: "user", content: opts.user }],
   });
 
-  if (!res.ok) {
-    const text = await res.text();
-    if (res.status === 429) throw new Error("Rate limit exceeded. Please retry shortly.");
-    if (res.status === 402)
-      throw new Error("AI credits exhausted. Please check your API key and billing.");
-    throw new Error(`AI gateway error ${res.status}: ${text}`);
-  }
+  const text = msg.content
+    .filter((b) => b.type === "text")
+    .map((b) => (b as Anthropic.TextBlock).text)
+    .join("");
 
-  const data = (await res.json()) as { choices: { message: { content: string } }[] };
-  const content = data.choices?.[0]?.message?.content ?? "{}";
   try {
-    return JSON.parse(content) as T;
+    return JSON.parse(text) as T;
   } catch {
-    // try to extract JSON if model wrapped it
-    const match = content.match(/\{[\s\S]*\}/);
+    const match = text.match(/\{[\s\S]*\}/);
     if (match) return JSON.parse(match[0]) as T;
     throw new Error("AI returned invalid JSON");
   }
 }
 
 export async function chatText(opts: {
-  model?: string;
   system: string;
   messages: { role: "user" | "assistant"; content: string }[];
 }): Promise<string> {
-  const key = process.env.OPENAI_API_KEY ?? process.env.AI_API_KEY;
-  if (!key) throw new Error("Missing OPENAI_API_KEY");
-
-  const res = await fetch(`${BASE}/chat/completions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-    body: JSON.stringify({
-      model: opts.model ?? "gpt-4o-mini",
-      messages: [{ role: "system", content: opts.system }, ...opts.messages],
-    }),
+  const client = getClient();
+  const msg = await client.messages.create({
+    model: MODEL,
+    max_tokens: 1024,
+    thinking: { type: "adaptive" },
+    system: opts.system,
+    messages: opts.messages,
   });
 
-  if (!res.ok) {
-    const text = await res.text();
-    if (res.status === 429) throw new Error("Rate limit exceeded. Please retry shortly.");
-    if (res.status === 402)
-      throw new Error("AI credits exhausted. Please check your API key and billing.");
-    throw new Error(`AI gateway error ${res.status}: ${text}`);
-  }
-  const data = (await res.json()) as { choices: { message: { content: string } }[] };
-  return data.choices?.[0]?.message?.content ?? "";
+  return msg.content
+    .filter((b) => b.type === "text")
+    .map((b) => (b as Anthropic.TextBlock).text)
+    .join("");
 }
 
 export async function chatVisionJSON<T = unknown>(opts: {
-  model?: string;
   system: string;
   user: string;
   imageDataUrl: string;
 }): Promise<T> {
-  const key = process.env.OPENAI_API_KEY ?? process.env.AI_API_KEY;
-  if (!key) throw new Error("Missing OPENAI_API_KEY");
+  const client = getClient();
 
-  const res = await fetch(`${BASE}/chat/completions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+  // Parse data URL into media_type + base64 data
+  const match = opts.imageDataUrl.match(/^data:(image\/[a-z]+);base64,(.+)$/s);
+  if (!match) throw new Error("Invalid image data URL");
+  const mediaType = match[1] as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+  const base64Data = match[2];
 
-    body: JSON.stringify({
-      model: opts.model ?? "gpt-4o-mini",
-      messages: [
-        { role: "system", content: opts.system },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: opts.user },
-            { type: "image_url", image_url: { url: opts.imageDataUrl } },
-          ],
-        },
-      ],
-      response_format: { type: "json_object" },
-    }),
+  const msg = await client.messages.create({
+    model: MODEL,
+    max_tokens: 1024,
+    thinking: { type: "adaptive" },
+    system: opts.system + "\nIMPORTANT: Respond with valid JSON only, no markdown, no prose.",
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "image", source: { type: "base64", media_type: mediaType, data: base64Data } },
+          { type: "text", text: opts.user },
+        ],
+      },
+    ],
   });
 
-  if (!res.ok) {
-    const text = await res.text();
-    if (res.status === 429) throw new Error("Rate limit exceeded. Please retry shortly.");
-    if (res.status === 402) throw new Error("AI credits exhausted.");
-    throw new Error(`AI gateway error ${res.status}: ${text}`);
-  }
-  const data = (await res.json()) as { choices: { message: { content: string } }[] };
-  const content = data.choices?.[0]?.message?.content ?? "{}";
+  const text = msg.content
+    .filter((b) => b.type === "text")
+    .map((b) => (b as Anthropic.TextBlock).text)
+    .join("");
+
   try {
-    return JSON.parse(content) as T;
+    return JSON.parse(text) as T;
   } catch {
-    const m = content.match(/\{[\s\S]*\}/);
+    const m = text.match(/\{[\s\S]*\}/);
     if (m) return JSON.parse(m[0]) as T;
     throw new Error("AI returned invalid JSON");
   }
