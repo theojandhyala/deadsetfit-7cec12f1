@@ -1,17 +1,19 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Dumbbell, Activity, Apple, User, Users } from "lucide-react";
+import { Dumbbell, Activity, Apple, User, Users, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { getMyFollowStats } from "@/lib/social.functions";
 
 const STORAGE_KEY = "deadset_last_seen_followers";
 
-const tabs = [
+const LEFT_TABS = [
   { to: "/train", label: "Train", Icon: Dumbbell },
   { to: "/run", label: "Cardio", Icon: Activity },
+] as const;
+
+const RIGHT_TABS = [
   { to: "/friends", label: "Friends", Icon: Users },
-  { to: "/diet", label: "Diet", Icon: Apple },
-  { to: "/profile", label: "Profile", Icon: User },
+  { to: "/profile", label: "You", Icon: User },
 ] as const;
 
 export function BottomNav() {
@@ -25,68 +27,119 @@ export function BottomNav() {
       .then(({ followers }) => {
         if (cancelled) return;
         const lastSeen = Number(localStorage.getItem(STORAGE_KEY) ?? "0");
-        if (followers > lastSeen) {
-          setHasFriendsBadge(true);
-        }
+        if (followers > lastSeen) setHasFriendsBadge(true);
       })
       .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
-  // Clear badge when visiting friends tab
   useEffect(() => {
-    if (pathname.startsWith("/friends")) {
-      setHasFriendsBadge(false);
-      _getStats()
-        .then(({ followers }) => {
-          localStorage.setItem(STORAGE_KEY, String(followers));
-        })
-        .catch(() => {});
-    }
+    if (!pathname.startsWith("/friends")) return;
+    setHasFriendsBadge(false);
+    _getStats()
+      .then(({ followers }) => localStorage.setItem(STORAGE_KEY, String(followers)))
+      .catch(() => {});
   }, [pathname]);
+
+  const isRecordActive = pathname.startsWith("/workout/live");
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 border-t border-grit"
-      style={{ background: "#0a0a0a", paddingBottom: "env(safe-area-inset-bottom)" }}
+      className="fixed bottom-0 left-0 right-0 z-50"
+      style={{
+        background: "#17181C",
+        borderTop: "1px solid #2C2D33",
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
     >
-      <ul className="flex">
-        {tabs.map(({ to, label, Icon }) => {
+      <ul className="flex items-center h-[60px]">
+        {/* Left tabs */}
+        {LEFT_TABS.map(({ to, label, Icon }) => {
+          const active = pathname.startsWith(to);
+          return (
+            <li key={to} className="flex-1">
+              <Link
+                to={to}
+                className="flex flex-col items-center justify-center gap-1 h-[60px] relative press"
+                style={{ color: active ? "#FC4C02" : "#6B7280" }}
+              >
+                <div className="relative">
+                  <Icon size={22} strokeWidth={active ? 2.5 : 2} />
+                </div>
+                <span
+                  className="text-[10px] font-semibold"
+                  style={{ color: active ? "#FC4C02" : "#6B7280" }}
+                >
+                  {label}
+                </span>
+                {active && (
+                  <span
+                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-[3px] rounded-t-full"
+                    style={{ background: "#FC4C02" }}
+                  />
+                )}
+              </Link>
+            </li>
+          );
+        })}
+
+        {/* Center Record button */}
+        <li className="flex-shrink-0 px-2">
+          <Link
+            to="/workout/live"
+            className="flex flex-col items-center justify-center gap-1 press"
+            aria-label="Start workout"
+          >
+            <div
+              className="flex items-center justify-center"
+              style={{
+                width: 52,
+                height: 52,
+                borderRadius: "50%",
+                background: isRecordActive
+                  ? "#d93e00"
+                  : "linear-gradient(135deg, #FC4C02 0%, #ff6a24 100%)",
+                boxShadow: "0 4px 18px rgba(252,76,2,0.5)",
+                transition: "box-shadow 0.2s ease, transform 0.15s ease",
+              }}
+            >
+              <Plus size={26} color="#fff" strokeWidth={2.5} />
+            </div>
+          </Link>
+        </li>
+
+        {/* Right tabs */}
+        {RIGHT_TABS.map(({ to, label, Icon }) => {
           const active = pathname.startsWith(to);
           const showBadge = to === "/friends" && hasFriendsBadge;
           return (
             <li key={to} className="flex-1">
               <Link
                 to={to}
-                className="flex flex-col items-center justify-center gap-1 py-3 relative press"
-                style={{
-                  color: active ? "#e63222" : "#8a8a8a",
-                  transition: "color 0.18s ease, transform 0.1s ease",
-                }}
+                className="flex flex-col items-center justify-center gap-1 h-[60px] relative press"
+                style={{ color: active ? "#FC4C02" : "#6B7280" }}
               >
-                <span
-                  className="relative"
-                  style={{
-                    transform: active ? "scale(1.12)" : "scale(1)",
-                    transition: "transform 0.2s cubic-bezier(0.22,1,0.36,1)",
-                  }}
-                >
-                  <Icon size={20} strokeWidth={2.5} />
+                <div className="relative">
+                  <Icon size={22} strokeWidth={active ? 2.5 : 2} />
                   {showBadge && (
                     <span
-                      className="absolute -top-1 -right-1 w-2 h-2 bg-accent-red rounded-full"
-                      style={{ background: "#e63222" }}
+                      className="absolute -top-1 -right-1 w-2 h-2 rounded-full"
+                      style={{ background: "#FC4C02" }}
                     />
                   )}
-                </span>
+                </div>
                 <span
-                  className="text-[9px] font-bold uppercase tracking-widest"
-                  style={{ opacity: active ? 1 : 0.7, transition: "opacity 0.2s ease" }}
+                  className="text-[10px] font-semibold"
+                  style={{ color: active ? "#FC4C02" : "#6B7280" }}
                 >
                   {label}
                 </span>
+                {active && (
+                  <span
+                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-[3px] rounded-t-full"
+                    style={{ background: "#FC4C02" }}
+                  />
+                )}
               </Link>
             </li>
           );
