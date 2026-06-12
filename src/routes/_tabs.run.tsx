@@ -598,7 +598,9 @@ function LiveRunner({
           acc: result.acc,
           alt: result.alt,
         };
-        setSamples((s) => [...s, next]);
+        // Update ref immediately so the next GPS callback sees the right prev
+        samplesRef.current = [...samplesRef.current, next];
+        setSamples(samplesRef.current);
       },
       handleGpsError,
       { enableHighAccuracy: true, maximumAge: 0, timeout: 12000 },
