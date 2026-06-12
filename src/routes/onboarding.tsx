@@ -305,7 +305,7 @@ function Onboarding() {
         {step === "photo" && (
           <PhotoStep onSubmit={(url) => next({ avatarDataUrl: url })} onSkip={() => next({})} />
         )}
-        {step === "tour" && <TourStep onContinue={() => next({})} />
+        {step === "tour" && <TourStep onContinue={() => next({})} />}
       </div>
     </div>
   );
