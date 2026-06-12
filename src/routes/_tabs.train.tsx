@@ -24,6 +24,7 @@ import { EXERCISES, getExercise } from "@/lib/exercises";
 import { calculateGritScore, calculateStreak, defaultSchedule, isoDay, todayKey } from "@/lib/calc";
 import { generateSchedule } from "@/lib/ai.functions";
 import { ProBanner } from "@/components/ProBanner";
+import { InsightsWidget } from "@/components/InsightsWidget";
 import type { DayKey, Schedule, Program } from "@/lib/types";
 
 const DAY_KEYS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
@@ -163,6 +164,7 @@ function TrainPage() {
       }
       set((s) => ({ ...s, schedule: hasAny ? cleaned : buildFromDefault() }));
     } catch {
+      // Silent fallback so the user never sees an error — build a solid default split.
       set((s) => ({ ...s, schedule: buildFromDefault() }));
     } finally {
       setGenLoading(false);
@@ -190,6 +192,7 @@ function TrainPage() {
             </h1>
           </div>
           <div className="flex items-center gap-3">
+            {/* Stats chips */}
             <div
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
               style={{ background: "#1C1D21", border: "1px solid #2C2D33" }}
@@ -225,6 +228,12 @@ function TrainPage() {
           </div>
         </div>
 
+      </div>
+
+      {/* Weekly insights widget */}
+      <InsightsWidget />
+
+      <div className="px-5">
         {/* Quick-start CTA */}
         {(() => {
           const today = todayKey();
@@ -353,7 +362,10 @@ function TrainPage() {
                   {lbl}
                 </span>
                 {isToday && !active && (
-                  <span className="mt-1 w-1.5 h-1.5 rounded-full" style={{ background: "#FC4C02" }} />
+                  <span
+                    className="mt-1 w-1.5 h-1.5 rounded-full"
+                    style={{ background: "#FC4C02" }}
+                  />
                 )}
               </button>
             );
@@ -403,6 +415,7 @@ function TrainPage() {
             className="input-grit mb-3"
           />
 
+          {/* Selected exercises */}
           {(day?.exerciseIds?.length || 0) > 0 && (
             <>
               <p className="label-cap mb-2">Selected ({day!.exerciseIds.length})</p>
@@ -425,7 +438,7 @@ function TrainPage() {
                         })
                       }
                       className="text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1 font-semibold"
-                      style={{ background: "rgba(252,76,2,0.12)", color: "#FC4C02", border: "1px solid rgba(252,76,2,0.4)" }}
+                    style={{ background: "rgba(252,76,2,0.12)", color: "#FC4C02", border: "1px solid rgba(252,76,2,0.4)" }}
                     >
                       {ex.name} ×
                     </button>
@@ -475,14 +488,20 @@ function TrainPage() {
                     }}
                   >
                     <div className="min-w-0">
-                      <div className="text-xs font-bold uppercase truncate" style={{ color: sel ? "#FC4C02" : "#ffffff" }}>
+                      <div
+                        className="text-xs font-bold uppercase truncate"
+                        style={{ color: sel ? "#FC4C02" : "#ffffff" }}
+                      >
                         {e.name}
                       </div>
                       <div className="text-[9px] mt-0.5 font-medium uppercase tracking-wider" style={{ color: "#9EA3AE" }}>
                         {e.muscleGroup} · {e.skill}
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold" style={{ color: sel ? "#FC4C02" : "#9EA3AE", flexShrink: 0 }}>
+                    <span
+                      className="text-[10px] font-bold"
+                      style={{ color: sel ? "#FC4C02" : "#9EA3AE", flexShrink: 0 }}
+                    >
                       {sel ? "✓" : "+"}
                     </span>
                   </button>
@@ -498,10 +517,15 @@ function TrainPage() {
         {activeProgram ? (
           <>
             {(programDay?.items.length || 0) === 0 && (
-              <div className="p-8 text-center" style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 14 }}>
+              <div
+                className="p-8 text-center"
+                style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 14 }}
+              >
                 <p className="display text-2xl uppercase text-white font-extrabold">Rest Day</p>
                 <p className="text-sm mt-2 mb-4" style={{ color: "#9EA3AE" }}>Recover. Eat. Sleep. Grow.</p>
-                <Link to="/workout/live" className="btn-ghost text-sm py-2.5">Open Freestyle</Link>
+                <Link to="/workout/live" className="btn-ghost text-sm py-2.5">
+                  Open Freestyle
+                </Link>
               </div>
             )}
             {programDay?.items.map((it) => {
@@ -527,7 +551,10 @@ function TrainPage() {
         ) : (
           <>
             {(day?.exerciseIds || []).length === 0 && (
-              <div className="p-8 text-center" style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 14 }}>
+              <div
+                className="p-8 text-center"
+                style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 14 }}
+              >
                 <p className="display text-2xl uppercase text-white font-extrabold">Rest Day</p>
                 <p className="text-sm mt-2" style={{ color: "#9EA3AE" }}>Recover. Eat. Sleep. Grow.</p>
               </div>
@@ -577,14 +604,15 @@ function TrainPage() {
           onClose={() => setVideoState(null)}
         />
       )}
+
       {logFor && (
         <LogSetModal
           exerciseId={logFor.id}
           exerciseName={logFor.name}
           onClose={() => setLogFor(null)}
-          onLogged={(rest) => {
+          onLogged={(secs) => {
             setLogFor(null);
-            setResting(rest);
+            setResting(secs);
           }}
         />
       )}
@@ -601,24 +629,52 @@ function bestSet(logs: { exerciseId: string; weight: number }[], id: string) {
 }
 
 function ExerciseCard({
-  name, sets, tags, pr, videoId, onWatch, onLog,
+  name,
+  sets,
+  tags,
+  pr,
+  videoId,
+  onWatch,
+  onLog,
 }: {
-  name: string; sets: string; tags: string[]; pr: number | null;
-  videoId?: string; onWatch: () => void; onLog: () => void;
+  name: string;
+  sets: string;
+  tags: string[];
+  pr: number | null;
+  videoId?: string;
+  onWatch: () => void;
+  onLog: () => void;
 }) {
   return (
-    <div className="overflow-hidden" style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 14 }}>
+    <div
+      className="overflow-hidden"
+      style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 14 }}
+    >
       <button className="w-full text-left press" onClick={onWatch}>
         <div className="flex gap-0">
           {videoId && (
-            <div className="relative flex-shrink-0" style={{ width: 90, aspectRatio: "1/1", background: "#111215" }}>
+            <div
+              className="relative flex-shrink-0"
+              style={{ width: 90, aspectRatio: "1/1", background: "#111215" }}
+            >
               <img
                 src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
                 alt={name}
                 className="absolute inset-0 w-full h-full object-cover opacity-80"
               />
-              <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.35)" }}>
-                <div className="flex items-center justify-center rounded-full" style={{ width: 30, height: 30, background: "rgba(252,76,2,0.9)", boxShadow: "0 2px 8px rgba(252,76,2,0.5)" }}>
+              <div
+                className="absolute inset-0 flex items-center justify-center"
+                style={{ background: "rgba(0,0,0,0.35)" }}
+              >
+                <div
+                  className="flex items-center justify-center rounded-full"
+                  style={{
+                    width: 30,
+                    height: 30,
+                    background: "rgba(252,76,2,0.9)",
+                    boxShadow: "0 2px 8px rgba(252,76,2,0.5)",
+                  }}
+                >
                   <Play size={14} color="#fff" fill="#fff" />
                 </div>
               </div>
@@ -627,16 +683,31 @@ function ExerciseCard({
           <div className="flex-1 p-3">
             <div className="flex items-start justify-between gap-2">
               <p className="display uppercase font-extrabold text-white text-base leading-tight">{name}</p>
-              {!videoId && <Play size={16} style={{ color: "#FC4C02", flexShrink: 0, marginTop: 2 }} />}
+              {!videoId && (
+                <Play size={16} style={{ color: "#FC4C02", flexShrink: 0, marginTop: 2 }} />
+              )}
             </div>
             <p className="text-sm mt-0.5" style={{ color: "#9EA3AE" }}>{sets}</p>
             <div className="flex gap-1.5 mt-2 flex-wrap">
               {tags.filter(Boolean).slice(0, 3).map((t) => (
-                <span key={t} className="text-[10px] font-semibold uppercase px-2 py-0.5" style={{ background: "#25262B", color: "#9EA3AE", borderRadius: 6, letterSpacing: "0.05em" }}>
+                <span
+                  key={t}
+                  className="text-[10px] font-semibold uppercase px-2 py-0.5"
+                  style={{
+                    background: "#25262B",
+                    color: "#9EA3AE",
+                    borderRadius: 6,
+                    letterSpacing: "0.05em",
+                  }}
+                >
                   {t}
                 </span>
               ))}
-              {pr !== null && <span className="pr-badge">★ PR {pr}kg</span>}
+              {pr !== null && (
+                <span className="pr-badge">
+                  ★ PR {pr}kg
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -655,10 +726,15 @@ function ExerciseCard({
 }
 
 function LogSetModal({
-  exerciseId, exerciseName, onClose, onLogged,
+  exerciseId,
+  exerciseName,
+  onClose,
+  onLogged,
 }: {
-  exerciseId: string; exerciseName?: string;
-  onClose: () => void; onLogged: (rest: number) => void;
+  exerciseId: string;
+  exerciseName?: string;
+  onClose: () => void;
+  onLogged: (rest: number) => void;
 }) {
   const [, set] = useAppState();
   const [weight, setWeight] = useState("");
@@ -676,29 +752,64 @@ function LogSetModal({
     onLogged(rest);
   }
   return (
-    <div className="fixed inset-0 z-[100] flex items-end" style={{ background: "rgba(0,0,0,0.75)" }} onClick={onClose}>
+    <div
+      className="fixed inset-0 z-[100] flex items-end"
+      style={{ background: "rgba(0,0,0,0.75)" }}
+      onClick={onClose}
+    >
       <div
         className="w-full p-5 max-w-md mx-auto animate-slide-up"
-        style={{ background: "#1C1D21", borderTop: "2px solid #FC4C02", borderTopLeftRadius: 20, borderTopRightRadius: 20 }}
+        style={{
+          background: "#1C1D21",
+          borderTop: "2px solid #FC4C02",
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background: "#2C2D33" }} />
-        <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "#FC4C02" }}>Log Set</p>
+        <div
+          className="w-10 h-1 rounded-full mx-auto mb-4"
+          style={{ background: "#2C2D33" }}
+        />
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "#FC4C02" }}>
+          Log Set
+        </p>
         <h3 className="display text-xl uppercase font-extrabold text-white mb-5">{displayName}</h3>
         <div className="grid grid-cols-2 gap-3 mb-5">
           <div>
             <label className="label-cap block mb-1.5">Weight (kg)</label>
-            <input autoFocus inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)} className="input-grit text-center text-xl font-bold" />
+            <input
+              autoFocus
+              inputMode="decimal"
+              value={weight}
+              onChange={(e) => setWeight(e.target.value)}
+              className="input-grit text-center text-xl font-bold"
+            />
           </div>
           <div>
             <label className="label-cap block mb-1.5">Reps</label>
-            <input inputMode="numeric" value={reps} onChange={(e) => setReps(e.target.value)} className="input-grit text-center text-xl font-bold" />
+            <input
+              inputMode="numeric"
+              value={reps}
+              onChange={(e) => setReps(e.target.value)}
+              className="input-grit text-center text-xl font-bold"
+            />
           </div>
         </div>
         <p className="label-cap mb-2.5">Start rest timer</p>
         <div className="grid grid-cols-3 gap-2">
           {[60, 90, 120].map((s) => (
-            <button key={s} onClick={() => save(s)} className="py-3 font-bold text-sm press" style={{ background: "#25262B", color: "#ffffff", borderRadius: 10, border: "1.5px solid #2C2D33" }}>
+            <button
+              key={s}
+              onClick={() => save(s)}
+              className="py-3 font-bold text-sm press"
+              style={{
+                background: "#25262B",
+                color: "#ffffff",
+                borderRadius: 10,
+                border: "1.5px solid #2C2D33",
+              }}
+            >
               {s}s
             </button>
           ))}
