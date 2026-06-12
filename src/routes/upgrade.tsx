@@ -207,11 +207,11 @@ function UpgradePage() {
                 </div>
               </div>
               <div className="flex items-center gap-1.5">
-                <Star size={13} style={{ color: "#FFB800" }} />
+                <Star size={13} style={{ color: "#FAFAFA" }} />
                 <span className="text-xs font-bold text-white">4.9 rating</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <Flame size={13} style={{ color: "#FC4C02" }} />
+                <Flame size={13} style={{ color: "#E10600" }} />
                 <span className="text-xs font-bold text-white">Top 1% gains</span>
               </div>
             </div>
