@@ -163,7 +163,6 @@ function TrainPage() {
       }
       set((s) => ({ ...s, schedule: hasAny ? cleaned : buildFromDefault() }));
     } catch {
-      // Silent fallback so the user never sees an error — build a solid default split.
       set((s) => ({ ...s, schedule: buildFromDefault() }));
     } finally {
       setGenLoading(false);
@@ -178,35 +177,118 @@ function TrainPage() {
   }
 
   return (
-    <div style={{ paddingTop: "env(safe-area-inset-top)" }} className="animate-fade-in">
-      <header className="px-5 pt-6 pb-4 flex items-center justify-between animate-slide-down">
-        <Link to="/profile" className="flex items-center gap-2.5">
-          <div className="flex flex-col leading-tight">
-            <span className="label-cap text-[9px]">PWR</span>
-            <span className="display text-lg font-extrabold text-grit">{score.total}</span>
+    <div className="animate-fade-in pb-4">
+      {/* Strava-style greeting header */}
+      <div className="px-5 pt-5 pb-4 animate-slide-down">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "#9EA3AE" }}>
+              {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" }).toUpperCase()}
+            </p>
+            <h1 className="display text-2xl font-extrabold text-white mt-0.5">
+              {state.profile?.username ? `HEY, ${state.profile.username.toUpperCase()}` : "LET'S TRAIN"}
+            </h1>
           </div>
-          <div className="w-px h-6 bg-grit" />
-          <div className="flex items-center gap-1">
-            <Flame size={14} className="text-accent-red" />
-            <span className="display text-lg font-extrabold text-grit">{streak}</span>
+          <div className="flex items-center gap-3">
+            <div
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+              style={{ background: "#1C1D21", border: "1px solid #2C2D33" }}
+            >
+              <Flame size={13} style={{ color: "#FC4C02" }} />
+              <span className="display text-sm font-extrabold text-white">{streak}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link
+                to="/programs"
+                className="flex items-center justify-center rounded-full press"
+                style={{ width: 34, height: 34, background: "#1C1D21", border: "1px solid #2C2D33" }}
+                aria-label="Programs"
+              >
+                <ListPlus size={15} style={{ color: "#9EA3AE" }} />
+              </Link>
+              <button
+                onClick={() => setEditMode((v) => !v)}
+                className="flex items-center justify-center rounded-full press"
+                style={{
+                  width: 34,
+                  height: 34,
+                  background: editMode ? "rgba(252,76,2,0.12)" : "#1C1D21",
+                  border: `1px solid ${editMode ? "#FC4C02" : "#2C2D33"}`,
+                }}
+                aria-label="Edit schedule"
+              >
+                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: editMode ? "#FC4C02" : "#9EA3AE" }}>
+                  {editMode ? "Done" : "Edit"}
+                </span>
+              </button>
+            </div>
           </div>
-        </Link>
-        <div className="flex items-center gap-4">
-          <Link to="/programs" className="label-cap text-grit-dim text-xs flex items-center gap-1">
-            <ListPlus size={14} /> PROGRAMS
-          </Link>
-          <button
-            onClick={() => setEditMode((v) => !v)}
-            className="label-cap"
-            style={{ color: editMode ? "#e63222" : "#8a8a8a" }}
-          >
-            {editMode ? "DONE" : "EDIT"}
-          </button>
         </div>
-      </header>
+
+        {/* Quick-start CTA */}
+        {(() => {
+          const today = todayKey();
+          const todaysItems = activeProgram
+            ? activeProgram.days[today]?.items.length || 0
+            : schedule[today]?.exerciseIds?.length || 0;
+          const hasSchedule = !!state.schedule || !!activeProgram;
+          const canStart = todaysItems > 0;
+          return canStart ? (
+            <Link
+              to="/workout/live"
+              className="btn-grit w-full text-base py-4 flex items-center justify-center"
+              style={{ borderRadius: 12, fontSize: "0.95rem", letterSpacing: "0.03em" }}
+            >
+              <Flame size={18} className="mr-2" /> Start Today's Workout
+            </Link>
+          ) : !hasSchedule ? (
+            <button
+              onClick={handleGenerate}
+              disabled={genLoading}
+              className="btn-grit w-full text-base py-4 flex items-center justify-center"
+              style={{ borderRadius: 12, fontSize: "0.95rem" }}
+            >
+              {genLoading ? <Loader2 className="animate-spin mr-2" size={18} /> : <Sparkles size={18} className="mr-2" />}
+              {genLoading ? "Building Your Plan…" : "Generate My Schedule"}
+            </button>
+          ) : (
+            <div
+              className="p-4 text-center"
+              style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 12 }}
+            >
+              <p className="text-sm font-bold" style={{ color: "#9EA3AE" }}>Rest Day — Recover & Come Back Stronger</p>
+            </div>
+          );
+        })()}
+        {genError && <p className="text-xs mt-2" style={{ color: "#FC4C02" }}>{genError}</p>}
+      </div>
+
       <ProBanner />
       <Reminders />
 
+      {/* Quick actions */}
+      <div className="px-5 mb-5">
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { to: "/run", Icon: Activity, label: "Cardio" },
+            { to: "/programs", Icon: ListPlus, label: "Schedule" },
+            { to: "/challenges", Icon: Trophy, label: "Challenge" },
+            { to: "/recovery", Icon: Heart, label: "Recovery" },
+          ].map(({ to, Icon, label }) => (
+            <Link
+              key={to}
+              to={to}
+              className="flex flex-col items-center gap-1.5 py-3 press"
+              style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 12 }}
+            >
+              <Icon size={18} style={{ color: "#FC4C02" }} />
+              <span className="text-[10px] font-semibold" style={{ color: "#9EA3AE" }}>{label}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Stats row */}
       <div className="px-5 mb-5 animate-slide-up delay-100">
         <Big3Card state={state} />
       </div>
@@ -214,141 +296,94 @@ function TrainPage() {
         <WeeklyRecap state={state} />
       </div>
 
-      {/* ===== QUICK ACTIONS — everything you need, up top ===== */}
-      {(() => {
-        const today = todayKey();
-        const todaysItems = activeProgram
-          ? activeProgram.days[today]?.items.length || 0
-          : schedule[today]?.exerciseIds?.length || 0;
-        const hasSchedule = !!state.schedule || !!activeProgram;
-        const canStart = todaysItems > 0;
-        return (
-          <div className="px-5 mb-5">
-            <div className="grid grid-cols-1 gap-2">
-              {canStart ? (
-                <Link
-                  to="/workout/live"
-                  className="btn-grit w-full text-base py-4 flex items-center justify-center"
-                >
-                  <Flame size={18} className="mr-2" /> Start Today's Workout
-                </Link>
-              ) : !hasSchedule ? (
-                <button
-                  onClick={handleGenerate}
-                  disabled={genLoading}
-                  className="btn-grit w-full text-base py-4 flex items-center justify-center"
-                >
-                  {genLoading ? (
-                    <Loader2 className="animate-spin mr-2" size={18} />
-                  ) : (
-                    <Sparkles size={18} className="mr-2" />
-                  )}
-                  Generate My Schedule
-                </button>
-              ) : (
-                <div className="bg-grit-card border border-grit p-3 text-center">
-                  <p className="label-cap text-accent-red text-[10px]">REST DAY</p>
-                  <p className="text-xs text-grit-dim mt-1">
-                    No exercises today — recover & come back stronger.
-                  </p>
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-2">
-                <Link
-                  to="/run"
-                  className="btn-ghost py-2.5 flex items-center justify-center gap-2 text-xs"
-                >
-                  <Activity size={14} /> Cardio
-                </Link>
-                <Link
-                  to="/programs"
-                  className="btn-ghost py-2.5 flex items-center justify-center gap-2 text-xs"
-                >
-                  <ListPlus size={14} /> Schedule
-                </Link>
-                <Link
-                  to="/challenges"
-                  className="btn-ghost py-2.5 flex items-center justify-center gap-2 text-xs"
-                >
-                  <Trophy size={14} /> Challenge
-                </Link>
-                <Link
-                  to="/recovery"
-                  className="btn-ghost py-2.5 flex items-center justify-center gap-2 text-xs"
-                >
-                  <Heart size={14} /> Recovery
-                </Link>
-              </div>
-            </div>
-            {genError && <p className="text-xs text-accent-red mt-2">{genError}</p>}
-          </div>
-        );
-      })()}
-
       <DailyQuests />
 
       {activeProgram && (
-        <div className="px-5 mb-3">
+        <div className="px-4 mb-3">
           <Link
             to="/programs/$programId"
             params={{ programId: activeProgram.id }}
-            className="block bg-grit-card border border-accent-red px-3 py-2"
+            className="flex items-center justify-between px-4 py-3 press"
+            style={{ background: "rgba(252,76,2,0.1)", border: "1.5px solid rgba(252,76,2,0.4)", borderRadius: 12 }}
           >
-            <p className="label-cap text-[9px] text-accent-red">ACTIVE PROGRAM</p>
-            <p className="display uppercase font-extrabold text-grit text-sm truncate">
-              {activeProgram.name}
-            </p>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#FC4C02" }}>Active Program</p>
+              <p className="display uppercase font-extrabold text-white text-sm truncate mt-0.5">
+                {activeProgram.name}
+              </p>
+            </div>
+            <div style={{ color: "#FC4C02", fontSize: 18 }}>›</div>
           </Link>
         </div>
       )}
 
-      {/* Weekly strip */}
-      <div className="px-5 mb-4">
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+      {/* Strava-style day strip */}
+      <div className="px-4 mb-4">
+        <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
           {DAY_KEYS.map((k) => {
             const active = k === selectedDay;
             const isToday = k === todayKey();
             const lbl =
               (activeProgram ? activeProgram.days[k].label : schedule[k]?.label)?.split(" — ")[0] ||
               "REST";
+            const isRest = lbl === "REST";
             return (
               <button
                 key={k}
                 onClick={() => setSelectedDay(k)}
-                className="flex-shrink-0 min-w-[68px] p-2 border text-center"
+                className="flex-shrink-0 flex flex-col items-center pt-2 pb-2 px-2.5 press"
                 style={{
-                  borderColor: active ? "#e63222" : "#262626",
-                  background: active ? "#1a1a1a" : "transparent",
+                  minWidth: 62,
+                  borderRadius: 12,
+                  background: active ? "#FC4C02" : "#1C1D21",
+                  border: `1.5px solid ${active ? "#FC4C02" : isToday ? "rgba(252,76,2,0.5)" : "#2C2D33"}`,
+                  transition: "background 0.15s ease, border-color 0.15s ease",
                 }}
               >
-                <div className="label-cap" style={{ color: isToday ? "#e63222" : undefined }}>
+                <span
+                  className="text-[10px] font-bold uppercase tracking-wider"
+                  style={{ color: active ? "#fff" : isToday ? "#FC4C02" : "#9EA3AE" }}
+                >
                   {DAY_SHORT[k]}
-                </div>
-                <div className="text-xs font-bold uppercase mt-1 text-grit truncate">{lbl}</div>
+                </span>
+                <span
+                  className="text-[10px] font-semibold uppercase mt-1 truncate w-full text-center"
+                  style={{ color: active ? "rgba(255,255,255,0.85)" : isRest ? "#4A4B52" : "#fff" }}
+                >
+                  {lbl}
+                </span>
+                {isToday && !active && (
+                  <span className="mt-1 w-1.5 h-1.5 rounded-full" style={{ background: "#FC4C02" }} />
+                )}
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Today header */}
+      {/* Day header */}
       {(() => {
         const rawLabel = (activeProgram ? programDay?.label : day?.label) || "REST";
         const hype = dayHype(selectedDay, rawLabel, selectedDay === todayKey());
         return (
-          <div className="px-5 mb-5">
-            <p className="label-cap text-accent-red">{hype.eyebrow}</p>
-            <h1 className="display text-3xl font-extrabold uppercase text-grit leading-tight mt-1">
+          <div className="px-4 mb-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#FC4C02" }}>
+              {hype.eyebrow}
+            </p>
+            <h2 className="display text-2xl font-extrabold uppercase text-white leading-tight mt-1">
               {rawLabel}
-            </h1>
-            <p className="text-sm text-grit-dim mt-2 leading-snug">{hype.line}</p>
+            </h2>
+            <p className="text-sm mt-1.5 leading-snug" style={{ color: "#9EA3AE" }}>{hype.line}</p>
           </div>
         );
       })()}
 
-      {/* Edit mode: assign muscle group + searchable exercise picker */}
+      {/* Edit mode */}
       {editMode && (
-        <div className="px-5 mb-5 bg-grit-card border border-grit p-4">
+        <div
+          className="mx-4 mb-4 p-4"
+          style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 14 }}
+        >
           <p className="label-cap mb-3">Edit {DAY_SHORT[selectedDay]}</p>
           <label className="label-cap block mb-1">Label</label>
           <input
@@ -368,7 +403,6 @@ function TrainPage() {
             className="input-grit mb-3"
           />
 
-          {/* Selected exercises */}
           {(day?.exerciseIds?.length || 0) > 0 && (
             <>
               <p className="label-cap mb-2">Selected ({day!.exerciseIds.length})</p>
@@ -390,7 +424,8 @@ function TrainPage() {
                           return { ...s, schedule: sched };
                         })
                       }
-                      className="text-[10px] px-2 py-1 border border-accent-red text-accent-red uppercase font-bold tracking-wider flex items-center gap-1"
+                      className="text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1 font-semibold"
+                      style={{ background: "rgba(252,76,2,0.12)", color: "#FC4C02", border: "1px solid rgba(252,76,2,0.4)" }}
                     >
                       {ex.name} ×
                     </button>
@@ -432,25 +467,23 @@ function TrainPage() {
                         return { ...s, schedule: sched };
                       })
                     }
-                    className="p-2.5 border text-left flex items-center justify-between gap-2"
-                    style={{ borderColor: sel ? "#e63222" : "#262626", background: "#0a0a0a" }}
+                    className="p-3 text-left flex items-center justify-between gap-2 press"
+                    style={{
+                      background: sel ? "rgba(252,76,2,0.08)" : "#25262B",
+                      border: `1px solid ${sel ? "rgba(252,76,2,0.4)" : "#2C2D33"}`,
+                      borderRadius: 10,
+                    }}
                   >
                     <div className="min-w-0">
-                      <div
-                        className="text-xs font-bold uppercase truncate"
-                        style={{ color: sel ? "#e63222" : "#f5f5f0" }}
-                      >
+                      <div className="text-xs font-bold uppercase truncate" style={{ color: sel ? "#FC4C02" : "#ffffff" }}>
                         {e.name}
                       </div>
-                      <div className="text-[9px] label-cap text-grit-dim mt-0.5">
+                      <div className="text-[9px] mt-0.5 font-medium uppercase tracking-wider" style={{ color: "#9EA3AE" }}>
                         {e.muscleGroup} · {e.skill}
                       </div>
                     </div>
-                    <span
-                      className="text-[10px] label-cap"
-                      style={{ color: sel ? "#e63222" : "#8a8a8a" }}
-                    >
-                      {sel ? "ADDED" : "+ ADD"}
+                    <span className="text-[10px] font-bold" style={{ color: sel ? "#FC4C02" : "#9EA3AE", flexShrink: 0 }}>
+                      {sel ? "✓" : "+"}
                     </span>
                   </button>
                 );
@@ -460,83 +493,43 @@ function TrainPage() {
         </div>
       )}
 
-      {/* Exercises */}
-      <div className="px-5 flex flex-col gap-3">
+      {/* Exercise list */}
+      <div className="px-4 flex flex-col gap-3 pb-4">
         {activeProgram ? (
           <>
             {(programDay?.items.length || 0) === 0 && (
-              <div className="bg-grit-card border border-grit p-8 text-center">
-                <p className="display text-2xl uppercase text-grit font-extrabold">Rest Day</p>
-                <p className="text-sm text-[#8a8a8a] mt-2 mb-4">Recover. Eat. Sleep.</p>
-                <Link to="/workout/live" className="btn-ghost inline-block">
-                  Train another day
-                </Link>
+              <div className="p-8 text-center" style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 14 }}>
+                <p className="display text-2xl uppercase text-white font-extrabold">Rest Day</p>
+                <p className="text-sm mt-2 mb-4" style={{ color: "#9EA3AE" }}>Recover. Eat. Sleep. Grow.</p>
+                <Link to="/workout/live" className="btn-ghost text-sm py-2.5">Open Freestyle</Link>
               </div>
             )}
             {programDay?.items.map((it) => {
               const pr = bestSet(state.logs, it.id);
               return (
-                <div key={it.id} className="bg-grit-card border border-grit">
-                  <button
-                    className="w-full p-3 text-left"
-                    onClick={() =>
-                      setVideoState({ query: it.youtube_query || it.name, title: it.name })
-                    }
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="display uppercase font-extrabold text-grit text-lg leading-tight">
-                        {it.name}
-                      </div>
-                      <Play size={18} className="text-accent-red flex-shrink-0" />
-                    </div>
-                    <div className="text-xs text-[#8a8a8a] mt-1">
-                      {it.sets} × {it.reps}
-                    </div>
-                    <div className="flex gap-2 mt-2 flex-wrap">
-                      <span className="text-[10px] px-2 py-0.5 border border-grit uppercase font-bold tracking-wider">
-                        {it.equipment}
-                      </span>
-                      {it.primary_muscles.slice(0, 2).map((m) => (
-                        <span
-                          key={m}
-                          className="text-[10px] px-2 py-0.5 border border-grit uppercase font-bold tracking-wider text-grit-dim"
-                        >
-                          {m}
-                        </span>
-                      ))}
-                      {pr && (
-                        <span className="text-[10px] px-2 py-0.5 bg-accent-red text-white uppercase font-bold tracking-wider">
-                          PR {pr}KG
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                  <div className="border-t border-grit">
-                    <button
-                      onClick={() => setLogFor({ id: it.id, name: it.name })}
-                      className="w-full py-3 label-cap"
-                      style={{ color: "#e63222" }}
-                    >
-                      <Plus size={14} className="inline mr-1 -mt-0.5" /> Log Set
-                    </button>
-                  </div>
-                </div>
+                <ExerciseCard
+                  key={it.id}
+                  name={it.name}
+                  sets={`${it.sets} × ${it.reps}`}
+                  tags={[it.equipment, ...it.primary_muscles.slice(0, 2)]}
+                  pr={pr}
+                  onWatch={() => setVideoState({ query: it.youtube_query || it.name, title: it.name })}
+                  onLog={() => setLogFor({ id: it.id, name: it.name })}
+                />
               );
             })}
             {(programDay?.items.length || 0) > 0 && (
-              <button onClick={completeWorkout} className="btn-grit mt-4 mb-2">
-                {state.completedDates.includes(isoDay())
-                  ? "Workout Complete ✓"
-                  : "Complete Workout"}
+              <button onClick={completeWorkout} className="btn-grit mt-2 mb-4 w-full">
+                {state.completedDates.includes(isoDay()) ? "✓ Workout Complete" : "Complete Workout"}
               </button>
             )}
           </>
         ) : (
           <>
             {(day?.exerciseIds || []).length === 0 && (
-              <div className="bg-grit-card border border-grit p-8 text-center">
-                <p className="display text-2xl uppercase text-grit font-extrabold">Rest Day</p>
-                <p className="text-sm text-[#8a8a8a] mt-2">Recover. Eat. Sleep.</p>
+              <div className="p-8 text-center" style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 14 }}>
+                <p className="display text-2xl uppercase text-white font-extrabold">Rest Day</p>
+                <p className="text-sm mt-2" style={{ color: "#9EA3AE" }}>Recover. Eat. Sleep. Grow.</p>
               </div>
             )}
             {(day?.exerciseIds || []).map((id) => {
@@ -544,65 +537,29 @@ function TrainPage() {
               if (!ex) return null;
               const pr = bestSet(state.logs, id);
               return (
-                <div key={id} className="bg-grit-card border border-grit">
-                  <button
-                    className="w-full grid grid-cols-[96px_1fr] gap-0 text-left"
-                    onClick={() =>
-                      setVideoState({
-                        videoId: ex.videoId,
-                        title: ex.name,
-                        clipStart: ex.clipStart,
-                        clipEnd: ex.clipEnd,
-                        cue: ex.instruction,
-                      })
-                    }
-                  >
-                    <div className="relative bg-black" style={{ aspectRatio: "1 / 1" }}>
-                      <img
-                        src={`https://img.youtube.com/vi/${ex.videoId}/mqdefault.jpg`}
-                        alt={ex.name}
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                        <Play size={26} className="text-white" />
-                      </div>
-                    </div>
-                    <div className="p-3">
-                      <div className="display uppercase font-extrabold text-grit text-lg leading-tight">
-                        {ex.name}
-                      </div>
-                      <div className="text-xs text-[#8a8a8a] mt-1">
-                        {ex.sets} × {ex.reps}
-                      </div>
-                      <div className="flex gap-2 mt-2">
-                        <span className="text-[10px] px-2 py-0.5 border border-grit uppercase font-bold tracking-wider">
-                          {ex.skill}
-                        </span>
-                        {pr && (
-                          <span className="text-[10px] px-2 py-0.5 bg-accent-red text-white uppercase font-bold tracking-wider">
-                            PR {pr}KG
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                  <div className="border-t border-grit">
-                    <button
-                      onClick={() => setLogFor({ id, name: ex.name })}
-                      className="w-full py-3 label-cap"
-                      style={{ color: "#e63222" }}
-                    >
-                      <Plus size={14} className="inline mr-1 -mt-0.5" /> Log Set
-                    </button>
-                  </div>
-                </div>
+                <ExerciseCard
+                  key={id}
+                  name={ex.name}
+                  sets={`${ex.sets} × ${ex.reps}`}
+                  tags={[ex.skill]}
+                  pr={pr}
+                  videoId={ex.videoId}
+                  onWatch={() =>
+                    setVideoState({
+                      videoId: ex.videoId,
+                      title: ex.name,
+                      clipStart: ex.clipStart,
+                      clipEnd: ex.clipEnd,
+                      cue: ex.instruction,
+                    })
+                  }
+                  onLog={() => setLogFor({ id, name: ex.name })}
+                />
               );
             })}
             {(day?.exerciseIds?.length || 0) > 0 && (
-              <button onClick={completeWorkout} className="btn-grit mt-4 mb-2">
-                {state.completedDates.includes(isoDay())
-                  ? "Workout Complete ✓"
-                  : "Complete Workout"}
+              <button onClick={completeWorkout} className="btn-grit mt-2 mb-4 w-full">
+                {state.completedDates.includes(isoDay()) ? "✓ Workout Complete" : "Complete Workout"}
               </button>
             )}
           </>
@@ -620,15 +577,14 @@ function TrainPage() {
           onClose={() => setVideoState(null)}
         />
       )}
-
       {logFor && (
         <LogSetModal
           exerciseId={logFor.id}
           exerciseName={logFor.name}
           onClose={() => setLogFor(null)}
-          onLogged={(secs) => {
+          onLogged={(rest) => {
             setLogFor(null);
-            setResting(secs);
+            setResting(rest);
           }}
         />
       )}
@@ -644,16 +600,65 @@ function bestSet(logs: { exerciseId: string; weight: number }[], id: string) {
   return Math.max(...f.map((l) => l.weight));
 }
 
-function LogSetModal({
-  exerciseId,
-  exerciseName,
-  onClose,
-  onLogged,
+function ExerciseCard({
+  name, sets, tags, pr, videoId, onWatch, onLog,
 }: {
-  exerciseId: string;
-  exerciseName?: string;
-  onClose: () => void;
-  onLogged: (rest: number) => void;
+  name: string; sets: string; tags: string[]; pr: number | null;
+  videoId?: string; onWatch: () => void; onLog: () => void;
+}) {
+  return (
+    <div className="overflow-hidden" style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 14 }}>
+      <button className="w-full text-left press" onClick={onWatch}>
+        <div className="flex gap-0">
+          {videoId && (
+            <div className="relative flex-shrink-0" style={{ width: 90, aspectRatio: "1/1", background: "#111215" }}>
+              <img
+                src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
+                alt={name}
+                className="absolute inset-0 w-full h-full object-cover opacity-80"
+              />
+              <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.35)" }}>
+                <div className="flex items-center justify-center rounded-full" style={{ width: 30, height: 30, background: "rgba(252,76,2,0.9)", boxShadow: "0 2px 8px rgba(252,76,2,0.5)" }}>
+                  <Play size={14} color="#fff" fill="#fff" />
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="flex-1 p-3">
+            <div className="flex items-start justify-between gap-2">
+              <p className="display uppercase font-extrabold text-white text-base leading-tight">{name}</p>
+              {!videoId && <Play size={16} style={{ color: "#FC4C02", flexShrink: 0, marginTop: 2 }} />}
+            </div>
+            <p className="text-sm mt-0.5" style={{ color: "#9EA3AE" }}>{sets}</p>
+            <div className="flex gap-1.5 mt-2 flex-wrap">
+              {tags.filter(Boolean).slice(0, 3).map((t) => (
+                <span key={t} className="text-[10px] font-semibold uppercase px-2 py-0.5" style={{ background: "#25262B", color: "#9EA3AE", borderRadius: 6, letterSpacing: "0.05em" }}>
+                  {t}
+                </span>
+              ))}
+              {pr !== null && <span className="pr-badge">★ PR {pr}kg</span>}
+            </div>
+          </div>
+        </div>
+      </button>
+      <div style={{ borderTop: "1px solid #2C2D33" }}>
+        <button
+          onClick={onLog}
+          className="w-full py-2.5 flex items-center justify-center gap-1.5 press"
+          style={{ color: "#FC4C02", fontSize: "0.82rem", fontWeight: 700, letterSpacing: "0.05em" }}
+        >
+          <Plus size={14} /> Log Set
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function LogSetModal({
+  exerciseId, exerciseName, onClose, onLogged,
+}: {
+  exerciseId: string; exerciseName?: string;
+  onClose: () => void; onLogged: (rest: number) => void;
 }) {
   const [, set] = useAppState();
   const [weight, setWeight] = useState("");
@@ -671,42 +676,29 @@ function LogSetModal({
     onLogged(rest);
   }
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-end"
-      style={{ background: "rgba(0,0,0,0.7)" }}
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-[100] flex items-end" style={{ background: "rgba(0,0,0,0.75)" }} onClick={onClose}>
       <div
-        className="w-full bg-grit-card border-t border-accent-red p-5 max-w-md mx-auto"
+        className="w-full p-5 max-w-md mx-auto animate-slide-up"
+        style={{ background: "#1C1D21", borderTop: "2px solid #FC4C02", borderTopLeftRadius: 20, borderTopRightRadius: 20 }}
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="label-cap mb-1">Log Set</p>
-        <h3 className="display text-xl uppercase font-extrabold text-grit mb-4">{displayName}</h3>
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ background: "#2C2D33" }} />
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "#FC4C02" }}>Log Set</p>
+        <h3 className="display text-xl uppercase font-extrabold text-white mb-5">{displayName}</h3>
+        <div className="grid grid-cols-2 gap-3 mb-5">
           <div>
-            <label className="label-cap block mb-1">Weight (kg)</label>
-            <input
-              autoFocus
-              inputMode="decimal"
-              value={weight}
-              onChange={(e) => setWeight(e.target.value)}
-              className="input-grit"
-            />
+            <label className="label-cap block mb-1.5">Weight (kg)</label>
+            <input autoFocus inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)} className="input-grit text-center text-xl font-bold" />
           </div>
           <div>
-            <label className="label-cap block mb-1">Reps</label>
-            <input
-              inputMode="numeric"
-              value={reps}
-              onChange={(e) => setReps(e.target.value)}
-              className="input-grit"
-            />
+            <label className="label-cap block mb-1.5">Reps</label>
+            <input inputMode="numeric" value={reps} onChange={(e) => setReps(e.target.value)} className="input-grit text-center text-xl font-bold" />
           </div>
         </div>
-        <p className="label-cap mb-2">Rest</p>
+        <p className="label-cap mb-2.5">Start rest timer</p>
         <div className="grid grid-cols-3 gap-2">
           {[60, 90, 120].map((s) => (
-            <button key={s} onClick={() => save(s)} className="btn-grit">
+            <button key={s} onClick={() => save(s)} className="py-3 font-bold text-sm press" style={{ background: "#25262B", color: "#ffffff", borderRadius: 10, border: "1.5px solid #2C2D33" }}>
               {s}s
             </button>
           ))}
