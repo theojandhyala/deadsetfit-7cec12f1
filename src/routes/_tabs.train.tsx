@@ -231,6 +231,9 @@ function TrainPage() {
 
       </div>
 
+      {/* AI feature shortcuts */}
+      <AIToolbox />
+
       {/* Weekly insights widget */}
       <InsightsWidget />
 
