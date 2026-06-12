@@ -23,6 +23,7 @@ import {
 import { useAppState } from "@/lib/storage";
 import { RunMap } from "@/components/RunMap";
 import { RunAdvanced } from "@/components/RunAdvanced";
+import { RunShareCard } from "@/components/RunShareCard";
 import {
   avgPace,
   bestKmPace,
@@ -970,6 +971,7 @@ function RunSummary({
   const [name, setName] = useState(labelRun(run));
   const [notes, setNotes] = useState("");
   const [hr, setHr] = useState("");
+  const [showShareCard, setShowShareCard] = useState(false);
 
   function save() {
     onSave({
@@ -980,147 +982,121 @@ function RunSummary({
     });
   }
 
-  async function share() {
-    const text = `${name} · ${(run.distanceM / 1000).toFixed(2)} km · ${formatDuration(run.durationSec)} · ${run.calories ?? estimateCalories(run)} kcal 🔥 via DEADSET`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "DEADSET Activity", text });
-        return;
-      } catch {
-        /* cancelled */
-      }
-    }
-    await navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard");
-  }
+  const namedRun: Run = { ...run, name: name.trim() || labelRun(run) };
 
   return (
-    <div className="px-4 pt-6 pb-24 max-w-screen-sm mx-auto space-y-4">
-      <header className="flex items-center justify-between">
-        <button
-          onClick={onDiscard}
-          className="flex items-center gap-1 text-grit-dim text-xs uppercase tracking-wider font-bold"
-        >
-          <Trash2 size={14} /> Discard
-        </button>
-        <div className="flex items-center gap-2">
-          <span style={{ color: cfg.color }}>{cfg.icon}</span>
-          <span className="label-cap text-[11px]" style={{ color: cfg.color }}>
-            ACTIVITY COMPLETE
-          </span>
-        </div>
-        <button
-          onClick={share}
-          className="flex items-center gap-1 text-xs uppercase tracking-wider font-bold"
-          style={{ color: cfg.color }}
-        >
-          <Share2 size={14} /> Share
-        </button>
-      </header>
+    <>
+      {showShareCard && <RunShareCard run={namedRun} onClose={() => setShowShareCard(false)} />}
+      <div className="px-4 pt-6 pb-24 max-w-screen-sm mx-auto space-y-4">
+        <header className="flex items-center justify-between">
+          <button onClick={onDiscard}
+            className="flex items-center gap-1 text-xs uppercase tracking-wider font-bold"
+            style={{ color: "#8A8A8A" }}>
+            <Trash2 size={14} /> Discard
+          </button>
+          <div className="flex items-center gap-2">
+            <span style={{ color: cfg.color }}>{cfg.icon}</span>
+            <span className="label-cap text-[11px] font-bold" style={{ color: cfg.color }}>
+              ACTIVITY COMPLETE
+            </span>
+          </div>
+          <button onClick={() => setShowShareCard(true)}
+            className="flex items-center gap-1 text-xs uppercase tracking-wider font-bold"
+            style={{ color: cfg.color }}>
+            <Share2 size={14} /> Share card
+          </button>
+        </header>
 
-      {/* Map */}
-      <RunMap samples={run.samples} height={280} mapStyle="trail" activityColor={cfg.color} />
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="border p-4 text-center" style={{ borderColor: cfg.color }}>
-          <p className="label-cap text-[9px]" style={{ color: cfg.color }}>
-            DISTANCE
-          </p>
-          <p className="display text-3xl font-extrabold text-grit leading-none mt-1">
-            {(run.distanceM / 1000).toFixed(2)}
-          </p>
-          <p className="label-cap text-[9px] text-grit-dim">km</p>
-        </div>
-        <div className="border border-grit p-4 text-center bg-grit-card">
-          <p className="label-cap text-[9px] text-grit-dim">TIME</p>
-          <p className="display text-3xl font-extrabold text-grit leading-none mt-1">
-            {formatDuration(run.durationSec)}
-          </p>
-          <p className="label-cap text-[9px] text-grit-dim">duration</p>
-        </div>
-        <div className="border border-grit p-3 bg-grit-card text-center">
-          <p className="label-cap text-[9px] text-grit-dim">
-            {run.activityType === "cycle" ? "AVG SPEED" : "AVG PACE"}
-          </p>
-          <p className="display text-xl font-extrabold text-grit leading-none mt-1">
-            {run.activityType === "cycle"
-              ? `${speedKmh(run.distanceM, run.durationSec)} km/h`
-              : `${formatPace(run.avgPaceSecPerKm)}/km`}
-          </p>
-        </div>
-        <div className="border border-grit p-3 bg-grit-card text-center">
-          <p className="label-cap text-[9px] text-grit-dim">CALORIES</p>
-          <p className="display text-xl font-extrabold text-grit leading-none mt-1">
-            {run.calories ?? estimateCalories(run)}
-          </p>
-          <p className="label-cap text-[9px] text-grit-dim">kcal</p>
-        </div>
-        {(run.elevGainM ?? 0) > 0 && (
-          <div className="border border-grit p-3 bg-grit-card text-center">
-            <p className="label-cap text-[9px] text-grit-dim">ELEVATION</p>
-            <p className="display text-xl font-extrabold text-grit leading-none mt-1">
-              +{run.elevGainM}m
+        {/* Congrats banner */}
+        <div className="py-3 px-4 flex items-center gap-3"
+          style={{ background: `${cfg.color}18`, border: `1px solid ${cfg.color}60` }}>
+          <Trophy size={20} style={{ color: cfg.color, flexShrink: 0 }} />
+          <div>
+            <p className="text-xs font-extrabold uppercase tracking-wide" style={{ color: cfg.color }}>
+              {run.distanceM >= 10000 ? "Crushing it 🔥" : run.distanceM >= 5000 ? "Solid effort!" : "Good work!"}
+            </p>
+            <p className="text-[10px]" style={{ color: "#8A8A8A" }}>
+              {(run.distanceM / 1000).toFixed(2)} km · {formatDuration(run.durationSec)}
+              {run.activityType !== "cycle" && run.avgPaceSecPerKm
+                ? ` · ${formatPace(run.avgPaceSecPerKm)}/km` : ""}
             </p>
           </div>
-        )}
-        {run.splits.length > 0 && (
-          <div className="border border-grit p-3 bg-grit-card text-center">
-            <p className="label-cap text-[9px] text-grit-dim">BEST KM</p>
-            <p className="display text-xl font-extrabold text-grit leading-none mt-1">
-              {formatPace(run.bestPaceSecPerKm ?? 0)}/km
-            </p>
+        </div>
+
+        {/* Map */}
+        <RunMap samples={run.samples} height={260} mapStyle="dark" activityColor={cfg.color} />
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 gap-2">
+          <SummaryStatCell label="DISTANCE" value={`${(run.distanceM / 1000).toFixed(2)}`} unit="km" accent={cfg.color} />
+          <SummaryStatCell label="TIME" value={formatDuration(run.durationSec)} />
+          <SummaryStatCell
+            label={run.activityType === "cycle" ? "AVG SPEED" : "AVG PACE"}
+            value={run.activityType === "cycle"
+              ? `${speedKmh(run.distanceM, run.durationSec)}`
+              : formatPace(run.avgPaceSecPerKm)}
+            unit={run.activityType === "cycle" ? "km/h" : "/km"}
+          />
+          <SummaryStatCell label="CALORIES" value={String(run.calories ?? estimateCalories(run))} unit="kcal" />
+          {(run.elevGainM ?? 0) > 0 && (
+            <SummaryStatCell label="ELEVATION" value={`+${run.elevGainM}`} unit="m" />
+          )}
+          {run.bestPaceSecPerKm ? (
+            <SummaryStatCell label="BEST KM" value={`${formatPace(run.bestPaceSecPerKm)}`} unit="/km" />
+          ) : null}
+        </div>
+
+        {/* Name + notes */}
+        <div className="space-y-3">
+          <div>
+            <label className="label-cap text-[10px] block mb-1" style={{ color: "#8A8A8A" }}>Activity name</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} maxLength={60}
+              className="input-grit w-full" placeholder="Morning Run" />
           </div>
-        )}
-      </div>
+          <div>
+            <label className="label-cap text-[10px] block mb-1" style={{ color: "#8A8A8A" }}>Notes (optional)</label>
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
+              rows={2} maxLength={500} className="input-grit w-full resize-none"
+              placeholder="How did it feel?" />
+          </div>
+          <div>
+            <label className="label-cap text-[10px] block mb-1" style={{ color: "#8A8A8A" }}>Avg heart rate (optional)</label>
+            <div className="flex items-center gap-2">
+              <input value={hr} onChange={(e) => setHr(e.target.value)}
+                inputMode="numeric" maxLength={3} className="input-grit w-24"
+                placeholder="155" />
+              <span className="label-cap text-[9px]" style={{ color: "#8A8A8A" }}>bpm</span>
+            </div>
+          </div>
+        </div>
 
-      {/* Name + notes */}
-      <div className="space-y-3">
-        <div>
-          <label className="label-cap text-[10px] text-grit-dim block mb-1">Activity name</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={60}
-            className="input-grit w-full"
-            placeholder="Morning Run"
-          />
-        </div>
-        <div>
-          <label className="label-cap text-[10px] text-grit-dim block mb-1">Notes (optional)</label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={2}
-            maxLength={500}
-            className="input-grit w-full resize-none"
-            placeholder="How did it feel?"
-          />
-        </div>
-        <div>
-          <label className="label-cap text-[10px] text-grit-dim block mb-1">
-            Avg heart rate (optional)
-          </label>
-          <input
-            value={hr}
-            onChange={(e) => setHr(e.target.value)}
-            inputMode="numeric"
-            maxLength={3}
-            className="input-grit w-32"
-            placeholder="e.g. 155"
-          />
-          <span className="label-cap text-[9px] text-grit-dim ml-2">bpm</span>
+        {/* Actions */}
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={() => setShowShareCard(true)}
+            className="py-4 flex items-center justify-center gap-2 text-xs font-extrabold uppercase tracking-widest"
+            style={{ background: "#141414", border: "1px solid #262626", color: "#FAFAFA" }}>
+            <Share2 size={15} /> Share card
+          </button>
+          <button onClick={save}
+            className="py-4 text-white flex items-center justify-center gap-2 font-extrabold uppercase tracking-widest text-xs"
+            style={{ background: cfg.color, boxShadow: `0 0 20px ${cfg.color}50` }}>
+            <Trophy size={16} strokeWidth={3} /> Save
+          </button>
         </div>
       </div>
+    </>
+  );
+}
 
-      <button
-        onClick={save}
-        className="w-full text-white py-5 flex items-center justify-center gap-3 font-extrabold uppercase tracking-widest text-sm"
-        style={{ background: cfg.color, boxShadow: `0 0 24px ${cfg.color}40` }}
-      >
-        <Trophy size={20} strokeWidth={3} />
-        Save Activity
-      </button>
+function SummaryStatCell({ label, value, unit, accent }: { label: string; value: string; unit?: string; accent?: string }) {
+  return (
+    <div className="p-3 flex flex-col gap-0.5"
+      style={{ background: "#141414", border: `1px solid ${accent ? accent + "50" : "#262626"}` }}>
+      <p className="label-cap text-[9px]" style={{ color: accent ?? "#8A8A8A" }}>{label}</p>
+      <div className="flex items-baseline gap-1">
+        <p className="display text-2xl font-extrabold leading-none" style={{ color: "#FAFAFA" }}>{value}</p>
+        {unit && <p className="label-cap text-[9px]" style={{ color: "#8A8A8A" }}>{unit}</p>}
+      </div>
     </div>
   );
 }
@@ -1139,40 +1115,31 @@ function RunDetail({
   onDelete: () => void;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showShareCard, setShowShareCard] = useState(false);
   const cfg = ACTIVITY_CONFIG[run.activityType ?? "run"];
   const maxSplit = run.splits.length ? Math.max(...run.splits) : 0;
   const minSplit = run.splits.length ? Math.min(...run.splits) : 0;
 
-  async function share() {
-    const text = `${run.name || labelRun(run)} · ${(run.distanceM / 1000).toFixed(2)} km · ${formatDuration(run.durationSec)} · ${run.calories ?? estimateCalories(run)} kcal 🔥 via DEADSET`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "DEADSET Activity", text });
-        return;
-      } catch {
-        /* cancelled */
-      }
-    }
-    await navigator.clipboard.writeText(text);
-    toast.success("Copied");
-  }
-
   return (
-    <div className="px-4 pt-6 pb-24 max-w-screen-sm mx-auto space-y-4">
+    <>
+      {showShareCard && <RunShareCard run={run} onClose={() => setShowShareCard(false)} />}
+      <div className="px-4 pt-6 pb-24 max-w-screen-sm mx-auto space-y-4">
       <header className="flex items-center justify-between">
         <button
           onClick={onBack}
-          className="flex items-center gap-1 text-grit-dim hover:text-grit text-xs uppercase tracking-wider font-bold"
+          className="flex items-center gap-1 text-xs uppercase tracking-wider font-bold"
+          style={{ color: "#8A8A8A" }}
         >
           <ChevronLeft size={16} /> Back
         </button>
         <div className="flex items-center gap-3">
-          <button onClick={share} className="text-grit-dim hover:text-grit">
+          <button onClick={() => setShowShareCard(true)} style={{ color: "#8A8A8A" }}>
             <Share2 size={16} />
           </button>
           <button
             onClick={() => (confirmDelete ? onDelete() : setConfirmDelete(true))}
-            className={`flex items-center gap-1 text-xs uppercase tracking-wider font-bold ${confirmDelete ? "text-accent-red" : "text-grit-dim hover:text-accent-red"}`}
+            className="flex items-center gap-1 text-xs uppercase tracking-wider font-bold"
+            style={{ color: confirmDelete ? "#E10600" : "#8A8A8A" }}
           >
             <Trash2 size={14} />
             {confirmDelete ? "Confirm" : "Delete"}
@@ -1262,22 +1229,21 @@ function RunDetail({
       <RunAdvanced run={run} allRuns={allRuns} />
 
       {/* Share / Social */}
-      <section className="border border-grit bg-grit-card p-4 space-y-3">
-        <p className="label-cap text-[10px] text-accent-red">SHARE WITH CREW</p>
-        <button
-          onClick={share}
-          className="btn-grit w-full py-3 flex items-center justify-center gap-2"
-        >
-          <Share2 size={14} /> Share this {cfg.label.toLowerCase()}
+      <section className="p-4 space-y-3" style={{ background: "#141414", border: "1px solid #262626" }}>
+        <p className="label-cap text-[10px] font-bold" style={{ color: "#E10600" }}>SHARE WITH CREW</p>
+        <button onClick={() => setShowShareCard(true)}
+          className="w-full py-3 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest text-white"
+          style={{ background: "#E10600" }}>
+          <Share2 size={14} /> Create share card
         </button>
-        <Link
-          to="/friends"
-          className="block text-center label-cap text-[10px] text-grit-dim hover:text-accent-red"
-        >
+        <Link to="/friends"
+          className="block text-center label-cap text-[10px]"
+          style={{ color: "#8A8A8A" }}>
           Post to feed → <Users size={10} className="inline" />
         </Link>
       </section>
     </div>
+    </>
   );
 }
 
