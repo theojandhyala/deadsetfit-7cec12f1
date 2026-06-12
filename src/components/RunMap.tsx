@@ -11,7 +11,7 @@ interface RunMapProps {
   thumbnail?: boolean;
   /** Use topo tiles that expose paths/trails/contours for run detail/live tracking. */
   mapStyle?: "dark" | "trail";
-  /** Override the trail colour (default #e63222). */
+  /** Override the trail colour (default #E10600). */
   activityColor?: string;
 }
 
@@ -25,7 +25,7 @@ export function RunMap(props: RunMapProps) {
   return <LeafletRoute {...props} />;
 }
 
-const DEFAULT_COLOR = "#e63222";
+const DEFAULT_COLOR = "#E10600";
 
 /* ------------------------ SVG thumbnail ------------------------ */
 function SvgRoute({

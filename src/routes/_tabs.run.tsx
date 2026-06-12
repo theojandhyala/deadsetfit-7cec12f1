@@ -59,7 +59,7 @@ const ACTIVITY_CONFIG: Record<
   run: {
     label: "Run",
     icon: <Activity size={22} />,
-    color: "#e63222",
+    color: "#E10600",
     metricLabel: "Pace /km",
     calMult: 1.0,
     maxSpeedMps: 12.5,
@@ -714,7 +714,7 @@ function LiveRunner({
         ? { label: "STRONG", color: "#22c55e" }
         : gpsAccuracy <= 35
           ? { label: "OK", color: "#fbbf24" }
-          : { label: "WEAK", color: "#e63222" };
+          : { label: "WEAK", color: "#E10600" };
 
   const isCycle = activityType === "cycle";
   const speedKmhNow = elapsedSec > 0 ? (distanceM / elapsedSec) * 3.6 : 0;
@@ -955,7 +955,7 @@ function BigStat({
       <div className="flex items-baseline gap-1">
         <span
           className="display text-xl font-extrabold leading-none"
-          style={{ color: accent ? "#e63222" : "var(--grit-text, #e5e5e5)" }}
+          style={{ color: accent ? "#E10600" : "var(--grit-text, #e5e5e5)" }}
         >
           {value}
         </span>

@@ -129,8 +129,8 @@ export function DailyQuests() {
                 <div
                   className="w-7 h-7 flex items-center justify-center border flex-shrink-0"
                   style={{
-                    borderColor: q.done ? "#e63222" : "#2a2a2a",
-                    background: q.done ? "#e63222" : "transparent",
+                    borderColor: q.done ? "#E10600" : "#2a2a2a",
+                    background: q.done ? "#E10600" : "transparent",
                     color: q.done ? "#fff" : "#8a8a8a",
                   }}
                 >
@@ -151,8 +151,8 @@ export function DailyQuests() {
                 <span
                   className="label-cap text-[10px] px-1.5 py-0.5 flex-shrink-0 flex items-center gap-0.5"
                   style={{
-                    color: q.done ? "#e63222" : "#8a8a8a",
-                    border: `1px solid ${q.done ? "#e63222" : "#2a2a2a"}`,
+                    color: q.done ? "#E10600" : "#8a8a8a",
+                    border: `1px solid ${q.done ? "#E10600" : "#2a2a2a"}`,
                   }}
                 >
                   <Zap size={9} /> {q.xp}

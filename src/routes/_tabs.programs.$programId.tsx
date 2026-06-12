@@ -247,7 +247,7 @@ function BuilderPage() {
                 onClick={() => setDay(k)}
                 className="flex-shrink-0 min-w-[64px] p-2 border text-center"
                 style={{
-                  borderColor: active ? "#e63222" : "#262626",
+                  borderColor: active ? "#E10600" : "#262626",
                   background: active ? "#1a1a1a" : "transparent",
                 }}
               >
@@ -386,7 +386,7 @@ function BuilderPage() {
                 <button
                   onClick={() => addCustomExercise(search)}
                   className="w-full text-left px-3 py-2 mb-2 flex items-center justify-between gap-2 border-2 border-dashed"
-                  style={{ background: "#0a0a0a", borderColor: "#e63222" }}
+                  style={{ background: "#0a0a0a", borderColor: "#E10600" }}
                 >
                   <div className="min-w-0 flex-1">
                     <div className="label-cap text-xs text-accent-red truncate">
@@ -415,7 +415,7 @@ function BuilderPage() {
                         className="w-full text-left px-3 py-2 flex items-center justify-between gap-2"
                         style={{
                           background: "#0a0a0a",
-                          border: `1px solid ${added ? "#e63222" : "#2a2a2a"}`,
+                          border: `1px solid ${added ? "#E10600" : "#2a2a2a"}`,
                           opacity: added ? 0.6 : 1,
                         }}
                       >
@@ -498,7 +498,7 @@ function BuilderPage() {
                         <button
                           onClick={() => applySuggestion(g.suggested_ids)}
                           className="mt-2 w-full py-2 label-cap text-xs"
-                          style={{ background: "#e63222", color: "#0a0a0a" }}
+                          style={{ background: "#E10600", color: "#0a0a0a" }}
                         >
                           ADD TO {day}
                         </button>

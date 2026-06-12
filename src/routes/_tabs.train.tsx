@@ -184,7 +184,7 @@ function TrainPage() {
       <div className="px-5 pt-5 pb-4 animate-slide-down">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "#9EA3AE" }}>
+            <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "#8A8A8A" }}>
               {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" }).toUpperCase()}
             </p>
             <h1 className="display text-2xl font-extrabold text-white mt-0.5">
@@ -195,19 +195,19 @@ function TrainPage() {
             {/* Stats chips */}
             <div
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-              style={{ background: "#1C1D21", border: "1px solid #2C2D33" }}
+              style={{ background: "#141414", border: "1px solid #262626" }}
             >
-              <Flame size={13} style={{ color: "#FC4C02" }} />
+              <Flame size={13} style={{ color: "#E10600" }} />
               <span className="display text-sm font-extrabold text-white">{streak}</span>
             </div>
             <div className="flex items-center gap-2">
               <Link
                 to="/programs"
                 className="flex items-center justify-center rounded-full press"
-                style={{ width: 34, height: 34, background: "#1C1D21", border: "1px solid #2C2D33" }}
+                style={{ width: 34, height: 34, background: "#141414", border: "1px solid #262626" }}
                 aria-label="Programs"
               >
-                <ListPlus size={15} style={{ color: "#9EA3AE" }} />
+                <ListPlus size={15} style={{ color: "#8A8A8A" }} />
               </Link>
               <button
                 onClick={() => setEditMode((v) => !v)}
@@ -215,12 +215,12 @@ function TrainPage() {
                 style={{
                   width: 34,
                   height: 34,
-                  background: editMode ? "rgba(252,76,2,0.12)" : "#1C1D21",
-                  border: `1px solid ${editMode ? "#FC4C02" : "#2C2D33"}`,
+                  background: editMode ? "rgba(225,6,0,0.12)" : "#141414",
+                  border: `1px solid ${editMode ? "#E10600" : "#262626"}`,
                 }}
                 aria-label="Edit schedule"
               >
-                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: editMode ? "#FC4C02" : "#9EA3AE" }}>
+                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: editMode ? "#E10600" : "#8A8A8A" }}>
                   {editMode ? "Done" : "Edit"}
                 </span>
               </button>
@@ -274,15 +274,15 @@ function TrainPage() {
             return (
               <div
                 className="p-4 text-center"
-                style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 12 }}
+                style={{ background: "#141414", border: "1.5px solid #262626", borderRadius: 12 }}
               >
                 <p className="text-sm font-bold text-white">{DAY_FULL[selectedDay]}'s workout</p>
-                <p className="text-xs mt-0.5" style={{ color: "#9EA3AE" }}>
+                <p className="text-xs mt-0.5" style={{ color: "#8A8A8A" }}>
                   {isToday ? "" : "Come back on " + DAY_FULL[selectedDay] + " · "}
                   {selectedItems} exercise{selectedItems !== 1 ? "s" : ""}
                   {todaysItems > 0 && !isToday ? (
                     <> &nbsp;·&nbsp;
-                      <Link to="/workout/live" style={{ color: "#FC4C02", fontWeight: 700 }}>
+                      <Link to="/workout/live" style={{ color: "#E10600", fontWeight: 700 }}>
                         Start today's instead ›
                       </Link>
                     </>
@@ -294,20 +294,20 @@ function TrainPage() {
           return (
             <div
               className="p-4 text-center"
-              style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 12 }}
+              style={{ background: "#141414", border: "1.5px solid #262626", borderRadius: 12 }}
             >
-              <p className="text-sm font-bold" style={{ color: "#9EA3AE" }}>
+              <p className="text-sm font-bold" style={{ color: "#8A8A8A" }}>
                 {isToday ? "Rest Day — Recover & Come Back Stronger" : `${DAY_FULL[selectedDay]} is a rest day`}
               </p>
               {!isToday && todaysItems > 0 && (
-                <Link to="/workout/live" className="text-xs mt-1.5 block font-bold" style={{ color: "#FC4C02" }}>
+                <Link to="/workout/live" className="text-xs mt-1.5 block font-bold" style={{ color: "#E10600" }}>
                   Start today's workout instead ›
                 </Link>
               )}
             </div>
           );
         })()}
-        {genError && <p className="text-xs mt-2" style={{ color: "#FC4C02" }}>{genError}</p>}
+        {genError && <p className="text-xs mt-2" style={{ color: "#E10600" }}>{genError}</p>}
       </div>
 
       <ProBanner />
@@ -326,10 +326,10 @@ function TrainPage() {
               key={to}
               to={to}
               className="flex flex-col items-center gap-1.5 py-3 press"
-              style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 12 }}
+              style={{ background: "#141414", border: "1.5px solid #262626", borderRadius: 12 }}
             >
-              <Icon size={18} style={{ color: "#FC4C02" }} />
-              <span className="text-[10px] font-semibold" style={{ color: "#9EA3AE" }}>{label}</span>
+              <Icon size={18} style={{ color: "#E10600" }} />
+              <span className="text-[10px] font-semibold" style={{ color: "#8A8A8A" }}>{label}</span>
             </Link>
           ))}
         </div>
@@ -351,15 +351,15 @@ function TrainPage() {
             to="/programs/$programId"
             params={{ programId: activeProgram.id }}
             className="flex items-center justify-between px-4 py-3 press"
-            style={{ background: "rgba(252,76,2,0.1)", border: "1.5px solid rgba(252,76,2,0.4)", borderRadius: 12 }}
+            style={{ background: "rgba(225,6,0,0.1)", border: "1.5px solid rgba(225,6,0,0.4)", borderRadius: 12 }}
           >
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#FC4C02" }}>Active Program</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#E10600" }}>Active Program</p>
               <p className="display uppercase font-extrabold text-white text-sm truncate mt-0.5">
                 {activeProgram.name}
               </p>
             </div>
-            <div style={{ color: "#FC4C02", fontSize: 18 }}>›</div>
+            <div style={{ color: "#E10600", fontSize: 18 }}>›</div>
           </Link>
         </div>
       )}
@@ -382,14 +382,14 @@ function TrainPage() {
                 style={{
                   minWidth: 62,
                   borderRadius: 12,
-                  background: active ? "#FC4C02" : "#1C1D21",
-                  border: `1.5px solid ${active ? "#FC4C02" : isToday ? "rgba(252,76,2,0.5)" : "#2C2D33"}`,
+                  background: active ? "#E10600" : "#141414",
+                  border: `1.5px solid ${active ? "#E10600" : isToday ? "rgba(225,6,0,0.5)" : "#262626"}`,
                   transition: "background 0.15s ease, border-color 0.15s ease",
                 }}
               >
                 <span
                   className="text-[10px] font-bold uppercase tracking-wider"
-                  style={{ color: active ? "#fff" : isToday ? "#FC4C02" : "#9EA3AE" }}
+                  style={{ color: active ? "#fff" : isToday ? "#E10600" : "#8A8A8A" }}
                 >
                   {DAY_SHORT[k]}
                 </span>
@@ -402,7 +402,7 @@ function TrainPage() {
                 {isToday && !active && (
                   <span
                     className="mt-1 w-1.5 h-1.5 rounded-full"
-                    style={{ background: "#FC4C02" }}
+                    style={{ background: "#E10600" }}
                   />
                 )}
               </button>
@@ -417,13 +417,13 @@ function TrainPage() {
         const hype = dayHype(selectedDay, rawLabel, selectedDay === todayKey());
         return (
           <div className="px-4 mb-4">
-            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#FC4C02" }}>
+            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#E10600" }}>
               {hype.eyebrow}
             </p>
             <h2 className="display text-2xl font-extrabold uppercase text-white leading-tight mt-1">
               {rawLabel}
             </h2>
-            <p className="text-sm mt-1.5 leading-snug" style={{ color: "#9EA3AE" }}>{hype.line}</p>
+            <p className="text-sm mt-1.5 leading-snug" style={{ color: "#8A8A8A" }}>{hype.line}</p>
           </div>
         );
       })()}
@@ -432,7 +432,7 @@ function TrainPage() {
       {editMode && (
         <div
           className="mx-4 mb-4 p-4"
-          style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 14 }}
+          style={{ background: "#141414", border: "1.5px solid #262626", borderRadius: 14 }}
         >
           <p className="label-cap mb-3">Edit {DAY_SHORT[selectedDay]}</p>
           <label className="label-cap block mb-1">Label</label>
@@ -476,7 +476,7 @@ function TrainPage() {
                         })
                       }
                       className="text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1 font-semibold"
-                    style={{ background: "rgba(252,76,2,0.12)", color: "#FC4C02", border: "1px solid rgba(252,76,2,0.4)" }}
+                    style={{ background: "rgba(225,6,0,0.12)", color: "#E10600", border: "1px solid rgba(225,6,0,0.4)" }}
                     >
                       {ex.name} ×
                     </button>
@@ -520,25 +520,25 @@ function TrainPage() {
                     }
                     className="p-3 text-left flex items-center justify-between gap-2 press"
                     style={{
-                      background: sel ? "rgba(252,76,2,0.08)" : "#25262B",
-                      border: `1px solid ${sel ? "rgba(252,76,2,0.4)" : "#2C2D33"}`,
+                      background: sel ? "rgba(225,6,0,0.08)" : "#141414",
+                      border: `1px solid ${sel ? "rgba(225,6,0,0.4)" : "#262626"}`,
                       borderRadius: 10,
                     }}
                   >
                     <div className="min-w-0">
                       <div
                         className="text-xs font-bold uppercase truncate"
-                        style={{ color: sel ? "#FC4C02" : "#ffffff" }}
+                        style={{ color: sel ? "#E10600" : "#ffffff" }}
                       >
                         {e.name}
                       </div>
-                      <div className="text-[9px] mt-0.5 font-medium uppercase tracking-wider" style={{ color: "#9EA3AE" }}>
+                      <div className="text-[9px] mt-0.5 font-medium uppercase tracking-wider" style={{ color: "#8A8A8A" }}>
                         {e.muscleGroup} · {e.skill}
                       </div>
                     </div>
                     <span
                       className="text-[10px] font-bold"
-                      style={{ color: sel ? "#FC4C02" : "#9EA3AE", flexShrink: 0 }}
+                      style={{ color: sel ? "#E10600" : "#8A8A8A", flexShrink: 0 }}
                     >
                       {sel ? "✓" : "+"}
                     </span>
@@ -557,10 +557,10 @@ function TrainPage() {
             {(programDay?.items.length || 0) === 0 && (
               <div
                 className="p-8 text-center"
-                style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 14 }}
+                style={{ background: "#141414", border: "1.5px solid #262626", borderRadius: 14 }}
               >
                 <p className="display text-2xl uppercase text-white font-extrabold">Rest Day</p>
-                <p className="text-sm mt-2 mb-4" style={{ color: "#9EA3AE" }}>Recover. Eat. Sleep. Grow.</p>
+                <p className="text-sm mt-2 mb-4" style={{ color: "#8A8A8A" }}>Recover. Eat. Sleep. Grow.</p>
                 <Link to="/workout/live" className="btn-ghost text-sm py-2.5">
                   Open Freestyle
                 </Link>
@@ -591,10 +591,10 @@ function TrainPage() {
             {(day?.exerciseIds || []).length === 0 && (
               <div
                 className="p-8 text-center"
-                style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 14 }}
+                style={{ background: "#141414", border: "1.5px solid #262626", borderRadius: 14 }}
               >
                 <p className="display text-2xl uppercase text-white font-extrabold">Rest Day</p>
-                <p className="text-sm mt-2" style={{ color: "#9EA3AE" }}>Recover. Eat. Sleep. Grow.</p>
+                <p className="text-sm mt-2" style={{ color: "#8A8A8A" }}>Recover. Eat. Sleep. Grow.</p>
               </div>
             )}
             {(day?.exerciseIds || []).map((id) => {
@@ -686,14 +686,14 @@ function ExerciseCard({
   return (
     <div
       className="overflow-hidden"
-      style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 14 }}
+      style={{ background: "#141414", border: "1.5px solid #262626", borderRadius: 14 }}
     >
       <button className="w-full text-left press" onClick={onWatch}>
         <div className="flex gap-0">
           {videoId && (
             <div
               className="relative flex-shrink-0"
-              style={{ width: 90, aspectRatio: "1/1", background: "#111215" }}
+              style={{ width: 90, aspectRatio: "1/1", background: "#0A0A0A" }}
             >
               <img
                 src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
@@ -709,8 +709,8 @@ function ExerciseCard({
                   style={{
                     width: 30,
                     height: 30,
-                    background: "rgba(252,76,2,0.9)",
-                    boxShadow: "0 2px 8px rgba(252,76,2,0.5)",
+                    background: "rgba(225,6,0,0.9)",
+                    boxShadow: "0 2px 8px rgba(225,6,0,0.5)",
                   }}
                 >
                   <Play size={14} color="#fff" fill="#fff" />
@@ -722,18 +722,18 @@ function ExerciseCard({
             <div className="flex items-start justify-between gap-2">
               <p className="display uppercase font-extrabold text-white text-base leading-tight">{name}</p>
               {!videoId && (
-                <Play size={16} style={{ color: "#FC4C02", flexShrink: 0, marginTop: 2 }} />
+                <Play size={16} style={{ color: "#E10600", flexShrink: 0, marginTop: 2 }} />
               )}
             </div>
-            <p className="text-sm mt-0.5" style={{ color: "#9EA3AE" }}>{sets}</p>
+            <p className="text-sm mt-0.5" style={{ color: "#8A8A8A" }}>{sets}</p>
             <div className="flex gap-1.5 mt-2 flex-wrap">
               {tags.filter(Boolean).slice(0, 3).map((t) => (
                 <span
                   key={t}
                   className="text-[10px] font-semibold uppercase px-2 py-0.5"
                   style={{
-                    background: "#25262B",
-                    color: "#9EA3AE",
+                    background: "#141414",
+                    color: "#8A8A8A",
                     borderRadius: 6,
                     letterSpacing: "0.05em",
                   }}
@@ -750,11 +750,11 @@ function ExerciseCard({
           </div>
         </div>
       </button>
-      <div style={{ borderTop: "1px solid #2C2D33" }}>
+      <div style={{ borderTop: "1px solid #262626" }}>
         <button
           onClick={onLog}
           className="w-full py-2.5 flex items-center justify-center gap-1.5 press"
-          style={{ color: "#FC4C02", fontSize: "0.82rem", fontWeight: 700, letterSpacing: "0.05em" }}
+          style={{ color: "#E10600", fontSize: "0.82rem", fontWeight: 700, letterSpacing: "0.05em" }}
         >
           <Plus size={14} /> Log Set
         </button>
@@ -798,8 +798,8 @@ function LogSetModal({
       <div
         className="w-full p-5 max-w-md mx-auto animate-slide-up"
         style={{
-          background: "#1C1D21",
-          borderTop: "2px solid #FC4C02",
+          background: "#141414",
+          borderTop: "2px solid #E10600",
           borderTopLeftRadius: 20,
           borderTopRightRadius: 20,
         }}
@@ -807,9 +807,9 @@ function LogSetModal({
       >
         <div
           className="w-10 h-1 rounded-full mx-auto mb-4"
-          style={{ background: "#2C2D33" }}
+          style={{ background: "#262626" }}
         />
-        <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "#FC4C02" }}>
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "#E10600" }}>
           Log Set
         </p>
         <h3 className="display text-xl uppercase font-extrabold text-white mb-5">{displayName}</h3>
@@ -842,10 +842,10 @@ function LogSetModal({
               onClick={() => save(s)}
               className="py-3 font-bold text-sm press"
               style={{
-                background: "#25262B",
+                background: "#141414",
                 color: "#ffffff",
                 borderRadius: 10,
-                border: "1.5px solid #2C2D33",
+                border: "1.5px solid #262626",
               }}
             >
               {s}s

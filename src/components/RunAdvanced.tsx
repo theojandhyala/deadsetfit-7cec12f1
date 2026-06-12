@@ -300,8 +300,8 @@ function PaceChart({ data, avg }: { data: { km: number; pace: number }[]; avg: n
     >
       <defs>
         <linearGradient id="paceFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#e63222" stopOpacity="0.35" />
-          <stop offset="100%" stopColor="#e63222" stopOpacity="0" />
+          <stop offset="0%" stopColor="#E10600" stopOpacity="0.35" />
+          <stop offset="100%" stopColor="#E10600" stopOpacity="0" />
         </linearGradient>
       </defs>
       <line
@@ -317,7 +317,7 @@ function PaceChart({ data, avg }: { data: { km: number; pace: number }[]; avg: n
       <path
         d={path}
         fill="none"
-        stroke="#e63222"
+        stroke="#E10600"
         strokeWidth={1.4}
         strokeLinecap="round"
         strokeLinejoin="round"

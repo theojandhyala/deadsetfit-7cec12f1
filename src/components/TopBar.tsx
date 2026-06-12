@@ -53,7 +53,7 @@ export function TopBar() {
         background: "rgba(17,18,21,0.95)",
         backdropFilter: "blur(12px)",
         WebkitBackdropFilter: "blur(12px)",
-        borderBottom: "1px solid #2C2D33",
+        borderBottom: "1px solid #262626",
         paddingTop: "calc(env(safe-area-inset-top) + 8px)",
         paddingBottom: "10px",
         height: "calc(env(safe-area-inset-top) + 56px)",
@@ -66,7 +66,7 @@ export function TopBar() {
           style={{ fontStyle: "italic", letterSpacing: "0.12em" }}
         >
           <span style={{ color: "#ffffff" }}>DEAD</span>
-          <span style={{ color: "#FC4C02" }}>SET</span>
+          <span style={{ color: "#E10600" }}>SET</span>
         </span>
       </div>
 
@@ -75,7 +75,7 @@ export function TopBar() {
         {/* XP pill */}
         <div
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-          style={{ background: "#1C1D21", border: "1px solid #2C2D33" }}
+          style={{ background: "#141414", border: "1px solid #262626" }}
         >
           <span
             className="text-[10px] font-bold uppercase tracking-wider"
@@ -85,7 +85,7 @@ export function TopBar() {
           </span>
           <span
             className="text-[10px] font-bold"
-            style={{ color: "#9EA3AE" }}
+            style={{ color: "#8A8A8A" }}
           >
             {score}
           </span>
@@ -100,7 +100,7 @@ export function TopBar() {
                 cy={size / 2}
                 r={r}
                 fill="none"
-                stroke="#2C2D33"
+                stroke="#262626"
                 strokeWidth={stroke}
               />
               <circle
@@ -120,7 +120,7 @@ export function TopBar() {
               style={{
                 inset: stroke + 2,
                 borderRadius: "50%",
-                background: "#25262B",
+                background: "#141414",
               }}
             >
               {avatar ? (

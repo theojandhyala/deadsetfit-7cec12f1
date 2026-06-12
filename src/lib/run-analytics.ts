@@ -103,7 +103,7 @@ export function paceZones(splits: number[], avgPace: number) {
     { name: "Z2 Steady", min: 1.05, max: 1.15, color: "#22c55e" },
     { name: "Z3 Tempo", min: 0.95, max: 1.05, color: "#eab308" },
     { name: "Z4 Threshold", min: 0.85, max: 0.95, color: "#f97316" },
-    { name: "Z5 VO2", min: 0, max: 0.85, color: "#e63222" },
+    { name: "Z5 VO2", min: 0, max: 0.85, color: "#E10600" },
   ];
   const buckets = zones.map((z) => ({ ...z, count: 0 }));
   for (const s of splits) {

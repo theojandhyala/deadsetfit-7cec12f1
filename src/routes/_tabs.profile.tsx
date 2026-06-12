@@ -112,9 +112,9 @@ function ProfilePage() {
     return (
       <div className="px-5 pt-8 animate-fade-in">
         <h1 className="display text-4xl font-extrabold text-white leading-none mb-2">
-          YOUR<br /><span style={{ color: "#FC4C02" }}>PROFILE</span>
+          YOUR<br /><span style={{ color: "#E10600" }}>PROFILE</span>
         </h1>
-        <p className="text-sm mb-6" style={{ color: "#9EA3AE" }}>
+        <p className="text-sm mb-6" style={{ color: "#8A8A8A" }}>
           Sign in to track your progress, compete, and build your legacy.
         </p>
         <button
@@ -127,22 +127,22 @@ function ProfilePage() {
           onClick={() => navigate({ to: "/friends" })}
           className="w-full flex items-center gap-3 p-4 press"
           style={{
-            background: "rgba(252,76,2,0.08)",
-            border: "1.5px solid rgba(252,76,2,0.3)",
+            background: "rgba(225,6,0,0.08)",
+            border: "1.5px solid rgba(225,6,0,0.3)",
             borderRadius: 14,
           }}
         >
           <div
             className="flex items-center justify-center rounded-full flex-shrink-0"
-            style={{ width: 40, height: 40, background: "#FC4C02" }}
+            style={{ width: 40, height: 40, background: "#E10600" }}
           >
             <Sparkles size={18} color="#fff" />
           </div>
           <div className="flex-1 text-left">
             <p className="text-sm font-bold text-white">Find Your Crew</p>
-            <p className="text-xs mt-0.5" style={{ color: "#9EA3AE" }}>Add mates, climb leagues, share PRs.</p>
+            <p className="text-xs mt-0.5" style={{ color: "#8A8A8A" }}>Add mates, climb leagues, share PRs.</p>
           </div>
-          <span className="text-lg" style={{ color: "#FC4C02" }}>›</span>
+          <span className="text-lg" style={{ color: "#E10600" }}>›</span>
         </button>
       </div>
     );
@@ -298,8 +298,8 @@ function ProfilePage() {
       <div
         className="relative mb-0"
         style={{
-          background: "linear-gradient(180deg, #1C1D21 0%, #111215 100%)",
-          borderBottom: "1px solid #2C2D33",
+          background: "linear-gradient(180deg, #141414 0%, #0A0A0A 100%)",
+          borderBottom: "1px solid #262626",
         }}
       >
         {/* Cover area */}
@@ -307,7 +307,7 @@ function ProfilePage() {
           className="w-full"
           style={{
             height: 80,
-            background: `linear-gradient(135deg, rgba(252,76,2,0.2) 0%, rgba(252,76,2,0.05) 100%)`,
+            background: `linear-gradient(135deg, rgba(225,6,0,0.2) 0%, rgba(225,6,0,0.05) 100%)`,
           }}
         />
 
@@ -322,8 +322,8 @@ function ProfilePage() {
                     width: 80,
                     height: 80,
                     borderRadius: "50%",
-                    background: "#25262B",
-                    border: `3px solid #111215`,
+                    background: "#141414",
+                    border: `3px solid #0A0A0A`,
                     boxShadow: `0 0 0 2px ${badgeC}`,
                   }}
                 >
@@ -337,7 +337,7 @@ function ProfilePage() {
                 </div>
                 <div
                   className="absolute bottom-0 right-0 flex items-center justify-center rounded-full"
-                  style={{ width: 24, height: 24, background: "#FC4C02" }}
+                  style={{ width: 24, height: 24, background: "#E10600" }}
                 >
                   <Pencil size={11} color="#fff" />
                 </div>
@@ -357,8 +357,8 @@ function ProfilePage() {
               style={{
                 padding: "8px 20px",
                 borderRadius: 100,
-                background: editing ? "#FC4C02" : "transparent",
-                border: `1.5px solid ${editing ? "#FC4C02" : "#2C2D33"}`,
+                background: editing ? "#E10600" : "transparent",
+                border: `1.5px solid ${editing ? "#E10600" : "#262626"}`,
                 color: editing ? "#fff" : "#ffffff",
                 fontSize: "0.82rem",
                 fontWeight: 700,
@@ -380,7 +380,7 @@ function ProfilePage() {
             >
               {badge}
             </span>
-            <span className="text-[11px]" style={{ color: "#9EA3AE" }}>
+            <span className="text-[11px]" style={{ color: "#8A8A8A" }}>
               {p.goal?.replace("_", " ")} · {p.experience}
             </span>
           </div>
@@ -388,7 +388,7 @@ function ProfilePage() {
           {/* Stats row — Strava style */}
           <div
             className="flex mt-4 rounded-xl overflow-hidden"
-            style={{ border: "1.5px solid #2C2D33" }}
+            style={{ border: "1.5px solid #262626" }}
           >
             {[
               { label: "Streak", value: `${streak}`, unit: "days" },
@@ -399,15 +399,15 @@ function ProfilePage() {
                 key={s.label}
                 className="flex-1 py-3 flex flex-col items-center"
                 style={{
-                  background: "#1C1D21",
-                  borderRight: i < 2 ? "1px solid #2C2D33" : "none",
+                  background: "#141414",
+                  borderRight: i < 2 ? "1px solid #262626" : "none",
                 }}
               >
                 <div className="flex items-baseline gap-1">
                   <span className="display text-xl font-extrabold text-white">{s.value}</span>
-                  <span className="text-[10px] font-semibold" style={{ color: "#9EA3AE" }}>{s.unit}</span>
+                  <span className="text-[10px] font-semibold" style={{ color: "#8A8A8A" }}>{s.unit}</span>
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-wider mt-0.5" style={{ color: "#9EA3AE" }}>
+                <span className="text-[10px] font-bold uppercase tracking-wider mt-0.5" style={{ color: "#8A8A8A" }}>
                   {s.label}
                 </span>
               </div>
@@ -444,18 +444,18 @@ function ProfilePage() {
       <section className="px-4 mb-5">
         <div className="flex items-center justify-between mb-3">
           <p className="text-sm font-bold text-white flex items-center gap-2">
-            <Trophy size={14} style={{ color: "#FFB800" }} /> Personal Records
+            <Trophy size={14} style={{ color: "#FAFAFA" }} /> Personal Records
           </p>
-          <span className="text-[10px] font-semibold" style={{ color: "#9EA3AE" }}>Tap to update</span>
+          <span className="text-[10px] font-semibold" style={{ color: "#8A8A8A" }}>Tap to update</span>
         </div>
         <div
           className="overflow-hidden"
-          style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 14 }}
+          style={{ background: "#141414", border: "1.5px solid #262626", borderRadius: 14 }}
         >
           {PR_CATALOG.map((def, i) => {
             const pr = state.manualPRs?.[def.id];
             return (
-              <div key={def.id} style={{ borderTop: i > 0 ? "1px solid #2C2D33" : "none" }}>
+              <div key={def.id} style={{ borderTop: i > 0 ? "1px solid #262626" : "none" }}>
                 <PRRow def={def} pr={pr} onSave={(v, r) => savePR(def, v, r)} />
               </div>
             );
@@ -468,7 +468,7 @@ function ProfilePage() {
         <p className="text-sm font-bold text-white mb-3">Athlete Stats</p>
         <div
           className="overflow-hidden"
-          style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 14 }}
+          style={{ background: "#141414", border: "1.5px solid #262626", borderRadius: 14 }}
         >
           {editing ? (
             <>
@@ -524,10 +524,10 @@ function ProfilePage() {
               <Stat label="Current Weight" v={`${p.weightKg} kg`} />
               {delta !== 0 && (
                 <div className="flex justify-between items-center px-4 py-3">
-                  <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9EA3AE" }}>Weight Journey</span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#8A8A8A" }}>Weight Journey</span>
                   <span className="text-sm font-semibold text-white">
                     {startW} → {p.weightKg} kg{" "}
-                    <span style={{ color: delta > 0 ? "#4CAF50" : "#FC4C02" }}>
+                    <span style={{ color: delta > 0 ? "#FAFAFA" : "#E10600" }}>
                       ({delta > 0 ? "+" : ""}{delta.toFixed(1)})
                     </span>
                   </span>
@@ -550,14 +550,14 @@ function ProfilePage() {
         <div
           className="p-5 relative overflow-hidden"
           style={{
-            background: "linear-gradient(135deg, rgba(252,76,2,0.15) 0%, rgba(252,76,2,0.05) 100%)",
-            border: "1.5px solid rgba(252,76,2,0.4)",
+            background: "linear-gradient(135deg, rgba(225,6,0,0.15) 0%, rgba(225,6,0,0.05) 100%)",
+            border: "1.5px solid rgba(225,6,0,0.4)",
             borderRadius: 14,
           }}
         >
-          <Crown size={20} style={{ color: "#FC4C02", marginBottom: 8 }} />
+          <Crown size={20} style={{ color: "#E10600", marginBottom: 8 }} />
           <p className="display text-xl font-extrabold uppercase text-white">DEADSET Pro</p>
-          <p className="text-sm mt-1 mb-4" style={{ color: "#9EA3AE" }}>
+          <p className="text-sm mt-1 mb-4" style={{ color: "#8A8A8A" }}>
             AI coach · Advanced analytics · Custom splits · Weekly leagues
           </p>
           <Link to="/upgrade" className="btn-grit w-full block text-center" style={{ borderRadius: 10 }}>
@@ -571,56 +571,56 @@ function ProfilePage() {
         <Link
           to="/coach"
           className="flex items-center gap-3 p-4 press"
-          style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 12 }}
+          style={{ background: "#141414", border: "1.5px solid #262626", borderRadius: 12 }}
         >
           <div
             className="flex items-center justify-center rounded-full flex-shrink-0"
-            style={{ width: 36, height: 36, background: "rgba(252,76,2,0.12)" }}
+            style={{ width: 36, height: 36, background: "rgba(225,6,0,0.12)" }}
           >
-            <Sparkles size={16} style={{ color: "#FC4C02" }} />
+            <Sparkles size={16} style={{ color: "#E10600" }} />
           </div>
           <span className="font-semibold text-white text-sm">Ask DEADSET Coach</span>
-          <span className="ml-auto text-lg" style={{ color: "#9EA3AE" }}>›</span>
+          <span className="ml-auto text-lg" style={{ color: "#8A8A8A" }}>›</span>
         </Link>
         <Link
           to="/recovery"
           className="flex items-center gap-3 p-4 press"
-          style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 12 }}
+          style={{ background: "#141414", border: "1.5px solid #262626", borderRadius: 12 }}
         >
           <div
             className="flex items-center justify-center rounded-full flex-shrink-0"
-            style={{ width: 36, height: 36, background: "rgba(252,76,2,0.12)" }}
+            style={{ width: 36, height: 36, background: "rgba(225,6,0,0.12)" }}
           >
-            <Heart size={16} style={{ color: "#FC4C02" }} />
+            <Heart size={16} style={{ color: "#E10600" }} />
           </div>
           <span className="font-semibold text-white text-sm">Recovery & Mobility</span>
-          <span className="ml-auto text-lg" style={{ color: "#9EA3AE" }}>›</span>
+          <span className="ml-auto text-lg" style={{ color: "#8A8A8A" }}>›</span>
         </Link>
         <Link
           to="/settings"
           className="flex items-center gap-3 p-4 press"
-          style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 12 }}
+          style={{ background: "#141414", border: "1.5px solid #262626", borderRadius: 12 }}
         >
           <div
             className="flex items-center justify-center rounded-full flex-shrink-0"
-            style={{ width: 36, height: 36, background: "#25262B" }}
+            style={{ width: 36, height: 36, background: "#141414" }}
           >
-            <Settings size={16} style={{ color: "#9EA3AE" }} />
+            <Settings size={16} style={{ color: "#8A8A8A" }} />
           </div>
           <span className="font-semibold text-white text-sm">Settings</span>
-          <span className="ml-auto text-lg" style={{ color: "#9EA3AE" }}>›</span>
+          <span className="ml-auto text-lg" style={{ color: "#8A8A8A" }}>›</span>
         </Link>
 
         <button
           onClick={logout}
           className="flex items-center gap-3 p-4 w-full text-left press"
-          style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 12 }}
+          style={{ background: "#141414", border: "1.5px solid #262626", borderRadius: 12 }}
         >
           <div
             className="flex items-center justify-center rounded-full flex-shrink-0"
-            style={{ width: 36, height: 36, background: "#25262B" }}
+            style={{ width: 36, height: 36, background: "#141414" }}
           >
-            <LogOut size={16} style={{ color: "#9EA3AE" }} />
+            <LogOut size={16} style={{ color: "#8A8A8A" }} />
           </div>
           <span className="font-semibold text-white text-sm">Sign Out</span>
         </button>
@@ -628,7 +628,7 @@ function ProfilePage() {
         <button
           onClick={reset}
           className="py-3 text-sm font-semibold press"
-          style={{ color: "#9EA3AE", background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 12, width: "100%" }}
+          style={{ color: "#8A8A8A", background: "#141414", border: "1.5px solid #262626", borderRadius: 12, width: "100%" }}
         >
           Reset This Device
         </button>
@@ -693,7 +693,7 @@ function PRRow({
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-white truncate">{def.label}</p>
         {pr && (
-          <p className="text-[10px] mt-0.5" style={{ color: "#9EA3AE" }}>
+          <p className="text-[10px] mt-0.5" style={{ color: "#8A8A8A" }}>
             Current: {pr.value} {unit}
           </p>
         )}
@@ -713,7 +713,7 @@ function PRRow({
         />
         <span
           className="text-[10px] font-bold uppercase tracking-wider w-8"
-          style={{ color: "#9EA3AE" }}
+          style={{ color: "#8A8A8A" }}
         >
           {unit}
         </span>
@@ -725,7 +725,7 @@ function PRRow({
 function Stat({ label, v }: { label: string; v: string }) {
   return (
     <div className="flex justify-between items-center px-4 py-3">
-      <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9EA3AE" }}>{label}</span>
+      <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#8A8A8A" }}>{label}</span>
       <span className="text-sm font-semibold text-white">{v}</span>
     </div>
   );
@@ -734,7 +734,7 @@ function Stat({ label, v }: { label: string; v: string }) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="px-4 py-3 grid grid-cols-[120px_1fr] items-center gap-3">
-      <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9EA3AE" }}>{label}</span>
+      <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#8A8A8A" }}>{label}</span>
       <div>{children}</div>
     </div>
   );
@@ -791,19 +791,19 @@ function ShareProfileCard({ username }: { username: string }) {
     <section className="px-4 mb-4">
       <div
         className="p-4"
-        style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 14 }}
+        style={{ background: "#141414", border: "1.5px solid #262626", borderRadius: 14 }}
       >
-        <p className="text-[11px] font-bold uppercase tracking-wider mb-3" style={{ color: "#9EA3AE" }}>
+        <p className="text-[11px] font-bold uppercase tracking-wider mb-3" style={{ color: "#8A8A8A" }}>
           Share Profile
         </p>
         <button
           onClick={copyLink}
           className="w-full flex items-center justify-between px-3 py-2.5 mb-3 text-left press"
-          style={{ background: "#25262B", borderRadius: 10, border: "1px solid #2C2D33" }}
+          style={{ background: "#141414", borderRadius: 10, border: "1px solid #262626" }}
         >
-          <span className="text-xs truncate flex-1" style={{ color: "#9EA3AE" }}>{profileUrl}</span>
+          <span className="text-xs truncate flex-1" style={{ color: "#8A8A8A" }}>{profileUrl}</span>
           {copied ? (
-            <Check size={13} style={{ color: "#FC4C02", marginLeft: 8, flexShrink: 0 }} />
+            <Check size={13} style={{ color: "#E10600", marginLeft: 8, flexShrink: 0 }} />
           ) : (
             <Copy size={13} style={{ color: "#6B7280", marginLeft: 8, flexShrink: 0 }} />
           )}

@@ -19,7 +19,7 @@ function Logo() {
       style={{ fontStyle: "italic" }}
     >
       <span style={{ color: "#f5f5f0" }}>DEAD</span>
-      <span style={{ color: "#e63222" }}>SET</span>
+      <span style={{ color: "#E10600" }}>SET</span>
     </span>
   );
 }
@@ -50,7 +50,7 @@ function Nav() {
         <Link
           to="/auth"
           className="label-cap text-xs px-4 py-2 border"
-          style={{ borderColor: "#e63222", color: "#e63222" }}
+          style={{ borderColor: "#E10600", color: "#E10600" }}
         >
           LOGIN
         </Link>
@@ -97,7 +97,7 @@ function Hero() {
             <br />
             <span style={{ color: "#f5f5f0" }}>TRACK EVERYTHING.</span>
             <br />
-            <span style={{ color: "#e63222" }}>FORGE YOUR BODY.</span>
+            <span style={{ color: "#E10600" }}>FORGE YOUR BODY.</span>
           </h1>
           <p className="mt-6 text-grit-dim max-w-md leading-relaxed animate-slide-up delay-150">
             DEADSET is the all-in-one fitness app built to help you plan workouts, track progress,
@@ -107,7 +107,7 @@ function Hero() {
             <Link
               to="/auth"
               className="label-cap text-sm px-6 py-3 inline-flex items-center gap-2"
-              style={{ background: "#e63222", color: "#0a0a0a" }}
+              style={{ background: "#E10600", color: "#0a0a0a" }}
             >
               GET STARTED →
             </Link>
@@ -137,7 +137,7 @@ function Hero() {
 
           <div
             className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 p-4"
-            style={{ background: "rgba(20,20,20,0.7)", border: "1px solid rgba(230,50,34,0.2)" }}
+            style={{ background: "rgba(20,20,20,0.7)", border: "1px solid rgba(225,6,0,0.2)" }}
           >
             {[
               { n: "0", l: "USERS SO FAR" },
@@ -186,7 +186,7 @@ function Features() {
           >
             <div
               className="w-10 h-10 flex items-center justify-center shrink-0"
-              style={{ background: "rgba(230,50,34,0.15)", color: "#e63222" }}
+              style={{ background: "rgba(225,6,0,0.15)", color: "#E10600" }}
             >
               ◆
             </div>
@@ -219,7 +219,7 @@ function About() {
           style={{ fontStyle: "italic" }}
         >
           <span style={{ color: "#f5f5f0" }}>ABOUT </span>
-          <span style={{ color: "#e63222" }}>DEADSET</span>
+          <span style={{ color: "#E10600" }}>DEADSET</span>
         </h2>
         <p className="label-cap text-sm text-grit mb-6">
           DeadSet was built by lifters, for lifters.
@@ -300,7 +300,7 @@ function Benefits() {
               >
                 <div
                   className="w-10 h-10 flex items-center justify-center shrink-0"
-                  style={{ background: "rgba(230,50,34,0.15)", color: "#e63222" }}
+                  style={{ background: "rgba(225,6,0,0.15)", color: "#E10600" }}
                 >
                   ◆
                 </div>
@@ -358,7 +358,7 @@ function Reviews() {
         <Link
           to="/auth"
           className="label-cap text-sm px-6 py-3 inline-block"
-          style={{ background: "#e63222", color: "#0a0a0a" }}
+          style={{ background: "#E10600", color: "#0a0a0a" }}
         >
           JOIN DEADSET
         </Link>
@@ -411,8 +411,8 @@ function FAQ() {
             onClick={() => setOpen(open === i ? null : i)}
             className="w-full text-left p-4 flex items-start justify-between gap-4 press"
             style={{
-              background: open === i ? "rgba(230,50,34,0.05)" : "rgba(20,20,20,0.7)",
-              border: `1px solid ${open === i ? "rgba(230,50,34,0.25)" : "rgba(255,255,255,0.05)"}`,
+              background: open === i ? "rgba(225,6,0,0.05)" : "rgba(20,20,20,0.7)",
+              border: `1px solid ${open === i ? "rgba(225,6,0,0.25)" : "rgba(255,255,255,0.05)"}`,
               transition: "background 0.2s ease, border-color 0.2s ease",
             }}
           >
@@ -438,7 +438,7 @@ function FAQ() {
       </div>
       <div
         className="mt-10 max-w-3xl p-5 flex items-center justify-between gap-4"
-        style={{ background: "rgba(20,20,20,0.7)", border: "1px solid rgba(230,50,34,0.25)" }}
+        style={{ background: "rgba(20,20,20,0.7)", border: "1px solid rgba(225,6,0,0.25)" }}
       >
         <div>
           <p className="label-cap text-sm text-grit">STILL HAVE QUESTIONS?</p>
@@ -447,7 +447,7 @@ function FAQ() {
         <Link
           to="/auth"
           className="label-cap text-xs px-4 py-2 shrink-0"
-          style={{ border: "1px solid #e63222", color: "#e63222" }}
+          style={{ border: "1px solid #E10600", color: "#E10600" }}
         >
           CONTACT SUPPORT
         </Link>
