@@ -436,31 +436,6 @@ function ProfilePage() {
       {/* Share Profile */}
       {p.username && <ShareProfileCard username={p.username} />}
 
-      {/* Streak + score card (compact) */}
-      <section className="px-4 mb-4">
-        <div
-          className="flex items-center gap-4 p-4"
-          style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 14 }}
-        >
-          <div className="flex items-center gap-2">
-            <Flame size={22} style={{ color: "#FC4C02" }} />
-            <div>
-              <p className="display text-2xl font-extrabold text-white leading-none">
-                {streak}<span className="text-xs ml-1" style={{ color: "#9EA3AE" }}>days</span>
-              </p>
-              <p className="label-cap mt-0.5">Streak</p>
-            </div>
-          </div>
-          <div style={{ width: 1, height: 36, background: "#2C2D33" }} />
-          <div className="ml-auto text-right">
-            <p className="display text-2xl font-extrabold leading-none" style={{ color: badgeC }}>
-              {score.total}
-            </p>
-            <p className="label-cap mt-0.5">Score</p>
-          </div>
-        </div>
-      </section>
-
       <StatsGrid state={state} />
       <LiftLevels state={state} />
       <TrophyCase state={state} />
@@ -547,15 +522,17 @@ function ProfilePage() {
               <Stat label="Experience" v={p.experience} />
               <Stat label="Days / Week" v={String(p.daysPerWeek)} />
               <Stat label="Current Weight" v={`${p.weightKg} kg`} />
-              <div className="flex justify-between items-center px-4 py-3">
-                <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9EA3AE" }}>Weight Journey</span>
-                <span className="text-sm font-semibold text-white">
-                  {startW} → {p.weightKg} kg{" "}
-                  <span style={{ color: delta === 0 ? "#9EA3AE" : "#FC4C02" }}>
-                    ({delta > 0 ? "+" : ""}{delta.toFixed(1)})
+              {delta !== 0 && (
+                <div className="flex justify-between items-center px-4 py-3">
+                  <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#9EA3AE" }}>Weight Journey</span>
+                  <span className="text-sm font-semibold text-white">
+                    {startW} → {p.weightKg} kg{" "}
+                    <span style={{ color: delta > 0 ? "#4CAF50" : "#FC4C02" }}>
+                      ({delta > 0 ? "+" : ""}{delta.toFixed(1)})
+                    </span>
                   </span>
-                </span>
-              </div>
+                </div>
+              )}
               <Stat label="Height" v={`${p.heightCm} cm`} />
               <Stat label="Age" v={`${p.age} yrs`} />
               <Stat label="BMI" v={bmi} />
@@ -581,11 +558,11 @@ function ProfilePage() {
           <Crown size={20} style={{ color: "#FC4C02", marginBottom: 8 }} />
           <p className="display text-xl font-extrabold uppercase text-white">DEADSET Pro</p>
           <p className="text-sm mt-1 mb-4" style={{ color: "#9EA3AE" }}>
-            AI coach · Advanced analytics · Custom splits · Video form review
+            AI coach · Advanced analytics · Custom splits · Weekly leagues
           </p>
-          <button className="btn-grit w-full" style={{ borderRadius: 10 }}>
-            Upgrade — $9.99 / mo
-          </button>
+          <Link to="/upgrade" className="btn-grit w-full block text-center" style={{ borderRadius: 10 }}>
+            Unlock Pro
+          </Link>
         </div>
       </section>
 

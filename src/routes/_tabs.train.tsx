@@ -237,35 +237,73 @@ function TrainPage() {
         {/* Quick-start CTA */}
         {(() => {
           const today = todayKey();
+          const isToday = selectedDay === today;
+          const selectedItems = activeProgram
+            ? activeProgram.days[selectedDay]?.items.length || 0
+            : schedule[selectedDay]?.exerciseIds?.length || 0;
           const todaysItems = activeProgram
             ? activeProgram.days[today]?.items.length || 0
             : schedule[today]?.exerciseIds?.length || 0;
           const hasSchedule = !!state.schedule || !!activeProgram;
-          const canStart = todaysItems > 0;
-          return canStart ? (
-            <Link
-              to="/workout/live"
-              className="btn-grit w-full text-base py-4 flex items-center justify-center"
-              style={{ borderRadius: 12, fontSize: "0.95rem", letterSpacing: "0.03em" }}
-            >
-              <Flame size={18} className="mr-2" /> Start Today's Workout
-            </Link>
-          ) : !hasSchedule ? (
-            <button
-              onClick={handleGenerate}
-              disabled={genLoading}
-              className="btn-grit w-full text-base py-4 flex items-center justify-center"
-              style={{ borderRadius: 12, fontSize: "0.95rem" }}
-            >
-              {genLoading ? <Loader2 className="animate-spin mr-2" size={18} /> : <Sparkles size={18} className="mr-2" />}
-              {genLoading ? "Building Your Plan…" : "Generate My Schedule"}
-            </button>
-          ) : (
+          const selectedIsRest = selectedItems === 0;
+          if (!hasSchedule) {
+            return (
+              <button
+                onClick={handleGenerate}
+                disabled={genLoading}
+                className="btn-grit w-full text-base py-4 flex items-center justify-center"
+                style={{ borderRadius: 12, fontSize: "0.95rem" }}
+              >
+                {genLoading ? <Loader2 className="animate-spin mr-2" size={18} /> : <Sparkles size={18} className="mr-2" />}
+                {genLoading ? "Building Your Plan…" : "Generate My Schedule"}
+              </button>
+            );
+          }
+          if (isToday && !selectedIsRest) {
+            return (
+              <Link
+                to="/workout/live"
+                className="btn-grit w-full text-base py-4 flex items-center justify-center"
+                style={{ borderRadius: 12, fontSize: "0.95rem", letterSpacing: "0.03em" }}
+              >
+                <Flame size={18} className="mr-2" /> Start Today's Workout
+              </Link>
+            );
+          }
+          if (!isToday && !selectedIsRest) {
+            return (
+              <div
+                className="p-4 text-center"
+                style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 12 }}
+              >
+                <p className="text-sm font-bold text-white">{DAY_FULL[selectedDay]}'s workout</p>
+                <p className="text-xs mt-0.5" style={{ color: "#9EA3AE" }}>
+                  {isToday ? "" : "Come back on " + DAY_FULL[selectedDay] + " · "}
+                  {selectedItems} exercise{selectedItems !== 1 ? "s" : ""}
+                  {todaysItems > 0 && !isToday ? (
+                    <> &nbsp;·&nbsp;
+                      <Link to="/workout/live" style={{ color: "#FC4C02", fontWeight: 700 }}>
+                        Start today's instead ›
+                      </Link>
+                    </>
+                  ) : null}
+                </p>
+              </div>
+            );
+          }
+          return (
             <div
               className="p-4 text-center"
               style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderRadius: 12 }}
             >
-              <p className="text-sm font-bold" style={{ color: "#9EA3AE" }}>Rest Day — Recover & Come Back Stronger</p>
+              <p className="text-sm font-bold" style={{ color: "#9EA3AE" }}>
+                {isToday ? "Rest Day — Recover & Come Back Stronger" : `${DAY_FULL[selectedDay]} is a rest day`}
+              </p>
+              {!isToday && todaysItems > 0 && (
+                <Link to="/workout/live" className="text-xs mt-1.5 block font-bold" style={{ color: "#FC4C02" }}>
+                  Start today's workout instead ›
+                </Link>
+              )}
             </div>
           );
         })()}
