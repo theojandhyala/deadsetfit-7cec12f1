@@ -126,7 +126,7 @@ function FriendsPage() {
   if (session === "loading") {
     return (
       <div className="flex items-center justify-center pt-20">
-        <Loader2 className="animate-spin text-[#FC4C02]" />
+        <Loader2 className="animate-spin text-[#E10600]" />
       </div>
     );
   }
@@ -167,12 +167,12 @@ function FriendsPage() {
       {/* Prominent global search — always visible above tabs */}
       <div className="px-5 mt-4 relative">
         <div className="flex items-center gap-2 rounded-2xl bg-grit-card px-3 py-2.5">
-          <Search size={16} className="text-[#FC4C02] shrink-0" />
+          <Search size={16} className="text-[#E10600] shrink-0" />
           <input
             value={globalQ}
             onChange={(e) => setGlobalQ(e.target.value)}
             placeholder="Search athletes by username..."
-            className="flex-1 bg-transparent text-sm text-white placeholder:text-[#9EA3AE] outline-none"
+            className="flex-1 bg-transparent text-sm text-white placeholder:text-[#8A8A8A] outline-none"
             maxLength={40}
           />
           {globalQ && (
@@ -181,7 +181,7 @@ function FriendsPage() {
                 setGlobalQ("");
                 setGlobalResults(null);
               }}
-              className="text-[#9EA3AE] hover:text-grit"
+              className="text-[#8A8A8A] hover:text-grit"
             >
               ✕
             </button>
@@ -203,7 +203,7 @@ function FriendsPage() {
                   }}
                   className="flex items-center gap-3 flex-1 min-w-0"
                 >
-                  <div className="w-8 h-8 bg-[#111215] rounded-2xl flex items-center justify-center display font-extrabold text-white text-xs overflow-hidden shrink-0">
+                  <div className="w-8 h-8 bg-[#0A0A0A] rounded-2xl flex items-center justify-center display font-extrabold text-white text-xs overflow-hidden shrink-0">
                     {r.avatar_url ? (
                       <img src={r.avatar_url} alt="" className="w-full h-full object-cover" />
                     ) : (
@@ -214,7 +214,7 @@ function FriendsPage() {
                     <p className="text-sm font-bold text-white truncate">
                       {r.display_name || r.username || "Athlete"}
                     </p>
-                    <p className="text-[10px] label-cap text-[#9EA3AE] truncate">
+                    <p className="text-[10px] label-cap text-[#8A8A8A] truncate">
                       {r.username ? `@${r.username} · ` : ""}
                       {r.level}
                     </p>
@@ -236,7 +236,7 @@ function FriendsPage() {
                       }
                     }
                   }}
-                  className={`label-cap text-[9px] px-2 py-1 border shrink-0 ${r.following || globalFollowed.has(r.id) ? "border-grit text-[#9EA3AE]" : "border-[#FC4C02] text-[#FC4C02]"}`}
+                  className={`label-cap text-[9px] px-2 py-1 border shrink-0 ${r.following || globalFollowed.has(r.id) ? "border-grit text-[#8A8A8A]" : "border-[#E10600] text-[#E10600]"}`}
                 >
                   {r.following || globalFollowed.has(r.id) ? "Following ✓" : "+ Follow"}
                 </button>
@@ -245,21 +245,21 @@ function FriendsPage() {
           </div>
         )}
         {globalResults && globalResults.length === 0 && (
-          <div className="absolute left-5 right-5 top-full z-20 rounded-2xl border-t-0 bg-[#0a0a0a] p-4 text-sm text-[#9EA3AE] text-center">
+          <div className="absolute left-5 right-5 top-full z-20 rounded-2xl border-t-0 bg-[#0a0a0a] p-4 text-sm text-[#8A8A8A] text-center">
             No athletes found for "{globalQ}"
           </div>
         )}
       </div>
 
-      <div className="px-5 mt-4 flex gap-2 overflow-x-auto" style={{ borderBottom: "1px solid #2C2D33" }}>
+      <div className="px-5 mt-4 flex gap-2 overflow-x-auto" style={{ borderBottom: "1px solid #262626" }}>
         {(["FRIENDS", "FEED", "LEAGUE", "INVITE"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className="label-cap pb-3 pt-1 border-b-2 whitespace-nowrap"
             style={{
-              borderColor: tab === t ? "#e63222" : "transparent",
-              color: tab === t ? "#f5f5f0" : "#9EA3AE",
+              borderColor: tab === t ? "#E10600" : "transparent",
+              color: tab === t ? "#f5f5f0" : "#8A8A8A",
             }}
           >
             {t}
@@ -407,7 +407,7 @@ function Feed({ userId }: { userId: string }) {
   if (!posts)
     return (
       <div className="px-5 pt-10 flex justify-center">
-        <Loader2 className="animate-spin text-[#FC4C02]" />
+        <Loader2 className="animate-spin text-[#E10600]" />
       </div>
     );
 
@@ -418,7 +418,7 @@ function Feed({ userId }: { userId: string }) {
           onClick={() => setComposing(true)}
           className="w-full mb-4 rounded-2xl p-4 flex items-center gap-3 text-left"
         >
-          <div className="w-9 h-9 bg-[#FC4C02] flex items-center justify-center">
+          <div className="w-9 h-9 bg-[#E10600] flex items-center justify-center">
             <Plus size={16} className="text-white" />
           </div>
           <span className="text-sm text-[#8a8a8a]">Drop a lift, PR or thought…</span>
@@ -432,8 +432,8 @@ function Feed({ userId }: { userId: string }) {
                 onClick={() => setPostKind(k)}
                 className="label-cap px-3 py-1 border"
                 style={{
-                  borderColor: postKind === k ? "#e63222" : "#2C2D33",
-                  color: postKind === k ? "#FC4C02" : "#9EA3AE",
+                  borderColor: postKind === k ? "#E10600" : "#262626",
+                  color: postKind === k ? "#E10600" : "#8A8A8A",
                 }}
               >
                 {k === "text" ? "POST" : "NEW PR"}
@@ -507,7 +507,7 @@ function Feed({ userId }: { userId: string }) {
       {posts.map((p) => (
         <article key={p.id} className="rounded-2xl p-4 mb-3">
           <header className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-[#111215] rounded-2xl flex items-center justify-center display font-extrabold text-grit">
+            <div className="w-10 h-10 bg-[#0A0A0A] rounded-2xl flex items-center justify-center display font-extrabold text-grit">
               {(p.author.display_name || "A")[0]}
             </div>
             <div className="flex-1 min-w-0">
@@ -518,13 +518,13 @@ function Feed({ userId }: { userId: string }) {
                 {p.author.id !== userId && !followedIds.has(p.author.id) && (
                   <button
                     onClick={() => followFromFeed(p.author.id)}
-                    className="label-cap text-[9px] px-2 py-0.5 rounded-2xl text-[#FC4C02] flex items-center gap-1"
+                    className="label-cap text-[9px] px-2 py-0.5 rounded-2xl text-[#E10600] flex items-center gap-1"
                   >
                     <UserPlus size={9} /> FOLLOW
                   </button>
                 )}
                 {p.author.id !== userId && followedIds.has(p.author.id) && (
-                  <span className="label-cap text-[9px] px-2 py-0.5 rounded-2xl text-[#9EA3AE]">
+                  <span className="label-cap text-[9px] px-2 py-0.5 rounded-2xl text-[#8A8A8A]">
                     Following ✓
                   </span>
                 )}
@@ -535,7 +535,7 @@ function Feed({ userId }: { userId: string }) {
               </p>
             </div>
             {p.kind !== "text" && (
-              <span className="label-cap text-[9px] px-2 py-0.5 rounded-2xl text-[#FC4C02]">
+              <span className="label-cap text-[9px] px-2 py-0.5 rounded-2xl text-[#E10600]">
                 {p.kind}
               </span>
             )}
@@ -549,9 +549,9 @@ function Feed({ userId }: { userId: string }) {
             typeof p.metadata === "object" &&
             "lift" in p.metadata && (
               <div className="rounded-2xl p-3 mb-3 flex items-center gap-3">
-                <Trophy className="text-[#FC4C02]" size={20} />
+                <Trophy className="text-[#E10600]" size={20} />
                 <div>
-                  <p className="label-cap text-[#FC4C02]">NEW PR</p>
+                  <p className="label-cap text-[#E10600]">NEW PR</p>
                   <p className="display font-extrabold text-white text-xl leading-none">
                     {String((p.metadata as { lift?: string }).lift)} ·{" "}
                     {String((p.metadata as { weight?: number }).weight)}kg
@@ -691,7 +691,7 @@ function League({ userId }: { userId: string }) {
   if (!data)
     return (
       <div className="px-5 pt-10 flex justify-center">
-        <Loader2 className="animate-spin text-[#FC4C02]" />
+        <Loader2 className="animate-spin text-[#E10600]" />
       </div>
     );
 
@@ -704,7 +704,7 @@ function League({ userId }: { userId: string }) {
             className="w-16 h-16 flex items-center justify-center"
             style={{ background: leagueColor(data.me.league) }}
           >
-            <Crown size={28} className="text-grit-bg" style={{ color: "#111215" }} />
+            <Crown size={28} className="text-grit-bg" style={{ color: "#0A0A0A" }} />
           </div>
           <div className="flex-1">
             <p className="label-cap" style={{ color: leagueColor(data.me.league) }}>
@@ -737,16 +737,16 @@ function League({ userId }: { userId: string }) {
 
       <Link
         to="/leaderboard"
-        className="bg-grit-card rounded-2xl mb-3 px-4 py-3 flex items-center gap-3 hover:bg-[#111215] transition-colors"
+        className="bg-grit-card rounded-2xl mb-3 px-4 py-3 flex items-center gap-3 hover:bg-[#0A0A0A] transition-colors"
       >
-        <Trophy size={18} className="text-[#FC4C02]" />
+        <Trophy size={18} className="text-[#E10600]" />
         <div className="flex-1">
-          <p className="label-cap text-[#FC4C02] text-[11px]">STRENGTH LEADERBOARD</p>
-          <p className="text-xs text-[#9EA3AE]">
+          <p className="label-cap text-[#E10600] text-[11px]">STRENGTH LEADERBOARD</p>
+          <p className="text-xs text-[#8A8A8A]">
             Ranked by Overall · Bench · Squat · Deadlift · Total
           </p>
         </div>
-        <span className="label-cap text-[#9EA3AE] text-[10px]">VIEW →</span>
+        <span className="label-cap text-[#8A8A8A] text-[10px]">VIEW →</span>
       </Link>
 
       <div className="rounded-2xl">
@@ -758,7 +758,7 @@ function League({ userId }: { userId: string }) {
             key={p.id}
             to="/athlete/$id"
             params={{ id: p.id }}
-            className="flex items-center gap-3 px-4 py-3 border-b border-grit last:border-b-0 hover:bg-[#111215]"
+            className="flex items-center gap-3 px-4 py-3 border-b border-grit last:border-b-0 hover:bg-[#0A0A0A]"
             style={{ background: p.id === userId ? "rgba(230,50,34,0.08)" : undefined }}
           >
             <div className="display font-extrabold text-white text-lg w-7 text-center">
@@ -771,7 +771,7 @@ function League({ userId }: { userId: string }) {
                 <span style={{ color: leagueColor(p.league) }}>{p.league}</span>
               </p>
             </div>
-            <span className="display font-extrabold text-[#FC4C02] text-base">
+            <span className="display font-extrabold text-[#E10600] text-base">
               {p.grit_points}
             </span>
           </Link>
@@ -836,7 +836,7 @@ function Invite() {
   if (!info)
     return (
       <div className="px-5 pt-10 flex justify-center">
-        <Loader2 className="animate-spin text-[#FC4C02]" />
+        <Loader2 className="animate-spin text-[#E10600]" />
       </div>
     );
 
@@ -844,7 +844,7 @@ function Invite() {
     <div className="px-5 pb-6 space-y-4">
       {/* Pro status */}
       <div className="rounded-2xl p-5">
-        <p className="label-cap text-[#FC4C02] mb-1">DEADSET PRO</p>
+        <p className="label-cap text-[#E10600] mb-1">DEADSET PRO</p>
         {info.proUntil && new Date(info.proUntil) > new Date() ? (
           <>
             <p className="display font-extrabold text-white text-3xl leading-none">ACTIVE</p>
@@ -860,8 +860,8 @@ function Invite() {
       {/* Your invite code */}
       <div className="bg-grit-card rounded-2xl p-5">
         <div className="flex items-center gap-2 mb-2">
-          <Gift size={14} className="text-[#FC4C02]" />
-          <p className="label-cap text-[#FC4C02]">Invite a mate, both get 30 days Pro</p>
+          <Gift size={14} className="text-[#E10600]" />
+          <p className="label-cap text-[#E10600]">Invite a mate, both get 30 days Pro</p>
         </div>
         <div className="display font-extrabold text-white text-4xl leading-none my-3 tracking-wider">
           {info.code}
@@ -1079,7 +1079,7 @@ function Friends() {
       {/* Location card */}
       <div className="rounded-2xl p-4 mb-4">
         <p className="label-cap mb-2 flex items-center gap-2">
-          <MapPin size={12} className="text-[#FC4C02]" /> Your city
+          <MapPin size={12} className="text-[#E10600]" /> Your city
         </p>
         {myLoc?.city ? (
           <p className="text-sm text-white mb-3">
@@ -1182,7 +1182,7 @@ function Friends() {
               </p>
               {following === null && (
                 <div className="flex justify-center py-4">
-                  <Loader2 className="animate-spin text-[#FC4C02]" size={18} />
+                  <Loader2 className="animate-spin text-[#E10600]" size={18} />
                 </div>
               )}
               {following && following.map((r) => (
@@ -1200,7 +1200,7 @@ function Friends() {
           <p className="label-cap text-[#8a8a8a] mb-2 mt-2">Suggested rivals</p>
           {!suggested && (
             <div className="flex justify-center py-6">
-              <Loader2 className="animate-spin text-[#FC4C02]" />
+              <Loader2 className="animate-spin text-[#E10600]" />
             </div>
           )}
           {suggested && suggested.length === 0 && (
@@ -1251,7 +1251,7 @@ function AthleteRow({
           params={{ id: a.id }}
           className="flex items-center gap-3 flex-1 min-w-0"
         >
-          <div className="w-10 h-10 bg-[#111215] rounded-2xl flex items-center justify-center display font-extrabold text-white overflow-hidden">
+          <div className="w-10 h-10 bg-[#0A0A0A] rounded-2xl flex items-center justify-center display font-extrabold text-white overflow-hidden">
             {a.avatar_url ? (
               <img src={a.avatar_url} alt="" className="w-full h-full object-cover" />
             ) : (
@@ -1268,7 +1268,7 @@ function AthleteRow({
               {a.grit_points ? ` · ${a.grit_points} DS` : ""}
             </p>
             {mutuals && mutuals > 0 ? (
-              <p className="text-[10px] text-[#FC4C02] label-cap mt-0.5">
+              <p className="text-[10px] text-[#E10600] label-cap mt-0.5">
                 {mutuals} mutual{mutuals > 1 ? "s" : ""}
               </p>
             ) : null}
@@ -1298,7 +1298,7 @@ function AthleteRow({
       </div>
       {a.topPR && a.topPR.value > 0 && (
         <div className="mt-2 flex items-center justify-between">
-          <span className="label-cap text-[9px] text-[#9EA3AE]">
+          <span className="label-cap text-[9px] text-[#8A8A8A]">
             Top PR:{" "}
             <span className="text-white">
               {a.topPR.label} {a.topPR.value}
@@ -1308,7 +1308,7 @@ function AthleteRow({
           <Link
             to="/athlete/$id"
             params={{ id: a.id }}
-            className="label-cap text-[9px] text-[#FC4C02]"
+            className="label-cap text-[9px] text-[#E10600]"
           >
             View Profile →
           </Link>
@@ -1319,7 +1319,7 @@ function AthleteRow({
           <Link
             to="/athlete/$id"
             params={{ id: a.id }}
-            className="label-cap text-[9px] text-[#9EA3AE]"
+            className="label-cap text-[9px] text-[#8A8A8A]"
           >
             View Profile →
           </Link>

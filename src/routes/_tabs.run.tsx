@@ -6,7 +6,6 @@ import {
   Bike,
   ChevronLeft,
   ChevronRight,
-  Flame,
   Footprints,
   MapPinned,
   Mountain,
@@ -14,7 +13,6 @@ import {
   Play,
   Share2,
   Square,
-  Timer,
   Trash2,
   Trophy,
   Users,
@@ -23,6 +21,7 @@ import {
 import { useAppState } from "@/lib/storage";
 import { RunMap } from "@/components/RunMap";
 import { RunAdvanced } from "@/components/RunAdvanced";
+import { RunShareCard } from "@/components/RunShareCard";
 import {
   avgPace,
   bestKmPace,
@@ -59,7 +58,7 @@ const ACTIVITY_CONFIG: Record<
   run: {
     label: "Run",
     icon: <Activity size={22} />,
-    color: "#e63222",
+    color: "#E10600",
     metricLabel: "Pace /km",
     calMult: 1.0,
     maxSpeedMps: 12.5,
@@ -287,7 +286,7 @@ function RunHub({
           </div>
         );
       })}
-      {/* History list */} origin/main
+      {/* History list */}
       <section className="space-y-2">
         <div className="flex items-center justify-between">
           <h2 className="label-cap text-xs text-grit">Recent Activity</h2>
@@ -428,11 +427,13 @@ function LiveRunner({
   const [error, setError] = useState<string | null>(null);
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [previewPos, setPreviewPos] = useState<{ lat: number; lng: number } | null>(null);
-  const [mapExpanded, setMapExpanded] = useState(false);
 
-  const [rejectCount, setRejectCount] = useState(0);
-  const [rawSpeed, setRawSpeed] = useState<number | null>(null);
-  const [lastFixTime, setLastFixTime] = useState<number | null>(null);
+  // hold-to-finish state
+  const [holdProgress, setHoldProgress] = useState(0);
+  const holdIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const rejectCountRef2 = useRef(0); // renamed to avoid shadow
+  const lastFixTimeRef = useRef<number | null>(null);
 
   const statusRef = useRef<Status>(status);
   statusRef.current = status;
@@ -496,7 +497,7 @@ function LiveRunner({
       (pos) => {
         setGpsAccuracy(pos.coords.accuracy);
         setPreviewPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setLastFixTime(Date.now());
+        lastFixTimeRef.current = Date.now();
         setError(null);
       },
       handleGpsError,
@@ -538,7 +539,7 @@ function LiveRunner({
     setSamples(initial);
     setElapsedSec(0);
     rejectCountRef.current = 0;
-    setRejectCount(0);
+    rejectCountRef2.current = 0;
     lastRawPosRef.current = null;
     setStatus("running");
 
@@ -548,7 +549,7 @@ function LiveRunner({
         const { latitude, longitude, accuracy, altitude, speed } = pos.coords;
         const now = Date.now();
         setGpsAccuracy(accuracy);
-        setLastFixTime(now);
+        lastFixTimeRef.current = now;
         const deviceSpeed = typeof speed === "number" && speed >= 0 ? speed : null;
         const t = now - startedAtRef.current - pausedAccumRef.current;
         const prev = samplesRef.current[samplesRef.current.length - 1];
@@ -563,11 +564,10 @@ function LiveRunner({
           if (dt > 0) instantSpeed = rawDist / dt;
         }
         lastRawPosRef.current = { lat: latitude, lng: longitude, time: now };
-        setRawSpeed(deviceSpeed ?? instantSpeed);
 
         if (instantSpeed != null && instantSpeed > cfg.maxSpeedMps * 1.5) {
           rejectCountRef.current += 1;
-          setRejectCount(rejectCountRef.current);
+          rejectCountRef2.current += 1;
           return;
         }
 
@@ -586,7 +586,7 @@ function LiveRunner({
 
         if (!result.accepted) {
           rejectCountRef.current += 1;
-          setRejectCount(rejectCountRef.current);
+          rejectCountRef2.current += 1;
           return;
         }
         const next: RunSample = {
@@ -714,7 +714,7 @@ function LiveRunner({
         ? { label: "STRONG", color: "#22c55e" }
         : gpsAccuracy <= 35
           ? { label: "OK", color: "#fbbf24" }
-          : { label: "WEAK", color: "#e63222" };
+          : { label: "WEAK", color: "#E10600" };
 
   const isCycle = activityType === "cycle";
   const speedKmhNow = elapsedSec > 0 ? (distanceM / elapsedSec) * 3.6 : 0;
@@ -729,216 +729,195 @@ function LiveRunner({
         })()
       : speedKmhNow;
 
-  const mapHeight = mapExpanded ? 380 : 240;
+  // hold-to-finish handlers
+  const startHold = () => {
+    if (status !== "paused") return;
+    holdIntervalRef.current = setInterval(() => {
+      setHoldProgress((p) => {
+        if (p >= 100) {
+          clearInterval(holdIntervalRef.current!);
+          holdIntervalRef.current = null;
+          stop();
+          return 100;
+        }
+        return p + 5;
+      });
+    }, 50);
+  };
+  const endHold = () => {
+    if (holdIntervalRef.current) {
+      clearInterval(holdIntervalRef.current);
+      holdIntervalRef.current = null;
+    }
+    setHoldProgress(0);
+  };
 
   return (
-    <div className="px-4 pt-4 pb-24 max-w-screen-sm mx-auto space-y-3">
-      <header className="flex items-center justify-between">
+    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: "#0A0A0A" }}>
+      {/* Full-bleed map */}
+      <div className="absolute inset-0">
+        <RunMap
+          samples={mapSamples}
+          height={800}
+          live={status === "running" || status === "paused"}
+          mapStyle="dark"
+          activityColor={cfg.color}
+        />
+      </div>
+
+      {/* Top bar overlay */}
+      <div className="relative z-10 flex items-center justify-between px-4 pt-10 pb-3"
+        style={{ background: "linear-gradient(to bottom, rgba(10,10,10,0.9) 0%, transparent 100%)" }}>
         <button
           onClick={discard}
-          className="flex items-center gap-1 text-grit-dim hover:text-grit text-xs uppercase tracking-wider font-bold"
+          className="flex items-center gap-1 text-xs uppercase tracking-wider font-bold"
+          style={{ color: "#8A8A8A" }}
         >
-          <ChevronLeft size={16} />
-          Cancel
+          <ChevronLeft size={16} /> Cancel
         </button>
         <div className="flex items-center gap-2">
           <span style={{ color: cfg.color }}>{cfg.icon}</span>
-          <span className="label-cap text-[11px]" style={{ color: cfg.color }}>
+          <span className="label-cap text-[11px] font-bold" style={{ color: cfg.color }}>
             {cfg.label.toUpperCase()}
           </span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span
-            className="w-2 h-2 rounded-full"
-            style={{ background: gpsStrength.color, boxShadow: `0 0 6px ${gpsStrength.color}` }}
-          />
+          <span className="w-2 h-2 rounded-full"
+            style={{ background: gpsStrength.color, boxShadow: `0 0 6px ${gpsStrength.color}` }} />
           <span className="label-cap text-[10px]" style={{ color: gpsStrength.color }}>
             {gpsAccuracy != null ? `±${Math.round(gpsAccuracy)}m` : "GPS"}
           </span>
         </div>
-      </header>
-
-      {/* Hero metric */}
-      <div
-        className="bg-grit-card border p-5 text-center"
-        style={{ borderColor: status === "running" ? cfg.color : "#262626" }}
-      >
-        <p className="label-cap text-[10px] text-grit-dim mb-1">
-          {status === "ready" ? "READY" : "DISTANCE"}
-        </p>
-        <p
-          className="display text-6xl font-extrabold leading-none tracking-tight"
-          style={{ color: cfg.color }}
-        >
-          {(distanceM / 1000).toFixed(2)}
-        </p>
-        <p className="label-cap text-xs text-grit-dim mt-1">KILOMETRES</p>
       </div>
 
-      {/* Stats row */}
-      <div className="grid grid-cols-3 gap-2">
-        <BigStat label="Time" value={formatDuration(elapsedSec)} />
-        {isCycle ? (
-          <>
-            <BigStat label="Avg km/h" value={speedKmhNow.toFixed(1)} />
-            <BigStat
-              label="Now km/h"
-              value={currentSpeedKmhNow.toFixed(1)}
-              accent={status === "running"}
-            />
-          </>
-        ) : (
-          <>
-            <BigStat label="Avg pace" value={formatPace(pace)} suffix="/km" />
-            <BigStat
-              label="Now"
-              value={formatPace(currentPace)}
-              suffix="/km"
-              accent={status === "running"}
-            />
-          </>
-        )}
-      </div>
+      {/* LIVE badge */}
+      {status === "running" && samples.length >= 2 && (
+        <div className="absolute top-20 left-4 z-10 flex items-center gap-1.5 px-2 py-1"
+          style={{ background: "rgba(0,0,0,0.8)", border: "1px solid #E10600" }}>
+          <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#FF1A1A" }} />
+          <span className="label-cap text-[9px]" style={{ color: "#FF1A1A" }}>LIVE · {samples.length} pts</span>
+        </div>
+      )}
 
-      {/* Map — tap to expand */}
-      <div className="relative">
-        <RunMap
-          samples={mapSamples}
-          height={mapHeight}
-          live={status === "running" || status === "paused"}
-          mapStyle="trail"
-          activityColor={cfg.color}
-        />
-        <button
-          onClick={() => setMapExpanded((v) => !v)}
-          className="absolute bottom-2 right-2 bg-black/80 border border-grit px-2 py-1 z-[400] label-cap text-[9px] text-grit"
-        >
-          {mapExpanded ? "⊟ SHRINK" : "⊞ EXPAND"}
-        </button>
-        {status === "running" && samples.length >= 2 && (
-          <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-black/80 border border-accent-red px-2 py-1 z-[400]">
-            <span className="w-1.5 h-1.5 bg-accent-red rounded-full animate-pulse" />
-            <span className="label-cap text-[9px] text-accent-red">
-              LIVE · {samples.length} pts
-            </span>
+      {/* Bottom stats + controls overlay */}
+      <div className="relative z-10 mt-auto px-4 pb-8 pt-4 space-y-3"
+        style={{ background: "linear-gradient(to top, rgba(10,10,10,0.97) 60%, transparent 100%)" }}>
+
+        {/* Error / GPS denied */}
+        {permission === "denied" && (
+          <div className="px-3 py-2 text-xs font-bold uppercase tracking-wider"
+            style={{ background: "rgba(225,6,0,0.15)", border: "1px solid #E10600", color: "#FF1A1A" }}>
+            GPS BLOCKED — enable location in browser settings
           </div>
         )}
-      </div>
+        {error && !permission.includes("denied") && (
+          <div className="px-3 py-2 text-xs uppercase tracking-wider"
+            style={{ background: "rgba(225,6,0,0.1)", border: "1px solid #E10600", color: "#FF1A1A" }}>
+            {error}
+          </div>
+        )}
 
-      {permission === "denied" && (
-        <div className="bg-grit-card border border-accent-red p-4 space-y-2">
-          <p className="label-cap text-[10px] text-accent-red">GPS BLOCKED</p>
-          <p className="text-xs text-grit-dim">
-            Enable location in browser settings to record your route.
+        {/* Hero distance */}
+        <div className="text-center">
+          <p className="label-cap text-[10px]" style={{ color: "#8A8A8A" }}>
+            {status === "ready" ? "READY TO GO" : "DISTANCE"}
           </p>
-          <button
-            onClick={() => {
-              setPermission("prompt");
-              setError(null);
-              navigator.geolocation.getCurrentPosition(
-                () => setPermission("granted"),
-                handleGpsError,
-                { enableHighAccuracy: true },
-              );
-            }}
-            className="btn-grit w-full py-2.5 text-xs"
-          >
-            Retry GPS
-          </button>
+          <p className="display font-extrabold leading-none tracking-tight"
+            style={{ fontSize: 72, color: cfg.color }}>
+            {(distanceM / 1000).toFixed(2)}
+          </p>
+          <p className="label-cap text-xs" style={{ color: "#8A8A8A" }}>KILOMETRES</p>
         </div>
-      )}
 
-      {error && (
-        <div className="bg-accent-red/10 border border-accent-red text-accent-red text-xs px-3 py-2 uppercase tracking-wider">
-          {error}
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-2">
+          <OverlayStat label="Time" value={formatDuration(elapsedSec)} />
+          {isCycle ? (
+            <>
+              <OverlayStat label="Avg km/h" value={speedKmhNow.toFixed(1)} />
+              <OverlayStat label="Now km/h" value={currentSpeedKmhNow.toFixed(1)} accent={status === "running"} />
+            </>
+          ) : (
+            <>
+              <OverlayStat label="Avg pace" value={formatPace(pace)} suffix="/km" />
+              <OverlayStat label="Now" value={formatPace(currentPace)} suffix="/km" accent={status === "running"} />
+            </>
+          )}
         </div>
-      )}
 
-      {/* Live stats bar */}
-      {status === "running" && (
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="bg-grit-card border border-grit p-2">
-            <p className="text-[9px] uppercase tracking-wider text-grit-dim">Calories</p>
-            <p className="text-sm font-bold text-grit">
-              {Math.round((distanceM / 1000) * weightKg * cfg.calMult)}
-            </p>
+        {/* Secondary stats when running */}
+        {(status === "running" || status === "paused") && (
+          <div className="grid grid-cols-3 gap-2">
+            <OverlayStat label="kcal" value={String(Math.round((distanceM / 1000) * weightKg * cfg.calMult))} />
+            <OverlayStat label="fixes" value={String(samples.length)} />
+            <OverlayStat label="elev" value={`+${elevationGain(samples)}m`} />
           </div>
-          <div className="bg-grit-card border border-grit p-2">
-            <p className="text-[9px] uppercase tracking-wider text-grit-dim">Fixes</p>
-            <p className="text-sm font-bold text-grit">{samples.length}</p>
-          </div>
-          <div className="bg-grit-card border border-grit p-2">
-            <p className="text-[9px] uppercase tracking-wider text-grit-dim">Elevation</p>
-            <p className="text-sm font-bold text-grit">+{elevationGain(samples)}m</p>
-          </div>
+        )}
+
+        {/* Controls */}
+        <div className="pt-1">
+          {status === "ready" && (
+            <button onClick={start}
+              className="w-full text-white py-5 flex items-center justify-center gap-3 font-extrabold uppercase tracking-widest text-sm"
+              style={{ background: cfg.color, boxShadow: `0 0 32px ${cfg.color}60` }}>
+              <Play size={20} strokeWidth={3} fill="currentColor" />
+              Start {cfg.label}
+            </button>
+          )}
+          {status === "running" && (
+            <button onClick={pause}
+              className="w-full py-5 flex items-center justify-center gap-3 font-extrabold uppercase tracking-widest text-sm"
+              style={{ background: "#141414", border: "1px solid #262626", color: "#FAFAFA" }}>
+              <Pause size={20} strokeWidth={3} />
+              Pause
+            </button>
+          )}
+          {status === "paused" && (
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={resume}
+                  className="text-white py-4 flex items-center justify-center gap-2 font-extrabold uppercase tracking-widest text-xs"
+                  style={{ background: cfg.color }}>
+                  <Play size={18} strokeWidth={3} fill="currentColor" /> Resume
+                </button>
+                {/* Hold to finish */}
+                <div className="relative overflow-hidden"
+                  style={{ background: "#141414", border: "1px solid #262626" }}
+                  onPointerDown={startHold}
+                  onPointerUp={endHold}
+                  onPointerLeave={endHold}>
+                  <div className="absolute inset-y-0 left-0 transition-all"
+                    style={{ width: `${holdProgress}%`, background: "rgba(225,6,0,0.3)" }} />
+                  <div className="relative py-4 flex items-center justify-center gap-2 font-extrabold uppercase tracking-widest text-xs select-none"
+                    style={{ color: holdProgress > 0 ? "#E10600" : "#8A8A8A" }}>
+                    <Square size={16} strokeWidth={3} fill={holdProgress > 0 ? "currentColor" : "none"} />
+                    {holdProgress > 0 ? "Hold…" : "Hold to finish"}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          {status === "finished" && (
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={discard}
+                className="py-5 flex items-center justify-center gap-2 font-extrabold uppercase tracking-widest text-xs"
+                style={{ background: "#141414", border: "1px solid #262626", color: "#8A8A8A" }}>
+                <Trash2 size={16} strokeWidth={3} /> Discard
+              </button>
+              <button onClick={finish}
+                className="text-white py-5 flex items-center justify-center gap-2 font-extrabold uppercase tracking-widest text-xs"
+                style={{ background: cfg.color, boxShadow: `0 0 24px ${cfg.color}40` }}>
+                <Trophy size={18} strokeWidth={3} /> Save
+              </button>
+            </div>
+          )}
         </div>
-      )}
-
-      {/* Controls */}
-      <div className="pt-1">
-        {status === "ready" && (
-          <button
-            onClick={start}
-            className="w-full text-white py-5 flex items-center justify-center gap-3 font-extrabold uppercase tracking-widest text-sm transition-colors"
-            style={{ background: cfg.color, boxShadow: `0 0 24px ${cfg.color}40` }}
-          >
-            <Play size={20} strokeWidth={3} fill="currentColor" />
-            Start {cfg.label}
-          </button>
-        )}
-        {status === "running" && (
-          <button
-            onClick={pause}
-            className="w-full bg-grit-card border border-grit text-grit py-5 flex items-center justify-center gap-3 font-extrabold uppercase tracking-widest text-sm hover:border-accent-red transition-colors"
-          >
-            <Pause size={20} strokeWidth={3} />
-            Pause
-          </button>
-        )}
-        {status === "paused" && (
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={resume}
-              className="text-white py-5 flex items-center justify-center gap-2 font-extrabold uppercase tracking-widest text-xs transition-colors"
-              style={{ background: cfg.color }}
-            >
-              <Play size={18} strokeWidth={3} fill="currentColor" />
-              Resume
-            </button>
-            <button
-              onClick={stop}
-              className="bg-grit-card border border-grit text-grit py-5 flex items-center justify-center gap-2 font-extrabold uppercase tracking-widest text-xs hover:border-accent-red transition-colors"
-            >
-              <Square size={18} strokeWidth={3} fill="currentColor" />
-              Finish
-            </button>
-          </div>
-        )}
-        {status === "finished" && (
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={discard}
-              className="bg-grit-card border border-grit text-grit-dim py-5 flex items-center justify-center gap-2 font-extrabold uppercase tracking-widest text-xs hover:text-accent-red hover:border-accent-red transition-colors"
-            >
-              <Trash2 size={16} strokeWidth={3} />
-              Discard
-            </button>
-            <button
-              onClick={finish}
-              className="text-white py-5 flex items-center justify-center gap-2 font-extrabold uppercase tracking-widest text-xs transition-colors"
-              style={{ background: cfg.color, boxShadow: `0 0 24px ${cfg.color}40` }}
-            >
-              <Trophy size={18} strokeWidth={3} />
-              Save
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
 }
 
-function BigStat({
+function OverlayStat({
   label,
   value,
   suffix,
@@ -950,23 +929,27 @@ function BigStat({
   accent?: boolean;
 }) {
   return (
-    <div className="bg-grit-card border border-grit p-3 flex flex-col gap-1">
-      <span className="text-[9px] uppercase tracking-widest text-grit-dim">{label}</span>
-      <div className="flex items-baseline gap-1">
-        <span
-          className="display text-xl font-extrabold leading-none"
-          style={{ color: accent ? "#e63222" : "var(--grit-text, #e5e5e5)" }}
-        >
+    <div className="p-2.5 flex flex-col gap-0.5 text-center"
+      style={{ background: "rgba(20,20,20,0.85)", border: "1px solid #262626" }}>
+      <span className="text-[9px] uppercase tracking-widest" style={{ color: "#8A8A8A" }}>{label}</span>
+      <div className="flex items-baseline justify-center gap-1">
+        <span className="display text-lg font-extrabold leading-none"
+          style={{ color: accent ? "#FF1A1A" : "#FAFAFA" }}>
           {value}
         </span>
         {suffix && (
-          <span className="text-[9px] font-bold uppercase tracking-wider text-grit-dim">
+          <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "#8A8A8A" }}>
             {suffix}
           </span>
         )}
       </div>
     </div>
   );
+}
+
+// kept for backwards compat within file
+function BigStat({ label, value, suffix, accent }: { label: string; value: string; suffix?: string; accent?: boolean }) {
+  return <OverlayStat label={label} value={value} suffix={suffix} accent={accent} />;
 }
 
 /* ====================== POST-RUN SUMMARY ====================== */
@@ -984,6 +967,7 @@ function RunSummary({
   const [name, setName] = useState(labelRun(run));
   const [notes, setNotes] = useState("");
   const [hr, setHr] = useState("");
+  const [showShareCard, setShowShareCard] = useState(false);
 
   function save() {
     onSave({
@@ -994,147 +978,121 @@ function RunSummary({
     });
   }
 
-  async function share() {
-    const text = `${name} · ${(run.distanceM / 1000).toFixed(2)} km · ${formatDuration(run.durationSec)} · ${run.calories ?? estimateCalories(run)} kcal 🔥 via DEADSET`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "DEADSET Activity", text });
-        return;
-      } catch {
-        /* cancelled */
-      }
-    }
-    await navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard");
-  }
+  const namedRun: Run = { ...run, name: name.trim() || labelRun(run) };
 
   return (
-    <div className="px-4 pt-6 pb-24 max-w-screen-sm mx-auto space-y-4">
-      <header className="flex items-center justify-between">
-        <button
-          onClick={onDiscard}
-          className="flex items-center gap-1 text-grit-dim text-xs uppercase tracking-wider font-bold"
-        >
-          <Trash2 size={14} /> Discard
-        </button>
-        <div className="flex items-center gap-2">
-          <span style={{ color: cfg.color }}>{cfg.icon}</span>
-          <span className="label-cap text-[11px]" style={{ color: cfg.color }}>
-            ACTIVITY COMPLETE
-          </span>
-        </div>
-        <button
-          onClick={share}
-          className="flex items-center gap-1 text-xs uppercase tracking-wider font-bold"
-          style={{ color: cfg.color }}
-        >
-          <Share2 size={14} /> Share
-        </button>
-      </header>
+    <>
+      {showShareCard && <RunShareCard run={namedRun} onClose={() => setShowShareCard(false)} />}
+      <div className="px-4 pt-6 pb-24 max-w-screen-sm mx-auto space-y-4">
+        <header className="flex items-center justify-between">
+          <button onClick={onDiscard}
+            className="flex items-center gap-1 text-xs uppercase tracking-wider font-bold"
+            style={{ color: "#8A8A8A" }}>
+            <Trash2 size={14} /> Discard
+          </button>
+          <div className="flex items-center gap-2">
+            <span style={{ color: cfg.color }}>{cfg.icon}</span>
+            <span className="label-cap text-[11px] font-bold" style={{ color: cfg.color }}>
+              ACTIVITY COMPLETE
+            </span>
+          </div>
+          <button onClick={() => setShowShareCard(true)}
+            className="flex items-center gap-1 text-xs uppercase tracking-wider font-bold"
+            style={{ color: cfg.color }}>
+            <Share2 size={14} /> Share card
+          </button>
+        </header>
 
-      {/* Map */}
-      <RunMap samples={run.samples} height={280} mapStyle="trail" activityColor={cfg.color} />
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="border p-4 text-center" style={{ borderColor: cfg.color }}>
-          <p className="label-cap text-[9px]" style={{ color: cfg.color }}>
-            DISTANCE
-          </p>
-          <p className="display text-3xl font-extrabold text-grit leading-none mt-1">
-            {(run.distanceM / 1000).toFixed(2)}
-          </p>
-          <p className="label-cap text-[9px] text-grit-dim">km</p>
-        </div>
-        <div className="border border-grit p-4 text-center bg-grit-card">
-          <p className="label-cap text-[9px] text-grit-dim">TIME</p>
-          <p className="display text-3xl font-extrabold text-grit leading-none mt-1">
-            {formatDuration(run.durationSec)}
-          </p>
-          <p className="label-cap text-[9px] text-grit-dim">duration</p>
-        </div>
-        <div className="border border-grit p-3 bg-grit-card text-center">
-          <p className="label-cap text-[9px] text-grit-dim">
-            {run.activityType === "cycle" ? "AVG SPEED" : "AVG PACE"}
-          </p>
-          <p className="display text-xl font-extrabold text-grit leading-none mt-1">
-            {run.activityType === "cycle"
-              ? `${speedKmh(run.distanceM, run.durationSec)} km/h`
-              : `${formatPace(run.avgPaceSecPerKm)}/km`}
-          </p>
-        </div>
-        <div className="border border-grit p-3 bg-grit-card text-center">
-          <p className="label-cap text-[9px] text-grit-dim">CALORIES</p>
-          <p className="display text-xl font-extrabold text-grit leading-none mt-1">
-            {run.calories ?? estimateCalories(run)}
-          </p>
-          <p className="label-cap text-[9px] text-grit-dim">kcal</p>
-        </div>
-        {(run.elevGainM ?? 0) > 0 && (
-          <div className="border border-grit p-3 bg-grit-card text-center">
-            <p className="label-cap text-[9px] text-grit-dim">ELEVATION</p>
-            <p className="display text-xl font-extrabold text-grit leading-none mt-1">
-              +{run.elevGainM}m
+        {/* Congrats banner */}
+        <div className="py-3 px-4 flex items-center gap-3"
+          style={{ background: `${cfg.color}18`, border: `1px solid ${cfg.color}60` }}>
+          <Trophy size={20} style={{ color: cfg.color, flexShrink: 0 }} />
+          <div>
+            <p className="text-xs font-extrabold uppercase tracking-wide" style={{ color: cfg.color }}>
+              {run.distanceM >= 10000 ? "Crushing it 🔥" : run.distanceM >= 5000 ? "Solid effort!" : "Good work!"}
+            </p>
+            <p className="text-[10px]" style={{ color: "#8A8A8A" }}>
+              {(run.distanceM / 1000).toFixed(2)} km · {formatDuration(run.durationSec)}
+              {run.activityType !== "cycle" && run.avgPaceSecPerKm
+                ? ` · ${formatPace(run.avgPaceSecPerKm)}/km` : ""}
             </p>
           </div>
-        )}
-        {run.splits.length > 0 && (
-          <div className="border border-grit p-3 bg-grit-card text-center">
-            <p className="label-cap text-[9px] text-grit-dim">BEST KM</p>
-            <p className="display text-xl font-extrabold text-grit leading-none mt-1">
-              {formatPace(run.bestPaceSecPerKm ?? 0)}/km
-            </p>
+        </div>
+
+        {/* Map */}
+        <RunMap samples={run.samples} height={260} mapStyle="dark" activityColor={cfg.color} />
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 gap-2">
+          <SummaryStatCell label="DISTANCE" value={`${(run.distanceM / 1000).toFixed(2)}`} unit="km" accent={cfg.color} />
+          <SummaryStatCell label="TIME" value={formatDuration(run.durationSec)} />
+          <SummaryStatCell
+            label={run.activityType === "cycle" ? "AVG SPEED" : "AVG PACE"}
+            value={run.activityType === "cycle"
+              ? `${speedKmh(run.distanceM, run.durationSec)}`
+              : formatPace(run.avgPaceSecPerKm)}
+            unit={run.activityType === "cycle" ? "km/h" : "/km"}
+          />
+          <SummaryStatCell label="CALORIES" value={String(run.calories ?? estimateCalories(run))} unit="kcal" />
+          {(run.elevGainM ?? 0) > 0 && (
+            <SummaryStatCell label="ELEVATION" value={`+${run.elevGainM}`} unit="m" />
+          )}
+          {run.bestPaceSecPerKm ? (
+            <SummaryStatCell label="BEST KM" value={`${formatPace(run.bestPaceSecPerKm)}`} unit="/km" />
+          ) : null}
+        </div>
+
+        {/* Name + notes */}
+        <div className="space-y-3">
+          <div>
+            <label className="label-cap text-[10px] block mb-1" style={{ color: "#8A8A8A" }}>Activity name</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} maxLength={60}
+              className="input-grit w-full" placeholder="Morning Run" />
           </div>
-        )}
-      </div>
+          <div>
+            <label className="label-cap text-[10px] block mb-1" style={{ color: "#8A8A8A" }}>Notes (optional)</label>
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
+              rows={2} maxLength={500} className="input-grit w-full resize-none"
+              placeholder="How did it feel?" />
+          </div>
+          <div>
+            <label className="label-cap text-[10px] block mb-1" style={{ color: "#8A8A8A" }}>Avg heart rate (optional)</label>
+            <div className="flex items-center gap-2">
+              <input value={hr} onChange={(e) => setHr(e.target.value)}
+                inputMode="numeric" maxLength={3} className="input-grit w-24"
+                placeholder="155" />
+              <span className="label-cap text-[9px]" style={{ color: "#8A8A8A" }}>bpm</span>
+            </div>
+          </div>
+        </div>
 
-      {/* Name + notes */}
-      <div className="space-y-3">
-        <div>
-          <label className="label-cap text-[10px] text-grit-dim block mb-1">Activity name</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={60}
-            className="input-grit w-full"
-            placeholder="Morning Run"
-          />
-        </div>
-        <div>
-          <label className="label-cap text-[10px] text-grit-dim block mb-1">Notes (optional)</label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={2}
-            maxLength={500}
-            className="input-grit w-full resize-none"
-            placeholder="How did it feel?"
-          />
-        </div>
-        <div>
-          <label className="label-cap text-[10px] text-grit-dim block mb-1">
-            Avg heart rate (optional)
-          </label>
-          <input
-            value={hr}
-            onChange={(e) => setHr(e.target.value)}
-            inputMode="numeric"
-            maxLength={3}
-            className="input-grit w-32"
-            placeholder="e.g. 155"
-          />
-          <span className="label-cap text-[9px] text-grit-dim ml-2">bpm</span>
+        {/* Actions */}
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={() => setShowShareCard(true)}
+            className="py-4 flex items-center justify-center gap-2 text-xs font-extrabold uppercase tracking-widest"
+            style={{ background: "#141414", border: "1px solid #262626", color: "#FAFAFA" }}>
+            <Share2 size={15} /> Share card
+          </button>
+          <button onClick={save}
+            className="py-4 text-white flex items-center justify-center gap-2 font-extrabold uppercase tracking-widest text-xs"
+            style={{ background: cfg.color, boxShadow: `0 0 20px ${cfg.color}50` }}>
+            <Trophy size={16} strokeWidth={3} /> Save
+          </button>
         </div>
       </div>
+    </>
+  );
+}
 
-      <button
-        onClick={save}
-        className="w-full text-white py-5 flex items-center justify-center gap-3 font-extrabold uppercase tracking-widest text-sm"
-        style={{ background: cfg.color, boxShadow: `0 0 24px ${cfg.color}40` }}
-      >
-        <Trophy size={20} strokeWidth={3} />
-        Save Activity
-      </button>
+function SummaryStatCell({ label, value, unit, accent }: { label: string; value: string; unit?: string; accent?: string }) {
+  return (
+    <div className="p-3 flex flex-col gap-0.5"
+      style={{ background: "#141414", border: `1px solid ${accent ? accent + "50" : "#262626"}` }}>
+      <p className="label-cap text-[9px]" style={{ color: accent ?? "#8A8A8A" }}>{label}</p>
+      <div className="flex items-baseline gap-1">
+        <p className="display text-2xl font-extrabold leading-none" style={{ color: "#FAFAFA" }}>{value}</p>
+        {unit && <p className="label-cap text-[9px]" style={{ color: "#8A8A8A" }}>{unit}</p>}
+      </div>
     </div>
   );
 }
@@ -1153,40 +1111,31 @@ function RunDetail({
   onDelete: () => void;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showShareCard, setShowShareCard] = useState(false);
   const cfg = ACTIVITY_CONFIG[run.activityType ?? "run"];
   const maxSplit = run.splits.length ? Math.max(...run.splits) : 0;
   const minSplit = run.splits.length ? Math.min(...run.splits) : 0;
 
-  async function share() {
-    const text = `${run.name || labelRun(run)} · ${(run.distanceM / 1000).toFixed(2)} km · ${formatDuration(run.durationSec)} · ${run.calories ?? estimateCalories(run)} kcal 🔥 via DEADSET`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "DEADSET Activity", text });
-        return;
-      } catch {
-        /* cancelled */
-      }
-    }
-    await navigator.clipboard.writeText(text);
-    toast.success("Copied");
-  }
-
   return (
-    <div className="px-4 pt-6 pb-24 max-w-screen-sm mx-auto space-y-4">
+    <>
+      {showShareCard && <RunShareCard run={run} onClose={() => setShowShareCard(false)} />}
+      <div className="px-4 pt-6 pb-24 max-w-screen-sm mx-auto space-y-4">
       <header className="flex items-center justify-between">
         <button
           onClick={onBack}
-          className="flex items-center gap-1 text-grit-dim hover:text-grit text-xs uppercase tracking-wider font-bold"
+          className="flex items-center gap-1 text-xs uppercase tracking-wider font-bold"
+          style={{ color: "#8A8A8A" }}
         >
           <ChevronLeft size={16} /> Back
         </button>
         <div className="flex items-center gap-3">
-          <button onClick={share} className="text-grit-dim hover:text-grit">
+          <button onClick={() => setShowShareCard(true)} style={{ color: "#8A8A8A" }}>
             <Share2 size={16} />
           </button>
           <button
             onClick={() => (confirmDelete ? onDelete() : setConfirmDelete(true))}
-            className={`flex items-center gap-1 text-xs uppercase tracking-wider font-bold ${confirmDelete ? "text-accent-red" : "text-grit-dim hover:text-accent-red"}`}
+            className="flex items-center gap-1 text-xs uppercase tracking-wider font-bold"
+            style={{ color: confirmDelete ? "#E10600" : "#8A8A8A" }}
           >
             <Trash2 size={14} />
             {confirmDelete ? "Confirm" : "Delete"}
@@ -1276,22 +1225,21 @@ function RunDetail({
       <RunAdvanced run={run} allRuns={allRuns} />
 
       {/* Share / Social */}
-      <section className="border border-grit bg-grit-card p-4 space-y-3">
-        <p className="label-cap text-[10px] text-accent-red">SHARE WITH CREW</p>
-        <button
-          onClick={share}
-          className="btn-grit w-full py-3 flex items-center justify-center gap-2"
-        >
-          <Share2 size={14} /> Share this {cfg.label.toLowerCase()}
+      <section className="p-4 space-y-3" style={{ background: "#141414", border: "1px solid #262626" }}>
+        <p className="label-cap text-[10px] font-bold" style={{ color: "#E10600" }}>SHARE WITH CREW</p>
+        <button onClick={() => setShowShareCard(true)}
+          className="w-full py-3 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest text-white"
+          style={{ background: "#E10600" }}>
+          <Share2 size={14} /> Create share card
         </button>
-        <Link
-          to="/friends"
-          className="block text-center label-cap text-[10px] text-grit-dim hover:text-accent-red"
-        >
+        <Link to="/friends"
+          className="block text-center label-cap text-[10px]"
+          style={{ color: "#8A8A8A" }}>
           Post to feed → <Users size={10} className="inline" />
         </Link>
       </section>
     </div>
+    </>
   );
 }
 

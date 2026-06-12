@@ -188,7 +188,7 @@ function LiveWorkoutPage() {
                     onClick={() => !empty && startDay(k)}
                     disabled={empty}
                     className="w-full bg-grit-card border p-3 flex items-center justify-between text-left disabled:opacity-50"
-                    style={{ borderColor: isToday ? "#e63222" : "#262626" }}
+                    style={{ borderColor: isToday ? "#E10600" : "#262626" }}
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
@@ -444,8 +444,8 @@ function LiveWorkoutPage() {
               onClick={() => setActiveIdx(i)}
               className="flex-shrink-0 px-3 py-1.5 border text-xs font-bold uppercase tracking-wider"
               style={{
-                borderColor: active ? "#e63222" : done ? "#3a8a3a" : "#262626",
-                color: active ? "#e63222" : done ? "#7acc7a" : "#8a8a8a",
+                borderColor: active ? "#E10600" : done ? "#3a8a3a" : "#262626",
+                color: active ? "#E10600" : done ? "#7acc7a" : "#8a8a8a",
                 background: active ? "#1a0606" : "transparent",
               }}
             >
@@ -634,7 +634,7 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
       <p className="label-cap text-[10px] text-grit-dim">{label}</p>
       <p
         className="display text-xl font-extrabold"
-        style={{ color: accent ? "#e63222" : "#f5f5f0" }}
+        style={{ color: accent ? "#E10600" : "#f5f5f0" }}
       >
         {value}
       </p>
@@ -782,8 +782,8 @@ function SetEntry({
           onClick={() => setAmrap((v) => !v)}
           className="px-2 py-1 border tracking-widest uppercase font-bold"
           style={{
-            borderColor: amrap ? "#e63222" : "#262626",
-            color: amrap ? "#e63222" : "#8a8a8a",
+            borderColor: amrap ? "#E10600" : "#262626",
+            color: amrap ? "#E10600" : "#8a8a8a",
             background: amrap ? "#1a0606" : "transparent",
           }}
         >
@@ -809,8 +809,8 @@ function SetEntry({
                 onClick={() => setRpe(String(v))}
                 className="flex-1 py-2 text-xs font-bold border"
                 style={{
-                  borderColor: rpe === String(v) ? "#e63222" : "#262626",
-                  color: rpe === String(v) ? "#e63222" : "#8a8a8a",
+                  borderColor: rpe === String(v) ? "#E10600" : "#262626",
+                  color: rpe === String(v) ? "#E10600" : "#8a8a8a",
                   background: rpe === String(v) ? "#1a0606" : "transparent",
                 }}
               >
@@ -917,7 +917,7 @@ function BigStat({ label, value, accent }: { label: string; value: string; accen
       <p className="label-cap text-[10px] text-grit-dim">{label}</p>
       <p
         className="display text-3xl font-extrabold mt-1"
-        style={{ color: accent ? "#e63222" : "#f5f5f0" }}
+        style={{ color: accent ? "#E10600" : "#f5f5f0" }}
       >
         {value}
       </p>

@@ -340,7 +340,7 @@ function DietPage() {
                 <p className="label-cap text-[9px] text-[#8a8a8a] mt-1">KCAL</p>
               </div>
               <div className="border border-grit p-2">
-                <p className="display font-extrabold leading-none" style={{ color: "#e63222" }}>
+                <p className="display font-extrabold leading-none" style={{ color: "#E10600" }}>
                   {perMeal.p}g
                 </p>
                 <p className="label-cap text-[9px] text-[#8a8a8a] mt-1">PROTEIN</p>
@@ -760,7 +760,7 @@ function MacroRing({
     cx = size / 2,
     cy = size / 2;
   const items = [
-    { color: "#e63222", target: protein, eaten: pEaten, label: "P", radius: 80 },
+    { color: "#E10600", target: protein, eaten: pEaten, label: "P", radius: 80 },
     { color: "#f5f5f0", target: carbs, eaten: cEaten, label: "C", radius: 64 },
     { color: "#8a8a8a", target: fats, eaten: fEaten, label: "F", radius: 48 },
   ];
@@ -789,7 +789,7 @@ function MacroRing({
         })}
       </svg>
       <div className="flex-1 space-y-2 text-sm">
-        <Row color="#e63222" label="Protein" eaten={pEaten} target={protein} />
+        <Row color="#E10600" label="Protein" eaten={pEaten} target={protein} />
         <Row color="#f5f5f0" label="Carbs" eaten={cEaten} target={carbs} />
         <Row color="#8a8a8a" label="Fats" eaten={fEaten} target={fats} />
       </div>

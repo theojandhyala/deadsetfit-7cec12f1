@@ -39,12 +39,12 @@ export function RankShareCard({
     ctx.fillRect(0, 0, w, h);
 
     // Top + bottom rails
-    ctx.fillStyle = "#e63222";
+    ctx.fillStyle = "#E10600";
     ctx.fillRect(0, 0, w, 16);
     ctx.fillRect(0, h - 16, w, 16);
 
     // Diagonal red wedge
-    ctx.fillStyle = "#e63222";
+    ctx.fillStyle = "#E10600";
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.lineTo(420, 0);
@@ -70,7 +70,7 @@ export function RankShareCard({
       SILVER: "#cbd5e1",
       BRONZE: "#b45309",
     };
-    const lc = leagueColors[league] ?? "#e63222";
+    const lc = leagueColors[league] ?? "#E10600";
     ctx.fillStyle = lc;
     ctx.font = "700 56px Arial, sans-serif";
     ctx.fillText(league + " LEAGUE", 70, 560);
@@ -80,7 +80,7 @@ export function RankShareCard({
     ctx.font = "900 96px Impact, 'Arial Black', sans-serif";
     ctx.fillText("RANK", 70, 720);
 
-    ctx.fillStyle = "#e63222";
+    ctx.fillStyle = "#E10600";
     ctx.font = "900 540px Impact, 'Arial Black', sans-serif";
     ctx.fillText(`#${rank}`, 70, 1180);
 
@@ -106,13 +106,13 @@ export function RankShareCard({
     ctx.font = "900 72px Impact, 'Arial Black', sans-serif";
     ctx.fillText((displayName || "ATHLETE").toUpperCase().slice(0, 22), 70, 1700);
     if (username) {
-      ctx.fillStyle = "#e63222";
+      ctx.fillStyle = "#E10600";
       ctx.font = "700 34px Arial, sans-serif";
       ctx.fillText(`@${username}`, 70, 1750);
     }
 
     // CTA
-    ctx.fillStyle = "#e63222";
+    ctx.fillStyle = "#E10600";
     ctx.fillRect(70, 1810, w - 140, 4);
     ctx.fillStyle = "#8a8a8a";
     ctx.font = "700 32px Arial, sans-serif";

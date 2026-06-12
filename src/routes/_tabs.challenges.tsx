@@ -50,7 +50,7 @@ const CHALLENGES: Challenge[] = [
   { id: "murph", name: "Murph (Time)", tagline: "1mi · 100 pull · 200 push · 300 sq · 1mi", type: "time", target: 2700, xp: 500, tier: "GOD" },
 ];
 
-const TIER_COLOR = { EASY: "#60a5fa", BEAST: "#fbbf24", GOD: "#FC4C02" };
+const TIER_COLOR = { EASY: "#60a5fa", BEAST: "#fbbf24", GOD: "#E10600" };
 const TIER_LABEL = { EASY: "Entry", BEAST: "Beast", GOD: "God Tier" };
 
 function bestRecord(records: ChallengeRecord[] | undefined, id: string) {
@@ -109,11 +109,11 @@ function ChallengesPage() {
   return (
     <div className="pb-6">
       <header className="px-5 pt-6 pb-4 flex items-center justify-between">
-        <Link to="/train" className="flex items-center gap-1.5 press" style={{ color: "#9EA3AE" }}>
+        <Link to="/train" className="flex items-center gap-1.5 press" style={{ color: "#8A8A8A" }}>
           <ArrowLeft size={16} />
           <span className="text-[10px] font-bold uppercase tracking-wider">Back</span>
         </Link>
-        <div className="flex items-center gap-1.5" style={{ color: "#FC4C02" }}>
+        <div className="flex items-center gap-1.5" style={{ color: "#E10600" }}>
           <Trophy size={14} />
           <span className="text-[11px] font-bold uppercase tracking-wider">Challenges</span>
         </div>
@@ -124,22 +124,22 @@ function ChallengesPage() {
       <div className="px-5 mb-5">
         <div
           className="p-5 rounded-2xl overflow-hidden relative"
-          style={{ background: "linear-gradient(135deg, rgba(252,76,2,0.15) 0%, #1C1D21 100%)", border: "1.5px solid rgba(252,76,2,0.3)" }}
+          style={{ background: "linear-gradient(135deg, rgba(225,6,0,0.15) 0%, #141414 100%)", border: "1.5px solid rgba(225,6,0,0.3)" }}
         >
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "#FC4C02" }}>Prove It</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "#E10600" }}>Prove It</p>
           <h1 className="display text-3xl font-extrabold text-white leading-tight">
-            Daily <span style={{ color: "#FC4C02" }}>Challenges</span>
+            Daily <span style={{ color: "#E10600" }}>Challenges</span>
           </h1>
-          <p className="text-sm mt-2 mb-3" style={{ color: "#9EA3AE" }}>
+          <p className="text-sm mt-2 mb-3" style={{ color: "#8A8A8A" }}>
             Hit targets. Earn XP. Challenge your crew.
           </p>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5">
-              <Trophy size={12} style={{ color: "#FFB800" }} />
+              <Trophy size={12} style={{ color: "#FAFAFA" }} />
               <span className="text-xs font-bold text-white">{beatenCount}/{CHALLENGES.length} beaten</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <Zap size={12} style={{ color: "#FC4C02" }} />
+              <Zap size={12} style={{ color: "#E10600" }} />
               <span className="text-xs font-bold text-white">
                 {CHALLENGES.filter(c => { const b = bestRecord(state.challengeRecords, c.id); return b; }).reduce((s, c) => s + c.xp, 0)} XP earned
               </span>
@@ -151,7 +151,7 @@ function ChallengesPage() {
       {/* Tab switcher */}
       <div
         className="mx-5 mb-5 flex rounded-xl p-1"
-        style={{ background: "#1C1D21", border: "1.5px solid #2C2D33" }}
+        style={{ background: "#141414", border: "1.5px solid #262626" }}
       >
         {TABS.map(({ id, icon: Icon, label }) => (
           <button
@@ -159,7 +159,7 @@ function ChallengesPage() {
             onClick={() => setTab(id)}
             className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg press"
             style={{
-              background: tab === id ? "#FC4C02" : "transparent",
+              background: tab === id ? "#E10600" : "transparent",
               color: tab === id ? "#fff" : "#6B7280",
               transition: "all 0.2s ease",
             }}
@@ -203,9 +203,9 @@ function GrindTab({ filtered, filter, setFilter, state, setActive }: {
             onClick={() => setFilter(f)}
             className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider border rounded-full whitespace-nowrap press"
             style={{
-              background: filter === f ? "#FC4C02" : "transparent",
-              borderColor: filter === f ? "#FC4C02" : "#2C2D33",
-              color: filter === f ? "#fff" : "#9EA3AE",
+              background: filter === f ? "#E10600" : "transparent",
+              borderColor: filter === f ? "#E10600" : "#262626",
+              color: filter === f ? "#fff" : "#8A8A8A",
             }}
           >
             {f === "BEATEN" ? "✓ Beaten" : f}
@@ -215,8 +215,8 @@ function GrindTab({ filtered, filter, setFilter, state, setActive }: {
 
       <div className="px-5 flex flex-col gap-3">
         {filtered.length === 0 && (
-          <div className="p-8 text-center rounded-2xl" style={{ background: "#1C1D21", border: "1.5px solid #2C2D33" }}>
-            <p className="text-sm" style={{ color: "#9EA3AE" }}>No challenges in this filter.</p>
+          <div className="p-8 text-center rounded-2xl" style={{ background: "#141414", border: "1.5px solid #262626" }}>
+            <p className="text-sm" style={{ color: "#8A8A8A" }}>No challenges in this filter.</p>
           </div>
         )}
         {filtered.map((c) => {
@@ -230,13 +230,13 @@ function GrindTab({ filtered, filter, setFilter, state, setActive }: {
               key={c.id}
               onClick={() => setActive(c)}
               className="text-left rounded-2xl p-4 press relative overflow-hidden"
-              style={{ background: "#1C1D21", border: `1.5px solid ${beat ? "#FC4C02" : "#2C2D33"}` }}
+              style={{ background: "#141414", border: `1.5px solid ${beat ? "#E10600" : "#262626"}` }}
             >
               {beat && (
                 <div
                   className="absolute top-0 right-0 w-16 h-16"
                   style={{
-                    background: "linear-gradient(135deg, transparent 50%, rgba(252,76,2,0.15) 50%)",
+                    background: "linear-gradient(135deg, transparent 50%, rgba(225,6,0,0.15) 50%)",
                   }}
                 />
               )}
@@ -252,19 +252,19 @@ function GrindTab({ filtered, filter, setFilter, state, setActive }: {
                     {beat && (
                       <span
                         className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full flex items-center gap-1"
-                        style={{ background: "rgba(252,76,2,0.15)", color: "#FC4C02", border: "1px solid rgba(252,76,2,0.3)" }}
+                        style={{ background: "rgba(225,6,0,0.15)", color: "#E10600", border: "1px solid rgba(225,6,0,0.3)" }}
                       >
                         <Check size={9} /> Beaten
                       </span>
                     )}
                   </div>
                   <p className="display text-lg font-extrabold text-white uppercase leading-tight">{c.name}</p>
-                  <p className="text-[11px] mt-0.5" style={{ color: "#9EA3AE" }}>{c.tagline}</p>
+                  <p className="text-[11px] mt-0.5" style={{ color: "#8A8A8A" }}>{c.tagline}</p>
                 </div>
                 <div className="text-right flex-shrink-0">
                   <div
                     className="flex items-center gap-1 justify-end mb-1"
-                    style={{ color: "#FC4C02" }}
+                    style={{ color: "#E10600" }}
                   >
                     <Zap size={11} />
                     <span className="text-xs font-bold">{c.xp} XP</span>
@@ -272,7 +272,7 @@ function GrindTab({ filtered, filter, setFilter, state, setActive }: {
                   {best && (
                     <div
                       className="text-[10px] font-bold px-2 py-1 rounded-lg"
-                      style={{ background: "rgba(252,76,2,0.1)", color: "#FC4C02" }}
+                      style={{ background: "rgba(225,6,0,0.1)", color: "#E10600" }}
                     >
                       {c.type === "time" ? fmtTime(best.value) : best.value}
                     </div>
@@ -287,21 +287,21 @@ function GrindTab({ filtered, filter, setFilter, state, setActive }: {
 
               {best && (
                 <div className="mt-3">
-                  <div className="h-1 rounded-full overflow-hidden" style={{ background: "#2C2D33" }}>
+                  <div className="h-1 rounded-full overflow-hidden" style={{ background: "#262626" }}>
                     <div
                       className="h-full rounded-full"
                       style={{
                         width: `${Math.max(2, pct)}%`,
-                        background: beat ? "#FC4C02" : tierColor,
+                        background: beat ? "#E10600" : tierColor,
                         transition: "width 600ms ease",
                       }}
                     />
                   </div>
                   <div className="flex justify-between mt-1">
-                    <span className="text-[9px]" style={{ color: "#9EA3AE" }}>
+                    <span className="text-[9px]" style={{ color: "#8A8A8A" }}>
                       Your best: {c.type === "time" ? fmtTime(best.value) : `${best.value} reps`}
                     </span>
-                    <span className="text-[9px]" style={{ color: "#9EA3AE" }}>
+                    <span className="text-[9px]" style={{ color: "#8A8A8A" }}>
                       Target: {c.type === "time" ? fmtTime(c.target) : `${c.target} reps`}
                     </span>
                   </div>
@@ -361,12 +361,12 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
       <div className="px-5 text-center py-12">
         <div
           className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"
-          style={{ background: "rgba(252,76,2,0.15)", border: "2px solid #FC4C02" }}
+          style={{ background: "rgba(225,6,0,0.15)", border: "2px solid #E10600" }}
         >
-          <Swords size={32} style={{ color: "#FC4C02" }} />
+          <Swords size={32} style={{ color: "#E10600" }} />
         </div>
         <h2 className="display text-2xl font-extrabold text-white uppercase">Challenge Issued</h2>
-        <p className="text-sm mt-2 mb-6" style={{ color: "#9EA3AE" }}>
+        <p className="text-sm mt-2 mb-6" style={{ color: "#8A8A8A" }}>
           Your challenge post is live. Now go do it first.
         </p>
         <button
@@ -384,24 +384,24 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
       {/* Step 1: Search for opponent */}
       <div
         className="p-4 rounded-2xl"
-        style={{ background: "#1C1D21", border: `1.5px solid ${selected ? "#4CAF50" : "#2C2D33"}` }}
+        style={{ background: "#141414", border: `1.5px solid ${selected ? "#FAFAFA" : "#262626"}` }}
       >
-        <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: "#9EA3AE" }}>
+        <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: "#8A8A8A" }}>
           1 — Pick Your Opponent
         </p>
         {selected ? (
           <div className="flex items-center gap-3">
             <div
               className="w-10 h-10 rounded-full flex items-center justify-center font-extrabold display text-white text-sm flex-shrink-0"
-              style={{ background: "#FC4C02" }}
+              style={{ background: "#E10600" }}
             >
               {(selected.display_name || selected.username || "A")[0].toUpperCase()}
             </div>
             <div className="flex-1">
               <p className="font-bold text-white text-sm">{selected.display_name || selected.username}</p>
-              {selected.username && <p className="text-xs" style={{ color: "#9EA3AE" }}>@{selected.username}</p>}
+              {selected.username && <p className="text-xs" style={{ color: "#8A8A8A" }}>@{selected.username}</p>}
             </div>
-            <button onClick={() => setSelected(null)} style={{ color: "#9EA3AE" }}>
+            <button onClick={() => setSelected(null)} style={{ color: "#8A8A8A" }}>
               <X size={16} />
             </button>
           </div>
@@ -409,9 +409,9 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
           <div className="relative">
             <div
               className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
-              style={{ background: "#25262B", border: "1px solid #2C2D33" }}
+              style={{ background: "#141414", border: "1px solid #262626" }}
             >
-              <Search size={14} style={{ color: "#9EA3AE" }} />
+              <Search size={14} style={{ color: "#8A8A8A" }} />
               <input
                 value={query}
                 onChange={e => setQuery(e.target.value)}
@@ -422,24 +422,24 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
             {results && results.length > 0 && (
               <div
                 className="absolute left-0 right-0 top-full mt-1 rounded-xl overflow-hidden z-20"
-                style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}
+                style={{ background: "#141414", border: "1.5px solid #262626", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}
               >
                 {results.slice(0, 6).map(r => (
                   <button
                     key={r.id}
                     onClick={() => { setSelected(r); setQuery(""); setResults(null); }}
                     className="flex items-center gap-3 px-3 py-2.5 w-full text-left press"
-                    style={{ borderBottom: "1px solid #2C2D33" }}
+                    style={{ borderBottom: "1px solid #262626" }}
                   >
                     <div
                       className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                      style={{ background: "#FC4C02" }}
+                      style={{ background: "#E10600" }}
                     >
                       {(r.display_name || r.username || "A")[0]}
                     </div>
                     <div>
                       <p className="text-sm font-bold text-white">{r.display_name || r.username}</p>
-                      {r.username && <p className="text-xs" style={{ color: "#9EA3AE" }}>@{r.username}</p>}
+                      {r.username && <p className="text-xs" style={{ color: "#8A8A8A" }}>@{r.username}</p>}
                     </div>
                   </button>
                 ))}
@@ -448,9 +448,9 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
             {results && results.length === 0 && (
               <div
                 className="absolute left-0 right-0 top-full mt-1 rounded-xl p-4 text-center z-20"
-                style={{ background: "#1C1D21", border: "1.5px solid #2C2D33" }}
+                style={{ background: "#141414", border: "1.5px solid #262626" }}
               >
-                <p className="text-sm" style={{ color: "#9EA3AE" }}>No athletes found</p>
+                <p className="text-sm" style={{ color: "#8A8A8A" }}>No athletes found</p>
               </div>
             )}
           </div>
@@ -460,9 +460,9 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
       {/* Step 2: Pick challenge */}
       <div
         className="p-4 rounded-2xl"
-        style={{ background: "#1C1D21", border: `1.5px solid ${challenge ? "#4CAF50" : "#2C2D33"}` }}
+        style={{ background: "#141414", border: `1.5px solid ${challenge ? "#FAFAFA" : "#262626"}` }}
       >
-        <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: "#9EA3AE" }}>
+        <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: "#8A8A8A" }}>
           2 — Pick The Challenge
         </p>
         {challenge ? (
@@ -475,9 +475,9 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
             </div>
             <div className="flex-1">
               <p className="font-bold text-white text-sm">{challenge.name}</p>
-              <p className="text-xs" style={{ color: "#9EA3AE" }}>{challenge.xp} XP · {challenge.tier}</p>
+              <p className="text-xs" style={{ color: "#8A8A8A" }}>{challenge.xp} XP · {challenge.tier}</p>
             </div>
-            <button onClick={() => setChallenge(null)} style={{ color: "#9EA3AE" }}>
+            <button onClick={() => setChallenge(null)} style={{ color: "#8A8A8A" }}>
               <X size={16} />
             </button>
           </div>
@@ -488,11 +488,11 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
                 key={c.id}
                 onClick={() => setChallenge(c)}
                 className="flex items-center justify-between px-3 py-2.5 rounded-xl text-left press"
-                style={{ background: "#25262B" }}
+                style={{ background: "#141414" }}
               >
                 <div>
                   <p className="text-sm font-bold text-white">{c.name}</p>
-                  <p className="text-[10px]" style={{ color: "#9EA3AE" }}>{c.tagline}</p>
+                  <p className="text-[10px]" style={{ color: "#8A8A8A" }}>{c.tagline}</p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <span
@@ -501,7 +501,7 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
                   >
                     {c.tier}
                   </span>
-                  <span className="text-[10px] font-bold" style={{ color: "#FC4C02" }}>{c.xp} XP</span>
+                  <span className="text-[10px] font-bold" style={{ color: "#E10600" }}>{c.xp} XP</span>
                 </div>
               </button>
             ))}
@@ -574,17 +574,17 @@ function WarsTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
       {/* Weekly summary card */}
       <div
         className="p-5 rounded-2xl"
-        style={{ background: "linear-gradient(135deg, rgba(252,76,2,0.1) 0%, #1C1D21 100%)", border: "1.5px solid rgba(252,76,2,0.25)" }}
+        style={{ background: "linear-gradient(135deg, rgba(225,6,0,0.1) 0%, #141414 100%)", border: "1.5px solid rgba(225,6,0,0.25)" }}
       >
-        <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "#FC4C02" }}>This Week</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "#E10600" }}>This Week</p>
         <h2 className="display text-2xl font-extrabold text-white">
-          {thisWeekSessions.length} <span className="text-base font-semibold" style={{ color: "#9EA3AE" }}>sessions</span>
+          {thisWeekSessions.length} <span className="text-base font-semibold" style={{ color: "#8A8A8A" }}>sessions</span>
         </h2>
         <div className="flex items-center gap-1 mt-1">
           {volDelta !== null && (
             <span
               className="text-[10px] font-bold flex items-center gap-0.5"
-              style={{ color: volDelta >= 0 ? "#4CAF50" : "#FF5252" }}
+              style={{ color: volDelta >= 0 ? "#FAFAFA" : "#FF5252" }}
             >
               {volDelta >= 0 ? <TrendingUp size={10} /> : null}
               {volDelta >= 0 ? "+" : ""}{volDelta}% volume vs last week
@@ -606,12 +606,12 @@ function WarsTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
                     className="w-full rounded-t-md"
                     style={{
                       height: count > 0 ? Math.min(40, count * 20) : 4,
-                      background: isToday ? "#FC4C02" : count > 0 ? "rgba(252,76,2,0.4)" : "#2C2D33",
+                      background: isToday ? "#E10600" : count > 0 ? "rgba(225,6,0,0.4)" : "#262626",
                       transition: "height 400ms ease",
                     }}
                   />
                 </div>
-                <span className="text-[9px] font-bold" style={{ color: isToday ? "#FC4C02" : "#6B7280" }}>
+                <span className="text-[9px] font-bold" style={{ color: isToday ? "#E10600" : "#6B7280" }}>
                   {day[0]}
                 </span>
               </div>
@@ -623,12 +623,12 @@ function WarsTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
       {/* Stats grid */}
       <div className="grid grid-cols-2 gap-3">
         {[
-          { label: "Sessions This Week", value: thisWeekSessions.length, sub: `${lastWeekSessions.length} last week`, color: "#FC4C02" },
-          { label: "Volume This Week", value: `${Math.round(thisVol / 1000)}t`, sub: `${Math.round(lastVol / 1000)}t last week`, color: "#FC4C02" },
-          { label: "PRs This Week", value: thisPRs, sub: `${lastPRs} last week`, color: "#FFB800" },
-          { label: "Challenges Beaten", value: totalBeaten, sub: `of ${CHALLENGES.length} total`, color: "#4CAF50" },
+          { label: "Sessions This Week", value: thisWeekSessions.length, sub: `${lastWeekSessions.length} last week`, color: "#E10600" },
+          { label: "Volume This Week", value: `${Math.round(thisVol / 1000)}t`, sub: `${Math.round(lastVol / 1000)}t last week`, color: "#E10600" },
+          { label: "PRs This Week", value: thisPRs, sub: `${lastPRs} last week`, color: "#FAFAFA" },
+          { label: "Challenges Beaten", value: totalBeaten, sub: `of ${CHALLENGES.length} total`, color: "#FAFAFA" },
         ].map(s => (
-          <div key={s.label} className="p-4 rounded-2xl" style={{ background: "#1C1D21", border: "1.5px solid #2C2D33" }}>
+          <div key={s.label} className="p-4 rounded-2xl" style={{ background: "#141414", border: "1.5px solid #262626" }}>
             <p className="display text-2xl font-extrabold" style={{ color: s.color }}>{s.value}</p>
             <p className="text-[10px] font-bold uppercase tracking-wider mt-0.5 text-white">{s.label}</p>
             <p className="text-[10px] mt-0.5" style={{ color: "#6B7280" }}>{s.sub}</p>
@@ -640,17 +640,17 @@ function WarsTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
       <Link
         to="/friends"
         className="p-4 rounded-2xl flex items-center gap-4 press"
-        style={{ background: "#1C1D21", border: "1.5px solid #2C2D33" }}
+        style={{ background: "#141414", border: "1.5px solid #262626" }}
       >
         <div
           className="flex items-center justify-center rounded-xl flex-shrink-0"
-          style={{ width: 44, height: 44, background: "rgba(252,76,2,0.12)" }}
+          style={{ width: 44, height: 44, background: "rgba(225,6,0,0.12)" }}
         >
-          <Crown size={20} style={{ color: "#FC4C02" }} />
+          <Crown size={20} style={{ color: "#E10600" }} />
         </div>
         <div className="flex-1">
           <p className="font-bold text-white text-sm">See Your League Rank</p>
-          <p className="text-xs mt-0.5" style={{ color: "#9EA3AE" }}>
+          <p className="text-xs mt-0.5" style={{ color: "#8A8A8A" }}>
             Compete with your friends this week
           </p>
         </div>
@@ -661,9 +661,9 @@ function WarsTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
       {CHALLENGES.filter(c => bestRecord(state.challengeRecords, c.id)).length > 0 && (
         <div
           className="rounded-2xl overflow-hidden"
-          style={{ background: "#1C1D21", border: "1.5px solid #2C2D33" }}
+          style={{ background: "#141414", border: "1.5px solid #262626" }}
         >
-          <p className="px-4 py-3 text-xs font-bold uppercase tracking-wider" style={{ color: "#9EA3AE", borderBottom: "1px solid #2C2D33" }}>
+          <p className="px-4 py-3 text-xs font-bold uppercase tracking-wider" style={{ color: "#8A8A8A", borderBottom: "1px solid #262626" }}>
             Your Challenge Records
           </p>
           {CHALLENGES.filter(c => bestRecord(state.challengeRecords, c.id)).slice(0, 5).map((c, i) => {
@@ -673,7 +673,7 @@ function WarsTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
               <div
                 key={c.id}
                 className="flex items-center justify-between px-4 py-3"
-                style={{ borderTop: i > 0 ? "1px solid #2C2D33" : "none" }}
+                style={{ borderTop: i > 0 ? "1px solid #262626" : "none" }}
               >
                 <div>
                   <p className="text-sm font-bold text-white">{c.name}</p>
@@ -685,10 +685,10 @@ function WarsTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
                   </span>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-bold" style={{ color: beat ? "#FC4C02" : "#9EA3AE" }}>
+                  <p className="text-sm font-bold" style={{ color: beat ? "#E10600" : "#8A8A8A" }}>
                     {c.type === "time" ? fmtTime(best.value) : `${best.value} reps`}
                   </p>
-                  {beat && <p className="text-[9px]" style={{ color: "#FC4C02" }}>✓ beaten</p>}
+                  {beat && <p className="text-[9px]" style={{ color: "#E10600" }}>✓ beaten</p>}
                 </div>
               </div>
             );
@@ -743,15 +743,15 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
       style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}>
       <div
         className="w-full max-w-md relative rounded-t-3xl sm:rounded-3xl"
-        style={{ background: "#1C1D21", border: "1.5px solid #2C2D33", borderTop: `3px solid ${tierColor}` }}
+        style={{ background: "#141414", border: "1.5px solid #262626", borderTop: `3px solid ${tierColor}` }}
         onClick={e => e.stopPropagation()}
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-3 sm:hidden">
-          <div className="w-10 h-1 rounded-full" style={{ background: "#2C2D33" }} />
+          <div className="w-10 h-1 rounded-full" style={{ background: "#262626" }} />
         </div>
 
-        <button onClick={onClose} className="absolute top-4 right-4" style={{ color: "#9EA3AE" }}>
+        <button onClick={onClose} className="absolute top-4 right-4" style={{ color: "#8A8A8A" }}>
           <X size={20} />
         </button>
 
@@ -762,7 +762,7 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
           <h2 className="display text-2xl font-extrabold text-white uppercase leading-tight mt-1">
             {challenge.name}
           </h2>
-          <p className="text-xs mt-0.5" style={{ color: "#9EA3AE" }}>{challenge.tagline}</p>
+          <p className="text-xs mt-0.5" style={{ color: "#8A8A8A" }}>{challenge.tagline}</p>
         </div>
 
         {/* Ring timer for time challenges */}
@@ -770,14 +770,14 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
           <div className="flex flex-col items-center py-4">
             <div className="relative" style={{ width: size, height: size }}>
               <svg width={size} height={size} className="-rotate-90 absolute inset-0">
-                <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#2C2D33" strokeWidth={sw} />
+                <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#262626" strokeWidth={sw} />
                 <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={tierColor} strokeWidth={sw}
                   strokeDasharray={`${circ * pct / 100} ${circ}`} strokeLinecap="round"
                   style={{ transition: "stroke-dasharray 200ms linear" }} />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="display font-extrabold text-white" style={{ fontSize: 44 }}>{display}</span>
-                <span className="text-xs font-bold uppercase tracking-wider mt-1" style={{ color: "#9EA3AE" }}>
+                <span className="text-xs font-bold uppercase tracking-wider mt-1" style={{ color: "#8A8A8A" }}>
                   Target: {fmtTime(challenge.target)}
                 </span>
               </div>
@@ -790,11 +790,11 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
               <button
                 onClick={() => setReps(r => Math.max(0, r - 1))}
                 className="w-12 h-12 rounded-full flex items-center justify-center press"
-                style={{ background: "#25262B", border: "1.5px solid #2C2D33" }}
+                style={{ background: "#141414", border: "1.5px solid #262626" }}
               >
-                <Minus size={20} style={{ color: "#9EA3AE" }} />
+                <Minus size={20} style={{ color: "#8A8A8A" }} />
               </button>
-              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#9EA3AE" }}>
+              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#8A8A8A" }}>
                 Target: {challenge.target} reps
               </span>
               <button
@@ -813,20 +813,20 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
           <div
             className="mx-5 mb-4 p-4 rounded-2xl text-center"
             style={{
-              background: finished.beat ? "rgba(252,76,2,0.1)" : "rgba(44,45,51,0.5)",
-              border: `1.5px solid ${finished.beat ? "#FC4C02" : "#2C2D33"}`,
+              background: finished.beat ? "rgba(225,6,0,0.1)" : "rgba(44,45,51,0.5)",
+              border: `1.5px solid ${finished.beat ? "#E10600" : "#262626"}`,
             }}
           >
-            <p className="display text-xl font-extrabold" style={{ color: finished.beat ? "#FC4C02" : "#9EA3AE" }}>
+            <p className="display text-xl font-extrabold" style={{ color: finished.beat ? "#E10600" : "#8A8A8A" }}>
               {finished.beat ? "🔥 BEATEN!" : "Not yet"}
             </p>
-            <p className="text-sm mt-1" style={{ color: "#9EA3AE" }}>
+            <p className="text-sm mt-1" style={{ color: "#8A8A8A" }}>
               {isTime ? fmtTime(finished.value) : `${finished.value} reps`}
               {" · "}
               Target: {isTime ? fmtTime(challenge.target) : `${challenge.target} reps`}
             </p>
             {finished.beat && (
-              <p className="text-xs mt-1 font-bold" style={{ color: "#FC4C02" }}>+{challenge.xp} XP earned!</p>
+              <p className="text-xs mt-1 font-bold" style={{ color: "#E10600" }}>+{challenge.xp} XP earned!</p>
             )}
           </div>
         )}
@@ -842,14 +842,14 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
                   <button
                     onClick={() => running ? setRunning(false) : setRunning(true)}
                     className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm press"
-                    style={{ background: running ? "#2C2D33" : tierColor, color: "#fff" }}
+                    style={{ background: running ? "#262626" : tierColor, color: "#fff" }}
                   >
                     {running ? <><Pause size={16} /> Pause</> : <><Play size={16} /> {seconds > 0 ? "Resume" : "Start"}</>}
                   </button>
                   <button
                     onClick={finish}
                     className="flex-1 py-3 rounded-2xl font-bold text-sm press"
-                    style={{ background: "#2C2D33", color: "#9EA3AE" }}
+                    style={{ background: "#262626", color: "#8A8A8A" }}
                   >
                     Finish
                   </button>
@@ -859,7 +859,7 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
                   <button
                     onClick={() => { setReps(0); setFinished(null); }}
                     className="py-3 px-4 rounded-2xl press"
-                    style={{ background: "#2C2D33", color: "#9EA3AE" }}
+                    style={{ background: "#262626", color: "#8A8A8A" }}
                   >
                     <RotateCcw size={16} />
                   </button>

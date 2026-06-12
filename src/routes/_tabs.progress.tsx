@@ -275,9 +275,9 @@ function ProgressPage() {
     : undefined;
 
   return (
-    <div style={{ paddingTop: "env(safe-area-inset-top)", background: "#111215", minHeight: "100vh" }} className="animate-fade-in">
+    <div style={{ paddingTop: "env(safe-area-inset-top)", background: "#0A0A0A", minHeight: "100vh" }} className="animate-fade-in">
       <header className="px-5 pt-6 pb-4 animate-slide-down">
-        <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "#FC4C02" }}>DEADSET</p>
+        <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "#E10600" }}>DEADSET</p>
         <h1 className="display text-3xl font-extrabold uppercase text-white">Track The Work</h1>
       </header>
 
@@ -300,9 +300,9 @@ function ProgressPage() {
         <section className="px-5 mb-6">
           <div className="flex items-center justify-between mb-2">
             <p className="label-cap flex items-center gap-1.5">
-              <Activity size={12} className="text-[#FC4C02]" /> Cardio
+              <Activity size={12} className="text-[#E10600]" /> Cardio
             </p>
-            <Link to="/run" className="label-cap text-[10px] text-[#FC4C02]">
+            <Link to="/run" className="label-cap text-[10px] text-[#E10600]">
               View all →
             </Link>
           </div>
@@ -331,8 +331,8 @@ function ProgressPage() {
                     {r.name ||
                       `${(r.activityType ?? "run").charAt(0).toUpperCase() + (r.activityType ?? "run").slice(1)}`}
                   </p>
-                  <p className="text-[10px] text-[#9EA3AE]">{r.date.slice(0, 10)}</p>
-                  <p className="label-cap text-[9px] text-[#FC4C02] mt-0.5">
+                  <p className="text-[10px] text-[#8A8A8A]">{r.date.slice(0, 10)}</p>
+                  <p className="label-cap text-[9px] text-[#E10600] mt-0.5">
                     {(r.distanceM / 1000).toFixed(2)} km · {formatDuration(r.durationSec)}
                   </p>
                 </div>
@@ -342,7 +342,7 @@ function ProgressPage() {
                       ? `${((r.distanceM / r.durationSec) * 3.6).toFixed(1)} km/h`
                       : `${formatPace(r.avgPaceSecPerKm)}/km`}
                   </p>
-                  <p className="text-[9px] text-[#9EA3AE]">{r.calories ?? 0} kcal</p>
+                  <p className="text-[9px] text-[#8A8A8A]">{r.calories ?? 0} kcal</p>
                 </div>
               </Link>
             ))}
@@ -394,7 +394,7 @@ function ProgressPage() {
               className="w-20 h-28 object-cover rounded-2xl"
             />
             <div className="flex-1 min-w-0">
-              <p className="label-cap text-[10px] text-[#9EA3AE]">
+              <p className="label-cap text-[10px] text-[#8A8A8A]">
                 LATEST {latestScan.date.slice(0, 10)}
               </p>
               <div className="flex gap-3 mt-1">
@@ -420,7 +420,7 @@ function ProgressPage() {
           )}
           {scanning ? "Analyzing..." : latestScan ? "New Scan" : "Take Physique Scan"}
         </button>
-        {scanError && <p className="text-sm text-[#FC4C02] mt-2">{scanError}</p>}
+        {scanError && <p className="text-sm text-[#E10600] mt-2">{scanError}</p>}
         {state.physiqueScans.length > 1 && (
           <div className="grid grid-cols-4 gap-1 mt-3">
             {state.physiqueScans
@@ -438,7 +438,7 @@ function ProgressPage() {
                       deleteScan(p.id);
                     }}
                     aria-label="Delete scan"
-                    className="absolute top-1 right-1 bg-black/80 rounded-2xl text-[#FC4C02] p-1 hover:bg-[#FC4C02] hover:text-black"
+                    className="absolute top-1 right-1 bg-black/80 rounded-2xl text-[#E10600] p-1 hover:bg-[#E10600] hover:text-black"
                   >
                     <Trash2 size={11} />
                   </button>
@@ -454,12 +454,12 @@ function ProgressPage() {
           <p className="label-cap mb-2">Strength Curves</p>
           <div className="flex flex-col gap-3">
             {strengthCurves.map((c) => (
-              <div key={c.name} className="rounded-2xl p-4" style={{ background: "#1C1D21", border: "1.5px solid #2C2D33" }}>
+              <div key={c.name} className="rounded-2xl p-4" style={{ background: "#141414", border: "1.5px solid #262626" }}>
                 <div className="flex items-center justify-between mb-2">
                   <p className="display text-sm uppercase font-extrabold text-white truncate">
                     {c.name}
                   </p>
-                  <p className="display text-lg font-extrabold text-[#FC4C02]">
+                  <p className="display text-lg font-extrabold text-[#E10600]">
                     {Math.max(...c.points.map((p) => p.weight))}KG
                   </p>
                 </div>
@@ -481,11 +481,11 @@ function ProgressPage() {
                 <div key={name}>
                   <div className="flex justify-between text-xs uppercase font-bold tracking-wider mb-1">
                     <span className="text-white">{name}</span>
-                    <span className="text-[#9EA3AE]">{Math.round(vol).toLocaleString()}kg</span>
+                    <span className="text-[#8A8A8A]">{Math.round(vol).toLocaleString()}kg</span>
                   </div>
                   <div className="h-2 bg-[#0a0a0a]">
                     <div
-                      className="h-full bg-[#FC4C02]"
+                      className="h-full bg-[#E10600]"
                       style={{ width: `${(vol / max) * 100}%` }}
                     />
                   </div>
@@ -499,7 +499,7 @@ function ProgressPage() {
       {/* Weight */}
       <section className="px-5 mb-6">
         <p className="label-cap mb-2">Weight Log</p>
-        <div className="rounded-2xl p-4" style={{ background: "#1C1D21", border: "1.5px solid #2C2D33" }}>
+        <div className="rounded-2xl p-4" style={{ background: "#141414", border: "1.5px solid #262626" }}>
           <div className="flex gap-2 mb-3">
             <input
               inputMode="decimal"
@@ -521,12 +521,12 @@ function ProgressPage() {
                 .reverse()
                 .map((w) => (
                   <div key={w.date} className="flex items-center justify-between py-1 text-xs">
-                    <span className="text-[#9EA3AE]">{w.date}</span>
+                    <span className="text-[#8A8A8A]">{w.date}</span>
                     <div className="flex items-center gap-3">
                       <span className="font-bold text-grit">{w.weight} kg</span>
                       <button
                         onClick={() => deleteWeight(w.date)}
-                        className="text-[#9EA3AE] hover:text-[#FC4C02]"
+                        className="text-[#8A8A8A] hover:text-[#E10600]"
                         aria-label="Delete entry"
                       >
                         <Trash2 size={12} />
@@ -555,7 +555,7 @@ function ProgressPage() {
               <MeasurementsChart entries={state.measurements} />
               <div className="flex gap-3 justify-center mt-2 text-[10px] label-cap">
                 <span className="flex items-center gap-1">
-                  <i className="w-2 h-2 inline-block" style={{ background: "#e63222" }} />
+                  <i className="w-2 h-2 inline-block" style={{ background: "#E10600" }} />
                   Chest
                 </span>
                 <span className="flex items-center gap-1">
@@ -581,13 +581,13 @@ function ProgressPage() {
                 .reverse()
                 .map((m) => (
                   <div key={m.date} className="flex items-center justify-between py-1 text-[11px]">
-                    <span className="text-[#9EA3AE]">{m.date}</span>
+                    <span className="text-[#8A8A8A]">{m.date}</span>
                     <span className="text-white">
                       C{m.chest} W{m.waist} A{m.arms} L{m.legs}
                     </span>
                     <button
                       onClick={() => deleteMeasurement(m.date)}
-                      className="text-[#9EA3AE] hover:text-[#FC4C02]"
+                      className="text-[#8A8A8A] hover:text-[#E10600]"
                       aria-label="Delete entry"
                     >
                       <Trash2 size={12} />
@@ -648,7 +648,7 @@ function ProgressPage() {
                       <button
                         onClick={() => togglePhoto(c.date)}
                         className="relative border block w-full"
-                        style={{ borderColor: sel ? "#e63222" : "#2C2D33" }}
+                        style={{ borderColor: sel ? "#E10600" : "#262626" }}
                       >
                         <img
                           src={c.photoDataUrl}
@@ -665,7 +665,7 @@ function ProgressPage() {
                       <button
                         onClick={() => deleteCheckIn(c.date)}
                         aria-label="Delete photo"
-                        className="absolute top-1 right-1 bg-black/80 rounded-2xl text-[#FC4C02] p-1 hover:bg-[#FC4C02] hover:text-black"
+                        className="absolute top-1 right-1 bg-black/80 rounded-2xl text-[#E10600] p-1 hover:bg-[#E10600] hover:text-black"
                       >
                         <Trash2 size={10} />
                       </button>
@@ -711,18 +711,18 @@ function Stat({
   icon?: React.ReactNode;
 }) {
   return (
-    <div className="p-3 rounded-2xl" style={{ background: "#1C1D21", border: "1.5px solid #2C2D33" }}>
-      <p className="text-[10px] font-bold uppercase tracking-widest text-[#9EA3AE] flex items-center gap-1">
+    <div className="p-3 rounded-2xl" style={{ background: "#141414", border: "1.5px solid #262626" }}>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-[#8A8A8A] flex items-center gap-1">
         {icon}
         {label}
       </p>
       <p
         className="display text-3xl font-extrabold leading-none mt-1"
-        style={{ color: accent ? "#FC4C02" : "#ffffff" }}
+        style={{ color: accent ? "#E10600" : "#ffffff" }}
       >
         {value}
       </p>
-      {sub && <p className="text-[10px] text-[#9EA3AE] uppercase tracking-wider mt-1">{sub}</p>}
+      {sub && <p className="text-[10px] text-[#8A8A8A] uppercase tracking-wider mt-1">{sub}</p>}
     </div>
   );
 }
@@ -730,7 +730,7 @@ function Stat({
 function ScoreChip({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl px-2 py-1">
-      <p className="text-[8px] uppercase tracking-wider text-[#9EA3AE]">{label}</p>
+      <p className="text-[8px] uppercase tracking-wider text-[#8A8A8A]">{label}</p>
       <p className="display text-sm font-extrabold text-white leading-none">{value}</p>
     </div>
   );
@@ -793,7 +793,7 @@ function ConsistencyHeatmap({ completedDates }: { completedDates: string[] }) {
             <div key={w} style={{ width: CELL, flexShrink: 0 }}>
               {label && (
                 <span
-                  className="text-[8px] label-cap text-[#9EA3AE]"
+                  className="text-[8px] label-cap text-[#8A8A8A]"
                   style={{ whiteSpace: "nowrap" }}
                 >
                   {label.label}
@@ -815,7 +815,7 @@ function ConsistencyHeatmap({ completedDates }: { completedDates: string[] }) {
                   width: CELL,
                   height: CELL,
                   background:
-                    cell.count === 0 ? "#111215" : cell.count === 1 ? "#7a1410" : "#e63222",
+                    cell.count === 0 ? "#0A0A0A" : cell.count === 1 ? "#7a1410" : "#E10600",
                   flexShrink: 0,
                 }}
               />
@@ -825,11 +825,11 @@ function ConsistencyHeatmap({ completedDates }: { completedDates: string[] }) {
       </div>
       {/* Legend */}
       <div className="flex items-center gap-2 mt-2">
-        <span className="text-[9px] label-cap text-[#9EA3AE]">Less</span>
-        {["#111215", "#7a1410", "#e63222"].map((c) => (
+        <span className="text-[9px] label-cap text-[#8A8A8A]">Less</span>
+        {["#0A0A0A", "#7a1410", "#E10600"].map((c) => (
           <div key={c} style={{ width: CELL, height: CELL, background: c, flexShrink: 0 }} />
         ))}
-        <span className="text-[9px] label-cap text-[#9EA3AE]">More</span>
+        <span className="text-[9px] label-cap text-[#8A8A8A]">More</span>
       </div>
     </div>
   );
@@ -863,7 +863,7 @@ function StreakCalendar({ completedDates }: { completedDates: string[] }) {
               title={c.date}
               className="w-3 h-3"
               style={{
-                background: c.done ? "#e63222" : "#111215",
+                background: c.done ? "#E10600" : "#0A0A0A",
                 outline: c.isToday ? "1px solid #f5f5f0" : undefined,
               }}
             />
@@ -891,7 +891,7 @@ function LineChart({ points }: { points: number[] }) {
     .join(" ");
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-20" preserveAspectRatio="none">
-      <polyline points={pts} fill="none" stroke="#FC4C02" strokeWidth="2" />
+      <polyline points={pts} fill="none" stroke="#E10600" strokeWidth="2" />
     </svg>
   );
 }
@@ -915,7 +915,7 @@ function WeightChart({ entries }: { entries: { date: string; weight: number }[] 
     .join(" ");
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-24">
-      <polyline points={pts} fill="none" stroke="#FC4C02" strokeWidth="2" />
+      <polyline points={pts} fill="none" stroke="#E10600" strokeWidth="2" />
       {entries.map((e, i) => {
         const x = pad + (i * (w - pad * 2)) / (entries.length - 1);
         const y = h - pad - ((e.weight - min) / range) * (h - pad * 2);
@@ -965,20 +965,20 @@ function ScanModal({
           <Stat label="SYMMETRY" value={`${a.symmetryScore}`} />
         </div>
         <div className="bg-grit-card rounded-2xl p-4 mb-4">
-          <p className="label-cap text-[#FC4C02] text-[10px]">VERDICT</p>
+          <p className="label-cap text-[#E10600] text-[10px]">VERDICT</p>
           <p className="display text-base uppercase font-extrabold text-white mt-1">{a.verdict}</p>
         </div>
         <div className="grid grid-cols-1 gap-3 mb-4">
           <Block title="STRENGTHS" items={a.strengths} color="#7acc7a" />
-          <Block title="WEAKNESSES" items={a.weaknesses} color="#e63222" />
+          <Block title="WEAKNESSES" items={a.weaknesses} color="#E10600" />
           <Block title="FOCUS NEXT" items={a.focus} color="#f5f5f0" />
         </div>
         {a.leanMassNote && (
-          <p className="text-xs text-[#9EA3AE] uppercase tracking-wider mb-4">{a.leanMassNote}</p>
+          <p className="text-xs text-[#8A8A8A] uppercase tracking-wider mb-4">{a.leanMassNote}</p>
         )}
         <button
           onClick={onDelete}
-          className="w-full rounded-2xl text-[#FC4C02] py-2 label-cap text-xs flex items-center justify-center gap-2 hover:bg-[#FC4C02] hover:text-black mb-6"
+          className="w-full rounded-2xl text-[#E10600] py-2 label-cap text-xs flex items-center justify-center gap-2 hover:bg-[#E10600] hover:text-black mb-6"
         >
           <Trash2 size={14} /> Delete Scan
         </button>
@@ -996,7 +996,7 @@ function MeasurementsChart({
     h = 110,
     pad = 8;
   const keys: { k: "chest" | "waist" | "arms" | "legs"; color: string }[] = [
-    { k: "chest", color: "#e63222" },
+    { k: "chest", color: "#E10600" },
     { k: "waist", color: "#ffffff" },
     { k: "arms", color: "#7acc7a" },
     { k: "legs", color: "#7aa3cc" },

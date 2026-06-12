@@ -5,7 +5,7 @@ export function GritLogo({ className = "" }: { className?: string }) {
       style={{ fontStyle: "italic" }}
     >
       <span style={{ color: "#f5f5f0" }}>DEAD</span>
-      <span style={{ color: "#e63222" }}>SET</span>
+      <span style={{ color: "#E10600" }}>SET</span>
     </span>
   );
 }

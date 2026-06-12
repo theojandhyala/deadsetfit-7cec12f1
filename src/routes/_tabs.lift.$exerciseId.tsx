@@ -126,8 +126,8 @@ function LiftDetailPage() {
             onClick={() => setRangeIdx(i)}
             className="px-3 py-1.5 text-[11px] font-extrabold tracking-widest border"
             style={{
-              borderColor: i === rangeIdx ? "#e63222" : "#262626",
-              color: i === rangeIdx ? "#e63222" : "#8a8a8a",
+              borderColor: i === rangeIdx ? "#E10600" : "#262626",
+              color: i === rangeIdx ? "#E10600" : "#8a8a8a",
               background: i === rangeIdx ? "#1a0606" : "transparent",
             }}
           >
@@ -154,7 +154,7 @@ function LiftDetailPage() {
                 <Line
                   type="monotone"
                   dataKey="e1rm"
-                  stroke="#e63222"
+                  stroke="#E10600"
                   strokeWidth={2}
                   dot={{ r: 3 }}
                 />
@@ -169,7 +169,7 @@ function LiftDetailPage() {
                 <XAxis dataKey="date" tick={{ fill: "#8a8a8a", fontSize: 10 }} />
                 <YAxis tick={{ fill: "#8a8a8a", fontSize: 10 }} />
                 <Tooltip contentStyle={{ background: "#0a0a0a", border: "1px solid #262626" }} />
-                <Bar dataKey="volume" fill="#e63222" />
+                <Bar dataKey="volume" fill="#E10600" />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -267,8 +267,8 @@ function StrengthStandard({
               <div
                 className="w-full h-3"
                 style={{
-                  background: isActive ? "#e63222" : isPast ? "#7a1410" : "#1a1a1a",
-                  outline: isActive ? "1px solid #e63222" : undefined,
+                  background: isActive ? "#E10600" : isPast ? "#7a1410" : "#1a1a1a",
+                  outline: isActive ? "1px solid #E10600" : undefined,
                   position: "relative",
                   overflow: "hidden",
                 }}
@@ -281,7 +281,7 @@ function StrengthStandard({
               </div>
               <span
                 className="text-[8px] label-cap"
-                style={{ color: isActive ? "#e63222" : "#8a8a8a" }}
+                style={{ color: isActive ? "#E10600" : "#8a8a8a" }}
               >
                 {level.slice(0, 3).toUpperCase()}
               </span>

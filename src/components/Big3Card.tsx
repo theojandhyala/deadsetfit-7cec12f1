@@ -61,7 +61,7 @@ export function Big3Card({ state }: { state: AppState }) {
               trendColor = "#3a8a3a";
             } else if (delta < 0) {
               trendIcon = <TrendingDown size={12} />;
-              trendColor = "#e63222";
+              trendColor = "#E10600";
             }
           }
           return (

@@ -228,7 +228,7 @@ function ProgramsPage() {
             <li
               key={p.id}
               className="bg-grit-card border"
-              style={{ borderColor: isActive ? "#e63222" : "#262626" }}
+              style={{ borderColor: isActive ? "#E10600" : "#262626" }}
             >
               <div className="flex items-stretch">
                 <Link

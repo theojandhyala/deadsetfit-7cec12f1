@@ -152,7 +152,7 @@ function RecoveryPage() {
   }, [state.completedDates, state.sessions]);
 
   const scoreLabel = score >= 80 ? "READY" : score >= 60 ? "CAUTION" : "RECOVER";
-  const scoreColor = score >= 80 ? "#22c55e" : score >= 60 ? "#fbbf24" : "#e63222";
+  const scoreColor = score >= 80 ? "#22c55e" : score >= 60 ? "#fbbf24" : "#E10600";
 
   // Timer effect
   useEffect(() => {
@@ -259,9 +259,9 @@ function RecoveryPage() {
                 onClick={() => toggleMuscle(m)}
                 className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider border"
                 style={{
-                  borderColor: active ? "#e63222" : "#262626",
+                  borderColor: active ? "#E10600" : "#262626",
                   background: active ? "#1a0606" : "transparent",
-                  color: active ? "#e63222" : "#8a8a8a",
+                  color: active ? "#E10600" : "#8a8a8a",
                 }}
               >
                 {m}
@@ -279,7 +279,7 @@ function RecoveryPage() {
             onClick={() => setTab(t)}
             className="label-cap pb-3 pt-1 border-b-2"
             style={{
-              borderColor: tab === t ? "#e63222" : "transparent",
+              borderColor: tab === t ? "#E10600" : "transparent",
               color: tab === t ? "#f5f5f0" : "#8a8a8a",
             }}
           >

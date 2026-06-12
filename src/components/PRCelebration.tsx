@@ -37,7 +37,7 @@ export function PRCelebration({
           const left = (i * 37) % 100;
           const delay = (i % 7) * 0.12;
           const size = 6 + (i % 4) * 3;
-          const color = ["#e63222", "#f5c542", "#f5f5f0"][i % 3];
+          const color = ["#E10600", "#f5c542", "#f5f5f0"][i % 3];
           return (
             <span
               key={i}
@@ -73,7 +73,7 @@ export function PRCelebration({
         />
         <p
           className="label-cap text-sm tracking-[0.4em] animate-[pr-flash_0.8s_ease-in-out_3]"
-          style={{ color: "#e63222" }}
+          style={{ color: "#E10600" }}
         >
           NEW PR
         </p>
@@ -105,7 +105,7 @@ export function PRCelebration({
         }
         @keyframes pr-flash {
           0%, 100% { opacity: 1; text-shadow: 0 0 0 transparent; }
-          50% { opacity: 0.2; text-shadow: 0 0 20px #e63222; }
+          50% { opacity: 0.2; text-shadow: 0 0 20px #E10600; }
         }
       `}</style>
     </div>

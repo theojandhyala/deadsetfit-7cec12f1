@@ -11,7 +11,7 @@ interface Props {
   size?: number;
 }
 
-const ACCENT = "#e63222";
+const ACCENT = "#E10600";
 const DIM = "#5a1a14";
 const BASE = "#1a1a1a";
 const STROKE = "#2a2a2a";
