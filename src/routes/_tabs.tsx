@@ -136,8 +136,8 @@ function TabsLayout() {
     <div
       className="min-h-screen bg-grit"
       style={{
-        paddingTop: "env(safe-area-inset-top)",
-        paddingBottom: "calc(70px + env(safe-area-inset-bottom))",
+        paddingTop: "calc(env(safe-area-inset-top) + 56px)",
+        paddingBottom: "calc(76px + env(safe-area-inset-bottom))",
       }}
     >
       <TopBar />
