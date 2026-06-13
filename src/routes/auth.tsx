@@ -67,7 +67,7 @@ export function AuthPage() {
         });
         if (error) throw error;
         toast.success("Welcome to DEADSET");
-        navigate({ to: "/onboarding", replace: true });
+        // routing handled by onAuthStateChange listener
       } else {
         const id = identifier.trim().toLowerCase();
         if (id.includes("@")) {
