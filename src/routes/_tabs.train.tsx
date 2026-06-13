@@ -25,6 +25,7 @@ import { calculateGritScore, calculateStreak, defaultSchedule, isoDay, todayKey 
 import { generateSchedule } from "@/lib/ai.functions";
 import { ProBanner } from "@/components/ProBanner";
 import { InsightsWidget } from "@/components/InsightsWidget";
+import { AIToolbox } from "@/components/AIToolbox";
 import type { DayKey, Schedule, Program } from "@/lib/types";
 
 const DAY_KEYS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
@@ -229,6 +230,9 @@ function TrainPage() {
         </div>
 
       </div>
+
+      {/* AI feature shortcuts */}
+      <AIToolbox />
 
       {/* Weekly insights widget */}
       <InsightsWidget />

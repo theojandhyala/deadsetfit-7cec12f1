@@ -2,7 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const ProfileSchema = z.object({
   username: z
@@ -36,10 +35,11 @@ export const signUpUser = createServerFn({ method: "POST" })
     z.object({ email: z.string().email(), password: z.string().min(6).max(128) }).parse(input),
   )
   .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     // Check if email is already registered
     const { data: existing } = await supabaseAdmin.auth.admin.listUsers();
     const alreadyExists = existing.users.some(
-      (u) => u.email?.toLowerCase() === data.email.toLowerCase(),
+      (u: { email?: string | null }) => u.email?.toLowerCase() === data.email.toLowerCase(),
     );
     if (alreadyExists) throw new Error("An account with this email already exists");
 
@@ -76,6 +76,7 @@ export const saveProfile = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
 
     if (data.username) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: existing } = await supabaseAdmin
         .from("profiles")
         .select("id")
@@ -132,6 +133,7 @@ export const signInWithUsername = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const fail = { ok: false as const, error: "Invalid username or password" };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("id")

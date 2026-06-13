@@ -37,11 +37,18 @@ export function AuthPage() {
       setMode("reset");
       return;
     }
-    const { data } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (session && mode !== "reset") routeAfterAuth();
+    let routed = false;
+    const go = () => {
+      if (routed) return;
+      routed = true;
+      routeAfterAuth();
+    };
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      if (mode === "reset") return;
+      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) go();
     });
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) routeAfterAuth();
+      if (session) go();
     }).catch(() => {});
     return () => data.subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -60,7 +67,7 @@ export function AuthPage() {
         });
         if (error) throw error;
         toast.success("Welcome to DEADSET");
-        navigate({ to: "/onboarding", replace: true });
+        // routing handled by onAuthStateChange listener
       } else {
         const id = identifier.trim().toLowerCase();
         if (id.includes("@")) {

@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Check, Zap } from "lucide-react";
+import { Check, Zap, Camera, MessageSquare, Scan, Images, Activity } from "lucide-react";
 import { GritLogo } from "@/components/GritLogo";
 import { getState, setLocalStateOwner, setState, waitForRemoteState } from "@/lib/storage";
 import { defaultSchedule } from "@/lib/calc";
@@ -32,7 +32,8 @@ type Step =
   | "weakness"
   | "prs"
   | "username"
-  | "photo";
+  | "photo"
+  | "tour";
 
 type Mode = "GENERATE" | "BUILD";
 
@@ -54,6 +55,7 @@ function orderFor(mode: Mode | null): Step[] {
     "prs",
     "username",
     "photo",
+    "tour",
   ];
 }
 
@@ -303,6 +305,7 @@ function Onboarding() {
         {step === "photo" && (
           <PhotoStep onSubmit={(url) => next({ avatarDataUrl: url })} onSkip={() => next({})} />
         )}
+        {step === "tour" && <TourStep onContinue={() => next({})} />}
       </div>
     </div>
   );
@@ -644,6 +647,51 @@ function PRStep({ onContinue }: { onContinue: () => void }) {
           Skip
         </button>
       </div>
+    </>
+  );
+}
+
+function TourStep({ onContinue }: { onContinue: () => void }) {
+  const tools = [
+    { Icon: Camera, t: "AI MEAL SCAN", d: "Snap your plate — get calories and macros in seconds.", where: "Diet tab" },
+    { Icon: MessageSquare, t: "AI COACH", d: "24/7 strength coach. Ask anything, get a real answer.", where: "Profile → Coach" },
+    { Icon: Scan, t: "PHYSIQUE SCANNER", d: "AI grades body fat, muscle and symmetry from a photo.", where: "Progress tab" },
+    { Icon: Images, t: "PROGRESS PICTURES", d: "Side-by-side check-ins to see the transformation.", where: "Progress tab" },
+    { Icon: Activity, t: "AI RUN COACH", d: "Live tracking with pacing tips and your next session.", where: "Cardio tab" },
+  ];
+  return (
+    <>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">Your AI toolkit</h1>
+      <p className="text-sm text-[#8a8a8a] mb-6">
+        Built in. Always on. Find them anywhere you see the spark.
+      </p>
+      <div className="flex flex-col gap-3 mb-8">
+        {tools.map(({ Icon, t, d, where }) => (
+          <div
+            key={t}
+            className="p-4 flex gap-3"
+            style={{
+              background: "rgba(20,20,20,0.85)",
+              border: "1px solid rgba(255,255,255,0.06)",
+            }}
+          >
+            <div
+              className="w-10 h-10 flex items-center justify-center shrink-0"
+              style={{ background: "rgba(225,6,0,0.15)", color: "#E10600" }}
+            >
+              <Icon size={18} />
+            </div>
+            <div className="min-w-0">
+              <p className="label-cap text-sm text-grit">{t}</p>
+              <p className="text-xs text-grit-dim mt-1 leading-relaxed">{d}</p>
+              <p className="text-[10px] text-accent-red mt-1 label-cap">{where}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <button onClick={onContinue} className="btn-grit mt-auto">
+        Let's go
+      </button>
     </>
   );
 }
