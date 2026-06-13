@@ -133,6 +133,7 @@ export const signInWithUsername = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const fail = { ok: false as const, error: "Invalid username or password" };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("id")
