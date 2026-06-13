@@ -35,10 +35,11 @@ export const signUpUser = createServerFn({ method: "POST" })
     z.object({ email: z.string().email(), password: z.string().min(6).max(128) }).parse(input),
   )
   .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     // Check if email is already registered
     const { data: existing } = await supabaseAdmin.auth.admin.listUsers();
     const alreadyExists = existing.users.some(
-      (u) => u.email?.toLowerCase() === data.email.toLowerCase(),
+      (u: { email?: string | null }) => u.email?.toLowerCase() === data.email.toLowerCase(),
     );
     if (alreadyExists) throw new Error("An account with this email already exists");
 
