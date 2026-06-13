@@ -554,22 +554,7 @@ function LiveRunner({
         const t = now - startedAtRef.current - pausedAccumRef.current;
         const prev = samplesRef.current[samplesRef.current.length - 1];
 
-        let instantSpeed: number | null = null;
-        if (lastRawPosRef.current) {
-          const rawDist = haversine(
-            { lat: lastRawPosRef.current.lat, lng: lastRawPosRef.current.lng },
-            { lat: latitude, lng: longitude },
-          );
-          const dt = (now - lastRawPosRef.current.time) / 1000;
-          if (dt > 0) instantSpeed = rawDist / dt;
-        }
         lastRawPosRef.current = { lat: latitude, lng: longitude, time: now };
-
-        if (instantSpeed != null && instantSpeed > cfg.maxSpeedMps * 1.5) {
-          rejectCountRef.current += 1;
-          rejectCountRef2.current += 1;
-          return;
-        }
 
         const result = smoothGpsFix(
           prev,
@@ -581,7 +566,7 @@ function LiveRunner({
             speed: deviceSpeed,
             timeMs: t,
           },
-          { maxAccuracyM: 90, maxSpeedMps: cfg.maxSpeedMps, minDeltaM: 0.5 },
+          { maxAccuracyM: 50, maxSpeedMps: cfg.maxSpeedMps, minDeltaM: 2 },
         );
 
         if (!result.accepted) {
@@ -603,7 +588,7 @@ function LiveRunner({
         setSamples(samplesRef.current);
       },
       handleGpsError,
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 12000 },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 },
     );
     requestWakeLock();
   };

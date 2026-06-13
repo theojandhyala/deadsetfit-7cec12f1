@@ -97,12 +97,9 @@ export function bestKmPace(samples: RunSample[]): number {
 }
 
 /**
- * Decide whether to accept a raw GPS fix, and if so produce a smoothed
- * coordinate. Filters out: low-accuracy fixes, jitter, and impossible-speed
- * jumps (e.g. tower-handoff teleports). Applies an accuracy-weighted
- * low-pass filter (simple 1D Kalman-style blend) against the previous
- * accepted sample so the rendered polyline tracks the actual path closely
- * instead of zig-zagging between noisy fixes.
+ * Accept or reject a raw GPS fix. Records the raw coordinate directly —
+ * no position blending — so the route matches reality like Strava.
+ * Filters out: poor-accuracy fixes, stationary jitter, and teleport jumps.
  */
 export function smoothGpsFix(
   prev: RunSample | undefined,
@@ -112,70 +109,40 @@ export function smoothGpsFix(
     accuracy?: number;
     altitude?: number | null;
     speed?: number | null;
-    timeMs: number; // run-relative ms
+    timeMs: number;
   },
   opts: { maxAccuracyM?: number; maxSpeedMps?: number; minDeltaM?: number } = {},
 ):
   | { accepted: false }
-  | {
-      accepted: true;
-      lat: number;
-      lng: number;
-      d: number;
-      total: number;
-      acc?: number;
-      alt?: number;
-    } {
-  const maxAccuracy = opts.maxAccuracyM ?? 100;
-  const maxSpeed = opts.maxSpeedMps ?? 12.5; // ~45 km/h, still rejects GPS teleports
-  const minDelta = opts.minDeltaM ?? 0.75;
+  | { accepted: true; lat: number; lng: number; d: number; total: number; acc?: number; alt?: number } {
+  const maxAccuracy = opts.maxAccuracyM ?? 50;
+  const maxSpeed = opts.maxSpeedMps ?? 12.5;
+  const minDelta = opts.minDeltaM ?? 2;
   const acc = raw.accuracy;
 
-  // Reject very inaccurate fixes outright.
   if (acc != null && acc > maxAccuracy) return { accepted: false };
 
   if (!prev) {
-    return {
-      accepted: true,
-      lat: raw.lat,
-      lng: raw.lng,
-      d: 0,
-      total: 0,
-      acc,
-      alt: raw.altitude ?? undefined,
-    };
+    return { accepted: true, lat: raw.lat, lng: raw.lng, d: 0, total: 0, acc, alt: raw.altitude ?? undefined };
   }
 
   const rawDist = haversine({ lat: prev.lat, lng: prev.lng }, { lat: raw.lat, lng: raw.lng });
   const dtSec = Math.max(0.001, (raw.timeMs - prev.t) / 1000);
 
-  // Jitter: keep this deliberately permissive so 0.01km changes show quickly.
-  // Accuracy still matters, but we cap the noise gate and let device speed prove movement.
-  const movingBySensor = typeof raw.speed === "number" && raw.speed > 0.35;
-  const noiseFloor = movingBySensor ? minDelta : Math.max(minDelta, Math.min(4, (acc ?? 0) * 0.12));
-  if (rawDist < noiseFloor) return { accepted: false };
+  // Filter stationary noise — device speed sensor overrides the distance gate
+  const movingBySensor = typeof raw.speed === "number" && raw.speed > 0.5;
+  if (!movingBySensor && rawDist < minDelta) return { accepted: false };
+  if (movingBySensor && rawDist < 0.5) return { accepted: false };
 
-  // Impossible-speed teleport: reject hard.
-  if (rawDist / dtSec > maxSpeed) return { accepted: false };
-
-  // Accuracy-weighted blend toward the new fix. When the new fix is much
-  // less accurate than our prior position, we trust it less.
-  const prevAcc = prev.acc ?? 10;
-  const newAcc = acc ?? 10;
-  const baseK = prevAcc / (prevAcc + newAcc); // 0..1, higher = trust new fix more
-  const k = Math.min(0.85, Math.max(movingBySensor ? 0.55 : 0.35, baseK));
-  const blendedLat = prev.lat + k * (raw.lat - prev.lat);
-  const blendedLng = prev.lng + k * (raw.lng - prev.lng);
-
-  const d = haversine({ lat: prev.lat, lng: prev.lng }, { lat: blendedLat, lng: blendedLng });
-  if (d < minDelta) return { accepted: false };
+  // Reject GPS teleport (tower handoff, multipath spike)
+  if (rawDist / dtSec > maxSpeed * 2) return { accepted: false };
 
   return {
     accepted: true,
-    lat: blendedLat,
-    lng: blendedLng,
-    d,
-    total: prev.total + d,
+    lat: raw.lat,
+    lng: raw.lng,
+    d: rawDist,
+    total: prev.total + rawDist,
     acc,
     alt: raw.altitude ?? undefined,
   };
