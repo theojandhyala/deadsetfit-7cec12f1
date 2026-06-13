@@ -76,6 +76,7 @@ export const saveProfile = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
 
     if (data.username) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: existing } = await supabaseAdmin
         .from("profiles")
         .select("id")
