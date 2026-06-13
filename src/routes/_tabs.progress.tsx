@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
-import { Activity, Camera, Trophy, Loader2, Sparkles, Flame, X, Trash2 } from "lucide-react";
+import { Camera, Trophy, Loader2, Sparkles, Flame, X, Trash2 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useAppState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
@@ -9,8 +9,6 @@ import { analyzePhysique } from "@/lib/physique.functions";
 import type { PhysiqueScan } from "@/lib/types";
 import { QuickLogFAB } from "@/components/QuickLogFAB";
 import { PRList, groupForMuscle } from "@/components/PRList";
-import { RunMap } from "@/components/RunMap";
-import { formatDistance, formatDuration, formatPace } from "@/lib/run";
 
 export const Route = createFileRoute("/_tabs/progress")({
   head: () => ({ meta: [{ title: "DEADSET — Progress" }] }),
@@ -36,13 +34,6 @@ function ProgressPage() {
   const totalSessions = state.sessions.filter((s) => s.endedAt).length;
   const totalVolume = state.sessions.reduce((a, s) => a + (s.totalVolume || 0), 0);
   const totalPRs = state.sessions.reduce((a, s) => a + (s.prCount || 0), 0);
-
-  const runs = state.runs ?? [];
-  const weekAgo = Date.now() - 7 * 24 * 3600 * 1000;
-  const weekRuns = runs.filter((r) => new Date(r.date).getTime() >= weekAgo);
-  const totalCardioKm = runs.reduce((s, r) => s + r.distanceM, 0) / 1000;
-  const weekCardioKm = weekRuns.reduce((s, r) => s + r.distanceM, 0) / 1000;
-  const totalCardioCalories = runs.reduce((s, r) => s + (r.calories ?? 0), 0);
 
   function addPhoto(file: File) {
     const r = new FileReader();
@@ -294,61 +285,6 @@ function ProgressPage() {
         <Stat label="VOLUME" value={`${Math.round(totalVolume).toLocaleString()}`} sub="KG" />
         <Stat label="PRS" value={`${totalPRs}`} sub="HIT" accent={totalPRs > 0} />
       </section>
-
-      {/* Cardio Stats */}
-      {runs.length > 0 && (
-        <section className="px-5 mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <p className="label-cap flex items-center gap-1.5">
-              <Activity size={12} className="text-[#E10600]" /> Cardio
-            </p>
-            <Link to="/run" className="label-cap text-[10px] text-[#E10600]">
-              View all →
-            </Link>
-          </div>
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            <Stat
-              label="THIS WEEK"
-              value={weekCardioKm.toFixed(1)}
-              sub="km"
-              accent={weekCardioKm > 0}
-            />
-            <Stat label="ALL-TIME" value={totalCardioKm.toFixed(0)} sub="km" />
-            <Stat label="CALORIES" value={totalCardioCalories.toLocaleString()} sub="kcal" />
-          </div>
-          <div className="space-y-2">
-            {runs.slice(0, 3).map((r) => (
-              <Link
-                key={r.id}
-                to="/run"
-                className="flex gap-3 rounded-2xl p-2.5 items-center"
-              >
-                <div className="w-14 h-14 flex-shrink-0">
-                  <RunMap samples={r.samples} height={56} thumbnail />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-white truncate">
-                    {r.name ||
-                      `${(r.activityType ?? "run").charAt(0).toUpperCase() + (r.activityType ?? "run").slice(1)}`}
-                  </p>
-                  <p className="text-[10px] text-[#8A8A8A]">{r.date.slice(0, 10)}</p>
-                  <p className="label-cap text-[9px] text-[#E10600] mt-0.5">
-                    {(r.distanceM / 1000).toFixed(2)} km · {formatDuration(r.durationSec)}
-                  </p>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-[10px] font-bold text-grit">
-                    {r.activityType === "cycle"
-                      ? `${((r.distanceM / r.durationSec) * 3.6).toFixed(1)} km/h`
-                      : `${formatPace(r.avgPaceSecPerKm)}/km`}
-                  </p>
-                  <p className="text-[9px] text-[#8A8A8A]">{r.calories ?? 0} kcal</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
 
       {/* Calendar streak */}
       <section className="px-5 mb-6">

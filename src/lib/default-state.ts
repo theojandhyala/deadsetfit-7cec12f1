@@ -21,5 +21,4 @@ export const DEFAULT_STATE: AppState = {
   manualPRs: {},
   units: "kg",
   remindersEnabled: true,
-  runs: [],
 };
