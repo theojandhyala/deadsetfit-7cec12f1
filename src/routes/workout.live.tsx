@@ -128,7 +128,7 @@ function LiveWorkoutPage() {
   const [plateOpen, setPlateOpen] = useState(false);
   const liveWeightRef = useRef<number>(60);
   const [showRPE, setShowRPE] = useState(false);
-  const [celebrate, setCelebrate] = useState<{ name: string; weight: number; reps: number } | null>(
+  const [celebrate, setCelebrate] = useState<{ name: string; weight: number; reps: number; prevBest: number } | null>(
     null,
   );
 
@@ -295,7 +295,7 @@ function LiveWorkoutPage() {
       } catch {
         /* noop */
       }
-      setCelebrate({ name: current.name, weight, reps });
+      setCelebrate({ name: current.name, weight, reps, prevBest });
     }
   }
 
@@ -621,6 +621,7 @@ function LiveWorkoutPage() {
           exerciseName={celebrate.name}
           weight={celebrate.weight}
           reps={celebrate.reps}
+          prevBest={celebrate.prevBest}
           onClose={() => setCelebrate(null)}
         />
       )}
