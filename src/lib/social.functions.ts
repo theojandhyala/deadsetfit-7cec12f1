@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { gritLevel } from "@/lib/calc";
 
 // === Feed ===
@@ -9,6 +8,7 @@ export const getFeed = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // Hide posts authored by users this user has blocked or who have blocked them.
     const { data: blocks } = await supabase
@@ -169,6 +169,7 @@ export const getComments = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => GetCommentsInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows, error } = await supabase
       .from("post_comments")
       .select("id, user_id, content, created_at")
@@ -199,6 +200,7 @@ export const getLeaderboard = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase: _supabase, userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await supabaseAdmin
       .from("profiles")
       .select("id, display_name, username, avatar_url, grit_points")
