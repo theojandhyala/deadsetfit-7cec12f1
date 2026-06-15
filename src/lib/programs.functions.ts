@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { chatJSON } from "./ai-gateway.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const DayItem = z.object({
@@ -25,6 +24,7 @@ export const smartSuggest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => SmartSuggestInput.parse(d))
   .handler(async ({ data }) => {
+    const { chatJSON } = await import("./ai-gateway.server");
     const sys = `You are an elite strength coach reviewing a weekly training program.
 Reply STRICT JSON only:
 {"gaps":[{"day":"label","muscle":"muscle-slug","reason":"short reason","suggested_ids":["uuid","uuid"]}]}

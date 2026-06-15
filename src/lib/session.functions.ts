@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { chatJSON } from "./ai-gateway.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const PumpInput = z.object({
@@ -25,6 +24,7 @@ export const scorePump = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => PumpInput.parse(d))
   .handler(async ({ data }) => {
+    const { chatJSON } = await import("./ai-gateway.server");
     const sys = `You are an elite hypertrophy coach. Reply with strict JSON only:
 {"score": 0-100, "note": "ONE punchy uppercase sentence under 70 chars"}
 Score reflects training stimulus (volume, intensity, PRs, density). Note is motivational, no fluff.`;
