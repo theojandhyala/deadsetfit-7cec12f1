@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
-import { getMyProfile, signInWithUsername, signUpUser } from "@/lib/profile.functions";
+import { getMyProfile, signInWithUsername } from "@/lib/profile.functions";
 import { profileQuestionsComplete } from "@/lib/account-restore";
 import { Loader2, Eye, EyeOff, Zap } from "lucide-react";
 import { toast } from "sonner";
