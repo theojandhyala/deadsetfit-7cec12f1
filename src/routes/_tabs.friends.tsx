@@ -905,6 +905,8 @@ function Invite() {
 // ============ FRIENDS ============
 type SearchHit = Awaited<ReturnType<typeof searchAthletes>>[number];
 type Suggested = Awaited<ReturnType<typeof getSuggestedAthletes>>[number];
+type NearbyData = Awaited<ReturnType<typeof getNearbyAthletes>>;
+type NearbyAthlete = NearbyData["athletes"][number];
 
 type FollowingUser = Awaited<ReturnType<typeof getMyFollowing>>[number];
 
@@ -924,7 +926,7 @@ function Friends() {
   const [following, setFollowing] = useState<FollowingUser[] | null>(null);
   const [stats, setStats] = useState<{ following: number; followers: number } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [nearby, setNearby] = useState<Awaited<ReturnType<typeof getNearbyAthletes>> | null>(null);
+  const [nearby, setNearby] = useState<NearbyData | null>(null);
   const [myLoc, setMyLoc] = useState<{ city: string | null; country: string | null } | null>(null);
   const [locBusy, setLocBusy] = useState(false);
   const [cityInput, setCityInput] = useState("");
@@ -988,7 +990,7 @@ function Friends() {
       n
         ? {
             ...n,
-            athletes: n.athletes.map((a) =>
+            athletes: n.athletes.map((a: NearbyAthlete) =>
               a.id === id ? { ...a, following: !currentlyFollowing } : a,
             ),
           }
@@ -1133,7 +1135,7 @@ function Friends() {
             </p>
           ) : (
             <div className="mb-4">
-              {nearby.athletes.map((a) => (
+              {nearby.athletes.map((a: NearbyAthlete) => (
                 <AthleteRow
                   key={a.id}
                   a={a}

@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 /**
  * Permanently delete the authenticated user's account.
@@ -13,6 +12,7 @@ export const deleteMyAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // Best-effort cleanup of rows that don't auto-cascade.
     // Most tables already have ON DELETE CASCADE from auth.users, but we
@@ -75,6 +75,7 @@ export const adminDeleteAllUsers = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const secret = process.env.ADMIN_DELETE_SECRET;
     if (!secret || data.secret !== secret) throw new Error("Unauthorized");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // List all users (paginated, max 1000 per request)
     let page = 1;
