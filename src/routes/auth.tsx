@@ -41,22 +41,38 @@ export function AuthPage() {
     return null;
   }
 
-  async function ensureStarterProfile(email: string) {
-    const displayName = email.split("@")[0]?.replace(/[^a-zA-Z0-9_ -]/g, "").slice(0, 60) || "DEADSET Athlete";
+  async function ensureStarterProfile(email?: string | null) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.user?.id) return false;
+
+    const source = email || session.user.email || "";
+    const displayName =
+      source.split("@")[0]?.replace(/[^a-zA-Z0-9_ -]/g, "").slice(0, 60) ||
+      "DEADSET Athlete";
+    const row = { id: session.user.id, display_name: displayName };
+
     for (let attempt = 0; attempt < 5; attempt++) {
-      try {
-        await saveStarterProfile({ data: { display_name: displayName } });
-        return;
-      } catch (error) {
-        if (attempt === 4) throw error;
-        await delay(250 * (attempt + 1));
-      }
+      const { error } = await supabase.from("profiles").upsert(row, { onConflict: "id" });
+      if (!error) return true;
+      await delay(250 * (attempt + 1));
+    }
+
+    try {
+      await saveStarterProfile({ data: { display_name: displayName } });
+      return true;
+    } catch (error) {
+      console.warn("starter profile save failed", error);
+      return false;
     }
   }
 
   async function routeAfterAuth() {
     const session = await waitForActiveSession();
     if (!session) throw new Error("Sign-in did not finish. Please try again.");
+
+    await ensureStarterProfile(session.user.email);
 
     let profile = null;
     for (let attempt = 0; attempt < 5; attempt++) {
@@ -105,7 +121,14 @@ export function AuthPage() {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: window.location.origin + "/auth" },
+          options: {
+            emailRedirectTo: window.location.origin + "/auth",
+            data: {
+              display_name:
+                email.split("@")[0]?.replace(/[^a-zA-Z0-9_ -]/g, "").slice(0, 60) ||
+                "DEADSET Athlete",
+            },
+          },
         });
         if (error) throw error;
         // If auto-confirm is on, the listener will route. If a session wasn't
@@ -117,7 +140,7 @@ export function AuthPage() {
         }
         const activeSession = await waitForActiveSession();
         if (!activeSession) throw new Error("Account created — please sign in");
-        await ensureStarterProfile(email);
+        await ensureStarterProfile(activeSession.user.email ?? email);
         toast.success("Welcome to DEADSET");
         await routeAfterAuth();
       } else {
