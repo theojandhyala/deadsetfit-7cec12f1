@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { chatText } from "./ai-gateway.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const MessageSchema = z.object({
@@ -28,6 +27,7 @@ export const coachChat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => CoachInput.parse(d))
   .handler(async ({ data }) => {
+    const { chatText } = await import("./ai-gateway.server");
     const c = data.context ?? {};
     const ctxLines = [
       c.goal && `Goal: ${c.goal}`,

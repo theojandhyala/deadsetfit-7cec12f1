@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
-import { type StripeEnv, verifyWebhook } from "@/lib/stripe.server";
+
+type StripeEnv = "sandbox" | "live";
 
 let _supabase: any = null;
 function getSupabase(): any {
@@ -77,6 +78,7 @@ async function handleSubscriptionDeleted(subscription: any, env: StripeEnv) {
 }
 
 async function handleWebhook(req: Request, env: StripeEnv) {
+  const { verifyWebhook } = await import("@/lib/stripe.server");
   const event = await verifyWebhook(req, env);
   switch (event.type) {
     case "customer.subscription.created":

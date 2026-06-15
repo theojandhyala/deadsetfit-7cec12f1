@@ -1,16 +1,31 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { chatJSON, chatVisionJSON } from "./ai-gateway.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { requirePro } from "@/lib/require-pro.server";
 
 // === Photo food analysis ===
 const PhotoInput = z.object({ imageDataUrl: z.string().min(20).max(5_000_000) });
 
 export const analyzeFoodPhoto = createServerFn({ method: "POST" })
-  .middleware([requirePro])
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => PhotoInput.parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const env = process.env.STRIPE_ENV === "live" ? "live" : "sandbox";
+    const { data: sub } = await context.supabase
+      .from("subscriptions")
+      .select("status,current_period_end")
+      .eq("user_id", context.userId)
+      .eq("environment", env)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (
+      !sub ||
+      !["active", "trialing", "past_due"].includes(sub.status) ||
+      (sub.current_period_end && new Date(sub.current_period_end) <= new Date())
+    ) {
+      throw new Error("Pro subscription required");
+    }
+    const { chatVisionJSON } = await import("./ai-gateway.server");
     const sys = `You are a nutritionist. Identify the meal in the photo and estimate macros for the visible portion. Reply with strict JSON only:
 {"name":"...","calories":0,"protein":0,"carbs":0,"fats":0,"confidence":"low|medium|high","notes":"..."}`;
     return await chatVisionJSON<{
@@ -32,9 +47,25 @@ export const analyzeFoodPhoto = createServerFn({ method: "POST" })
 const BarcodeInput = z.object({ barcode: z.string().regex(/^[0-9]{6,14}$/) });
 
 export const lookupBarcode = createServerFn({ method: "POST" })
-  .middleware([requirePro])
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => BarcodeInput.parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const env = process.env.STRIPE_ENV === "live" ? "live" : "sandbox";
+    const { data: sub } = await context.supabase
+      .from("subscriptions")
+      .select("status,current_period_end")
+      .eq("user_id", context.userId)
+      .eq("environment", env)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (
+      !sub ||
+      !["active", "trialing", "past_due"].includes(sub.status) ||
+      (sub.current_period_end && new Date(sub.current_period_end) <= new Date())
+    ) {
+      throw new Error("Pro subscription required");
+    }
     const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${data.barcode}.json`, {
       headers: { "User-Agent": "DEADSET-App/1.0" },
     });
@@ -87,9 +118,26 @@ const WeeklyInput = z.object({
 });
 
 export const weeklyNutritionReport = createServerFn({ method: "POST" })
-  .middleware([requirePro])
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => WeeklyInput.parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const env = process.env.STRIPE_ENV === "live" ? "live" : "sandbox";
+    const { data: sub } = await context.supabase
+      .from("subscriptions")
+      .select("status,current_period_end")
+      .eq("user_id", context.userId)
+      .eq("environment", env)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (
+      !sub ||
+      !["active", "trialing", "past_due"].includes(sub.status) ||
+      (sub.current_period_end && new Date(sub.current_period_end) <= new Date())
+    ) {
+      throw new Error("Pro subscription required");
+    }
+    const { chatJSON } = await import("./ai-gateway.server");
     const sys = `You are an elite sports nutritionist reviewing a week of intake. Reply with strict JSON only:
 {"grade":"A+|A|B|C|D|F","adherence":0,"avgCalories":0,"avgProtein":0,"hydrationScore":0,"wins":["..."],"misses":["..."],"action":"one specific action for next week"}
 Where adherence and hydrationScore are 0-100.`;
