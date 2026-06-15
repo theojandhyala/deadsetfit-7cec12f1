@@ -23,7 +23,6 @@ export function AuthPage() {
   const [showPass, setShowPass] = useState(false);
   const [busy, setBusy] = useState(false);
   const usernameSignIn = useServerFn(signInWithUsername);
-  const signUp = useServerFn(signUpUser);
   const getProfile = useServerFn(getMyProfile);
 
   async function routeAfterAuth() {
