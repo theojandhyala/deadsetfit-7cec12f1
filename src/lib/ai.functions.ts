@@ -1,8 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { chatJSON } from "./ai-gateway.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { requirePro } from "@/lib/require-pro.server";
 
 const ScheduleInput = z.object({
   goal: z.string(),
@@ -15,6 +13,7 @@ export const generateSchedule = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => ScheduleInput.parse(d))
   .handler(async ({ data }) => {
+    const { chatJSON } = await import("./ai-gateway.server");
     const sys = `You are a strength coach. Reply with strict JSON only.
 The JSON shape must be:
 {"days":{"MON":{"label":"PUSH — CHEST / SHOULDERS / TRICEPS","exerciseIds":["bench-press","ohp"]}, ...all 7 days...}}
@@ -39,9 +38,26 @@ const MealsInput = z.object({
 });
 
 export const generateMeals = createServerFn({ method: "POST" })
-  .middleware([requirePro])
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => MealsInput.parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const env = process.env.STRIPE_ENV === "live" ? "live" : "sandbox";
+    const { data: sub } = await context.supabase
+      .from("subscriptions")
+      .select("status,current_period_end")
+      .eq("user_id", context.userId)
+      .eq("environment", env)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (
+      !sub ||
+      !["active", "trialing", "past_due"].includes(sub.status) ||
+      (sub.current_period_end && new Date(sub.current_period_end) <= new Date())
+    ) {
+      throw new Error("Pro subscription required");
+    }
+    const { chatJSON } = await import("./ai-gateway.server");
     const sys = `You are a sports nutritionist. Reply with strict JSON only:
 {"breakfast":{"name":"...","calories":0,"protein":0,"carbs":0,"fats":0},"lunch":{...},"dinner":{...},"snack":{...}}
 Total of all 4 meals should approximate the daily targets.`;
@@ -66,9 +82,26 @@ const SwapInput = z.object({
 });
 
 export const swapMeal = createServerFn({ method: "POST" })
-  .middleware([requirePro])
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => SwapInput.parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const env = process.env.STRIPE_ENV === "live" ? "live" : "sandbox";
+    const { data: sub } = await context.supabase
+      .from("subscriptions")
+      .select("status,current_period_end")
+      .eq("user_id", context.userId)
+      .eq("environment", env)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (
+      !sub ||
+      !["active", "trialing", "past_due"].includes(sub.status) ||
+      (sub.current_period_end && new Date(sub.current_period_end) <= new Date())
+    ) {
+      throw new Error("Pro subscription required");
+    }
+    const { chatJSON } = await import("./ai-gateway.server");
     const sys = `Reply with strict JSON only: {"name":"...","calories":0,"protein":0,"carbs":0,"fats":0}. Suggest one alternative meal with matching macros (±10%).`;
     const user = `Current: ${data.name} (${data.calories} kcal, P${data.protein} C${data.carbs} F${data.fats}). Give one different but similar-macro alternative.`;
     return await chatJSON<{
