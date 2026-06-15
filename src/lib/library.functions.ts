@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { chatJSON } from "./ai-gateway.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -112,6 +111,7 @@ export const generateExerciseBatch = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => BatchInput.parse(d))
   .handler(async ({ data, context }) => {
     const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: isAdmin, error: roleErr } = await supabaseAdmin.rpc("has_role", {
       _user_id: userId,
       _role: "admin",
