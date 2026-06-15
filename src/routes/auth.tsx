@@ -96,6 +96,7 @@ export function AuthPage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    manualAuthInProgress.current = true;
     setBusy(true);
     try {
       if (mode === "signup") {
@@ -114,7 +115,11 @@ export function AuthPage() {
           const { error: siErr } = await supabase.auth.signInWithPassword({ email, password });
           if (siErr) throw new Error("Account created — please sign in");
         }
+        const activeSession = await waitForActiveSession();
+        if (!activeSession) throw new Error("Account created — please sign in");
+        await ensureStarterProfile(email);
         toast.success("Welcome to DEADSET");
+        await routeAfterAuth();
       } else {
         const id = identifier.trim().toLowerCase();
         if (id.includes("@")) {
@@ -129,10 +134,12 @@ export function AuthPage() {
           });
           if (error) throw error;
         }
+        await routeAfterAuth();
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Sign in failed — check your details");
     } finally {
+      manualAuthInProgress.current = false;
       setBusy(false);
     }
   }
