@@ -417,6 +417,7 @@ export const redeemReferral = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => RedeemInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const code = data.code.trim().toUpperCase();
     const { data: owner, error: oErr } = await supabaseAdmin
       .from("profiles")
@@ -525,6 +526,7 @@ export const getMyFollowing = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: follows } = await supabase
       .from("follows")
       .select("following_id")
@@ -552,6 +554,7 @@ export const getNearbyAthletes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: me } = await supabaseAdmin
       .from("profiles")
       .select("city, country")
