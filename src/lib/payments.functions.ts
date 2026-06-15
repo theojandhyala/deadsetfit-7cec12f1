@@ -5,6 +5,14 @@ type StripeEnv = "sandbox" | "live";
 
 type CheckoutSessionResult = { clientSecret: string } | { error: string };
 type PortalSessionResult = { url: string } | { error: string };
+type SubscriptionStatusResult = {
+  subscription: {
+    status: string | null;
+    price_id: string | null;
+    current_period_end: string | null;
+    cancel_at_period_end: boolean | null;
+  } | null;
+};
 
 async function resolveOrCreateCustomer(
   stripe: any,
@@ -118,4 +126,21 @@ export const createPortalSession = createServerFn({ method: "POST" })
       const { getStripeErrorMessage } = await import("@/lib/stripe.server");
       return { error: getStripeErrorMessage(error) };
     }
+  });
+
+export const getMySubscriptionStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { environment: StripeEnv }) => data)
+  .handler(async ({ data, context }): Promise<SubscriptionStatusResult> => {
+    const { supabase, userId } = context;
+    const { data: subscription, error } = await supabase
+      .from("subscriptions")
+      .select("status,price_id,current_period_end,cancel_at_period_end")
+      .eq("user_id", userId)
+      .eq("environment", data.environment)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return { subscription };
   });
