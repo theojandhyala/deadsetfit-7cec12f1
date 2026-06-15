@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const CategorySchema = z.enum(["OVERALL", "BENCH", "SQUAT", "DEADLIFT", "TOTAL"]);
+const CategorySchema = z.enum(["OVERALL", "BENCH", "SQUAT", "DEADLIFT", "OHP", "TOTAL"]);
 
 const Input = z.object({
   category: CategorySchema,

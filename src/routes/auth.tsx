@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
-import { getMyProfile, signInWithUsername, signUpUser } from "@/lib/profile.functions";
+import { getMyProfile, signInWithUsername } from "@/lib/profile.functions";
 import { profileQuestionsComplete } from "@/lib/account-restore";
 import { Loader2, Eye, EyeOff, Zap } from "lucide-react";
 import { toast } from "sonner";
@@ -23,7 +23,6 @@ export function AuthPage() {
   const [showPass, setShowPass] = useState(false);
   const [busy, setBusy] = useState(false);
   const usernameSignIn = useServerFn(signInWithUsername);
-  const signUp = useServerFn(signUpUser);
   const getProfile = useServerFn(getMyProfile);
 
   async function routeAfterAuth() {
@@ -59,15 +58,22 @@ export function AuthPage() {
     setBusy(true);
     try {
       if (mode === "signup") {
-        if (!identifier.includes("@")) throw new Error("Enter a valid email to sign up");
-        const result = await signUp({ data: { email: identifier.trim().toLowerCase(), password } });
-        const { error } = await supabase.auth.setSession({
-          access_token: result.access_token,
-          refresh_token: result.refresh_token,
+        const email = identifier.trim().toLowerCase();
+        if (!email.includes("@")) throw new Error("Enter a valid email to sign up");
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { emailRedirectTo: window.location.origin + "/auth" },
         });
         if (error) throw error;
+        // If auto-confirm is on, the listener will route. If a session wasn't
+        // returned (email confirmation required), sign in immediately.
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          const { error: siErr } = await supabase.auth.signInWithPassword({ email, password });
+          if (siErr) throw new Error("Account created — please sign in");
+        }
         toast.success("Welcome to DEADSET");
-        // routing handled by onAuthStateChange listener
       } else {
         const id = identifier.trim().toLowerCase();
         if (id.includes("@")) {
