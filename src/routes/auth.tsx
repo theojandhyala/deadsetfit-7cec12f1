@@ -1,9 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
-import { getMyProfile, signInWithUsername } from "@/lib/profile.functions";
+import { getMyProfile, saveProfile, signInWithUsername } from "@/lib/profile.functions";
 import { profileQuestionsComplete } from "@/lib/account-restore";
 import { Loader2, Eye, EyeOff, Zap } from "lucide-react";
 import { toast } from "sonner";
@@ -12,6 +12,8 @@ export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "DEADSET — Sign In" }] }),
   component: AuthPage,
 });
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function AuthPage() {
   const navigate = useNavigate();
@@ -22,11 +24,49 @@ export function AuthPage() {
   const [forgotEmail, setForgotEmail] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [busy, setBusy] = useState(false);
+  const manualAuthInProgress = useRef(false);
   const usernameSignIn = useServerFn(signInWithUsername);
   const getProfile = useServerFn(getMyProfile);
+  const saveStarterProfile = useServerFn(saveProfile);
+
+  async function waitForActiveSession(timeoutMs = 6000) {
+    const started = Date.now();
+    while (Date.now() - started < timeoutMs) {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) return session;
+      await delay(150);
+    }
+    return null;
+  }
+
+  async function ensureStarterProfile(email: string) {
+    const displayName = email.split("@")[0]?.replace(/[^a-zA-Z0-9_ -]/g, "").slice(0, 60) || "DEADSET Athlete";
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        await saveStarterProfile({ data: { display_name: displayName } });
+        return;
+      } catch (error) {
+        if (attempt === 4) throw error;
+        await delay(250 * (attempt + 1));
+      }
+    }
+  }
 
   async function routeAfterAuth() {
-    const profile = await getProfile().catch(() => null);
+    const session = await waitForActiveSession();
+    if (!session) throw new Error("Sign-in did not finish. Please try again.");
+
+    let profile = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        profile = await getProfile();
+        break;
+      } catch {
+        await delay(250 * (attempt + 1));
+      }
+    }
     navigate({ to: profileQuestionsComplete(profile) ? "/train" : "/onboarding", replace: true });
   }
 
@@ -38,9 +78,10 @@ export function AuthPage() {
     }
     let routed = false;
     const go = () => {
+      if (manualAuthInProgress.current) return;
       if (routed) return;
       routed = true;
-      routeAfterAuth();
+      routeAfterAuth().catch(() => {});
     };
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if (mode === "reset") return;
