@@ -261,6 +261,7 @@ export const searchAthletes = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => SearchInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const q = data.q.replace(/[%_]/g, "");
     const { data: blocks } = await supabase
       .from("user_blocks")
@@ -297,6 +298,7 @@ export const getSuggestedAthletes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: follows } = await supabase
       .from("follows")
       .select("following_id")
@@ -347,6 +349,7 @@ export const getAthleteCard = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => AthleteInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: row, error } = await supabaseAdmin
       .from("public_profiles")
       .select("id, username, display_name, avatar_url, bio, grit_points, public_stats")
