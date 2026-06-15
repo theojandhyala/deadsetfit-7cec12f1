@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { chatJSON } from "./ai-gateway.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export interface LibraryExercise {
@@ -118,6 +117,7 @@ export const generateExerciseBatch = createServerFn({ method: "POST" })
     });
     if (roleErr) throw new Error(roleErr.message);
     if (!isAdmin) throw new Error("Forbidden: admin role required");
+    const { chatJSON } = await import("./ai-gateway.server");
     const sys = `You are an elite strength coach building a hypertrophy + strength exercise library.
 Reply with STRICT JSON only, shape:
 {"exercises":[{"name":"...","category":"PUSH|PULL|LEGS|CORE|CARDIO","primary_muscles":["..."],"secondary_muscles":["..."],"equipment":"BARBELL|DUMBBELL|CABLE|MACHINE|BODYWEIGHT|BANDS|KETTLEBELL","difficulty":1-5,"instructions":"1-2 cue sentences","pro_tip":"1 elite-athlete tip","youtube_query":"3-6 word search","warmup_note":"short cue","stretch_note":"short cue","is_compound":true|false}]}
