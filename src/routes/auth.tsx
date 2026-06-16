@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
-import { getMyProfile, saveProfile, signInWithUsername } from "@/lib/profile.functions";
+import { saveProfile, signInWithUsername, signUpUser } from "@/lib/profile.functions";
 import { profileQuestionsComplete } from "@/lib/account-restore";
 import { Loader2, Eye, EyeOff, Zap } from "lucide-react";
 import { toast } from "sonner";
@@ -26,10 +26,10 @@ export function AuthPage() {
   const [busy, setBusy] = useState(false);
   const manualAuthInProgress = useRef(false);
   const usernameSignIn = useServerFn(signInWithUsername);
-  const getProfile = useServerFn(getMyProfile);
+  const createAccount = useServerFn(signUpUser);
   const saveStarterProfile = useServerFn(saveProfile);
 
-  async function waitForActiveSession(timeoutMs = 6000) {
+  async function waitForActiveSession(timeoutMs = 3500) {
     const started = Date.now();
     while (Date.now() - started < timeoutMs) {
       const {
@@ -68,21 +68,27 @@ export function AuthPage() {
     }
   }
 
+  async function loadCurrentProfile(userId: string) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select(
+          "onboarded,goal,experience,gender,age,weight_kg,height_cm,days_per_week,equipment,username,avatar_url",
+        )
+        .eq("id", userId)
+        .maybeSingle();
+      if (!error) return data;
+      await delay(150 * (attempt + 1));
+    }
+    return null;
+  }
+
   async function routeAfterAuth() {
     const session = await waitForActiveSession();
     if (!session) throw new Error("Sign-in did not finish. Please try again.");
 
     await ensureStarterProfile(session.user.email);
-
-    let profile = null;
-    for (let attempt = 0; attempt < 5; attempt++) {
-      try {
-        profile = await getProfile();
-        break;
-      } catch {
-        await delay(250 * (attempt + 1));
-      }
-    }
+    const profile = await loadCurrentProfile(session.user.id);
     navigate({ to: profileQuestionsComplete(profile) ? "/train" : "/onboarding", replace: true });
   }
 
