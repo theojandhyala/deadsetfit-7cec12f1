@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
-import { getMyProfile, saveProfile, signInWithUsername } from "@/lib/profile.functions";
+import { saveProfile, signInWithUsername, signUpUser } from "@/lib/profile.functions";
 import { profileQuestionsComplete } from "@/lib/account-restore";
 import { Loader2, Eye, EyeOff, Zap } from "lucide-react";
 import { toast } from "sonner";
@@ -26,10 +26,10 @@ export function AuthPage() {
   const [busy, setBusy] = useState(false);
   const manualAuthInProgress = useRef(false);
   const usernameSignIn = useServerFn(signInWithUsername);
-  const getProfile = useServerFn(getMyProfile);
+  const createAccount = useServerFn(signUpUser);
   const saveStarterProfile = useServerFn(saveProfile);
 
-  async function waitForActiveSession(timeoutMs = 6000) {
+  async function waitForActiveSession(timeoutMs = 3500) {
     const started = Date.now();
     while (Date.now() - started < timeoutMs) {
       const {
@@ -68,21 +68,27 @@ export function AuthPage() {
     }
   }
 
+  async function loadCurrentProfile(userId: string) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select(
+          "onboarded,goal,experience,gender,age,weight_kg,height_cm,days_per_week,equipment,username,avatar_url",
+        )
+        .eq("id", userId)
+        .maybeSingle();
+      if (!error) return data;
+      await delay(150 * (attempt + 1));
+    }
+    return null;
+  }
+
   async function routeAfterAuth() {
     const session = await waitForActiveSession();
     if (!session) throw new Error("Sign-in did not finish. Please try again.");
 
     await ensureStarterProfile(session.user.email);
-
-    let profile = null;
-    for (let attempt = 0; attempt < 5; attempt++) {
-      try {
-        profile = await getProfile();
-        break;
-      } catch {
-        await delay(250 * (attempt + 1));
-      }
-    }
+    const profile = await loadCurrentProfile(session.user.id);
     navigate({ to: profileQuestionsComplete(profile) ? "/train" : "/onboarding", replace: true });
   }
 
@@ -118,26 +124,21 @@ export function AuthPage() {
       if (mode === "signup") {
         const email = identifier.trim().toLowerCase();
         if (!email.includes("@")) throw new Error("Enter a valid email to sign up");
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: window.location.origin + "/auth",
-            data: {
-              display_name:
-                email.split("@")[0]?.replace(/[^a-zA-Z0-9_ -]/g, "").slice(0, 60) ||
-                "DEADSET Athlete",
-            },
+        const displayName =
+          email.split("@")[0]?.replace(/[^a-zA-Z0-9_ -]/g, "").slice(0, 60) ||
+          "DEADSET Athlete";
+        const tokens = await createAccount({
+          data: {
+            email,
+            password,
+            display_name: displayName,
           },
         });
+        const { error } = await supabase.auth.setSession({
+          access_token: tokens.access_token,
+          refresh_token: tokens.refresh_token,
+        });
         if (error) throw error;
-        // If auto-confirm is on, the listener will route. If a session wasn't
-        // returned (email confirmation required), sign in immediately.
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          const { error: siErr } = await supabase.auth.signInWithPassword({ email, password });
-          if (siErr) throw new Error("Account created — please sign in");
-        }
         const activeSession = await waitForActiveSession();
         if (!activeSession) throw new Error("Account created — please sign in");
         await ensureStarterProfile(activeSession.user.email ?? email);
