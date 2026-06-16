@@ -1,0 +1,47 @@
+name: Supabase keep-alive
+
+on:
+  schedule:
+    # Every 3 days — well inside Supabase's 7-day inactivity pause window.
+    - cron: "0 6 */3 * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ping Supabase project to reset inactivity timer
+        run: |
+          set -euo pipefail
+
+          SUPABASE_URL=$(grep -E '^SUPABASE_URL=' .env | sed -E 's/^SUPABASE_URL=//' | tr -d '"')
+          SUPABASE_ANON_KEY=$(grep -E '^SUPABASE_PUBLISHABLE_KEY=' .env | sed -E 's/^SUPABASE_PUBLISHABLE_KEY=//' | tr -d '"')
+
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "Could not read SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY from .env" >&2
+            exit 1
+          fi
+
+          echo "Pinging $SUPABASE_URL ..."
+
+          # A lightweight authenticated read counts as project activity and
+          # resets Supabase's 7-day inactivity pause timer.
+          status=$(curl -s -o /tmp/resp.txt -w "%{http_code}" \
+            --max-time 20 \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            "$SUPABASE_URL/rest/v1/profiles?select=id&limit=1")
+
+          echo "HTTP status: $status"
+          cat /tmp/resp.txt
+
+          # 200/206 = healthy. 401/403/404 still prove the project responded
+          # (i.e. it's awake) — only treat connection failures/timeouts as a
+          # real failure so the workflow doesn't flap on RLS quirks.
+          case "$status" in
+            2*) echo "Project is awake and responded normally." ;;
+            401|403|404) echo "Project responded (auth/RLS denied the query, but the project is awake)." ;;
+            *) echo "Unexpected status — project may be down or paused." >&2; exit 1 ;;
+          esac
