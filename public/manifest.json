@@ -1,10 +1,47 @@
 {
-  "name": "DEADSET",
+  "name": "DEADSET — Train. Build. Become.",
   "short_name": "DEADSET",
-  "description": "Train. Build. Become.",
+  "description": "Track PRs, follow programs, log workouts, and forge your strongest self.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0a0a0a",
-  "theme_color": "#0a0a0a"
+  "theme_color": "#0a0a0a",
+  "categories": ["fitness", "health", "lifestyle", "sports"],
+  "lang": "en-US",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/__l5e/assets-v1/8b3ee421-1183-47fa-b08c-2852d1ee9386/apple-touch-icon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/__l5e/assets-v1/542c36bf-1285-42a1-ae6e-dd770fa0408f/apple-touch-icon-76x76.png",
+      "sizes": "76x76",
+      "type": "image/png"
+    },
+    {
+      "src": "/__l5e/assets-v1/6673b37c-9b6f-4a9a-9f1b-d3c13c9d2f33/apple-touch-icon-120x120.png",
+      "sizes": "120x120",
+      "type": "image/png"
+    },
+    {
+      "src": "/__l5e/assets-v1/3cba76de-9499-4239-ae4f-9c38911c8a13/apple-touch-icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png"
+    },
+    {
+      "src": "/__l5e/assets-v1/b709d3b5-25fb-49bc-a497-ce39436e1d13/apple-touch-icon-167x167.png",
+      "sizes": "167x167",
+      "type": "image/png"
+    },
+    {
+      "src": "/__l5e/assets-v1/8b0e02d2-2d9f-4268-b20c-cf4bf9b3a7b0/apple-touch-icon-180x180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
 }
