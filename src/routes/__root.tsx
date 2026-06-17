@@ -113,6 +113,39 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "manifest", href: "/manifest.json" },
+      {
+        rel: "icon",
+        type: "image/png",
+        sizes: "32x32",
+        href: "/__l5e/assets-v1/8b3ee421-1183-47fa-b08c-2852d1ee9386/apple-touch-icon-32x32.png",
+      },
+      {
+        rel: "icon",
+        type: "image/png",
+        sizes: "16x16",
+        href: "/__l5e/assets-v1/3c85945d-aaa0-42df-9b92-790c5443f062/apple-touch-icon-16x16.png",
+      },
+      {
+        rel: "apple-touch-icon",
+        sizes: "180x180",
+        href: "/__l5e/assets-v1/8b0e02d2-2d9f-4268-b20c-cf4bf9b3a7b0/apple-touch-icon-180x180.png",
+      },
+      {
+        rel: "apple-touch-icon",
+        sizes: "167x167",
+        href: "/__l5e/assets-v1/b709d3b5-25fb-49bc-a497-ce39436e1d13/apple-touch-icon-167x167.png",
+      },
+      {
+        rel: "apple-touch-icon",
+        sizes: "152x152",
+        href: "/__l5e/assets-v1/3cba76de-9499-4239-ae4f-9c38911c8a13/apple-touch-icon-152x152.png",
+      },
+      {
+        rel: "apple-touch-icon",
+        sizes: "120x120",
+        href: "/__l5e/assets-v1/6673b37c-9b6f-4a9a-9f1b-d3c13c9d2f33/apple-touch-icon-120x120.png",
+      },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
