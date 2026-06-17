@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { chatVisionJSON } from "./ai-gateway.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const ScanInput = z.object({
@@ -13,6 +12,7 @@ export const analyzePhysique = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => ScanInput.parse(d))
   .handler(async ({ data }) => {
+    const { chatVisionJSON } = await import("./ai-gateway.server");
     const sys = `You are an elite physique coach analyzing a progress photo. Reply with strict JSON only:
 {
   "bodyFatEstimate": <number 5-40>,

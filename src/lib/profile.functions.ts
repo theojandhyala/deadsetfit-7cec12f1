@@ -32,24 +32,39 @@ const ProfileSchema = z.object({
  */
 export const signUpUser = createServerFn({ method: "POST" })
   .inputValidator((input) =>
-    z.object({ email: z.string().email(), password: z.string().min(6).max(128) }).parse(input),
+    z
+      .object({
+        email: z.string().email(),
+        password: z.string().min(6).max(128),
+        display_name: z.string().min(1).max(60).optional(),
+      })
+      .parse(input),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    // Check if email is already registered
-    const { data: existing } = await supabaseAdmin.auth.admin.listUsers();
-    const alreadyExists = existing.users.some(
-      (u: { email?: string | null }) => u.email?.toLowerCase() === data.email.toLowerCase(),
-    );
-    if (alreadyExists) throw new Error("An account with this email already exists");
+    const displayName =
+      data.display_name?.trim() ||
+      data.email.split("@")[0]?.replace(/[^a-zA-Z0-9_ -]/g, "").slice(0, 60) ||
+      "DEADSET Athlete";
 
     // Create user with email pre-confirmed so they can sign in immediately
     const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: data.password,
       email_confirm: true,
+      user_metadata: { display_name: displayName },
     });
-    if (error) throw new Error(error.message);
+    if (error) {
+      const message = error.message.toLowerCase().includes("already")
+        ? "An account with this email already exists"
+        : error.message;
+      throw new Error(message);
+    }
+
+    const { error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .upsert({ id: created.user.id, display_name: displayName }, { onConflict: "id" });
+    if (profileError) throw new Error(profileError.message);
 
     // Sign in immediately and return session tokens
     const anon = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {

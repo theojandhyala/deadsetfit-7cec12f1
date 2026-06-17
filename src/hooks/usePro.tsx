@@ -1,5 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import { getMySubscriptionStatus } from "@/lib/payments.functions";
 import { getStripeEnvironment, isPaymentsConfigured } from "@/lib/stripe";
 
 type ProState = {
@@ -21,6 +23,7 @@ export function ProProvider({ children }: { children: ReactNode }) {
   const [priceId, setPriceId] = useState<string | null>(null);
   const [currentPeriodEnd, setCurrentPeriodEnd] = useState<string | null>(null);
   const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(false);
+  const getSubscriptionStatus = useServerFn(getMySubscriptionStatus);
 
   const refresh = useCallback(async () => {
     if (!isPaymentsConfigured()) {
@@ -37,27 +40,20 @@ export function ProProvider({ children }: { children: ReactNode }) {
         return;
       }
       const env = getStripeEnvironment();
-      const { data } = await supabase
-        .from("subscriptions")
-        .select("status,price_id,current_period_end,cancel_at_period_end")
-        .eq("user_id", session.user.id)
-        .eq("environment", env)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (data) {
+      const { subscription } = await getSubscriptionStatus({ data: { environment: env } });
+      if (subscription) {
         const active =
-          (["active", "trialing", "past_due"].includes(data.status as string) &&
-            (!data.current_period_end ||
-              new Date(data.current_period_end as string) > new Date())) ||
-          (data.status === "canceled" &&
-            data.current_period_end &&
-            new Date(data.current_period_end as string) > new Date());
+          (["active", "trialing", "past_due"].includes(subscription.status as string) &&
+            (!subscription.current_period_end ||
+              new Date(subscription.current_period_end as string) > new Date())) ||
+          (subscription.status === "canceled" &&
+            subscription.current_period_end &&
+            new Date(subscription.current_period_end as string) > new Date());
         setIsPro(!!active);
-        setStatus(data.status as string | null);
-        setPriceId(data.price_id as string | null);
-        setCurrentPeriodEnd(data.current_period_end as string | null);
-        setCancelAtPeriodEnd(!!data.cancel_at_period_end);
+        setStatus(subscription.status as string | null);
+        setPriceId(subscription.price_id as string | null);
+        setCurrentPeriodEnd(subscription.current_period_end as string | null);
+        setCancelAtPeriodEnd(!!subscription.cancel_at_period_end);
       } else {
         setIsPro(false);
         setStatus(null);
@@ -70,7 +66,7 @@ export function ProProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [getSubscriptionStatus]);
 
   useEffect(() => {
     refresh();

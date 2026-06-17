@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const CategorySchema = z.enum(["OVERALL", "BENCH", "SQUAT", "DEADLIFT", "TOTAL", "OHP"]);
+const CategorySchema = z.enum(["OVERALL", "BENCH", "SQUAT", "DEADLIFT", "OHP", "TOTAL"]);
 
 const Input = z.object({
   category: CategorySchema,
@@ -63,8 +63,6 @@ export const getLeaderboard = createServerFn({ method: "POST" })
           value = getPRValue(stats, "squat");
         } else if (cat === "DEADLIFT") {
           value = getPRValue(stats, "deadlift");
-        } else if (cat === "OHP") {
-          value = getPRValue(stats, "overhead-press");
         }
         return {
           id: r.id,
