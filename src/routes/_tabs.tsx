@@ -76,17 +76,25 @@ function TabsLayout() {
           navRef.current({ to: "/auth", replace: true });
           return;
         }
-        const localOwner = getLocalStateOwner();
-        if (getState().profile && localOwner === session.user.id) return;
+        const uid = session.user.id;
+        const cacheKey = `ds_profile_status_${uid}`;
 
-        const [row] = await Promise.all([
-          withTimeout(getProfileRef.current().catch(() => null), null, 7000),
-          withTimeout(waitForRemoteState(session.user.id), undefined, 5000),
-        ]);
+        // Fast path: local profile already belongs to this user — render immediately.
+        if (getState().profile && getLocalStateOwner() === uid) return;
 
-        if (getState().profile && getLocalStateOwner() === session.user.id) return;
+        // Second-best path: we've already seen this user onboarded in this tab,
+        // and have a local profile — render immediately and let StateSync hydrate.
+        if (sessionStorage.getItem(cacheKey) === "onboarded" && getState().profile) {
+          setLocalStateOwner(uid);
+          return;
+        }
+
+        const row = await withTimeout(getProfileRef.current().catch(() => null), null, 5000);
+
+        if (getState().profile && getLocalStateOwner() === uid) return;
 
         if (row && profileQuestionsComplete(row)) {
+          sessionStorage.setItem(cacheKey, "onboarded");
           const accountProfile = profileFromAccount(row);
           if (accountProfile) {
             setState((current) => ({
@@ -94,11 +102,20 @@ function TabsLayout() {
               profile: accountProfile,
               schedule: current.schedule ?? defaultSchedule(accountProfile),
             }));
+            setLocalStateOwner(uid);
           }
           return;
         }
 
-        if (row !== null && !profileQuestionsComplete(row)) {
+        if (row && !profileQuestionsComplete(row)) {
+          sessionStorage.removeItem(cacheKey);
+          navRef.current({ to: "/onboarding", replace: true });
+          return;
+        }
+
+        // row === null: profile fetch failed (transient). If we have any local
+        // profile, use it; otherwise send to onboarding so the user isn't stuck.
+        if (!getState().profile) {
           navRef.current({ to: "/onboarding", replace: true });
         }
       } catch (e) {
@@ -108,7 +125,7 @@ function TabsLayout() {
       }
     })();
 
-    const safety = setTimeout(finish, 8000);
+    const safety = setTimeout(finish, 5500);
 
     const { data } = supabase.auth.onAuthStateChange((event, s) => {
       if (event === "SIGNED_OUT" && !s) navRef.current({ to: "/auth", replace: true });
