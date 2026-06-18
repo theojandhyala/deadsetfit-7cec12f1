@@ -3,7 +3,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { BottomNav } from "@/components/BottomNav";
 import { TopBar } from "@/components/TopBar";
-import { getLocalStateOwner, getState, setState, waitForRemoteState } from "@/lib/storage";
+import {
+  getLocalStateOwner,
+  getState,
+  setLocalStateOwner,
+  setState,
+} from "@/lib/storage";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyProfile } from "@/lib/profile.functions";
 import { profileFromAccount, profileQuestionsComplete, withTimeout } from "@/lib/account-restore";
