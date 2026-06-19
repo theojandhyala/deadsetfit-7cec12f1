@@ -68,13 +68,22 @@ function AuthPage() {
     if (!password) { toast.error("Enter your password"); return; }
     setBusy(true);
     try {
+      logSessionEvent("auth:password-signin-start", { emailDomain: email.split("@")[1] ?? null });
       const { error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password,
       });
       if (error) throw error;
-      // onAuthStateChange handles navigation
+      const session = await getLoggedSession("auth:password-signin-success", 3500);
+      if (!session) throw new Error("Signed in, but the session was not saved. Please try again.");
+      if (!navigated.current) {
+        navigated.current = true;
+        navigate({ to: "/train", replace: true });
+      }
     } catch (err: unknown) {
+      logSessionEvent("auth:password-signin-error", {
+        message: err instanceof Error ? err.message : "Unknown error",
+      });
       const msg = err instanceof Error ? err.message : "Sign in failed";
       if (msg.toLowerCase().includes("invalid login")) {
         toast.error("Wrong email or password");
@@ -94,17 +103,34 @@ function AuthPage() {
     if (password.length < 6) { toast.error("Password must be at least 6 characters"); return; }
     setBusy(true);
     try {
-      const { error } = await supabase.auth.signUp({
-        email: email.trim().toLowerCase(),
-        password,
-        options: { emailRedirectTo: window.location.origin + "/auth" },
+      logSessionEvent("auth:signup-start", { emailDomain: email.split("@")[1] ?? null });
+      const result = await signUp({
+        data: {
+          email: email.trim().toLowerCase(),
+          password,
+          display_name: email.trim().split("@")[0] || "DEADSET Athlete",
+        },
       });
-      if (error) throw error;
-      toast.success("Account created — check your email to confirm, then sign in");
-      setMode("signin");
+      await supabase.auth.setSession({
+        access_token: result.access_token,
+        refresh_token: result.refresh_token,
+      });
+      const session = await getLoggedSession("auth:signup-session-set", 3500);
+      if (!session) throw new Error("Account created, but the session was not saved. Try signing in.");
+      toast.success("Account created — finish your setup");
+      if (!navigated.current) {
+        navigated.current = true;
+        navigate({ to: "/onboarding", replace: true });
+      }
     } catch (err: unknown) {
+      logSessionEvent("auth:signup-error", {
+        message: err instanceof Error ? err.message : "Unknown error",
+      });
       const msg = err instanceof Error ? err.message : "Sign up failed";
       if (msg.toLowerCase().includes("already registered")) {
+        toast.error("That email is already registered — try signing in");
+        setMode("signin");
+      } else if (msg.toLowerCase().includes("already exists")) {
         toast.error("That email is already registered — try signing in");
         setMode("signin");
       } else {
@@ -141,6 +167,7 @@ function AuthPage() {
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
+      await getLoggedSession("auth:password-reset-success", 3500);
       toast.success("Password updated — you're signed in");
       navigate({ to: "/train", replace: true });
     } catch (err: unknown) {
