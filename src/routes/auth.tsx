@@ -4,13 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
-import { signUpUser } from "@/lib/profile.functions";
+import { getMyProfile, signUpUser } from "@/lib/profile.functions";
 import {
+  cacheProfileBootstrap,
   getLoggedSession,
   logSessionEvent,
   readSessionLogs,
   recordSessionSnapshot,
 } from "@/lib/session-diagnostics";
+import { profileFromAccount, profileQuestionsComplete, withTimeout } from "@/lib/account-restore";
+import { defaultSchedule } from "@/lib/calc";
+import { getState, setLocalStateOwner, setState } from "@/lib/storage";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "DEADSET — Sign In" }] }),
@@ -20,6 +24,7 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const navigate = useNavigate();
   const signUp = useServerFn(signUpUser);
+  const getProfile = useServerFn(getMyProfile);
   const [mode, setMode] = useState<"signin" | "signup" | "forgot" | "reset">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -76,9 +81,10 @@ function AuthPage() {
       if (error) throw error;
       const session = await getLoggedSession("auth:password-signin-success", 3500);
       if (!session) throw new Error("Signed in, but the session was not saved. Please try again.");
+      const target = await preloadProfile(session.user.id);
       if (!navigated.current) {
         navigated.current = true;
-        navigate({ to: "/train", replace: true });
+        navigate({ to: target, replace: true });
       }
     } catch (err: unknown) {
       logSessionEvent("auth:password-signin-error", {
@@ -175,6 +181,58 @@ function AuthPage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function preloadProfile(userId: string): Promise<"/train" | "/onboarding"> {
+    logSessionEvent("auth:profile-preload-start", { user: userId.slice(0, 8) });
+    const row = await withTimeout(
+      getProfile().catch((e) => {
+        logSessionEvent("auth:profile-preload-error", {
+          message: e instanceof Error ? e.message : "Unknown error",
+        });
+        return null;
+      }),
+      null,
+      4000,
+    );
+
+    if (row && profileQuestionsComplete(row)) {
+      const accountProfile = profileFromAccount(row);
+      if (accountProfile) {
+        setState((current) => ({
+          ...current,
+          profile: accountProfile,
+          schedule: current.schedule ?? defaultSchedule(accountProfile),
+        }));
+        setLocalStateOwner(userId);
+      }
+      cacheProfileBootstrap(userId, {
+        onboarded: Boolean(row.onboarded),
+        complete: true,
+        hasUsername: Boolean(row.username),
+      });
+      logSessionEvent("auth:profile-preload-complete", { user: userId.slice(0, 8) });
+      return "/train";
+    }
+
+    if (row) {
+      cacheProfileBootstrap(userId, {
+        onboarded: Boolean(row.onboarded),
+        complete: false,
+        hasUsername: Boolean(row.username),
+      });
+      logSessionEvent("auth:profile-preload-incomplete", { user: userId.slice(0, 8) });
+      return "/onboarding";
+    }
+
+    if (getState().profile) {
+      setLocalStateOwner(userId);
+      logSessionEvent("auth:profile-preload-local-fallback", { user: userId.slice(0, 8) });
+      return "/train";
+    }
+
+    logSessionEvent("auth:profile-preload-empty", { user: userId.slice(0, 8) });
+    return "/onboarding";
   }
 
   const diagnosticLogs = showDiagnostics ? readSessionLogs().slice(-12).reverse() : [];
