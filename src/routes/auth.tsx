@@ -50,7 +50,7 @@ function AuthPage() {
       if (session && !navigated.current) {
         navigated.current = true;
         logSessionEvent("auth:auto-redirect-to-train");
-        navigate({ to: "/train", replace: true });
+        preloadProfile(session.user.id).then((target) => navigate({ to: target, replace: true }));
       }
     });
 
@@ -60,7 +60,7 @@ function AuthPage() {
         recordSessionSnapshot(`auth:${event.toLowerCase()}`, session);
         if (modeRef.current === "reset") return;
         navigated.current = true;
-        navigate({ to: "/train", replace: true });
+        preloadProfile(session.user.id).then((target) => navigate({ to: target, replace: true }));
       }
     });
     return () => data.subscription.unsubscribe();
