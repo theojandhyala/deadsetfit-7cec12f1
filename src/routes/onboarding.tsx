@@ -146,10 +146,22 @@ function Onboarding() {
           },
         });
         setSubmitting(false);
+        if (userId) {
+          cacheProfileBootstrap(userId, {
+            onboarded: true,
+            complete: true,
+            hasUsername: Boolean(p.username),
+          });
+          logSessionEvent("onboarding:profile-saved", { user: userId.slice(0, 8) });
+        }
         navigate({ to: "/train", replace: true });
         return;
       } catch (e) {
         lastErr = e instanceof Error ? e : new Error("Save failed");
+        logSessionEvent("onboarding:profile-save-error", {
+          attempt: attempt + 1,
+          message: lastErr.message,
+        });
         await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
       }
     }
