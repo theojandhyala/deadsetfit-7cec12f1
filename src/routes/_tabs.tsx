@@ -13,6 +13,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { getMyProfile } from "@/lib/profile.functions";
 import { profileFromAccount, profileQuestionsComplete, withTimeout } from "@/lib/account-restore";
 import { defaultSchedule } from "@/lib/calc";
+import {
+  cacheProfileBootstrap,
+  getCachedProfileBootstrap,
+  getLoggedSession,
+  logSessionEvent,
+} from "@/lib/session-diagnostics";
 
 export const Route = createFileRoute("/_tabs")({
   component: TabsLayout,
@@ -69,32 +75,49 @@ function TabsLayout() {
 
     (async () => {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        logSessionEvent("tabs:bootstrap-start");
+        const session = await getLoggedSession("tabs:bootstrap", 3000);
         if (!session) {
+          logSessionEvent("tabs:no-session-redirect-auth");
           navRef.current({ to: "/auth", replace: true });
           return;
         }
         const uid = session.user.id;
         const cacheKey = `ds_profile_status_${uid}`;
+        const cachedBootstrap = getCachedProfileBootstrap(uid);
 
         // Fast path: local profile already belongs to this user — render immediately.
-        if (getState().profile && getLocalStateOwner() === uid) return;
-
-        // Second-best path: we've already seen this user onboarded in this tab,
-        // and have a local profile — render immediately and let StateSync hydrate.
-        if (sessionStorage.getItem(cacheKey) === "onboarded" && getState().profile) {
-          setLocalStateOwner(uid);
+        if (getState().profile && getLocalStateOwner() === uid) {
+          logSessionEvent("tabs:local-profile-ready", { user: uid.slice(0, 8) });
           return;
         }
 
+        // Second-best path: we've already seen this user onboarded in this tab,
+        // and have a local profile — render immediately and let StateSync hydrate.
+        if (
+          (sessionStorage.getItem(cacheKey) === "onboarded" || cachedBootstrap?.complete) &&
+          getState().profile
+        ) {
+          setLocalStateOwner(uid);
+          logSessionEvent("tabs:cached-profile-ready", { user: uid.slice(0, 8) });
+          return;
+        }
+
+        logSessionEvent("tabs:profile-fetch-start", { user: uid.slice(0, 8) });
         const row = await withTimeout(getProfileRef.current().catch(() => null), null, 5000);
 
-        if (getState().profile && getLocalStateOwner() === uid) return;
+        if (getState().profile && getLocalStateOwner() === uid) {
+          logSessionEvent("tabs:state-sync-profile-ready", { user: uid.slice(0, 8) });
+          return;
+        }
 
         if (row && profileQuestionsComplete(row)) {
           sessionStorage.setItem(cacheKey, "onboarded");
+          cacheProfileBootstrap(uid, {
+            onboarded: Boolean(row.onboarded),
+            complete: true,
+            hasUsername: Boolean(row.username),
+          });
           const accountProfile = profileFromAccount(row);
           if (accountProfile) {
             setState((current) => ({
@@ -104,21 +127,33 @@ function TabsLayout() {
             }));
             setLocalStateOwner(uid);
           }
+          logSessionEvent("tabs:profile-loaded", { user: uid.slice(0, 8) });
           return;
         }
 
         if (row && !profileQuestionsComplete(row)) {
           sessionStorage.removeItem(cacheKey);
+          cacheProfileBootstrap(uid, {
+            onboarded: Boolean(row.onboarded),
+            complete: false,
+            hasUsername: Boolean(row.username),
+          });
+          logSessionEvent("tabs:profile-incomplete-redirect-onboarding", { user: uid.slice(0, 8) });
           navRef.current({ to: "/onboarding", replace: true });
           return;
         }
 
         // row === null: profile fetch failed (transient). If we have any local
         // profile, use it; otherwise send to onboarding so the user isn't stuck.
-        if (!getState().profile) {
+        if (getState().profile) {
+          setLocalStateOwner(uid);
+          logSessionEvent("tabs:profile-fetch-fallback-local", { user: uid.slice(0, 8) });
+        } else {
+          logSessionEvent("tabs:profile-fetch-fallback-onboarding", { user: uid.slice(0, 8) });
           navRef.current({ to: "/onboarding", replace: true });
         }
       } catch (e) {
+        logSessionEvent("tabs:bootstrap-error", { message: e instanceof Error ? e.message : "Unknown" });
         console.warn("tabs bootstrap failed", e);
       } finally {
         finish();
