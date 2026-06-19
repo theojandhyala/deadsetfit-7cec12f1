@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
-import { getMyProfile, signUpUser } from "@/lib/profile.functions";
+import { getMyProfile } from "@/lib/profile.functions";
 import {
   cacheProfileBootstrap,
   getLoggedSession,
@@ -23,7 +23,6 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const signUp = useServerFn(signUpUser);
   const getProfile = useServerFn(getMyProfile);
   const [mode, setMode] = useState<"signin" | "signup" | "forgot" | "reset">("signin");
   const [email, setEmail] = useState("");
@@ -110,23 +109,23 @@ function AuthPage() {
     setBusy(true);
     try {
       logSessionEvent("auth:signup-start", { emailDomain: email.split("@")[1] ?? null });
-      const result = await signUp({
-        data: {
-          email: email.trim().toLowerCase(),
-          password,
-          display_name: email.trim().split("@")[0] || "DEADSET Athlete",
-        },
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password,
+        options: { emailRedirectTo: window.location.origin + "/auth" },
       });
-      await supabase.auth.setSession({
-        access_token: result.access_token,
-        refresh_token: result.refresh_token,
-      });
-      const session = await getLoggedSession("auth:signup-session-set", 3500);
-      if (!session) throw new Error("Account created, but the session was not saved. Try signing in.");
-      toast.success("Account created — finish your setup");
-      if (!navigated.current) {
-        navigated.current = true;
-        navigate({ to: "/onboarding", replace: true });
+      if (error) throw error;
+      if (data.session) {
+        recordSessionSnapshot("auth:signup-session", data.session);
+        toast.success("Account created — finish your setup");
+        if (!navigated.current) {
+          navigated.current = true;
+          navigate({ to: "/onboarding", replace: true });
+        }
+      } else {
+        logSessionEvent("auth:signup-confirmation-required");
+        toast.success("Account created — check your email to confirm, then sign in");
+        setMode("signin");
       }
     } catch (err: unknown) {
       logSessionEvent("auth:signup-error", {
