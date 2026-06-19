@@ -177,6 +177,8 @@ function AuthPage() {
     }
   }
 
+  const diagnosticLogs = showDiagnostics ? readSessionLogs().slice(-12).reverse() : [];
+
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center px-5 py-10"
@@ -289,6 +291,33 @@ function AuthPage() {
           {" "}and{" "}
           <Link to="/privacy" className="underline" style={{ color: "#8A8A8A" }}>Privacy Policy</Link>.
         </p>
+        <button
+          type="button"
+          onClick={() => setShowDiagnostics((v) => !v)}
+          className="mt-4 text-[10px] font-bold uppercase tracking-[0.18em]"
+          style={{ color: "#6B7280" }}
+        >
+          Session logs
+        </button>
+        {showDiagnostics && (
+          <div
+            className="mt-3 w-full max-h-40 overflow-auto rounded-xl p-3 text-left"
+            style={{ background: "#050505", border: "1px solid #262626" }}
+          >
+            {diagnosticLogs.length === 0 ? (
+              <p className="text-[10px]" style={{ color: "#6B7280" }}>No session events yet.</p>
+            ) : (
+              diagnosticLogs.map((log) => (
+                <div key={`${log.at}-${log.event}`} className="mb-2 last:mb-0">
+                  <p className="text-[10px] font-bold" style={{ color: "#E10600" }}>{log.event}</p>
+                  <p className="text-[10px] break-words" style={{ color: "#8A8A8A" }}>
+                    {new Date(log.at).toLocaleTimeString()} · {JSON.stringify(log.details ?? {})}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
