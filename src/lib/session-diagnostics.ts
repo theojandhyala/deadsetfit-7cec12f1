@@ -149,5 +149,7 @@ export function getCachedProfileBootstrap(userId: string, maxAgeMs = 60_000) {
 export function clearSessionDiagnostics() {
   if (!isBrowser()) return;
   sessionStorage.removeItem(SESSION_SNAPSHOT_KEY);
-  logSessionEvent("session-diagnostics:cleared");
+  sessionStorage.removeItem(SESSION_LOG_KEY);
+  exposeLogReader();
+  console.info("[DEADSET session] session-diagnostics:cleared");
 }
