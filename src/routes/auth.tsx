@@ -1,16 +1,25 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { signUpUser } from "@/lib/profile.functions";
+import {
+  getLoggedSession,
+  logSessionEvent,
+  readSessionLogs,
+  recordSessionSnapshot,
+} from "@/lib/session-diagnostics";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "DEADSET — Sign In" }] }),
   component: AuthPage,
 });
 
-export function AuthPage() {
+function AuthPage() {
   const navigate = useNavigate();
+  const signUp = useServerFn(signUpUser);
   const [mode, setMode] = useState<"signin" | "signup" | "forgot" | "reset">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -18,7 +27,10 @@ export function AuthPage() {
   const [forgotEmail, setForgotEmail] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const navigated = useRef(false);
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
 
   // Detect password-reset link in URL hash
   useEffect(() => {
@@ -29,16 +41,19 @@ export function AuthPage() {
 
   // Auto-redirect if already signed in
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    getLoggedSession("auth:auto-redirect").then((session) => {
       if (session && !navigated.current) {
         navigated.current = true;
+        logSessionEvent("auth:auto-redirect-to-train");
         navigate({ to: "/train", replace: true });
       }
     });
 
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      logSessionEvent("auth:state-change", { event, hasSession: Boolean(session) });
       if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session && !navigated.current) {
-        if (mode === "reset") return;
+        recordSessionSnapshot(`auth:${event.toLowerCase()}`, session);
+        if (modeRef.current === "reset") return;
         navigated.current = true;
         navigate({ to: "/train", replace: true });
       }
