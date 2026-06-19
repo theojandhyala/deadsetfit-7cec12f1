@@ -4,13 +4,14 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Check, Zap, Camera, MessageSquare, Scan, Images, Activity } from "lucide-react";
 import { GritLogo } from "@/components/GritLogo";
-import { getState, setLocalStateOwner, setState, waitForRemoteState } from "@/lib/storage";
+import { getState, setLocalStateOwner, setState } from "@/lib/storage";
 import { defaultSchedule } from "@/lib/calc";
 import { getExercise } from "@/lib/exercises";
 import { getMyProfile, saveProfile } from "@/lib/profile.functions";
 import { profileFromAccount, profileQuestionsComplete, withTimeout } from "@/lib/account-restore";
 import type { Equipment, Experience, Gender, Goal, Profile, Weakness } from "@/lib/types";
 import { buildPublicStats, PR_CATALOG } from "@/lib/fifa-stats";
+import { cacheProfileBootstrap, getLoggedSession, logSessionEvent } from "@/lib/session-diagnostics";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "DEADSET — Onboarding" }] }),
@@ -74,18 +75,15 @@ function Onboarding() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { supabase } = await import("@/integrations/supabase/client");
-      const {
-        data: { session },
-      } = await withTimeout(supabase.auth.getSession(), { data: { session: null }, error: null });
+      logSessionEvent("onboarding:bootstrap-start");
+      const session = await getLoggedSession("onboarding:bootstrap", 3000);
       if (cancelled) return;
       if (!session) {
+        logSessionEvent("onboarding:no-session-redirect-auth");
         navigate({ to: "/auth", replace: true });
         return;
       }
       setUserId(session.user.id);
-      await withTimeout(waitForRemoteState(session.user.id), undefined);
-      if (cancelled) return;
       const row = await withTimeout(
         getProfile().catch(() => null),
         null,
@@ -97,6 +95,15 @@ function Onboarding() {
           profile: accountProfile,
           schedule: current.schedule ?? defaultSchedule(accountProfile),
         }));
+        setLocalStateOwner(session.user.id);
+        cacheProfileBootstrap(session.user.id, {
+          onboarded: Boolean(row?.onboarded),
+          complete: true,
+          hasUsername: Boolean(row?.username),
+        });
+        logSessionEvent("onboarding:already-complete-redirect-train", {
+          user: session.user.id.slice(0, 8),
+        });
         navigate({ to: "/train", replace: true });
       }
     })();
