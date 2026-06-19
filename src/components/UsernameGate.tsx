@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { useLocation } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyProfile, saveProfile } from "@/lib/profile.functions";
+import { logSessionEvent } from "@/lib/session-diagnostics";
 
 /**
  * Blocking modal: if the signed-in user has no username yet, force them to
@@ -10,13 +12,20 @@ import { getMyProfile, saveProfile } from "@/lib/profile.functions";
 export function UsernameGate() {
   const fetchProfile = useServerFn(getMyProfile);
   const save = useServerFn(saveProfile);
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const skipGate = location.pathname === "/auth" || location.pathname === "/onboarding";
 
   async function check() {
     try {
+      if (skipGate) {
+        setOpen(false);
+        logSessionEvent("username-gate:skipped", { path: location.pathname });
+        return;
+      }
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -25,8 +34,13 @@ export function UsernameGate() {
         return;
       }
       const profile = await fetchProfile().catch(() => null);
-      if (profile && !profile.username) setOpen(true);
-      else setOpen(false);
+      const shouldOpen = Boolean(profile?.onboarded && !profile.username);
+      setOpen(shouldOpen);
+      logSessionEvent("username-gate:checked", {
+        shouldOpen,
+        onboarded: Boolean(profile?.onboarded),
+        hasUsername: Boolean(profile?.username),
+      });
     } catch {
       /* ignore */
     }
@@ -37,7 +51,7 @@ export function UsernameGate() {
     const { data } = supabase.auth.onAuthStateChange(() => check());
     return () => data.subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [location.pathname]);
 
   if (!open) return null;
 
