@@ -66,106 +66,114 @@ function TabsLayout() {
   getProfileRef.current = getProfile;
 
   useEffect(() => {
+    let cancelled = false;
     let done = false;
     const finish = () => {
-      if (done) return;
+      if (done || cancelled) return;
       done = true;
       setReady(true);
     };
 
+    // Hard safety: never block the UI more than 2s. Background work continues.
+    const safety = setTimeout(finish, 2000);
+
+    async function refreshProfile(uid: string) {
+      const cacheKey = `ds_profile_status_${uid}`;
+      const cachedBootstrap = getCachedProfileBootstrap(uid);
+      if (
+        (sessionStorage.getItem(cacheKey) === "onboarded" || cachedBootstrap?.complete) &&
+        getState().profile
+      ) {
+        setLocalStateOwner(uid);
+        return;
+      }
+      logSessionEvent("tabs:profile-fetch-start", { user: uid.slice(0, 8) });
+      const row = await withTimeout(getProfileRef.current().catch(() => null), null, 4000);
+      if (cancelled) return;
+
+      if (row && profileQuestionsComplete(row)) {
+        sessionStorage.setItem(cacheKey, "onboarded");
+        cacheProfileBootstrap(uid, {
+          onboarded: Boolean(row.onboarded),
+          complete: true,
+          hasUsername: Boolean(row.username),
+        });
+        const accountProfile = profileFromAccount(row);
+        if (accountProfile) {
+          setState((current) => ({
+            ...current,
+            profile: accountProfile,
+            schedule: current.schedule ?? defaultSchedule(accountProfile),
+          }));
+          setLocalStateOwner(uid);
+        }
+        return;
+      }
+
+      if (row && !profileQuestionsComplete(row)) {
+        sessionStorage.removeItem(cacheKey);
+        cacheProfileBootstrap(uid, {
+          onboarded: Boolean(row.onboarded),
+          complete: false,
+          hasUsername: Boolean(row.username),
+        });
+        navRef.current({ to: "/onboarding", replace: true });
+        return;
+      }
+
+      // Fetch failed/timed out. Keep local profile if any.
+      if (getState().profile) {
+        setLocalStateOwner(uid);
+      } else {
+        navRef.current({ to: "/onboarding", replace: true });
+      }
+    }
+
     (async () => {
       try {
         logSessionEvent("tabs:bootstrap-start");
-        const session = await getLoggedSession("tabs:bootstrap", 3000);
+
+        // Fast path: trust local cache, render immediately, validate in bg.
+        const localOwner = getLocalStateOwner();
+        if (localOwner && getState().profile) {
+          logSessionEvent("tabs:local-fast-path", { user: localOwner.slice(0, 8) });
+          finish();
+        }
+
+        const session = await getLoggedSession("tabs:bootstrap", 1800);
+        if (cancelled) return;
+
         if (!session) {
           logSessionEvent("tabs:no-session-redirect-auth");
           navRef.current({ to: "/auth", replace: true });
+          finish();
           return;
         }
+
         const uid = session.user.id;
-        const cacheKey = `ds_profile_status_${uid}`;
-        const cachedBootstrap = getCachedProfileBootstrap(uid);
-
-        // Fast path: local profile already belongs to this user — render immediately.
-        if (getState().profile && getLocalStateOwner() === uid) {
-          logSessionEvent("tabs:local-profile-ready", { user: uid.slice(0, 8) });
+        if (done) {
+          // Already rendered. Refresh in background.
+          if (localOwner && localOwner !== uid) setLocalStateOwner(uid);
+          void refreshProfile(uid);
           return;
         }
 
-        // Second-best path: we've already seen this user onboarded in this tab,
-        // and have a local profile — render immediately and let StateSync hydrate.
-        if (
-          (sessionStorage.getItem(cacheKey) === "onboarded" || cachedBootstrap?.complete) &&
-          getState().profile
-        ) {
-          setLocalStateOwner(uid);
-          logSessionEvent("tabs:cached-profile-ready", { user: uid.slice(0, 8) });
-          return;
-        }
-
-        logSessionEvent("tabs:profile-fetch-start", { user: uid.slice(0, 8) });
-        const row = await withTimeout(getProfileRef.current().catch(() => null), null, 5000);
-
-        if (getState().profile && getLocalStateOwner() === uid) {
-          logSessionEvent("tabs:state-sync-profile-ready", { user: uid.slice(0, 8) });
-          return;
-        }
-
-        if (row && profileQuestionsComplete(row)) {
-          sessionStorage.setItem(cacheKey, "onboarded");
-          cacheProfileBootstrap(uid, {
-            onboarded: Boolean(row.onboarded),
-            complete: true,
-            hasUsername: Boolean(row.username),
-          });
-          const accountProfile = profileFromAccount(row);
-          if (accountProfile) {
-            setState((current) => ({
-              ...current,
-              profile: accountProfile,
-              schedule: current.schedule ?? defaultSchedule(accountProfile),
-            }));
-            setLocalStateOwner(uid);
-          }
-          logSessionEvent("tabs:profile-loaded", { user: uid.slice(0, 8) });
-          return;
-        }
-
-        if (row && !profileQuestionsComplete(row)) {
-          sessionStorage.removeItem(cacheKey);
-          cacheProfileBootstrap(uid, {
-            onboarded: Boolean(row.onboarded),
-            complete: false,
-            hasUsername: Boolean(row.username),
-          });
-          logSessionEvent("tabs:profile-incomplete-redirect-onboarding", { user: uid.slice(0, 8) });
-          navRef.current({ to: "/onboarding", replace: true });
-          return;
-        }
-
-        // row === null: profile fetch failed (transient). If we have any local
-        // profile, use it; otherwise send to onboarding so the user isn't stuck.
-        if (getState().profile) {
-          setLocalStateOwner(uid);
-          logSessionEvent("tabs:profile-fetch-fallback-local", { user: uid.slice(0, 8) });
-        } else {
-          logSessionEvent("tabs:profile-fetch-fallback-onboarding", { user: uid.slice(0, 8) });
-          navRef.current({ to: "/onboarding", replace: true });
-        }
+        await refreshProfile(uid);
+        finish();
       } catch (e) {
-        logSessionEvent("tabs:bootstrap-error", { message: e instanceof Error ? e.message : "Unknown" });
+        logSessionEvent("tabs:bootstrap-error", {
+          message: e instanceof Error ? e.message : "Unknown",
+        });
         console.warn("tabs bootstrap failed", e);
-      } finally {
         finish();
       }
     })();
-
-    const safety = setTimeout(finish, 5500);
 
     const { data } = supabase.auth.onAuthStateChange((event, s) => {
       if (event === "SIGNED_OUT" && !s) navRef.current({ to: "/auth", replace: true });
     });
     return () => {
+      cancelled = true;
       clearTimeout(safety);
       data.subscription.unsubscribe();
     };
