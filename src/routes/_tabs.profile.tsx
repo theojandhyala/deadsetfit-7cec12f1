@@ -101,6 +101,14 @@ function ProfilePage() {
 
 
 
+  if (!sessionChecked && !p) {
+    return (
+      <div className="flex items-center justify-center pt-20">
+        <div className="w-6 h-6 border-2 border-accent-red border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   if (!p || !session) {
     return (
       <div className="px-5 pt-8 animate-fade-in">
