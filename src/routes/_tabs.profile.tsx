@@ -65,13 +65,17 @@ function ProfilePage() {
       .then(({ data }) => {
         if (cancelled) return;
         setSession(data.session ? { userId: data.session.user.id } : null);
+        setSessionChecked(true);
       })
       .catch(() => {
-        if (!cancelled) setSession(null);
+        if (cancelled) return;
+        setSession(null);
+        setSessionChecked(true);
       });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       if (cancelled) return;
       setSession(s ? { userId: s.user.id } : null);
+      setSessionChecked(true);
     });
     return () => {
       cancelled = true;
