@@ -30,7 +30,7 @@ jobs:
 
       - name: Bundle SSR worker for Cloudflare Pages
         run: |
-          npx esbuild dist/server/index.js \
+          npx esbuild dist/server/server.js \
             --bundle \
             --outfile=dist/client/_worker.js \
             --platform=browser \
