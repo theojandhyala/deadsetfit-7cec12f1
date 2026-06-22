@@ -321,7 +321,7 @@ function TrainPage() {
       <div className="px-5 mb-5">
         <div className="grid grid-cols-4 gap-2">
           {[
-            { to: "/run", Icon: Activity, label: "Cardio" },
+            { to: "/progress", Icon: Activity, label: "Progress" },
             { to: "/programs", Icon: ListPlus, label: "Schedule" },
             { to: "/challenges", Icon: Trophy, label: "Challenge" },
             { to: "/recovery", Icon: Heart, label: "Recovery" },

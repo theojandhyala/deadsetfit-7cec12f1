@@ -164,7 +164,7 @@ function Features() {
     { t: "AI COACH", d: "24/7 strength coach in your pocket. Ask anything, get answers." },
     { t: "PHYSIQUE SCANNER", d: "AI-powered body analysis: body fat, muscle, symmetry." },
     { t: "PROGRESS PICTURES", d: "Track your transformation with side-by-side check-ins." },
-    { t: "AI RUN COACH", d: "Get tips on pacing, splits and your next session." },
+    { t: "LEADERBOARDS", d: "Compete with friends and climb the global ranks." },
     { t: "PROGRESS OVER TIME", d: "Visualise your gains and stay on track." },
     { t: "CUSTOM WORKOUTS", d: "Create and save your own workout plans." },
     { t: "CLOUD SYNC", d: "Access your data anywhere, anytime, on any device." },
