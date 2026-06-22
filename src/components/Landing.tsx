@@ -140,10 +140,10 @@ function Hero() {
             style={{ background: "rgba(20,20,20,0.7)", border: "1px solid rgba(225,6,0,0.2)" }}
           >
             {[
-              { n: "0", l: "USERS SO FAR" },
-              { n: "YOU", l: "COULD BE FIRST" },
+              { n: "FREE", l: "TO GET STARTED" },
+              { n: "AI", l: "COACH BUILT IN" },
+              { n: "24/7", l: "TRACK ANYWHERE" },
               { n: "∞", l: "POTENTIAL GAINS" },
-              { n: "FREE", l: "ALWAYS WILL BE" },
             ].map((s, i) => (
               <div key={i}>
                 <p className="display font-extrabold text-xl text-accent-red">{s.n}</p>

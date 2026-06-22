@@ -1,8 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useRef } from "react";
-import { ChevronLeft, Download, Upload, Bell, Droplets, Scale } from "lucide-react";
+import { useRef, useState } from "react";
+import { ChevronLeft, Download, Upload, Bell, Droplets, Scale, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
 import { useAppState } from "@/lib/storage";
+import { clearSessionDiagnostics, readSessionLogs } from "@/lib/session-diagnostics";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "DEADSET — Settings" }] }),
@@ -13,6 +14,7 @@ function SettingsPage() {
   const [state, set] = useAppState();
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
+  const [sessionLogs, setSessionLogs] = useState(() => readSessionLogs());
 
   const units = state.units ?? "kg";
   const reminders = state.remindersEnabled ?? true;
@@ -49,6 +51,19 @@ function SettingsPage() {
       }
     };
     r.readAsText(file);
+  }
+
+  async function copySessionLogs() {
+    const logs = readSessionLogs();
+    setSessionLogs(logs);
+    await navigator.clipboard.writeText(JSON.stringify(logs, null, 2));
+    toast.success("Session logs copied");
+  }
+
+  function clearSessionLogs() {
+    clearSessionDiagnostics();
+    setSessionLogs(readSessionLogs());
+    toast.success("Session logs cleared");
   }
 
   return (
@@ -150,6 +165,34 @@ function SettingsPage() {
           Export a full backup of your local training data. Import will overwrite current device
           state.
         </p>
+      </section>
+
+      <section className="px-5 mb-6">
+        <p className="label-cap mb-2 flex items-center gap-1.5">
+          <ClipboardList size={12} className="text-accent-red" /> Session Logs
+        </p>
+        <div className="bg-grit-card border border-grit p-4">
+          <div className="flex gap-2 mb-3">
+            <button onClick={copySessionLogs} className="btn-grit flex-1 text-xs py-2">
+              Copy Logs
+            </button>
+            <button onClick={clearSessionLogs} className="btn-ghost flex-1 text-xs py-2">
+              Clear
+            </button>
+          </div>
+          <div className="max-h-36 overflow-auto text-[10px] text-grit-dim space-y-2">
+            {sessionLogs.length === 0 ? (
+              <p>No session events recorded on this device yet.</p>
+            ) : (
+              sessionLogs.slice(-10).reverse().map((log) => (
+                <div key={`${log.at}-${log.event}`} className="border-b border-[#262626] pb-2 last:border-0">
+                  <p className="font-bold text-grit">{log.event}</p>
+                  <p>{new Date(log.at).toLocaleString()} · {JSON.stringify(log.details ?? {})}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </section>
     </div>
   );

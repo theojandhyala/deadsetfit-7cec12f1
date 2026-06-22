@@ -15,6 +15,7 @@ import {
 } from "@/lib/storage";
 import { loadUserState, saveUserState } from "@/lib/user-state.functions";
 import { withTimeout } from "@/lib/account-restore";
+import { logSessionEvent, recordSessionSnapshot } from "@/lib/session-diagnostics";
 
 /**
  * Mounts once at the root. On sign-in, pulls the user's saved app state from
@@ -30,6 +31,7 @@ export function StateSync() {
     let activeUserId: string | null = null;
 
     async function pull(userId: string) {
+      logSessionEvent("state-sync:pull-start", { user: userId.slice(0, 8) });
       beginRemoteStateLoad(userId);
       try {
         const res = await withTimeout(load(), null);
@@ -40,6 +42,7 @@ export function StateSync() {
           } catch {
             /* ignore */
           }
+          logSessionEvent("state-sync:hydrated-remote", { user: userId.slice(0, 8) });
         } else {
           // First sign-in on this account: push whatever's local so it isn't lost.
           const local = getState();
@@ -60,6 +63,7 @@ export function StateSync() {
 
     withTimeout(supabase.auth.getSession(), { data: { session: null }, error: null }).then(
       ({ data: { session } }) => {
+        recordSessionSnapshot("state-sync:initial", session ?? null);
         if (session?.user?.id) {
           activeUserId = session.user.id;
           pull(session.user.id);
@@ -69,6 +73,7 @@ export function StateSync() {
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       const uid = session?.user?.id ?? null;
+      logSessionEvent("state-sync:auth-change", { event, hasSession: Boolean(session) });
       if (event === "SIGNED_OUT") {
         disableRemoteSync();
         clearLocalState();
@@ -92,10 +97,12 @@ export function StateSync() {
         const {
           data: { session },
         } = await supabase.auth.getSession();
+        recordSessionSnapshot("state-sync:refresh-check", session ?? null);
         if (session) {
           const expiresIn = (session.expires_at ?? 0) - Math.floor(Date.now() / 1000);
           if (expiresIn < 300) {
             await supabase.auth.refreshSession();
+            logSessionEvent("state-sync:session-refreshed", { expiresIn });
           }
         }
       } catch {

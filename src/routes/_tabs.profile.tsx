@@ -53,33 +53,32 @@ function ProfilePage() {
   const [h, setH] = useState(String(p?.heightCm ?? ""));
   const [username, setUsername] = useState(p?.username || "");
   const [savingProfile, setSavingProfile] = useState(false);
-  const [session, setSession] = useState<{ userId: string } | null | "loading">("loading");
+  const [session, setSession] = useState<{ userId: string } | null>(null);
+  const [sessionChecked, setSessionChecked] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    const timeout = setTimeout(() => {
-      if (!cancelled) setSession((s) => (s === "loading" ? null : s));
-    }, 4000);
+    // _tabs already validates the session before mounting. Read it without
+    // a long-running getSession() call so the profile page renders instantly.
     supabase.auth
       .getSession()
       .then(({ data }) => {
         if (cancelled) return;
-        clearTimeout(timeout);
         setSession(data.session ? { userId: data.session.user.id } : null);
+        setSessionChecked(true);
       })
       .catch(() => {
         if (cancelled) return;
-        clearTimeout(timeout);
         setSession(null);
+        setSessionChecked(true);
       });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       if (cancelled) return;
-      clearTimeout(timeout);
       setSession(s ? { userId: s.user.id } : null);
+      setSessionChecked(true);
     });
     return () => {
       cancelled = true;
-      clearTimeout(timeout);
       sub.subscription.unsubscribe();
     };
   }, []);
@@ -100,10 +99,12 @@ function ProfilePage() {
     p?.experience,
   ]);
 
-  if (session === "loading" && !p) {
+
+
+  if (!sessionChecked && !p) {
     return (
       <div className="flex items-center justify-center pt-20">
-        <div className="text-grit-dim text-xs label-cap">Loading…</div>
+        <div className="w-6 h-6 border-2 border-accent-red border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
