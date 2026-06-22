@@ -1,5 +1,6 @@
 import Stripe from "stripe";
-import { Buffer } from "node:buffer";
+
+export type StripeEnv = "sandbox" | "live";
 
 const getEnv = (key: string): string => {
   const value = process.env[key];
@@ -7,32 +8,17 @@ const getEnv = (key: string): string => {
   return value;
 };
 
-export type StripeEnv = "sandbox" | "live";
-
-const GATEWAY_STRIPE_BASE = "https://connector-gateway.lovable.dev/stripe";
-
-export function getConnectionApiKey(env: StripeEnv): string {
-  return env === "sandbox" ? getEnv("STRIPE_SANDBOX_API_KEY") : getEnv("STRIPE_LIVE_API_KEY");
+export function createStripeClient(env: StripeEnv): Stripe {
+  const apiKey = env === "sandbox"
+    ? getEnv("STRIPE_SANDBOX_API_KEY")
+    : getEnv("STRIPE_LIVE_API_KEY");
+  return new Stripe(apiKey, { apiVersion: "2026-03-25.dahlia" });
 }
 
-export function createStripeClient(env: StripeEnv): Stripe {
-  const connectionApiKey = getConnectionApiKey(env);
-  const lovableApiKey = getEnv("LOVABLE_API_KEY");
-
-  return new Stripe(connectionApiKey, {
-    apiVersion: "2026-03-25.dahlia",
-    httpClient: Stripe.createFetchHttpClient(((url: string | URL, init?: RequestInit) => {
-      const gatewayUrl = url.toString().replace("https://api.stripe.com", GATEWAY_STRIPE_BASE);
-      return fetch(gatewayUrl, {
-        ...init,
-        headers: {
-          ...Object.fromEntries(new Headers(init?.headers).entries()),
-          "X-Connection-Api-Key": connectionApiKey,
-          "Lovable-API-Key": lovableApiKey,
-        },
-      });
-    }) as any),
-  });
+export function getConnectionApiKey(env: StripeEnv): string {
+  return env === "sandbox"
+    ? getEnv("STRIPE_SANDBOX_API_KEY")
+    : getEnv("STRIPE_LIVE_API_KEY");
 }
 
 export function getStripeErrorMessage(error: unknown): string {
@@ -81,6 +67,7 @@ export async function verifyWebhook(
     key,
     new TextEncoder().encode(`${timestamp}.${body}`),
   );
+  const { Buffer } = await import("node:buffer");
   const expected = Buffer.from(new Uint8Array(signed)).toString("hex");
 
   if (!v1Signatures.includes(expected)) throw new Error("Invalid webhook signature");

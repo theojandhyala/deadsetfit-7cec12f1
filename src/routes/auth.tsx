@@ -1,29 +1,16 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
-import { getMyProfile } from "@/lib/profile.functions";
-import {
-  cacheProfileBootstrap,
-  getLoggedSession,
-  logSessionEvent,
-  readSessionLogs,
-  recordSessionSnapshot,
-} from "@/lib/session-diagnostics";
-import { profileFromAccount, profileQuestionsComplete, withTimeout } from "@/lib/account-restore";
-import { defaultSchedule } from "@/lib/calc";
-import { getState, setLocalStateOwner, setState } from "@/lib/storage";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "DEADSET — Sign In" }] }),
   component: AuthPage,
 });
 
-function AuthPage() {
+export function AuthPage() {
   const navigate = useNavigate();
-  const getProfile = useServerFn(getMyProfile);
   const [mode, setMode] = useState<"signin" | "signup" | "forgot" | "reset">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,10 +18,7 @@ function AuthPage() {
   const [forgotEmail, setForgotEmail] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const navigated = useRef(false);
-  const modeRef = useRef(mode);
-  modeRef.current = mode;
 
   // Detect password-reset link in URL hash
   useEffect(() => {
@@ -45,21 +29,18 @@ function AuthPage() {
 
   // Auto-redirect if already signed in
   useEffect(() => {
-    getLoggedSession("auth:auto-redirect").then((session) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (session && !navigated.current) {
         navigated.current = true;
-        logSessionEvent("auth:auto-redirect-to-train");
-        preloadProfile(session.user.id).then((target) => navigate({ to: target, replace: true }));
+        navigate({ to: "/train", replace: true });
       }
     });
 
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
-      logSessionEvent("auth:state-change", { event, hasSession: Boolean(session) });
       if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session && !navigated.current) {
-        recordSessionSnapshot(`auth:${event.toLowerCase()}`, session);
-        if (modeRef.current === "reset") return;
+        if (mode === "reset") return;
         navigated.current = true;
-        preloadProfile(session.user.id).then((target) => navigate({ to: target, replace: true }));
+        navigate({ to: "/train", replace: true });
       }
     });
     return () => data.subscription.unsubscribe();
@@ -72,23 +53,13 @@ function AuthPage() {
     if (!password) { toast.error("Enter your password"); return; }
     setBusy(true);
     try {
-      logSessionEvent("auth:password-signin-start", { emailDomain: email.split("@")[1] ?? null });
       const { error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password,
       });
       if (error) throw error;
-      const session = await getLoggedSession("auth:password-signin-success", 3500);
-      if (!session) throw new Error("Signed in, but the session was not saved. Please try again.");
-      const target = await preloadProfile(session.user.id);
-      if (!navigated.current) {
-        navigated.current = true;
-        navigate({ to: target, replace: true });
-      }
+      // onAuthStateChange handles navigation
     } catch (err: unknown) {
-      logSessionEvent("auth:password-signin-error", {
-        message: err instanceof Error ? err.message : "Unknown error",
-      });
       const msg = err instanceof Error ? err.message : "Sign in failed";
       if (msg.toLowerCase().includes("invalid login")) {
         toast.error("Wrong email or password");
@@ -108,34 +79,17 @@ function AuthPage() {
     if (password.length < 6) { toast.error("Password must be at least 6 characters"); return; }
     setBusy(true);
     try {
-      logSessionEvent("auth:signup-start", { emailDomain: email.split("@")[1] ?? null });
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password,
         options: { emailRedirectTo: window.location.origin + "/auth" },
       });
       if (error) throw error;
-      if (data.session) {
-        recordSessionSnapshot("auth:signup-session", data.session);
-        toast.success("Account created — finish your setup");
-        if (!navigated.current) {
-          navigated.current = true;
-          navigate({ to: "/onboarding", replace: true });
-        }
-      } else {
-        logSessionEvent("auth:signup-confirmation-required");
-        toast.success("Account created — check your email to confirm, then sign in");
-        setMode("signin");
-      }
+      toast.success("Account created — check your email to confirm, then sign in");
+      setMode("signin");
     } catch (err: unknown) {
-      logSessionEvent("auth:signup-error", {
-        message: err instanceof Error ? err.message : "Unknown error",
-      });
       const msg = err instanceof Error ? err.message : "Sign up failed";
       if (msg.toLowerCase().includes("already registered")) {
-        toast.error("That email is already registered — try signing in");
-        setMode("signin");
-      } else if (msg.toLowerCase().includes("already exists")) {
         toast.error("That email is already registered — try signing in");
         setMode("signin");
       } else {
@@ -172,7 +126,6 @@ function AuthPage() {
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
-      await getLoggedSession("auth:password-reset-success", 3500);
       toast.success("Password updated — you're signed in");
       navigate({ to: "/train", replace: true });
     } catch (err: unknown) {
@@ -181,60 +134,6 @@ function AuthPage() {
       setBusy(false);
     }
   }
-
-  async function preloadProfile(userId: string): Promise<"/train" | "/onboarding"> {
-    logSessionEvent("auth:profile-preload-start", { user: userId.slice(0, 8) });
-    const row = await withTimeout(
-      getProfile().catch((e) => {
-        logSessionEvent("auth:profile-preload-error", {
-          message: e instanceof Error ? e.message : "Unknown error",
-        });
-        return null;
-      }),
-      null,
-      4000,
-    );
-
-    if (row && profileQuestionsComplete(row)) {
-      const accountProfile = profileFromAccount(row);
-      if (accountProfile) {
-        setState((current) => ({
-          ...current,
-          profile: accountProfile,
-          schedule: current.schedule ?? defaultSchedule(accountProfile),
-        }));
-        setLocalStateOwner(userId);
-      }
-      cacheProfileBootstrap(userId, {
-        onboarded: Boolean(row.onboarded),
-        complete: true,
-        hasUsername: Boolean(row.username),
-      });
-      logSessionEvent("auth:profile-preload-complete", { user: userId.slice(0, 8) });
-      return "/train";
-    }
-
-    if (row) {
-      cacheProfileBootstrap(userId, {
-        onboarded: Boolean(row.onboarded),
-        complete: false,
-        hasUsername: Boolean(row.username),
-      });
-      logSessionEvent("auth:profile-preload-incomplete", { user: userId.slice(0, 8) });
-      return "/onboarding";
-    }
-
-    if (getState().profile) {
-      setLocalStateOwner(userId);
-      logSessionEvent("auth:profile-preload-local-fallback", { user: userId.slice(0, 8) });
-      return "/train";
-    }
-
-    logSessionEvent("auth:profile-preload-empty", { user: userId.slice(0, 8) });
-    return "/onboarding";
-  }
-
-  const diagnosticLogs = showDiagnostics ? readSessionLogs().slice(-12).reverse() : [];
 
   return (
     <div
@@ -348,33 +247,6 @@ function AuthPage() {
           {" "}and{" "}
           <Link to="/privacy" className="underline" style={{ color: "#8A8A8A" }}>Privacy Policy</Link>.
         </p>
-        <button
-          type="button"
-          onClick={() => setShowDiagnostics((v) => !v)}
-          className="mt-4 text-[10px] font-bold uppercase tracking-[0.18em]"
-          style={{ color: "#6B7280" }}
-        >
-          Session logs
-        </button>
-        {showDiagnostics && (
-          <div
-            className="mt-3 w-full max-h-40 overflow-auto rounded-xl p-3 text-left"
-            style={{ background: "#050505", border: "1px solid #262626" }}
-          >
-            {diagnosticLogs.length === 0 ? (
-              <p className="text-[10px]" style={{ color: "#6B7280" }}>No session events yet.</p>
-            ) : (
-              diagnosticLogs.map((log) => (
-                <div key={`${log.at}-${log.event}`} className="mb-2 last:mb-0">
-                  <p className="text-[10px] font-bold" style={{ color: "#E10600" }}>{log.event}</p>
-                  <p className="text-[10px] break-words" style={{ color: "#8A8A8A" }}>
-                    {new Date(log.at).toLocaleTimeString()} · {JSON.stringify(log.details ?? {})}
-                  </p>
-                </div>
-              ))
-            )}
-          </div>
-        )}
       </div>
     </div>
   );
