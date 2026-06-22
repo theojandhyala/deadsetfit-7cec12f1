@@ -28,9 +28,34 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           VITE_PAYMENTS_CLIENT_TOKEN: ${{ secrets.VITE_PAYMENTS_CLIENT_TOKEN }}
 
+      - name: Create Cloudflare worker entry
+        run: |
+          cat > worker-entry.js << 'EOF'
+          import server from './dist/server/server.js';
+          export default {
+            async fetch(request, env, ctx) {
+              const url = new URL(request.url);
+              const path = url.pathname;
+              // Serve static assets via Cloudflare's asset store
+              if (
+                path.startsWith('/assets/') ||
+                path === '/favicon.ico' ||
+                path === '/manifest.json' ||
+                path === '/robots.txt' ||
+                path === '/sitemap.xml' ||
+                path === '/llms.txt' ||
+                /\.(png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|webp|avif)$/.test(path)
+              ) {
+                try { return await env.ASSETS.fetch(request); } catch {}
+              }
+              return server.fetch(request, env, ctx);
+            }
+          };
+          EOF
+
       - name: Bundle SSR worker for Cloudflare Pages
         run: |
-          npx esbuild dist/server/server.js \
+          npx esbuild worker-entry.js \
             --bundle \
             --outfile=dist/client/_worker.js \
             --platform=browser \
