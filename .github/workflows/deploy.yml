@@ -47,7 +47,12 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Deploy to Cloudflare Pages
-        run: npx wrangler pages deploy dist/client --project-name=deadsetfit --commit-dirty=true
+        run: |
+          npx wrangler pages deploy dist/client \
+            --project-name=deadsetfit \
+            --commit-dirty=true \
+            --compatibility-date=2024-09-23 \
+            --compatibility-flags=nodejs_compat
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

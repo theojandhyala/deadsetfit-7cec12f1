@@ -74,10 +74,10 @@ function TabsLayout() {
       setReady(true);
     };
 
-    // Hard safety: never block the UI more than 2s. Background work continues.
-    const safety = setTimeout(finish, 2000);
+    // Safety valve: never block more than 5s (up from 2s to handle cold starts)
+    const safety = setTimeout(finish, 5000);
 
-    async function refreshProfile(uid: string) {
+    async function refreshProfile(uid: string, isBackground = false) {
       const cacheKey = `ds_profile_status_${uid}`;
       const cachedBootstrap = getCachedProfileBootstrap(uid);
       if (
@@ -88,7 +88,9 @@ function TabsLayout() {
         return;
       }
       logSessionEvent("tabs:profile-fetch-start", { user: uid.slice(0, 8) });
-      const row = await withTimeout(getProfileRef.current().catch(() => null), null, 4000);
+
+      // Use longer timeout to handle Cloudflare cold starts (up from 4s to 12s)
+      const row = await withTimeout(getProfileRef.current().catch(() => null), null, 12000);
       if (cancelled) return;
 
       if (row && profileQuestionsComplete(row)) {
@@ -111,6 +113,7 @@ function TabsLayout() {
       }
 
       if (row && !profileQuestionsComplete(row)) {
+        // Server confirmed profile is incomplete — redirect to onboarding
         sessionStorage.removeItem(cacheKey);
         cacheProfileBootstrap(uid, {
           onboarded: Boolean(row.onboarded),
@@ -121,11 +124,36 @@ function TabsLayout() {
         return;
       }
 
-      // Fetch failed/timed out. Keep local profile if any.
+      // row is null: fetch timed out or errored. Don't redirect to onboarding
+      // unless we have no local profile at all — the user IS logged in.
+      logSessionEvent("tabs:profile-fetch-failed", { user: uid.slice(0, 8), isBackground });
       if (getState().profile) {
         setLocalStateOwner(uid);
-      } else {
-        navRef.current({ to: "/onboarding", replace: true });
+      } else if (!isBackground) {
+        // No local profile AND server failed — retry once before giving up
+        logSessionEvent("tabs:profile-fetch-retry", { user: uid.slice(0, 8) });
+        const retry = await withTimeout(getProfileRef.current().catch(() => null), null, 12000);
+        if (cancelled) return;
+        if (retry && profileQuestionsComplete(retry)) {
+          sessionStorage.setItem(cacheKey, "onboarded");
+          cacheProfileBootstrap(uid, {
+            onboarded: Boolean(retry.onboarded),
+            complete: true,
+            hasUsername: Boolean(retry.username),
+          });
+          const accountProfile = profileFromAccount(retry);
+          if (accountProfile) {
+            setState((current) => ({
+              ...current,
+              profile: accountProfile,
+              schedule: current.schedule ?? defaultSchedule(accountProfile),
+            }));
+            setLocalStateOwner(uid);
+          }
+        } else if (retry && !profileQuestionsComplete(retry)) {
+          navRef.current({ to: "/onboarding", replace: true });
+        }
+        // If retry also timed out, stay on the page — user is logged in, profile just slow
       }
     }
 
@@ -133,32 +161,37 @@ function TabsLayout() {
       try {
         logSessionEvent("tabs:bootstrap-start");
 
-        // Fast path: trust local cache, render immediately, validate in bg.
+        // Fast path: trust local cache, render immediately, validate in background.
         const localOwner = getLocalStateOwner();
         if (localOwner && getState().profile) {
           logSessionEvent("tabs:local-fast-path", { user: localOwner.slice(0, 8) });
           finish();
         }
 
-        const session = await getLoggedSession("tabs:bootstrap", 1800);
+        // Longer session timeout — Supabase getSession() reads localStorage so should
+        // be fast, but give extra room for cold start initialization
+        const session = await getLoggedSession("tabs:bootstrap", 8000);
         if (cancelled) return;
 
         if (!session) {
-          logSessionEvent("tabs:no-session-redirect-auth");
-          navRef.current({ to: "/auth", replace: true });
+          // Only redirect to auth if we also have no local profile (belt-and-suspenders)
+          if (!getState().profile) {
+            logSessionEvent("tabs:no-session-redirect-auth");
+            navRef.current({ to: "/auth", replace: true });
+          }
           finish();
           return;
         }
 
         const uid = session.user.id;
         if (done) {
-          // Already rendered. Refresh in background.
+          // Already rendered via fast path or safety timer. Refresh in background.
           if (localOwner && localOwner !== uid) setLocalStateOwner(uid);
-          void refreshProfile(uid);
+          void refreshProfile(uid, true);
           return;
         }
 
-        await refreshProfile(uid);
+        await refreshProfile(uid, false);
         finish();
       } catch (e) {
         logSessionEvent("tabs:bootstrap-error", {

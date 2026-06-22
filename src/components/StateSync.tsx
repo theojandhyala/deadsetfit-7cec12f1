@@ -34,34 +34,55 @@ export function StateSync() {
       logSessionEvent("state-sync:pull-start", { user: userId.slice(0, 8) });
       beginRemoteStateLoad(userId);
       try {
-        const res = await withTimeout(load(), null);
+        // 10s timeout — Cloudflare cold starts can be slow
+        const res = await withTimeout(load(), null, 10000);
         if (cancelled) return;
         if (res?.data) {
           try {
             hydrateFromRemote(JSON.parse(res.data), userId);
-          } catch {
-            /* ignore */
+            logSessionEvent("state-sync:hydrated-remote", { user: userId.slice(0, 8) });
+          } catch (parseErr) {
+            // Corrupted state — log but don't crash. Local state stays as-is.
+            logSessionEvent("state-sync:hydration-parse-error", {
+              user: userId.slice(0, 8),
+              message: parseErr instanceof Error ? parseErr.message : "parse failed",
+            });
           }
-          logSessionEvent("state-sync:hydrated-remote", { user: userId.slice(0, 8) });
         } else {
-          // First sign-in on this account: push whatever's local so it isn't lost.
+          // First sign-in: push existing local state so it isn't lost
           const local = getState();
           if (local.profile && getLocalStateOwner() === userId) {
-            await save({ data: { data: JSON.stringify(local) } }).catch(() => {});
+            await save({ data: { data: JSON.stringify(local) } }).catch((err) => {
+              logSessionEvent("state-sync:initial-push-failed", {
+                message: err instanceof Error ? err.message : "unknown",
+              });
+            });
           }
           setLocalStateOwner(userId);
         }
         enableRemoteSync(async (json) => {
-          await save({ data: { data: json } });
+          await save({ data: { data: json } }).catch((err) => {
+            logSessionEvent("state-sync:push-failed", {
+              message: err instanceof Error ? err.message : "unknown",
+            });
+          });
         });
       } catch (e) {
+        logSessionEvent("state-sync:pull-failed", {
+          user: userId.slice(0, 8),
+          message: e instanceof Error ? e.message : "unknown",
+        });
         console.warn("state pull failed", e);
+        // Still enable sync so future changes are saved even if initial pull failed
+        enableRemoteSync(async (json) => {
+          await save({ data: { data: json } }).catch(() => {});
+        });
       } finally {
         if (!cancelled) finishRemoteStateLoad(userId);
       }
     }
 
-    withTimeout(supabase.auth.getSession(), { data: { session: null }, error: null }).then(
+    withTimeout(supabase.auth.getSession(), { data: { session: null }, error: null }, 8000).then(
       ({ data: { session } }) => {
         recordSessionSnapshot("state-sync:initial", session ?? null);
         if (session?.user?.id) {
@@ -94,9 +115,7 @@ export function StateSync() {
     // Proactively refresh session when the user returns to the app
     const refresh = async () => {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
         recordSessionSnapshot("state-sync:refresh-check", session ?? null);
         if (session) {
           const expiresIn = (session.expires_at ?? 0) - Math.floor(Date.now() / 1000);

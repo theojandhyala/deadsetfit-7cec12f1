@@ -20,6 +20,8 @@ export function AuthPage() {
   const [showPass, setShowPass] = useState(false);
   const [busy, setBusy] = useState(false);
   const navigated = useRef(false);
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
 
   // Detect password-reset link in URL hash
   useEffect(() => {
@@ -30,8 +32,9 @@ export function AuthPage() {
 
   // Auto-redirect if already signed in
   useEffect(() => {
+    navigated.current = false; // reset on mount so re-visiting /auth works
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session && !navigated.current) {
+      if (session && !navigated.current && modeRef.current !== "reset") {
         navigated.current = true;
         navigate({ to: "/train", replace: true });
       }
@@ -39,14 +42,13 @@ export function AuthPage() {
 
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session && !navigated.current) {
-        if (mode === "reset") return;
+        if (modeRef.current === "reset") return;
         navigated.current = true;
         navigate({ to: "/train", replace: true });
       }
     });
     return () => data.subscription.unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [navigate]);
 
   async function handleSignIn(e: React.FormEvent) {
     e.preventDefault();
