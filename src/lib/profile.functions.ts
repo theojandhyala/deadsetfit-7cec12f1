@@ -67,9 +67,11 @@ export const signUpUser = createServerFn({ method: "POST" })
     if (profileError) throw new Error(profileError.message);
 
     // Sign in immediately and return session tokens
-    const anon = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
+    const anon = createClient(
+      (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL)!,
+      (process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY)!,
+      { auth: { persistSession: false, autoRefreshToken: false } },
+    );
     const { data: signIn, error: signInErr } = await anon.auth.signInWithPassword({
       email: data.email,
       password: data.password,

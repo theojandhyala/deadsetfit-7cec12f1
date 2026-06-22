@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { signUpUser } from "@/lib/profile.functions";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
@@ -79,17 +80,17 @@ export function AuthPage() {
     if (password.length < 6) { toast.error("Password must be at least 6 characters"); return; }
     setBusy(true);
     try {
-      const { error } = await supabase.auth.signUp({
-        email: email.trim().toLowerCase(),
-        password,
-        options: { emailRedirectTo: window.location.origin + "/auth" },
+      const result = await signUpUser({ data: { email: email.trim().toLowerCase(), password } });
+      // Set the session returned by the server so the user is logged in immediately
+      await supabase.auth.setSession({
+        access_token: result.access_token,
+        refresh_token: result.refresh_token,
       });
-      if (error) throw error;
-      toast.success("Account created — check your email to confirm, then sign in");
-      setMode("signin");
+      navigated.current = true;
+      navigate({ to: "/train", replace: true });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Sign up failed";
-      if (msg.toLowerCase().includes("already registered")) {
+      if (msg.toLowerCase().includes("already exists") || msg.toLowerCase().includes("already registered")) {
         toast.error("That email is already registered — try signing in");
         setMode("signin");
       } else {
