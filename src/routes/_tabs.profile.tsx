@@ -19,9 +19,12 @@ import {
 import { useAppState, flushRemoteState } from "@/lib/storage";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateStreak, calculateGritScore, gritBadge, badgeColor } from "@/lib/calc";
+import { getRank, rankProgress, pointsToNextTier } from "@/lib/rank";
 import { saveProfile } from "@/lib/profile.functions";
 import { deleteMyAccount } from "@/lib/account.functions";
 import { FifaCard } from "@/components/FifaCard";
+import { RankEmblem } from "@/components/RankEmblem";
+import { RankShareCard } from "@/components/RankShareCard";
 import { QuickLogFAB } from "@/components/QuickLogFAB";
 import { StatsGrid } from "@/components/StatsGrid";
 import { LiftLevels } from "@/components/LiftLevels";
@@ -53,6 +56,7 @@ function ProfilePage() {
   const [h, setH] = useState(String(p?.heightCm ?? ""));
   const [username, setUsername] = useState(p?.username || "");
   const [savingProfile, setSavingProfile] = useState(false);
+  const [showRankCard, setShowRankCard] = useState(false);
   const [session, setSession] = useState<{ userId: string } | null>(null);
   const [sessionChecked, setSessionChecked] = useState(false);
 
@@ -370,23 +374,15 @@ function ProfilePage() {
             </button>
           </div>
 
-          {/* Name + badge */}
+          {/* Name + goal */}
           <h1 className="display text-2xl font-extrabold text-white leading-tight">
             {p.username || "Athlete"}
           </h1>
-          <div className="flex items-center gap-2 mt-1">
-            <span
-              className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
-              style={{ background: `${badgeC}20`, color: badgeC, border: `1px solid ${badgeC}50` }}
-            >
-              {badge}
-            </span>
-            <span className="text-[11px]" style={{ color: "#8A8A8A" }}>
-              {p.goal?.replace("_", " ")} · {p.experience}
-            </span>
-          </div>
+          <p className="text-[11px] mt-0.5" style={{ color: "#8A8A8A" }}>
+            {p.goal?.replace("_", " ")} · {p.experience}
+          </p>
 
-          {/* Stats row — Strava style */}
+          {/* Stats row */}
           <div
             className="flex mt-4 rounded-xl overflow-hidden"
             style={{ border: "1.5px solid #262626" }}
@@ -417,8 +413,75 @@ function ProfilePage() {
         </div>
       </div>
 
+      {/* === RANK SECTION === */}
+      {(() => {
+        const rank = getRank(score.total);
+        const progress = rankProgress(score.total);
+        const toNext = pointsToNextTier(score.total);
+        return (
+          <section className="px-4 mb-4 mt-2">
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{
+                background: `linear-gradient(135deg, ${rank.gradient[0]}cc, #0d0d0d)`,
+                border: `1.5px solid ${rank.color}40`,
+                boxShadow: `0 0 32px ${rank.glowColor}20`,
+              }}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 pt-4 pb-2">
+                <div>
+                  <p className="text-[10px] font-black tracking-widest uppercase" style={{ color: rank.color }}>
+                    SEASON 1 RANK
+                  </p>
+                  <p className="display text-3xl font-extrabold text-white mt-0.5">{rank.label}</p>
+                </div>
+                <RankEmblem gritPoints={score.total} size="lg" showLabel={false} />
+              </div>
+
+              {/* Progress bar */}
+              <div className="px-4 pb-3">
+                <div className="flex justify-between mb-1.5">
+                  <span className="text-[10px] font-bold" style={{ color: rank.color }}>{score.total} pts</span>
+                  {rank.tier !== "DEADSET" && (
+                    <span className="text-[10px] font-bold" style={{ color: "#555" }}>
+                      {toNext} to {rank.nextTier}
+                    </span>
+                  )}
+                </div>
+                <div className="rounded-full overflow-hidden" style={{ height: 6, background: "#111" }}>
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{
+                      width: `${Math.round(progress * 100)}%`,
+                      background: `linear-gradient(90deg, ${rank.gradient[0]}, ${rank.color})`,
+                      boxShadow: `0 0 8px ${rank.glowColor}`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Share button */}
+              <button
+                onClick={() => setShowRankCard(true)}
+                className="w-full flex items-center justify-center gap-2 py-3 font-black text-sm tracking-wider"
+                style={{
+                  background: rank.color + "18",
+                  borderTop: `1px solid ${rank.color}30`,
+                  color: rank.color,
+                  letterSpacing: "0.1em",
+                }}
+              >
+                <Share2 size={15} />
+                SHARE RANK CARD · TIKTOK READY
+              </button>
+            </div>
+          </section>
+        );
+      })()}
+
       {/* === FIFA card === */}
-      <section className="px-4 mb-4 mt-4 animate-scale-in delay-100">
+      <section className="px-4 mb-4 animate-scale-in delay-100">
         <FifaCard
           name={p.username || "Athlete"}
           username={p.username}
@@ -436,6 +499,21 @@ function ProfilePage() {
 
       {/* Share Profile */}
       {p.username && <ShareProfileCard username={p.username} />}
+
+      {/* Rank share card modal */}
+      {showRankCard && (
+        <RankShareCard
+          gritPoints={score.total}
+          displayName={p.username || "Athlete"}
+          username={p.username}
+          avatarDataUrl={p.avatarDataUrl}
+          streak={streak}
+          prs={buildHeadlinePRs(state)}
+          sessions={(state.sessions ?? []).length}
+          overall={fifa.overall}
+          onClose={() => setShowRankCard(false)}
+        />
+      )}
 
       <StatsGrid state={state} />
       <LiftLevels state={state} />
