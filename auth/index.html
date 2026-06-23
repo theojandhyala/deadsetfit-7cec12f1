@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#090609" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>DEADSET — Sign In</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        color-scheme: dark;
+        --red: #f00606;
+        --cream: #f5f5f0;
+        --muted: #93929c;
+        --panel: #1c1d24;
+        --black: #050505;
+        font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #080507;
+        color: var(--cream);
+      }
+
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: #080507;
+      }
+
+      body {
+        min-height: 100vh;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      .page {
+        position: relative;
+        min-height: 100vh;
+        overflow: hidden;
+        padding: max(78px, calc(env(safe-area-inset-top) + 56px)) 28px max(32px, env(safe-area-inset-bottom));
+        background:
+          radial-gradient(ellipse at 50% 5%, rgba(230, 50, 34, 0.2) 0%, rgba(230, 50, 34, 0.07) 34%, transparent 62%),
+          linear-gradient(180deg, #140609 0%, #080507 72%);
+      }
+
+      .page::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.18;
+        background:
+          linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+        background-size: 28px 28px;
+        mask-image: radial-gradient(ellipse at center, black 0%, transparent 68%);
+      }
+
+      .close {
+        position: fixed;
+        top: max(12px, env(safe-area-inset-top));
+        right: 12px;
+        z-index: 3;
+        display: grid;
+        place-items: center;
+        width: 56px;
+        height: 56px;
+        border: 0;
+        border-radius: 999px;
+        background: rgba(37, 38, 45, 0.92);
+        color: #c9c8cf;
+        box-shadow: 0 18px 38px rgba(0,0,0,0.4);
+      }
+
+      .close::before,
+      .close::after {
+        content: "";
+        position: absolute;
+        width: 32px;
+        height: 4px;
+        border-radius: 999px;
+        background: currentColor;
+      }
+
+      .close::before { transform: rotate(45deg); }
+      .close::after { transform: rotate(-45deg); }
+
+      main {
+        position: relative;
+        z-index: 1;
+        width: min(100%, 476px);
+        margin: 0 auto;
+      }
+
+      .brand-wrap {
+        margin: 0 0 52px;
+        text-align: center;
+      }
+
+      .brand-row {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .slash {
+        width: 4px;
+        height: 34px;
+        border-radius: 999px;
+        background: var(--red);
+        box-shadow: 0 0 18px rgba(240, 6, 6, 0.8);
+      }
+
+      .brand {
+        margin: 0;
+        color: #fff;
+        font-family: Oswald, Impact, "Arial Black", sans-serif;
+        font-size: clamp(48px, 13vw, 64px);
+        font-style: italic;
+        font-weight: 700;
+        letter-spacing: -0.045em;
+        line-height: 0.92;
+        text-shadow: 0 0 36px rgba(230, 50, 34, 0.34);
+      }
+
+      .brand span {
+        color: var(--red);
+      }
+
+      .tagline {
+        margin: 16px 0 0;
+        color: #a7a6b0;
+        font-size: 14px;
+        font-weight: 800;
+        letter-spacing: 0.42em;
+        text-transform: uppercase;
+      }
+
+      .card {
+        width: 100%;
+        padding: 38px;
+        border: 1px solid rgba(240, 6, 6, 0.18);
+        border-radius: 26px;
+        background: rgba(28, 29, 36, 0.97);
+        box-shadow:
+          0 0 0 1px rgba(255,255,255,0.025) inset,
+          0 28px 90px rgba(0,0,0,0.56),
+          0 0 42px rgba(230,50,34,0.10);
+      }
+
+      .tabs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        height: 60px;
+        margin-bottom: 32px;
+        padding: 4px;
+        border-radius: 18px;
+        background: #050505;
+      }
+
+      .tab {
+        border: 0;
+        border-radius: 15px;
+        background: transparent;
+        color: #858490;
+        font-size: 17px;
+        font-weight: 800;
+      }
+
+      .tab.active {
+        background: var(--red);
+        color: #fff;
+        box-shadow: 0 8px 20px rgba(230,50,34,0.32);
+      }
+
+      label {
+        display: block;
+        margin: 0 0 10px;
+        color: #9998a2;
+        font-size: 16px;
+        font-weight: 800;
+      }
+
+      input {
+        display: block;
+        width: 100%;
+        height: 62px;
+        border: 1px solid rgba(255,255,255,0.055);
+        border-radius: 18px;
+        outline: none;
+        background: #050505;
+        color: var(--cream);
+        caret-color: var(--red);
+        padding: 0 22px;
+        font-size: 17px;
+        font-weight: 700;
+      }
+
+      input::placeholder {
+        color: #777680;
+      }
+
+      input:focus {
+        border-color: rgba(240, 6, 6, 0.72);
+        box-shadow: 0 0 0 1px rgba(240,6,6,0.45), 0 0 22px rgba(240,6,6,0.12);
+      }
+
+      .field {
+        margin-bottom: 18px;
+      }
+
+      .password-wrap {
+        position: relative;
+      }
+
+      .password-wrap input {
+        padding-right: 58px;
+      }
+
+      .eye {
+        position: absolute;
+        top: 50%;
+        right: 12px;
+        width: 42px;
+        height: 42px;
+        transform: translateY(-50%);
+        border: 0;
+        border-radius: 999px;
+        background: transparent;
+        color: #737280;
+      }
+
+      .forgot {
+        display: block;
+        margin: 24px 0 0 auto;
+        border: 0;
+        background: transparent;
+        color: #92919b;
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      .submit {
+        width: 100%;
+        height: 64px;
+        margin-top: 20px;
+        border: 0;
+        border-radius: 18px;
+        background: var(--red);
+        color: white;
+        font-size: 19px;
+        font-weight: 800;
+        box-shadow: 0 12px 28px rgba(230,50,34,0.34);
+      }
+
+      .submit:disabled {
+        opacity: 0.62;
+      }
+
+      .message {
+        min-height: 20px;
+        margin-top: 16px;
+        color: #a7a6b0;
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.4;
+        text-align: center;
+      }
+
+      .message.error {
+        color: #ff6b62;
+      }
+
+      .terms {
+        max-width: 420px;
+        margin: 24px auto 0;
+        color: #777680;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1.7;
+        text-align: center;
+      }
+
+      .terms a {
+        color: #bdbcc5;
+        text-underline-offset: 4px;
+      }
+
+      @media (max-width: 380px) {
+        .page { padding-left: 16px; padding-right: 16px; }
+        .card { padding: 28px 22px; }
+        .tagline { letter-spacing: 0.32em; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <button class="close" id="close" type="button" aria-label="Close"></button>
+      <main>
+        <div class="brand-wrap">
+          <div class="brand-row">
+            <span class="slash"></span>
+            <h1 class="brand">DEAD<span>SET</span></h1>
+          </div>
+          <p class="tagline">Forge Your Body</p>
+        </div>
+
+        <section class="card" aria-label="Authentication">
+          <div class="tabs" role="tablist">
+            <button class="tab active" id="signin-tab" type="button">Sign In</button>
+            <button class="tab" id="signup-tab" type="button">Create Account</button>
+          </div>
+
+          <form id="auth-form" autocomplete="on">
+            <div class="field">
+              <label for="email">Email</label>
+              <input id="email" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="your@email.com" required />
+            </div>
+
+            <div class="field">
+              <label for="password">Password</label>
+              <div class="password-wrap">
+                <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Password" minlength="6" required />
+                <button class="eye" id="toggle-password" type="button" aria-label="Show password">
+                  <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" stroke="currentColor" stroke-width="2" />
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <button class="forgot" id="forgot" type="button">Forgot password?</button>
+            <button class="submit" id="submit" type="submit">Sign In</button>
+            <div class="message" id="message" role="status" aria-live="polite"></div>
+          </form>
+        </section>
+
+        <p class="terms">
+          By continuing you agree to our <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>.
+        </p>
+      </main>
+    </div>
+
+    <script type="module" src="/src/auth/plain.ts"></script>
+  </body>
+</html>
