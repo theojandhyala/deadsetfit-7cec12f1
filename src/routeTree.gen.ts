@@ -19,7 +19,6 @@ import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as DisclaimerRouteImport } from './routes/disclaimer'
 import { Route as CoachRouteImport } from './routes/coach'
 import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AdminDeleteUsersRouteImport } from './routes/admin-delete-users'
 import { Route as TabsRouteImport } from './routes/_tabs'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkoutLiveRouteImport } from './routes/workout.live'
@@ -85,11 +84,6 @@ const CoachRoute = CoachRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminDeleteUsersRoute = AdminDeleteUsersRouteImport.update({
-  id: '/admin-delete-users',
-  path: '/admin-delete-users',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TabsRoute = TabsRouteImport.update({
@@ -175,7 +169,6 @@ const ApiPublicPaymentsWebhookRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin-delete-users': typeof AdminDeleteUsersRoute
   '/auth': typeof AuthRoute
   '/coach': typeof CoachRoute
   '/disclaimer': typeof DisclaimerRoute
@@ -203,7 +196,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin-delete-users': typeof AdminDeleteUsersRoute
   '/auth': typeof AuthRoute
   '/coach': typeof CoachRoute
   '/disclaimer': typeof DisclaimerRoute
@@ -233,7 +225,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_tabs': typeof TabsRouteWithChildren
-  '/admin-delete-users': typeof AdminDeleteUsersRoute
   '/auth': typeof AuthRoute
   '/coach': typeof CoachRoute
   '/disclaimer': typeof DisclaimerRoute
@@ -263,7 +254,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/admin-delete-users'
     | '/auth'
     | '/coach'
     | '/disclaimer'
@@ -291,7 +281,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/admin-delete-users'
     | '/auth'
     | '/coach'
     | '/disclaimer'
@@ -320,7 +309,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_tabs'
-    | '/admin-delete-users'
     | '/auth'
     | '/coach'
     | '/disclaimer'
@@ -350,7 +338,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   TabsRoute: typeof TabsRouteWithChildren
-  AdminDeleteUsersRoute: typeof AdminDeleteUsersRoute
   AuthRoute: typeof AuthRoute
   CoachRoute: typeof CoachRoute
   DisclaimerRoute: typeof DisclaimerRoute
@@ -436,13 +423,6 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin-delete-users': {
-      id: '/admin-delete-users'
-      path: '/admin-delete-users'
-      fullPath: '/admin-delete-users'
-      preLoaderRoute: typeof AdminDeleteUsersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_tabs': {
@@ -603,7 +583,6 @@ const TabsRouteWithChildren = TabsRoute._addFileChildren(TabsRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   TabsRoute: TabsRouteWithChildren,
-  AdminDeleteUsersRoute: AdminDeleteUsersRoute,
   AuthRoute: AuthRoute,
   CoachRoute: CoachRoute,
   DisclaimerRoute: DisclaimerRoute,
@@ -621,13 +600,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

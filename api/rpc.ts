@@ -238,44 +238,6 @@ ${ctxLines || "(no profile context provided)"}
     return { reply };
   },
 
-  // === Run coach: getRunCoachTips ===
-  async getRunCoachTips(data, req) {
-    await requirePro(req);
-    const d = z.object({
-      distanceKm: z.number().min(0).max(500), durationSec: z.number().min(0).max(86400),
-      avgPaceSecPerKm: z.number().min(0).max(3600), bestKmPaceSecPerKm: z.number().min(0).max(3600).optional(),
-      splits: z.array(z.number().min(0).max(3600)).max(200), elevGainM: z.number().min(0).max(10000).optional(),
-      recentRunsKm: z.array(z.number().min(0).max(500)).max(10).optional(),
-    }).parse(data);
-    const fmtPace = (s: number) => {
-      if (!s) return "—";
-      return `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}/km`;
-    };
-    const splitsTxt = d.splits.length ? d.splits.map((s, i) => `km${i + 1} ${fmtPace(s)}`).join(", ") : "no full km splits";
-    const recent = d.recentRunsKm?.length ? `Recent runs (km): ${d.recentRunsKm.map(k => k.toFixed(2)).join(", ")}.` : "No recent run history.";
-    const sys = `You are an elite running coach. Reply with strict JSON only:
-{"headline":"...","verdict":"...","tips":["...","...","..."],"nextWorkout":"..."}
-
-Style:
-- "headline": 3-6 words, punchy, all-caps allowed, no emoji.
-- "verdict": one sentence (max 25 words) honestly grading the run — encouraging but real.
-- "tips": exactly 3 actionable tips, each under 20 words. Reference the runner's actual splits, pacing pattern (positive/negative split, fade, surge), or elevation when relevant. No generic fluff.
-- "nextWorkout": one concrete session to do next (under 25 words). Example: "Easy 5k @ 6:00/km tomorrow to recover, then 4×800m intervals Thursday."
-
-Never invent data the runner did not provide. Speak directly to the runner ("you").`;
-    const user = `Run summary:
-- Distance: ${d.distanceKm.toFixed(2)} km
-- Time: ${Math.round(d.durationSec / 60)} min ${d.durationSec % 60} sec
-- Avg pace: ${fmtPace(d.avgPaceSecPerKm)}
-- Best km: ${fmtPace(d.bestKmPaceSecPerKm ?? 0)}
-- Elevation gain: ${d.elevGainM ?? 0} m
-- Splits: ${splitsTxt}
-${recent}
-
-Analyze and respond.`;
-    return chatJSON({ system: sys, user });
-  },
-
   // === Physique: analyzePhysique ===
   async analyzePhysique(data, req) {
     await requireAuth(req);

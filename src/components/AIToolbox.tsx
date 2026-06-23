@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Camera, MessageSquare, Scan, Images, Activity } from "lucide-react";
+import { Camera, MessageSquare, Scan, Images } from "lucide-react";
 
 const TOOLS = [
   {
@@ -25,12 +25,6 @@ const TOOLS = [
     label: "Progress Pics",
     desc: "Track transformation",
     Icon: Images,
-  },
-  {
-    to: "/run",
-    label: "Run Coach",
-    desc: "AI splits & tips",
-    Icon: Activity,
   },
 ] as const;
 

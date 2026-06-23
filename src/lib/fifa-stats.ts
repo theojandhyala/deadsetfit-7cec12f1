@@ -15,7 +15,6 @@ export interface PRDef {
 }
 
 export const PR_CATALOG: PRDef[] = [
-  // Big 4
   {
     id: "bench-press",
     label: "Bench Press",
@@ -39,188 +38,6 @@ export const PR_CATALOG: PRDef[] = [
     category: "PULL",
     weightWeight: 1.7,
     desc: "Conventional barbell deadlift from the floor. Lock out hips at top.",
-  },
-  {
-    id: "ohp",
-    label: "Overhead Press",
-    kind: "1RM",
-    category: "PUSH",
-    weightWeight: 1.0,
-    desc: "Standing strict barbell press. No leg drive, bar finishes overhead.",
-  },
-  // Push variations
-  {
-    id: "incline-bench",
-    label: "Incline Bench",
-    kind: "1RM",
-    category: "PUSH",
-    weightWeight: 1.0,
-    desc: "Barbell bench press on a 30–45° incline bench.",
-  },
-  {
-    id: "db-bench",
-    label: "DB Bench (per hand)",
-    kind: "1RM",
-    category: "PUSH",
-    weightWeight: 0.8,
-    desc: "Flat dumbbell bench press. Record weight per hand.",
-  },
-  {
-    id: "weighted-dip",
-    label: "Weighted Dip",
-    kind: "1RM",
-    category: "PUSH",
-    weightWeight: 0.8,
-    desc: "Parallel-bar dip with weight belt. Total added weight (not bodyweight).",
-  },
-  // Pull variations
-  {
-    id: "weighted-pullup",
-    label: "Weighted Pull-Up",
-    kind: "1RM",
-    category: "PULL",
-    weightWeight: 1.1,
-    desc: "Strict pull-up with weight belt. Record added weight only.",
-  },
-  {
-    id: "barbell-row",
-    label: "Barbell Row",
-    kind: "1RM",
-    category: "PULL",
-    weightWeight: 1.0,
-    desc: "Bent-over barbell row, torso ~45°, pull to lower chest.",
-  },
-  {
-    id: "pendlay-row",
-    label: "Pendlay Row",
-    kind: "1RM",
-    category: "PULL",
-    weightWeight: 1.0,
-    desc: "Barbell row from a dead stop on floor each rep, torso parallel.",
-  },
-  // Legs
-  {
-    id: "front-squat",
-    label: "Front Squat",
-    kind: "1RM",
-    category: "LEGS",
-    weightWeight: 1.2,
-    desc: "Barbell racked on front delts, elbows high. Squat upright.",
-  },
-  {
-    id: "rdl",
-    label: "Romanian Deadlift",
-    kind: "1RM",
-    category: "LEGS",
-    weightWeight: 1.3,
-    desc: "Stiff-legged hip hinge with barbell, hamstring stretch, no floor touch.",
-  },
-  {
-    id: "hip-thrust",
-    label: "Hip Thrust",
-    kind: "1RM",
-    category: "LEGS",
-    weightWeight: 1.2,
-    desc: "Upper back on bench, barbell over hips, drive hips up & squeeze glutes.",
-  },
-  {
-    id: "leg-press",
-    label: "Leg Press",
-    kind: "1RM",
-    category: "LEGS",
-    weightWeight: 0.7,
-    desc: "Plate-loaded leg press. Record total weight on the sled.",
-  },
-  // Olympic
-  {
-    id: "power-clean",
-    label: "Power Clean",
-    kind: "1RM",
-    category: "OLY",
-    weightWeight: 1.3,
-    desc: "Pull barbell from floor & catch on front delts in a partial squat.",
-  },
-  {
-    id: "clean-jerk",
-    label: "Clean & Jerk",
-    kind: "1RM",
-    category: "OLY",
-    weightWeight: 1.4,
-    desc: "Full clean to front rack, then jerk overhead with split or push.",
-  },
-  {
-    id: "snatch",
-    label: "Snatch",
-    kind: "1RM",
-    category: "OLY",
-    weightWeight: 1.4,
-    desc: "Pull barbell from floor to overhead in one motion with wide grip.",
-  },
-  // Bodyweight reps
-  {
-    id: "pull-ups",
-    label: "Pull-Ups (max reps)",
-    kind: "REPS",
-    category: "BODY",
-    desc: "Strict bodyweight pull-ups, full hang to chin over bar. Max in one set.",
-  },
-  {
-    id: "push-ups",
-    label: "Push-Ups (max reps)",
-    kind: "REPS",
-    category: "BODY",
-    desc: "Strict push-ups, chest to floor, full lockout. Max unbroken.",
-  },
-  {
-    id: "dips",
-    label: "Dips (max reps)",
-    kind: "REPS",
-    category: "BODY",
-    desc: "Bodyweight parallel-bar dips, full range, max unbroken.",
-  },
-  {
-    id: "muscle-up",
-    label: "Muscle-Ups",
-    kind: "REPS",
-    category: "BODY",
-    desc: "Strict bar muscle-ups: pull-up that transitions to a dip above the bar.",
-  },
-  // Core
-  {
-    id: "plank",
-    label: "Plank Hold (sec)",
-    kind: "TIME",
-    category: "CORE",
-    desc: "Forearm plank, body straight, brace abs & glutes. Record max seconds.",
-  },
-  {
-    id: "hanging-leg-raise",
-    label: "Hanging Leg Raise",
-    kind: "REPS",
-    category: "CORE",
-    desc: "Hang from bar, raise straight legs to 90°, controlled. Max reps.",
-  },
-  // Cardio
-  {
-    id: "mile-run",
-    label: "1 Mile Run (sec)",
-    kind: "TIME",
-    category: "CARDIO",
-    desc: "1 mile (1.6 km) run for time. Record total seconds.",
-  },
-  {
-    id: "5k-run",
-    label: "5K Run (sec)",
-    kind: "TIME",
-    category: "CARDIO",
-    desc: "5 km run for time. Record total seconds (e.g. 24:00 = 1440).",
-  },
-  {
-    id: "row-2k",
-    label: "2K Row (sec)",
-    kind: "TIME",
-    category: "CARDIO",
-    desc: "Concept2 / rower 2000m for time. Record total seconds.",
   },
 ];
 
@@ -318,20 +135,11 @@ function repsRating(reps: number, def: PRDef): number {
 
 function timeRating(seconds: number, def: PRDef): number {
   if (!seconds) return 0;
-  // Lower is better for runs/rows; higher is better for plank.
+  // Higher is better for plank-style timed records.
   if (def.id === "plank") {
     return Math.max(0, Math.min(99, Math.round((seconds / 180) * 80))); // 3min = 80
   }
-  // run/row: target80 seconds for an "80"
-  const target80: Record<string, number> = {
-    "mile-run": 7 * 60,
-    "5k-run": 24 * 60,
-    "row-2k": 7 * 60 + 30,
-  };
-  const t = target80[def.id] ?? 600;
-  // 1.5× slower than target → 30 ; target → 80 ; 0.7× target → 99
-  const ratio = t / seconds; // >1 = faster
-  return Math.max(0, Math.min(99, Math.round(ratio * 80)));
+  return 0;
 }
 
 export interface FifaStats {
@@ -363,19 +171,9 @@ export function computeFifaStats(state: AppState): FifaStats {
     }
   }
 
-  const STR = avg(
-    ["bench-press", "squat", "deadlift", "ohp", "incline-bench", "barbell-row"].map(
-      (id) => ratings[id],
-    ),
-  );
-  const PWR = avg(
-    ["power-clean", "clean-jerk", "snatch", "weighted-pullup", "weighted-dip"].map(
-      (id) => ratings[id],
-    ),
-  );
-  const END = avg(
-    ["mile-run", "5k-run", "row-2k", "push-ups", "pull-ups", "dips"].map((id) => ratings[id]),
-  );
+  const STR = avg(["bench-press", "squat", "deadlift"].map((id) => ratings[id]));
+  const PWR = STR;
+  const END = 0;
 
   // HYP — total session volume rating
   const volume = (state.sessions || []).reduce((sum, s) => sum + (s.totalVolume || 0), 0);
@@ -397,14 +195,11 @@ export function computeFifaStats(state: AppState): FifaStats {
   return { STR, PWR, END, HYP, CON, DIE, overall };
 }
 
-/** The 6 headline lifts shown on the FIFA card. */
+/** The headline lifts shown on the athlete card. */
 export const HEADLINE_PRS: Array<{ id: string; short: string; unit: string }> = [
   { id: "bench-press", short: "BENCH", unit: "kg" },
   { id: "squat", short: "SQUAT", unit: "kg" },
   { id: "deadlift", short: "DEAD", unit: "kg" },
-  { id: "ohp", short: "OHP", unit: "kg" },
-  { id: "pull-ups", short: "PULL", unit: "reps" },
-  { id: "push-ups", short: "PUSH", unit: "reps" },
 ];
 
 export interface HeadlinePR {

@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import {
   Trophy, Flame, Play, Pause, RotateCcw, Check, X, Plus, Minus,
   Zap, ArrowLeft, Swords, TrendingUp, Crown,
@@ -322,8 +321,8 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
-  const _search = useServerFn(searchAthletes);
-  const _createPost = useServerFn(createPost);
+  const _search = searchAthletes;
+  const _createPost = createPost;
 
   useEffect(() => {
     if (query.trim().length < 2) { setResults(null); return; }

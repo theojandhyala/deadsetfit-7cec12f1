@@ -1,7 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Dumbbell, Apple, User, Users, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { getMyFollowStats } from "@/lib/social.functions";
 
 const STORAGE_KEY = "deadset_last_seen_followers";
@@ -19,7 +18,7 @@ const RIGHT_TABS = [
 export function BottomNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [hasFriendsBadge, setHasFriendsBadge] = useState(false);
-  const _getStats = useServerFn(getMyFollowStats);
+  const _getStats = getMyFollowStats;
 
   useEffect(() => {
     let cancelled = false;
