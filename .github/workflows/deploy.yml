@@ -40,10 +40,6 @@ jobs:
             --external:node:* \
             --log-level=info
 
-      - name: Write _routes.json to bypass worker for static assets
-        run: |
-          printf '{"version":1,"include":["/*"],"exclude":["/assets/*","/favicon.ico","/manifest.json","/robots.txt","/sitemap.xml","/llms.txt"]}' > dist/client/_routes.json
-
       - name: Create Pages project if needed
         run: npx wrangler pages project create deadsetfit --production-branch=main || true
         env:
