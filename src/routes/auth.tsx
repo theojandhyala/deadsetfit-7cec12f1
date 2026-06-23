@@ -1,7 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { signUpUser } from "@/lib/profile.functions";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
@@ -79,12 +78,24 @@ export function AuthPage() {
     if (password.length < 6) { toast.error("Password must be at least 6 characters"); return; }
     setBusy(true);
     try {
-      const result = await signUpUser({ data: { email: email.toLowerCase(), password } });
-      await supabase.auth.setSession({ access_token: result.access_token, refresh_token: result.refresh_token });
+      const { error } = await supabase.auth.signUp({ email: email.toLowerCase(), password });
+      if (error) throw error;
+      // Try immediate sign-in (works when email confirmation is disabled)
+      const { error: signInErr } = await supabase.auth.signInWithPassword({ email: email.toLowerCase(), password });
+      if (signInErr) {
+        toast.success("Account created! Check your email to confirm, then sign in.");
+        setMode("signin");
+        return;
+      }
       navigated.current = true;
       navigate({ to: "/train", replace: true });
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Sign up failed");
+      const msg = err instanceof Error ? err.message : "Sign up failed";
+      if (msg.toLowerCase().includes("already registered")) {
+        toast.error("Account already exists — try signing in instead.");
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setBusy(false);
     }
