@@ -78,28 +78,32 @@ export function AuthPage() {
     if (password.length < 6) { toast.error("Password must be at least 6 characters"); return; }
     setBusy(true);
     try {
-      const { data, error } = await supabase.auth.signUp({
+      // Try signup first
+      const { error: signUpError } = await supabase.auth.signUp({
         email: email.toLowerCase(),
         password,
-        options: { emailRedirectTo: `${window.location.origin}/auth` },
       });
-      if (error) throw error;
-      if (data.session) {
-        // Email confirmation disabled — signed in immediately
-        navigated.current = true;
-        navigate({ to: "/train", replace: true });
-      } else {
-        // Email confirmation required
-        toast.success("Check your email to confirm your account, then sign in.");
-        setMode("signin");
+      // Ignore "already registered" — just try signing in
+      if (signUpError && !signUpError.message.toLowerCase().includes("already registered")) {
+        throw signUpError;
       }
+      // Now sign in with the credentials
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.toLowerCase(),
+        password,
+      });
+      if (signInError) {
+        if (signInError.message.toLowerCase().includes("email not confirmed")) {
+          toast.error("Please confirm your email first — check your inbox.");
+        } else {
+          throw signInError;
+        }
+        return;
+      }
+      navigated.current = true;
+      navigate({ to: "/train", replace: true });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Sign up failed";
-      if (msg.toLowerCase().includes("already registered")) {
-        toast.error("An account with this email already exists — try signing in.");
-      } else {
-        toast.error(msg);
-      }
+      toast.error(err instanceof Error ? err.message : "Sign up failed");
     } finally {
       setBusy(false);
     }
