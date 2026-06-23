@@ -1,17 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import {
-  Loader2,
-  Play,
-  Plus,
-  Sparkles,
-  ListPlus,
-  Flame,
-  Trophy,
-  Heart,
-  Activity,
-} from "lucide-react";
-import { useServerFn } from "@tanstack/react-start";
+import { Loader2, Play, Plus, Sparkles, ListPlus, Flame, Trophy, Heart, Footprints } from "lucide-react";
+
 import { VideoModal } from "@/components/VideoModal";
 import { RestTimer } from "@/components/RestTimer";
 import { Reminders } from "@/components/Reminders";
@@ -24,35 +14,13 @@ import { EXERCISES, getExercise } from "@/lib/exercises";
 import { calculateGritScore, calculateStreak, defaultSchedule, isoDay, todayKey } from "@/lib/calc";
 import { generateSchedule } from "@/lib/ai.functions";
 import { ProBanner } from "@/components/ProBanner";
-import { InsightsWidget } from "@/components/InsightsWidget";
-import { AIToolbox } from "@/components/AIToolbox";
 import type { DayKey, Schedule, Program } from "@/lib/types";
 
-const DAY_KEYS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
-const DAY_SHORT: Record<DayKey, string> = {
-  MON: "Mon",
-  TUE: "Tue",
-  WED: "Wed",
-  THU: "Thu",
-  FRI: "Fri",
-  SAT: "Sat",
-  SUN: "Sun",
-};
-const DAY_FULL: Record<DayKey, string> = {
-  MON: "Monday",
-  TUE: "Tuesday",
-  WED: "Wednesday",
-  THU: "Thursday",
-  FRI: "Friday",
-  SAT: "Saturday",
-  SUN: "Sunday",
-};
+const DAY_KEYS: DayKey[] = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
+const DAY_SHORT: Record<DayKey, string> = { MON:"Mon",TUE:"Tue",WED:"Wed",THU:"Thu",FRI:"Fri",SAT:"Sat",SUN:"Sun" };
+const DAY_FULL: Record<DayKey, string> = { MON:"Monday",TUE:"Tuesday",WED:"Wednesday",THU:"Thursday",FRI:"Friday",SAT:"Saturday",SUN:"Sunday" };
 
-function dayHype(
-  dayKey: DayKey,
-  label: string,
-  isToday: boolean,
-): { eyebrow: string; line: string } {
+function dayHype(dayKey: DayKey, label: string, isToday: boolean): { eyebrow: string; line: string } {
   const focus = (label || "REST").split(" — ")[0];
   const isRest = focus === "REST" || !focus;
   const dayName = DAY_FULL[dayKey].toUpperCase();
@@ -82,6 +50,7 @@ function dayHype(
   };
 }
 
+
 export const Route = createFileRoute("/_tabs/train")({
   head: () => ({ meta: [{ title: "DEADSET — Train" }] }),
   component: TrainPage,
@@ -106,34 +75,28 @@ function TrainPage() {
   const [genLoading, setGenLoading] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
 
-  const generate = useServerFn(generateSchedule);
-  const activeProgram: Program | undefined = state.programs.find(
-    (p) => p.id === state.activeProgramId,
-  );
-  const schedule: Schedule =
-    state.schedule ?? (state.profile ? defaultSchedule(state.profile) : ({} as Schedule));
+  const generate = generateSchedule;
+  const activeProgram: Program | undefined = state.programs.find((p) => p.id === state.activeProgramId);
+  const schedule: Schedule = state.schedule ?? (state.profile ? defaultSchedule(state.profile) : ({} as Schedule));
   const day = schedule[selectedDay];
   const programDay = activeProgram?.days[selectedDay];
   const score = calculateGritScore(state);
   const streak = calculateStreak(state.completedDates);
 
   async function handleGenerate() {
-    setGenLoading(true);
-    setGenError(null);
-    const profile =
-      state.profile ??
-      ({
-        goal: "MAINTAIN",
-        experience: "BEGINNER",
-        gender: "OTHER",
-        age: 25,
-        weightKg: 75,
-        heightCm: 175,
-        daysPerWeek: 4,
-        equipment: "FULL_GYM",
-        username: "athlete",
-        startingWeightKg: 75,
-      } as unknown as NonNullable<typeof state.profile>);
+    setGenLoading(true); setGenError(null);
+    const profile = state.profile ?? ({
+      goal: "MAINTAIN",
+      experience: "BEGINNER",
+      gender: "OTHER",
+      age: 25,
+      weightKg: 75,
+      heightCm: 175,
+      daysPerWeek: 4,
+      equipment: "FULL_GYM",
+      username: "athlete",
+      startingWeightKg: 75,
+    } as unknown as NonNullable<typeof state.profile>);
     const buildFromDefault = (): Schedule => {
       const base = defaultSchedule(profile);
       const cleaned: Schedule = {} as Schedule;
@@ -147,14 +110,10 @@ function TrainPage() {
       return cleaned;
     };
     try {
-      const res = await generate({
-        data: {
-          goal: profile.goal,
-          experience: profile.experience,
-          daysPerWeek: profile.daysPerWeek,
-          equipment: profile.equipment,
-        },
-      });
+      const res = await generate({ data: {
+        goal: profile.goal, experience: profile.experience,
+        daysPerWeek: profile.daysPerWeek, equipment: profile.equipment,
+      }});
       const cleaned: Schedule = {} as Schedule;
       let hasAny = false;
       for (const k of DAY_KEYS) {
@@ -167,293 +126,157 @@ function TrainPage() {
     } catch {
       // Silent fallback so the user never sees an error — build a solid default split.
       set((s) => ({ ...s, schedule: buildFromDefault() }));
-    } finally {
-      setGenLoading(false);
-    }
+    } finally { setGenLoading(false); }
   }
 
   function completeWorkout() {
     const day = isoDay();
-    set((s) =>
-      s.completedDates.includes(day) ? s : { ...s, completedDates: [...s.completedDates, day] },
-    );
+    set((s) => s.completedDates.includes(day) ? s : ({ ...s, completedDates: [...s.completedDates, day] }));
   }
 
   return (
-    <div className="animate-fade-in pb-4">
-      {/* Strava-style greeting header */}
-      <div className="px-5 pt-5 pb-4 animate-slide-down">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "#8A8A8A" }}>
-              {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" }).toUpperCase()}
-            </p>
-            <h1 className="display text-2xl font-extrabold text-white mt-0.5">
-              {state.profile?.username ? `HEY, ${state.profile.username.toUpperCase()}` : "LET'S TRAIN"}
-            </h1>
+    <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
+      <header className="px-5 pt-6 pb-4 flex items-center justify-between">
+        <Link to="/profile" className="flex items-center gap-2.5">
+          <div className="flex flex-col leading-tight">
+            <span className="label-cap text-[9px]">PWR</span>
+            <span className="display text-lg font-extrabold text-grit">{score.total}</span>
           </div>
-          <div className="flex items-center gap-3">
-            {/* Stats chips */}
-            <div
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-              style={{ background: "#141414", border: "1px solid #262626" }}
-            >
-              <Flame size={13} style={{ color: "#E10600" }} />
-              <span className="display text-sm font-extrabold text-white">{streak}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Link
-                to="/programs"
-                className="flex items-center justify-center rounded-full press"
-                style={{ width: 34, height: 34, background: "#141414", border: "1px solid #262626" }}
-                aria-label="Programs"
-              >
-                <ListPlus size={15} style={{ color: "#8A8A8A" }} />
-              </Link>
-              <button
-                onClick={() => setEditMode((v) => !v)}
-                className="flex items-center justify-center rounded-full press"
-                style={{
-                  width: 34,
-                  height: 34,
-                  background: editMode ? "rgba(225,6,0,0.12)" : "#141414",
-                  border: `1px solid ${editMode ? "#E10600" : "#262626"}`,
-                }}
-                aria-label="Edit schedule"
-              >
-                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: editMode ? "#E10600" : "#8A8A8A" }}>
-                  {editMode ? "Done" : "Edit"}
-                </span>
-              </button>
-            </div>
+          <div className="w-px h-6 bg-grit" />
+          <div className="flex items-center gap-1">
+            <Flame size={14} className="text-accent-red" />
+            <span className="display text-lg font-extrabold text-grit">{streak}</span>
           </div>
+        </Link>
+        <div className="flex items-center gap-4">
+          <Link to="/programs" className="label-cap text-grit-dim text-xs flex items-center gap-1">
+            <ListPlus size={14} /> PROGRAMS
+          </Link>
+          <button onClick={() => setEditMode((v) => !v)} className="label-cap" style={{ color: editMode ? "#e63222" : "#8a8a8a" }}>
+            {editMode ? "DONE" : "EDIT"}
+          </button>
         </div>
-
-      </div>
-
-      {/* AI feature shortcuts */}
-      <AIToolbox />
-
-      {/* Weekly insights widget */}
-      <InsightsWidget />
-
-      <div className="px-5">
-        {/* Quick-start CTA */}
-        {(() => {
-          const today = todayKey();
-          const isToday = selectedDay === today;
-          const selectedItems = activeProgram
-            ? activeProgram.days[selectedDay]?.items.length || 0
-            : schedule[selectedDay]?.exerciseIds?.length || 0;
-          const todaysItems = activeProgram
-            ? activeProgram.days[today]?.items.length || 0
-            : schedule[today]?.exerciseIds?.length || 0;
-          const hasSchedule = !!state.schedule || !!activeProgram;
-          const selectedIsRest = selectedItems === 0;
-          if (!hasSchedule) {
-            return (
-              <button
-                onClick={handleGenerate}
-                disabled={genLoading}
-                className="btn-grit w-full text-base py-4 flex items-center justify-center"
-                style={{ borderRadius: 12, fontSize: "0.95rem" }}
-              >
-                {genLoading ? <Loader2 className="animate-spin mr-2" size={18} /> : <Sparkles size={18} className="mr-2" />}
-                {genLoading ? "Building Your Plan…" : "Generate My Schedule"}
-              </button>
-            );
-          }
-          if (isToday && !selectedIsRest) {
-            return (
-              <Link
-                to="/workout/live"
-                className="btn-grit w-full text-base py-4 flex items-center justify-center"
-                style={{ borderRadius: 12, fontSize: "0.95rem", letterSpacing: "0.03em" }}
-              >
-                <Flame size={18} className="mr-2" /> Start Today's Workout
-              </Link>
-            );
-          }
-          if (!isToday && !selectedIsRest) {
-            return (
-              <div
-                className="p-4 text-center"
-                style={{ background: "#141414", border: "1.5px solid #262626", borderRadius: 12 }}
-              >
-                <p className="text-sm font-bold text-white">{DAY_FULL[selectedDay]}'s workout</p>
-                <p className="text-xs mt-0.5" style={{ color: "#8A8A8A" }}>
-                  {isToday ? "" : "Come back on " + DAY_FULL[selectedDay] + " · "}
-                  {selectedItems} exercise{selectedItems !== 1 ? "s" : ""}
-                  {todaysItems > 0 && !isToday ? (
-                    <> &nbsp;·&nbsp;
-                      <Link to="/workout/live" style={{ color: "#E10600", fontWeight: 700 }}>
-                        Start today's instead ›
-                      </Link>
-                    </>
-                  ) : null}
-                </p>
-              </div>
-            );
-          }
-          return (
-            <div
-              className="p-4 text-center"
-              style={{ background: "#141414", border: "1.5px solid #262626", borderRadius: 12 }}
-            >
-              <p className="text-sm font-bold" style={{ color: "#8A8A8A" }}>
-                {isToday ? "Rest Day — Recover & Come Back Stronger" : `${DAY_FULL[selectedDay]} is a rest day`}
-              </p>
-              {!isToday && todaysItems > 0 && (
-                <Link to="/workout/live" className="text-xs mt-1.5 block font-bold" style={{ color: "#E10600" }}>
-                  Start today's workout instead ›
-                </Link>
-              )}
-            </div>
-          );
-        })()}
-        {genError && <p className="text-xs mt-2" style={{ color: "#E10600" }}>{genError}</p>}
-      </div>
-
+      </header>
       <ProBanner />
       <Reminders />
 
-      {/* Quick actions */}
-      <div className="px-5 mb-5">
-        <div className="grid grid-cols-4 gap-2">
-          {[
-            { to: "/progress", Icon: Activity, label: "Progress" },
-            { to: "/programs", Icon: ListPlus, label: "Schedule" },
-            { to: "/challenges", Icon: Trophy, label: "Challenge" },
-            { to: "/recovery", Icon: Heart, label: "Recovery" },
-          ].map(({ to, Icon, label }) => (
-            <Link
-              key={to}
-              to={to}
-              className="flex flex-col items-center gap-1.5 py-3 press"
-              style={{ background: "#141414", border: "1.5px solid #262626", borderRadius: 12 }}
-            >
-              <Icon size={18} style={{ color: "#E10600" }} />
-              <span className="text-[10px] font-semibold" style={{ color: "#8A8A8A" }}>{label}</span>
-            </Link>
-          ))}
-        </div>
-      </div>
+      <div className="px-5 mb-5"><Big3Card state={state} /></div>
+      <div className="px-5 mb-5"><WeeklyRecap state={state} /></div>
 
-      {/* Stats row */}
-      <div className="px-5 mb-5 animate-slide-up delay-100">
-        <Big3Card state={state} />
-      </div>
-      <div className="px-5 mb-5 animate-slide-up delay-150">
-        <WeeklyRecap state={state} />
-      </div>
+
+
+      {/* ===== QUICK ACTIONS — everything you need, up top ===== */}
+      {(() => {
+        const today = todayKey();
+        const todaysItems = activeProgram
+          ? (activeProgram.days[today]?.items.length || 0)
+          : (schedule[today]?.exerciseIds?.length || 0);
+        const hasSchedule = !!state.schedule || !!activeProgram;
+        const canStart = todaysItems > 0;
+        return (
+          <div className="px-5 mb-5">
+            <div className="grid grid-cols-1 gap-2">
+              {canStart ? (
+                <Link to="/workout/live" className="btn-grit w-full text-base py-4 flex items-center justify-center">
+                  <Flame size={18} className="mr-2" /> Start Today's Workout
+                </Link>
+              ) : !hasSchedule ? (
+                <button onClick={handleGenerate} disabled={genLoading} className="btn-grit w-full text-base py-4 flex items-center justify-center">
+                  {genLoading ? <Loader2 className="animate-spin mr-2" size={18} /> : <Sparkles size={18} className="mr-2" />}
+                  Generate My Schedule
+                </button>
+              ) : (
+                <div className="bg-grit-card border border-grit p-3 text-center">
+                  <p className="label-cap text-accent-red text-[10px]">REST DAY</p>
+                  <p className="text-xs text-grit-dim mt-1">No exercises today — recover & come back stronger.</p>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-2">
+                <Link to="/run" className="btn-ghost py-2.5 flex items-center justify-center gap-2 text-xs">
+                  <Footprints size={14} /> Run
+                </Link>
+                <Link to="/programs" className="btn-ghost py-2.5 flex items-center justify-center gap-2 text-xs">
+                  <ListPlus size={14} /> Schedule
+                </Link>
+                <Link to="/challenges" className="btn-ghost py-2.5 flex items-center justify-center gap-2 text-xs">
+                  <Trophy size={14} /> Challenge
+                </Link>
+                <Link to="/recovery" className="btn-ghost py-2.5 flex items-center justify-center gap-2 text-xs">
+                  <Heart size={14} /> Recovery
+                </Link>
+              </div>
+            </div>
+            {genError && <p className="text-xs text-accent-red mt-2">{genError}</p>}
+          </div>
+        );
+      })()}
 
       <DailyQuests />
 
+
+
+
+
       {activeProgram && (
-        <div className="px-4 mb-3">
+        <div className="px-5 mb-3">
           <Link
             to="/programs/$programId"
             params={{ programId: activeProgram.id }}
-            className="flex items-center justify-between px-4 py-3 press"
-            style={{ background: "rgba(225,6,0,0.1)", border: "1.5px solid rgba(225,6,0,0.4)", borderRadius: 12 }}
+            className="block bg-grit-card border border-accent-red px-3 py-2"
           >
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#E10600" }}>Active Program</p>
-              <p className="display uppercase font-extrabold text-white text-sm truncate mt-0.5">
-                {activeProgram.name}
-              </p>
-            </div>
-            <div style={{ color: "#E10600", fontSize: 18 }}>›</div>
+            <p className="label-cap text-[9px] text-accent-red">ACTIVE PROGRAM</p>
+            <p className="display uppercase font-extrabold text-grit text-sm truncate">{activeProgram.name}</p>
           </Link>
         </div>
       )}
 
-      {/* Strava-style day strip */}
-      <div className="px-4 mb-4">
-        <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+      {/* Weekly strip */}
+      <div className="px-5 mb-4">
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
           {DAY_KEYS.map((k) => {
             const active = k === selectedDay;
             const isToday = k === todayKey();
-            const lbl =
-              (activeProgram ? activeProgram.days[k].label : schedule[k]?.label)?.split(" — ")[0] ||
-              "REST";
-            const isRest = lbl === "REST";
+            const lbl = (activeProgram ? activeProgram.days[k].label : schedule[k]?.label)?.split(" — ")[0] || "REST";
             return (
-              <button
-                key={k}
-                onClick={() => setSelectedDay(k)}
-                className="flex-shrink-0 flex flex-col items-center pt-2 pb-2 px-2.5 press"
+              <button key={k} onClick={() => setSelectedDay(k)}
+                className="flex-shrink-0 min-w-[68px] p-2 border text-center"
                 style={{
-                  minWidth: 62,
-                  borderRadius: 12,
-                  background: active ? "#E10600" : "#141414",
-                  border: `1.5px solid ${active ? "#E10600" : isToday ? "rgba(225,6,0,0.5)" : "#262626"}`,
-                  transition: "background 0.15s ease, border-color 0.15s ease",
-                }}
-              >
-                <span
-                  className="text-[10px] font-bold uppercase tracking-wider"
-                  style={{ color: active ? "#fff" : isToday ? "#E10600" : "#8A8A8A" }}
-                >
-                  {DAY_SHORT[k]}
-                </span>
-                <span
-                  className="text-[10px] font-semibold uppercase mt-1 truncate w-full text-center"
-                  style={{ color: active ? "rgba(255,255,255,0.85)" : isRest ? "#4A4B52" : "#fff" }}
-                >
-                  {lbl}
-                </span>
-                {isToday && !active && (
-                  <span
-                    className="mt-1 w-1.5 h-1.5 rounded-full"
-                    style={{ background: "#E10600" }}
-                  />
-                )}
+                  borderColor: active ? "#e63222" : "#262626",
+                  background: active ? "#1a1a1a" : "transparent",
+                }}>
+                <div className="label-cap" style={{ color: isToday ? "#e63222" : undefined }}>{DAY_SHORT[k]}</div>
+                <div className="text-xs font-bold uppercase mt-1 text-grit truncate">{lbl}</div>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Day header */}
+      {/* Today header */}
       {(() => {
         const rawLabel = (activeProgram ? programDay?.label : day?.label) || "REST";
         const hype = dayHype(selectedDay, rawLabel, selectedDay === todayKey());
         return (
-          <div className="px-4 mb-4">
-            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#E10600" }}>
-              {hype.eyebrow}
-            </p>
-            <h2 className="display text-2xl font-extrabold uppercase text-white leading-tight mt-1">
+          <div className="px-5 mb-5">
+            <p className="label-cap text-accent-red">{hype.eyebrow}</p>
+            <h1 className="display text-3xl font-extrabold uppercase text-grit leading-tight mt-1">
               {rawLabel}
-            </h2>
-            <p className="text-sm mt-1.5 leading-snug" style={{ color: "#8A8A8A" }}>{hype.line}</p>
+            </h1>
+            <p className="text-sm text-grit-dim mt-2 leading-snug">{hype.line}</p>
           </div>
         );
       })()}
 
-      {/* Edit mode */}
+
+
+      {/* Edit mode: assign muscle group + searchable exercise picker */}
       {editMode && (
-        <div
-          className="mx-4 mb-4 p-4"
-          style={{ background: "#141414", border: "1.5px solid #262626", borderRadius: 14 }}
-        >
+        <div className="px-5 mb-5 bg-grit-card border border-grit p-4">
           <p className="label-cap mb-3">Edit {DAY_SHORT[selectedDay]}</p>
           <label className="label-cap block mb-1">Label</label>
           <input
             value={day?.label || ""}
-            onChange={(e) =>
-              set((s) => ({
-                ...s,
-                schedule: {
-                  ...(s.schedule || schedule),
-                  [selectedDay]: {
-                    ...(s.schedule?.[selectedDay] || day),
-                    label: e.target.value.toUpperCase(),
-                  },
-                },
-              }))
-            }
+            onChange={(e) => set((s) => ({ ...s, schedule: { ...(s.schedule || schedule), [selectedDay]: { ...(s.schedule?.[selectedDay] || day), label: e.target.value.toUpperCase() } } }))}
             className="input-grit mb-3"
           />
 
@@ -468,19 +291,13 @@ function TrainPage() {
                   return (
                     <button
                       key={id}
-                      onClick={() =>
-                        set((s) => {
-                          const sched = { ...(s.schedule || schedule) };
-                          const cur = sched[selectedDay]?.exerciseIds || [];
-                          sched[selectedDay] = {
-                            ...(sched[selectedDay] || { label: day?.label || "REST" }),
-                            exerciseIds: cur.filter((x) => x !== id),
-                          };
-                          return { ...s, schedule: sched };
-                        })
-                      }
-                      className="text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1 font-semibold"
-                    style={{ background: "rgba(225,6,0,0.12)", color: "#E10600", border: "1px solid rgba(225,6,0,0.4)" }}
+                      onClick={() => set((s) => {
+                        const sched = { ...(s.schedule || schedule) };
+                        const cur = sched[selectedDay]?.exerciseIds || [];
+                        sched[selectedDay] = { ...(sched[selectedDay] || { label: day?.label || "REST" }), exerciseIds: cur.filter((x) => x !== id) };
+                        return { ...s, schedule: sched };
+                      })}
+                      className="text-[10px] px-2 py-1 border border-accent-red text-accent-red uppercase font-bold tracking-wider flex items-center gap-1"
                     >
                       {ex.name} ×
                     </button>
@@ -506,46 +323,21 @@ function TrainPage() {
               }).map((e) => {
                 const sel = day?.exerciseIds.includes(e.id);
                 return (
-                  <button
-                    key={e.id}
-                    onClick={() =>
-                      set((s) => {
-                        const sched = { ...(s.schedule || schedule) };
-                        const cur = sched[selectedDay]?.exerciseIds || [];
-                        const next = cur.includes(e.id)
-                          ? cur.filter((x) => x !== e.id)
-                          : [...cur, e.id];
-                        sched[selectedDay] = {
-                          ...(sched[selectedDay] || { label: day?.label || "REST" }),
-                          exerciseIds: next,
-                        };
-                        return { ...s, schedule: sched };
-                      })
-                    }
-                    className="p-3 text-left flex items-center justify-between gap-2 press"
-                    style={{
-                      background: sel ? "rgba(225,6,0,0.08)" : "#141414",
-                      border: `1px solid ${sel ? "rgba(225,6,0,0.4)" : "#262626"}`,
-                      borderRadius: 10,
-                    }}
-                  >
+                  <button key={e.id}
+                    onClick={() => set((s) => {
+                      const sched = { ...(s.schedule || schedule) };
+                      const cur = sched[selectedDay]?.exerciseIds || [];
+                      const next = cur.includes(e.id) ? cur.filter((x) => x !== e.id) : [...cur, e.id];
+                      sched[selectedDay] = { ...(sched[selectedDay] || { label: day?.label || "REST" }), exerciseIds: next };
+                      return { ...s, schedule: sched };
+                    })}
+                    className="p-2.5 border text-left flex items-center justify-between gap-2"
+                    style={{ borderColor: sel ? "#e63222" : "#262626", background: "#0a0a0a" }}>
                     <div className="min-w-0">
-                      <div
-                        className="text-xs font-bold uppercase truncate"
-                        style={{ color: sel ? "#E10600" : "#ffffff" }}
-                      >
-                        {e.name}
-                      </div>
-                      <div className="text-[9px] mt-0.5 font-medium uppercase tracking-wider" style={{ color: "#8A8A8A" }}>
-                        {e.muscleGroup} · {e.skill}
-                      </div>
+                      <div className="text-xs font-bold uppercase truncate" style={{ color: sel ? "#e63222" : "#f5f5f0" }}>{e.name}</div>
+                      <div className="text-[9px] label-cap text-grit-dim mt-0.5">{e.muscleGroup} · {e.skill}</div>
                     </div>
-                    <span
-                      className="text-[10px] font-bold"
-                      style={{ color: sel ? "#E10600" : "#8A8A8A", flexShrink: 0 }}
-                    >
-                      {sel ? "✓" : "+"}
-                    </span>
+                    <span className="text-[10px] label-cap" style={{ color: sel ? "#e63222" : "#8a8a8a" }}>{sel ? "ADDED" : "+ ADD"}</span>
                   </button>
                 );
               })}
@@ -554,51 +346,56 @@ function TrainPage() {
         </div>
       )}
 
-      {/* Exercise list */}
-      <div className="px-4 flex flex-col gap-3 pb-4">
+      {/* Exercises */}
+      <div className="px-5 flex flex-col gap-3">
         {activeProgram ? (
           <>
             {(programDay?.items.length || 0) === 0 && (
-              <div
-                className="p-8 text-center"
-                style={{ background: "#141414", border: "1.5px solid #262626", borderRadius: 14 }}
-              >
-                <p className="display text-2xl uppercase text-white font-extrabold">Rest Day</p>
-                <p className="text-sm mt-2 mb-4" style={{ color: "#8A8A8A" }}>Recover. Eat. Sleep. Grow.</p>
-                <Link to="/workout/live" className="btn-ghost text-sm py-2.5">
-                  Open Freestyle
-                </Link>
+              <div className="bg-grit-card border border-grit p-8 text-center">
+                <p className="display text-2xl uppercase text-grit font-extrabold">Rest Day</p>
+                <p className="text-sm text-[#8a8a8a] mt-2 mb-4">Recover. Eat. Sleep.</p>
+                <Link to="/workout/live" className="btn-ghost inline-block">Train another day</Link>
               </div>
             )}
             {programDay?.items.map((it) => {
               const pr = bestSet(state.logs, it.id);
               return (
-                <ExerciseCard
-                  key={it.id}
-                  name={it.name}
-                  sets={`${it.sets} × ${it.reps}`}
-                  tags={[it.equipment, ...it.primary_muscles.slice(0, 2)]}
-                  pr={pr}
-                  onWatch={() => setVideoState({ query: it.youtube_query || it.name, title: it.name })}
-                  onLog={() => setLogFor({ id: it.id, name: it.name })}
-                />
+                <div key={it.id} className="bg-grit-card border border-grit">
+                  <button className="w-full p-3 text-left"
+                    onClick={() => setVideoState({ query: it.youtube_query || it.name, title: it.name })}>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="display uppercase font-extrabold text-grit text-lg leading-tight">{it.name}</div>
+                      <Play size={18} className="text-accent-red flex-shrink-0" />
+                    </div>
+                    <div className="text-xs text-[#8a8a8a] mt-1">{it.sets} × {it.reps}</div>
+                    <div className="flex gap-2 mt-2 flex-wrap">
+                      <span className="text-[10px] px-2 py-0.5 border border-grit uppercase font-bold tracking-wider">{it.equipment}</span>
+                      {it.primary_muscles.slice(0, 2).map((m) => (
+                        <span key={m} className="text-[10px] px-2 py-0.5 border border-grit uppercase font-bold tracking-wider text-grit-dim">{m}</span>
+                      ))}
+                      {pr && <span className="text-[10px] px-2 py-0.5 bg-accent-red text-white uppercase font-bold tracking-wider">PR {pr}KG</span>}
+                    </div>
+                  </button>
+                  <div className="border-t border-grit">
+                    <button onClick={() => setLogFor({ id: it.id, name: it.name })} className="w-full py-3 label-cap" style={{ color: "#e63222" }}>
+                      <Plus size={14} className="inline mr-1 -mt-0.5" /> Log Set
+                    </button>
+                  </div>
+                </div>
               );
             })}
             {(programDay?.items.length || 0) > 0 && (
-              <button onClick={completeWorkout} className="btn-grit mt-2 mb-4 w-full">
-                {state.completedDates.includes(isoDay()) ? "✓ Workout Complete" : "Complete Workout"}
+              <button onClick={completeWorkout} className="btn-grit mt-4 mb-2">
+                {state.completedDates.includes(isoDay()) ? "Workout Complete ✓" : "Complete Workout"}
               </button>
             )}
           </>
         ) : (
           <>
             {(day?.exerciseIds || []).length === 0 && (
-              <div
-                className="p-8 text-center"
-                style={{ background: "#141414", border: "1.5px solid #262626", borderRadius: 14 }}
-              >
-                <p className="display text-2xl uppercase text-white font-extrabold">Rest Day</p>
-                <p className="text-sm mt-2" style={{ color: "#8A8A8A" }}>Recover. Eat. Sleep. Grow.</p>
+              <div className="bg-grit-card border border-grit p-8 text-center">
+                <p className="display text-2xl uppercase text-grit font-extrabold">Rest Day</p>
+                <p className="text-sm text-[#8a8a8a] mt-2">Recover. Eat. Sleep.</p>
               </div>
             )}
             {(day?.exerciseIds || []).map((id) => {
@@ -606,29 +403,35 @@ function TrainPage() {
               if (!ex) return null;
               const pr = bestSet(state.logs, id);
               return (
-                <ExerciseCard
-                  key={id}
-                  name={ex.name}
-                  sets={`${ex.sets} × ${ex.reps}`}
-                  tags={[ex.skill]}
-                  pr={pr}
-                  videoId={ex.videoId}
-                  onWatch={() =>
-                    setVideoState({
-                      videoId: ex.videoId,
-                      title: ex.name,
-                      clipStart: ex.clipStart,
-                      clipEnd: ex.clipEnd,
-                      cue: ex.instruction,
-                    })
-                  }
-                  onLog={() => setLogFor({ id, name: ex.name })}
-                />
+                <div key={id} className="bg-grit-card border border-grit">
+                  <button className="w-full grid grid-cols-[96px_1fr] gap-0 text-left"
+                    onClick={() => setVideoState({ videoId: ex.videoId, title: ex.name, clipStart: ex.clipStart, clipEnd: ex.clipEnd, cue: ex.instruction })}>
+                    <div className="relative bg-black" style={{ aspectRatio: "1 / 1" }}>
+                      <img src={`https://img.youtube.com/vi/${ex.videoId}/mqdefault.jpg`} alt={ex.name} className="absolute inset-0 w-full h-full object-cover" />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                        <Play size={26} className="text-white" />
+                      </div>
+                    </div>
+                    <div className="p-3">
+                      <div className="display uppercase font-extrabold text-grit text-lg leading-tight">{ex.name}</div>
+                      <div className="text-xs text-[#8a8a8a] mt-1">{ex.sets} × {ex.reps}</div>
+                      <div className="flex gap-2 mt-2">
+                        <span className="text-[10px] px-2 py-0.5 border border-grit uppercase font-bold tracking-wider">{ex.skill}</span>
+                        {pr && <span className="text-[10px] px-2 py-0.5 bg-accent-red text-white uppercase font-bold tracking-wider">PR {pr}KG</span>}
+                      </div>
+                    </div>
+                  </button>
+                  <div className="border-t border-grit">
+                    <button onClick={() => setLogFor({ id, name: ex.name })} className="w-full py-3 label-cap" style={{ color: "#e63222" }}>
+                      <Plus size={14} className="inline mr-1 -mt-0.5" /> Log Set
+                    </button>
+                  </div>
+                </div>
               );
             })}
             {(day?.exerciseIds?.length || 0) > 0 && (
-              <button onClick={completeWorkout} className="btn-grit mt-2 mb-4 w-full">
-                {state.completedDates.includes(isoDay()) ? "✓ Workout Complete" : "Complete Workout"}
+              <button onClick={completeWorkout} className="btn-grit mt-4 mb-2">
+                {state.completedDates.includes(isoDay()) ? "Workout Complete ✓" : "Complete Workout"}
               </button>
             )}
           </>
@@ -647,17 +450,7 @@ function TrainPage() {
         />
       )}
 
-      {logFor && (
-        <LogSetModal
-          exerciseId={logFor.id}
-          exerciseName={logFor.name}
-          onClose={() => setLogFor(null)}
-          onLogged={(secs) => {
-            setLogFor(null);
-            setResting(secs);
-          }}
-        />
-      )}
+      {logFor && <LogSetModal exerciseId={logFor.id} exerciseName={logFor.name} onClose={() => setLogFor(null)} onLogged={(secs) => { setLogFor(null); setResting(secs); }} />}
       {resting !== null && <RestTimer seconds={resting} onDone={() => setResting(null)} />}
       <QuickLogFAB />
     </div>
@@ -670,190 +463,37 @@ function bestSet(logs: { exerciseId: string; weight: number }[], id: string) {
   return Math.max(...f.map((l) => l.weight));
 }
 
-function ExerciseCard({
-  name,
-  sets,
-  tags,
-  pr,
-  videoId,
-  onWatch,
-  onLog,
-}: {
-  name: string;
-  sets: string;
-  tags: string[];
-  pr: number | null;
-  videoId?: string;
-  onWatch: () => void;
-  onLog: () => void;
-}) {
-  return (
-    <div
-      className="overflow-hidden"
-      style={{ background: "#141414", border: "1.5px solid #262626", borderRadius: 14 }}
-    >
-      <button className="w-full text-left press" onClick={onWatch}>
-        <div className="flex gap-0">
-          {videoId && (
-            <div
-              className="relative flex-shrink-0"
-              style={{ width: 90, aspectRatio: "1/1", background: "#0A0A0A" }}
-            >
-              <img
-                src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
-                alt={name}
-                className="absolute inset-0 w-full h-full object-cover opacity-80"
-              />
-              <div
-                className="absolute inset-0 flex items-center justify-center"
-                style={{ background: "rgba(0,0,0,0.35)" }}
-              >
-                <div
-                  className="flex items-center justify-center rounded-full"
-                  style={{
-                    width: 30,
-                    height: 30,
-                    background: "rgba(225,6,0,0.9)",
-                    boxShadow: "0 2px 8px rgba(225,6,0,0.5)",
-                  }}
-                >
-                  <Play size={14} color="#fff" fill="#fff" />
-                </div>
-              </div>
-            </div>
-          )}
-          <div className="flex-1 p-3">
-            <div className="flex items-start justify-between gap-2">
-              <p className="display uppercase font-extrabold text-white text-base leading-tight">{name}</p>
-              {!videoId && (
-                <Play size={16} style={{ color: "#E10600", flexShrink: 0, marginTop: 2 }} />
-              )}
-            </div>
-            <p className="text-sm mt-0.5" style={{ color: "#8A8A8A" }}>{sets}</p>
-            <div className="flex gap-1.5 mt-2 flex-wrap">
-              {tags.filter(Boolean).slice(0, 3).map((t) => (
-                <span
-                  key={t}
-                  className="text-[10px] font-semibold uppercase px-2 py-0.5"
-                  style={{
-                    background: "#141414",
-                    color: "#8A8A8A",
-                    borderRadius: 6,
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  {t}
-                </span>
-              ))}
-              {pr !== null && (
-                <span className="pr-badge">
-                  ★ PR {pr}kg
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-      </button>
-      <div style={{ borderTop: "1px solid #262626" }}>
-        <button
-          onClick={onLog}
-          className="w-full py-2.5 flex items-center justify-center gap-1.5 press"
-          style={{ color: "#E10600", fontSize: "0.82rem", fontWeight: 700, letterSpacing: "0.05em" }}
-        >
-          <Plus size={14} /> Log Set
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function LogSetModal({
-  exerciseId,
-  exerciseName,
-  onClose,
-  onLogged,
-}: {
-  exerciseId: string;
-  exerciseName?: string;
-  onClose: () => void;
-  onLogged: (rest: number) => void;
-}) {
+function LogSetModal({ exerciseId, exerciseName, onClose, onLogged }: { exerciseId: string; exerciseName?: string; onClose: () => void; onLogged: (rest: number) => void }) {
   const [, set] = useAppState();
   const [weight, setWeight] = useState("");
   const [reps, setReps] = useState("");
   const ex = getExercise(exerciseId);
   const displayName = exerciseName ?? ex?.name ?? "Exercise";
   function save(rest: number) {
-    const w = Number(weight);
-    const r = Number(reps);
+    const w = Number(weight); const r = Number(reps);
     if (!r) return;
-    set((s) => ({
-      ...s,
-      logs: [...s.logs, { exerciseId, weight: w || 0, reps: r, date: new Date().toISOString() }],
-    }));
+    set((s) => ({ ...s, logs: [...s.logs, { exerciseId, weight: w || 0, reps: r, date: new Date().toISOString() }] }));
     onLogged(rest);
   }
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-end"
-      style={{ background: "rgba(0,0,0,0.75)" }}
-      onClick={onClose}
-    >
-      <div
-        className="w-full p-5 max-w-md mx-auto animate-slide-up"
-        style={{
-          background: "#141414",
-          borderTop: "2px solid #E10600",
-          borderTopLeftRadius: 20,
-          borderTopRightRadius: 20,
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div
-          className="w-10 h-1 rounded-full mx-auto mb-4"
-          style={{ background: "#262626" }}
-        />
-        <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "#E10600" }}>
-          Log Set
-        </p>
-        <h3 className="display text-xl uppercase font-extrabold text-white mb-5">{displayName}</h3>
-        <div className="grid grid-cols-2 gap-3 mb-5">
+    <div className="fixed inset-0 z-[100] flex items-end" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
+      <div className="w-full bg-grit-card border-t border-accent-red p-5 max-w-md mx-auto" onClick={(e) => e.stopPropagation()}>
+        <p className="label-cap mb-1">Log Set</p>
+        <h3 className="display text-xl uppercase font-extrabold text-grit mb-4">{displayName}</h3>
+        <div className="grid grid-cols-2 gap-3 mb-4">
           <div>
-            <label className="label-cap block mb-1.5">Weight (kg)</label>
-            <input
-              autoFocus
-              inputMode="decimal"
-              value={weight}
-              onChange={(e) => setWeight(e.target.value)}
-              className="input-grit text-center text-xl font-bold"
-            />
+            <label className="label-cap block mb-1">Weight (kg)</label>
+            <input autoFocus inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)} className="input-grit" />
           </div>
           <div>
-            <label className="label-cap block mb-1.5">Reps</label>
-            <input
-              inputMode="numeric"
-              value={reps}
-              onChange={(e) => setReps(e.target.value)}
-              className="input-grit text-center text-xl font-bold"
-            />
+            <label className="label-cap block mb-1">Reps</label>
+            <input inputMode="numeric" value={reps} onChange={(e) => setReps(e.target.value)} className="input-grit" />
           </div>
         </div>
-        <p className="label-cap mb-2.5">Start rest timer</p>
+        <p className="label-cap mb-2">Rest</p>
         <div className="grid grid-cols-3 gap-2">
           {[60, 90, 120].map((s) => (
-            <button
-              key={s}
-              onClick={() => save(s)}
-              className="py-3 font-bold text-sm press"
-              style={{
-                background: "#141414",
-                color: "#ffffff",
-                borderRadius: 10,
-                border: "1.5px solid #262626",
-              }}
-            >
-              {s}s
-            </button>
+            <button key={s} onClick={() => save(s)} className="btn-grit">{s}s</button>
           ))}
         </div>
       </div>

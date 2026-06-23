@@ -1,98 +1,105 @@
-import Anthropic from "@anthropic-ai/sdk";
+// Server-only Anthropic Messages API helper.
 
-function getClient() {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("Missing ANTHROPIC_API_KEY — add it to your environment.");
-  return new Anthropic({ apiKey });
-}
+const BASE = "https://api.anthropic.com/v1/messages";
+const DEFAULT_MODEL = "claude-sonnet-4-20250514";
 
-const MODEL = "claude-opus-4-8";
+type AnthropicMessage = {
+  role: "user" | "assistant";
+  content: unknown;
+};
 
-export async function chatJSON<T = unknown>(opts: {
+type AnthropicResponse = {
+  content?: Array<{ type: string; text?: string }>;
+  error?: { message?: string };
+};
+
+async function callAnthropic(opts: {
+  model?: string;
   system: string;
-  user: string;
-}): Promise<T> {
-  const client = getClient();
-  const msg = await client.messages.create({
-    model: MODEL,
-    max_tokens: 1024,
-    thinking: { type: "adaptive" },
-    system: opts.system + "\nIMPORTANT: Respond with valid JSON only, no markdown, no prose.",
-    messages: [{ role: "user", content: opts.user }],
+  messages: AnthropicMessage[];
+}): Promise<string> {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) throw new Error("Missing ANTHROPIC_API_KEY");
+
+  const res = await fetch(BASE, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": key,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: opts.model ?? DEFAULT_MODEL,
+      max_tokens: 2048,
+      system: opts.system,
+      messages: opts.messages,
+    }),
   });
 
-  const text = msg.content
-    .filter((b) => b.type === "text")
-    .map((b) => (b as Anthropic.TextBlock).text)
-    .join("");
+  const data = (await res.json().catch(() => ({}))) as AnthropicResponse;
+  if (!res.ok) {
+    if (res.status === 429) throw new Error("Rate limit exceeded. Please retry shortly.");
+    if (res.status === 402) throw new Error("AI credits exhausted.");
+    throw new Error(data.error?.message ?? `Anthropic API error ${res.status}`);
+  }
 
+  return data.content?.find((block) => block.type === "text")?.text ?? "";
+}
+
+function parseJSON<T>(content: string): T {
   try {
-    return JSON.parse(text) as T;
+    return JSON.parse(content) as T;
   } catch {
-    const match = text.match(/\{[\s\S]*\}/);
+    const match = content.match(/\{[\s\S]*\}/);
     if (match) return JSON.parse(match[0]) as T;
     throw new Error("AI returned invalid JSON");
   }
 }
 
+export async function chatJSON<T = unknown>(opts: {
+  model?: string;
+  system: string;
+  user: string;
+}): Promise<T> {
+  const content = await callAnthropic({
+    model: opts.model,
+    system: `${opts.system}\nReturn only valid JSON with no markdown fences.`,
+    messages: [{ role: "user", content: opts.user }],
+  });
+  return parseJSON<T>(content);
+}
+
 export async function chatText(opts: {
+  model?: string;
   system: string;
   messages: { role: "user" | "assistant"; content: string }[];
 }): Promise<string> {
-  const client = getClient();
-  const msg = await client.messages.create({
-    model: MODEL,
-    max_tokens: 1024,
-    thinking: { type: "adaptive" },
+  return callAnthropic({
+    model: opts.model,
     system: opts.system,
     messages: opts.messages,
   });
-
-  return msg.content
-    .filter((b) => b.type === "text")
-    .map((b) => (b as Anthropic.TextBlock).text)
-    .join("");
 }
 
 export async function chatVisionJSON<T = unknown>(opts: {
+  model?: string;
   system: string;
   user: string;
   imageDataUrl: string;
 }): Promise<T> {
-  const client = getClient();
+  const match = opts.imageDataUrl.match(/^data:(image\/(?:jpeg|png|gif|webp));base64,(.+)$/s);
+  if (!match) throw new Error("Unsupported image format");
 
-  // Parse data URL into media_type + base64 data
-  const match = opts.imageDataUrl.match(/^data:(image\/[a-z]+);base64,(.+)$/s);
-  if (!match) throw new Error("Invalid image data URL");
-  const mediaType = match[1] as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
-  const base64Data = match[2];
-
-  const msg = await client.messages.create({
-    model: MODEL,
-    max_tokens: 1024,
-    thinking: { type: "adaptive" },
-    system: opts.system + "\nIMPORTANT: Respond with valid JSON only, no markdown, no prose.",
-    messages: [
-      {
-        role: "user",
-        content: [
-          { type: "image", source: { type: "base64", media_type: mediaType, data: base64Data } },
-          { type: "text", text: opts.user },
-        ],
-      },
-    ],
+  const content = await callAnthropic({
+    model: opts.model,
+    system: `${opts.system}\nReturn only valid JSON with no markdown fences.`,
+    messages: [{
+      role: "user",
+      content: [
+        { type: "image", source: { type: "base64", media_type: match[1], data: match[2] } },
+        { type: "text", text: opts.user },
+      ],
+    }],
   });
-
-  const text = msg.content
-    .filter((b) => b.type === "text")
-    .map((b) => (b as Anthropic.TextBlock).text)
-    .join("");
-
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    const m = text.match(/\{[\s\S]*\}/);
-    if (m) return JSON.parse(m[0]) as T;
-    throw new Error("AI returned invalid JSON");
-  }
+  return parseJSON<T>(content);
 }

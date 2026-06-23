@@ -1,5 +1,8 @@
 {
-  "buildCommand": "bun run build && node scripts/vercel-output.mjs",
-  "framework": null,
-  "installCommand": "bun install"
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/client",
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }

@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import heroImg from "@/assets/landing-hero.jpg";
+import heroImg from "@/assets/gym-hero.jpg";
 import aboutImg from "@/assets/landing-about.jpg";
 import benefitsImg from "@/assets/landing-benefits.jpg";
 

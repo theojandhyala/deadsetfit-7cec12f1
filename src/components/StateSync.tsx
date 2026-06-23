@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useServerFn } from "@tanstack/react-start";
+
 import { supabase } from "@/integrations/supabase/client";
 import {
   enableRemoteSync,
@@ -15,7 +15,6 @@ import {
 } from "@/lib/storage";
 import { loadUserState, saveUserState } from "@/lib/user-state.functions";
 import { withTimeout } from "@/lib/account-restore";
-import { logSessionEvent, recordSessionSnapshot } from "@/lib/session-diagnostics";
 
 /**
  * Mounts once at the root. On sign-in, pulls the user's saved app state from
@@ -23,78 +22,58 @@ import { logSessionEvent, recordSessionSnapshot } from "@/lib/session-diagnostic
  * On sign-out, clears local state so the next user starts clean.
  */
 export function StateSync() {
-  const load = useServerFn(loadUserState);
-  const save = useServerFn(saveUserState);
+  const load = loadUserState;
+  const save = saveUserState;
 
   useEffect(() => {
     let cancelled = false;
     let activeUserId: string | null = null;
 
+    function prepareLocalState(userId: string) {
+      // Local training data must never cross account boundaries. This also
+      // clears legacy/unowned state before the first authenticated sync.
+      if (getLocalStateOwner() !== userId) clearLocalState();
+    }
+
     async function pull(userId: string) {
-      logSessionEvent("state-sync:pull-start", { user: userId.slice(0, 8) });
+      prepareLocalState(userId);
       beginRemoteStateLoad(userId);
       try {
-        // 10s timeout — Cloudflare cold starts can be slow
-        const res = await withTimeout(load(), null, 10000);
+        const res = await withTimeout(load(), null);
         if (cancelled) return;
         if (res?.data) {
           try {
             hydrateFromRemote(JSON.parse(res.data), userId);
-            logSessionEvent("state-sync:hydrated-remote", { user: userId.slice(0, 8) });
-          } catch (parseErr) {
-            // Corrupted state — log but don't crash. Local state stays as-is.
-            logSessionEvent("state-sync:hydration-parse-error", {
-              user: userId.slice(0, 8),
-              message: parseErr instanceof Error ? parseErr.message : "parse failed",
-            });
+          } catch {
+            /* ignore */
           }
         } else {
-          // First sign-in: push existing local state so it isn't lost
+          // First sign-in on this account: push whatever's local so it isn't lost.
           const local = getState();
           if (local.profile && getLocalStateOwner() === userId) {
-            await save({ data: { data: JSON.stringify(local) } }).catch((err) => {
-              logSessionEvent("state-sync:initial-push-failed", {
-                message: err instanceof Error ? err.message : "unknown",
-              });
-            });
+            await save({ data: { data: JSON.stringify(local) } }).catch(() => {});
           }
           setLocalStateOwner(userId);
         }
         enableRemoteSync(async (json) => {
-          await save({ data: { data: json } }).catch((err) => {
-            logSessionEvent("state-sync:push-failed", {
-              message: err instanceof Error ? err.message : "unknown",
-            });
-          });
+          await save({ data: { data: json } });
         });
       } catch (e) {
-        logSessionEvent("state-sync:pull-failed", {
-          user: userId.slice(0, 8),
-          message: e instanceof Error ? e.message : "unknown",
-        });
         console.warn("state pull failed", e);
-        // Still enable sync so future changes are saved even if initial pull failed
-        enableRemoteSync(async (json) => {
-          await save({ data: { data: json } }).catch(() => {});
-        });
       } finally {
         if (!cancelled) finishRemoteStateLoad(userId);
       }
     }
 
-    withTimeout(supabase.auth.getSession(), { data: { session: null }, error: null }, 8000).then(
-      ({ data: { session } }) => {
-        recordSessionSnapshot("state-sync:initial", session ?? null);
-        if (session?.user?.id) {
-          activeUserId = session.user.id;
-          pull(session.user.id);
-        }
-      },
-    );
+    withTimeout(supabase.auth.getSession(), { data: { session: null }, error: null }).then(({ data: { session } }) => {
+      if (session?.user?.id) {
+        activeUserId = session.user.id;
+        pull(session.user.id);
+      }
+    });
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       const uid = session?.user?.id ?? null;
-      logSessionEvent("state-sync:auth-change", { event, hasSession: Boolean(session) });
       if (event === "SIGNED_OUT") {
         disableRemoteSync();
         clearLocalState();
@@ -106,42 +85,14 @@ export function StateSync() {
       if (uid !== activeUserId) {
         activeUserId = uid;
         disableRemoteSync();
-        beginRemoteStateLoad(uid);
-        if (getLocalStateOwner() && getLocalStateOwner() !== uid) clearLocalState();
         pull(uid);
       }
     });
-
-    // Proactively refresh session when the user returns to the app
-    const refresh = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        recordSessionSnapshot("state-sync:refresh-check", session ?? null);
-        if (session) {
-          const expiresIn = (session.expires_at ?? 0) - Math.floor(Date.now() / 1000);
-          if (expiresIn < 300) {
-            await supabase.auth.refreshSession();
-            logSessionEvent("state-sync:session-refreshed", { expiresIn });
-          }
-        }
-      } catch {
-        /* ignore */
-      }
-    };
-
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") refresh();
-    };
-
-    document.addEventListener("visibilitychange", handleVisibility);
-    window.addEventListener("focus", refresh);
 
     return () => {
       cancelled = true;
       sub.subscription.unsubscribe();
       disableRemoteSync();
-      document.removeEventListener("visibilitychange", handleVisibility);
-      window.removeEventListener("focus", refresh);
     };
   }, [load, save]);
 

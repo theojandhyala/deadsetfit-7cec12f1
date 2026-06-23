@@ -1,17 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
+
 import { toast } from "sonner";
-import { Check, Zap, Camera, MessageSquare, Scan, Images, Activity } from "lucide-react";
+import { Check, Zap } from "lucide-react";
 import { GritLogo } from "@/components/GritLogo";
-import { getState, setLocalStateOwner, setState } from "@/lib/storage";
+import { getState, setLocalStateOwner, setState, waitForRemoteState } from "@/lib/storage";
 import { defaultSchedule } from "@/lib/calc";
 import { getExercise } from "@/lib/exercises";
 import { getMyProfile, saveProfile } from "@/lib/profile.functions";
 import { profileFromAccount, profileQuestionsComplete, withTimeout } from "@/lib/account-restore";
 import type { Equipment, Experience, Gender, Goal, Profile, Weakness } from "@/lib/types";
-import { buildPublicStats, PR_CATALOG } from "@/lib/fifa-stats";
-import { cacheProfileBootstrap, getLoggedSession, logSessionEvent } from "@/lib/session-diagnostics";
+import { buildPublicStats } from "@/lib/fifa-stats";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "DEADSET — Onboarding" }] }),
@@ -33,8 +32,7 @@ type Step =
   | "weakness"
   | "prs"
   | "username"
-  | "photo"
-  | "tour";
+  | "photo";
 
 type Mode = "GENERATE" | "BUILD";
 
@@ -42,7 +40,9 @@ function orderFor(mode: Mode | null): Step[] {
   const base: Step[] = ["mode"];
   if (!mode) return base;
   const schedule: Step[] =
-    mode === "GENERATE" ? ["goal", "days", "equipment", "schedule"] : ["goal", "days", "equipment"];
+    mode === "GENERATE"
+      ? ["goal", "days", "equipment", "schedule"]
+      : ["goal", "days", "equipment"];
   return [
     ...base,
     ...schedule,
@@ -56,7 +56,6 @@ function orderFor(mode: Mode | null): Step[] {
     "prs",
     "username",
     "photo",
-    "tour",
   ];
 }
 
@@ -66,28 +65,28 @@ function Onboarding() {
   const [mode, setMode] = useState<Mode | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Partial<Profile>>({});
-  const [submitting, setSubmitting] = useState(false);
-  const save = useServerFn(saveProfile);
-  const getProfile = useServerFn(getMyProfile);
+  const save = saveProfile;
+  const getProfile = getMyProfile;
   const ORDER = useMemo(() => orderFor(mode), [mode]);
   const step = ORDER[idx];
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      logSessionEvent("onboarding:bootstrap-start");
-      const session = await getLoggedSession("onboarding:bootstrap", 3000);
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data: { session } } = await withTimeout(
+        supabase.auth.getSession(),
+        { data: { session: null }, error: null },
+      );
       if (cancelled) return;
       if (!session) {
-        logSessionEvent("onboarding:no-session-redirect-auth");
         navigate({ to: "/auth", replace: true });
         return;
       }
       setUserId(session.user.id);
-      const row = await withTimeout(
-        getProfile().catch(() => null),
-        null,
-      );
+      await withTimeout(waitForRemoteState(session.user.id), undefined);
+      if (cancelled) return;
+      const row = await withTimeout(getProfile().catch(() => null), null);
       const accountProfile = profileQuestionsComplete(row) ? profileFromAccount(row) : null;
       if (accountProfile) {
         setState((current) => ({
@@ -95,15 +94,6 @@ function Onboarding() {
           profile: accountProfile,
           schedule: current.schedule ?? defaultSchedule(accountProfile),
         }));
-        setLocalStateOwner(session.user.id);
-        cacheProfileBootstrap(session.user.id, {
-          onboarded: Boolean(row?.onboarded),
-          complete: true,
-          hasUsername: Boolean(row?.username),
-        });
-        logSessionEvent("onboarding:already-complete-redirect-train", {
-          user: session.user.id.slice(0, 8),
-        });
         navigate({ to: "/train", replace: true });
       }
     })();
@@ -112,83 +102,48 @@ function Onboarding() {
     };
   }, [getProfile, navigate]);
 
-  async function finalize(merged: Partial<Profile>) {
-    const p = {
-      ...merged,
-      startingWeightKg: merged.startingWeightKg ?? merged.weightKg,
-    } as Profile;
-    const sched = mode === "BUILD" ? emptySchedule() : defaultSchedule(p);
-    if (userId) setLocalStateOwner(userId);
-    setState((s) => ({ ...s, profile: p, schedule: sched }));
-    const publicStats = buildPublicStats(getState());
-
-    setSubmitting(true);
-    // Retry the save up to 3 times so a transient network blip doesn't
-    // silently leave the account un-onboarded.
-    let lastErr: Error | null = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        await save({
-          data: {
-            username: p.username,
-            display_name: p.username,
-            goal: p.goal,
-            experience: p.experience,
-            gender: p.gender,
-            age: p.age,
-            weight_kg: p.weightKg,
-            height_cm: p.heightCm,
-            days_per_week: p.daysPerWeek,
-            equipment: p.equipment,
-            avatar_url: p.avatarDataUrl,
-            public_stats: publicStats,
-            onboarded: true,
-          },
-        });
-        setSubmitting(false);
-        if (userId) {
-          cacheProfileBootstrap(userId, {
-            onboarded: true,
-            complete: true,
-            hasUsername: Boolean(p.username),
-          });
-          logSessionEvent("onboarding:profile-saved", { user: userId.slice(0, 8) });
-        }
-        navigate({ to: "/train", replace: true });
-        return;
-      } catch (e) {
-        lastErr = e instanceof Error ? e : new Error("Save failed");
-        logSessionEvent("onboarding:profile-save-error", {
-          attempt: attempt + 1,
-          message: lastErr.message,
-        });
-        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
-      }
-    }
-    setSubmitting(false);
-    toast.error(
-      lastErr?.message ||
-        "Couldn't save your details. Check your connection and tap Finish again.",
-    );
-  }
-
   function next(patch: Partial<Profile>) {
     const merged = { ...draft, ...patch };
     setDraft(merged);
     if (idx === ORDER.length - 1) {
-      void finalize(merged);
+      const p = {
+        ...merged,
+        startingWeightKg: merged.startingWeightKg ?? merged.weightKg,
+      } as Profile;
+      const sched = mode === "BUILD" ? emptySchedule() : defaultSchedule(p);
+      if (!userId) {
+        toast.error("Your session is still loading. Try again.");
+        return;
+      }
+      const publicStats = buildPublicStats({ ...getState(), profile: p, schedule: sched });
+      save({
+        data: {
+          username: p.username,
+          display_name: p.username,
+          goal: p.goal,
+          experience: p.experience,
+          gender: p.gender,
+          age: p.age,
+          weight_kg: p.weightKg,
+          height_cm: p.heightCm,
+          days_per_week: p.daysPerWeek,
+          equipment: p.equipment,
+          avatar_url: p.avatarDataUrl,
+          public_stats: publicStats,
+          onboarded: true,
+        },
+      })
+        .then(() => {
+          setLocalStateOwner(userId);
+          setState((s) => ({ ...s, profile: p, schedule: sched }));
+          navigate({ to: "/train", replace: true });
+        })
+        .catch((e: Error) => {
+          toast.error(e.message || "Couldn't save profile");
+        });
     } else {
       setIdx(idx + 1);
     }
-  }
-
-  if (submitting) {
-    return (
-      <div className="min-h-screen bg-grit flex flex-col items-center justify-center px-6">
-        <GritLogo className="text-3xl mb-6" />
-        <p className="label-cap text-grit-dim">Saving your setup…</p>
-      </div>
-    );
   }
 
   return (
@@ -303,7 +258,9 @@ function Onboarding() {
             onPick={(v) => next({ equipment: v as Equipment })}
           />
         )}
-        {step === "schedule" && <SchedulePreview draft={draft} onContinue={() => next({})} />}
+        {step === "schedule" && (
+          <SchedulePreview draft={draft} onContinue={() => next({})} />
+        )}
         {step === "injuries" && (
           <Injuries onSubmit={(t) => next({ injuries: t })} onSkip={() => next({ injuries: "" })} />
         )}
@@ -324,7 +281,6 @@ function Onboarding() {
         {step === "photo" && (
           <PhotoStep onSubmit={(url) => next({ avatarDataUrl: url })} onSkip={() => next({})} />
         )}
-        {step === "tour" && <TourStep onContinue={() => next({})} />}
       </div>
     </div>
   );
@@ -484,7 +440,10 @@ function PhotoStep({ onSubmit, onSkip }: { onSubmit: (url: string) => void; onSk
         />
       </div>
       <div className="mt-auto flex flex-col gap-3">
-        <button onClick={() => (preview ? onSubmit(preview) : onSkip())} className="btn-grit">
+        <button
+          onClick={() => (preview ? onSubmit(preview) : onSkip())}
+          className="btn-grit"
+        >
           Finish Setup
         </button>
         {preview && (
@@ -527,8 +486,8 @@ function SchedulePreview({
         Schedule locked in
       </h1>
       <p className="text-sm text-[#8a8a8a] mb-6">
-        {draft.daysPerWeek} days · {(draft.equipment ?? "").replace("_", " ").toLowerCase()} · tuned
-        for {(draft.goal ?? "").toLowerCase()}. Tweak anytime in Programs.
+        {draft.daysPerWeek} days · {(draft.equipment ?? "").replace("_", " ").toLowerCase()} · tuned for{" "}
+        {(draft.goal ?? "").toLowerCase()}. Tweak anytime in Programs.
       </p>
       <div className="flex flex-col gap-1.5 mb-6">
         {DAYS.map((d) => {
@@ -550,7 +509,9 @@ function SchedulePreview({
                 </p>
                 {!isRest && (
                   <p className="text-[10px] text-grit-dim mt-1 truncate">
-                    {day.exerciseIds.map((id) => getExercise(id)?.name ?? id).join(" · ")}
+                    {day.exerciseIds
+                      .map((id) => getExercise(id)?.name ?? id)
+                      .join(" · ")}
                   </p>
                 )}
               </div>
@@ -581,7 +542,9 @@ function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
       <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">
         How do you want to start?
       </h1>
-      <p className="text-sm text-[#8a8a8a] mb-8">Pick one. You can change everything later.</p>
+      <p className="text-sm text-[#8a8a8a] mb-8">
+        Pick one. You can change everything later.
+      </p>
       <div className="flex flex-col gap-3">
         <button
           onClick={() => onPick("GENERATE")}
@@ -594,7 +557,9 @@ function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
           <span className="display text-2xl uppercase tracking-wide font-extrabold text-grit block">
             Generate Schedule
           </span>
-          <p className="text-xs text-[#8a8a8a] mt-1">Answer 3 questions. We build your week.</p>
+          <p className="text-xs text-[#8a8a8a] mt-1">
+            Answer 3 questions. We build your week.
+          </p>
         </button>
         <button
           onClick={() => onPick("BUILD")}
@@ -603,12 +568,23 @@ function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
           <span className="display text-2xl uppercase tracking-wide font-extrabold text-grit block">
             Build Your Own
           </span>
-          <p className="text-xs text-[#8a8a8a] mt-1">Start blank. Add your own splits and lifts.</p>
+          <p className="text-xs text-[#8a8a8a] mt-1">
+            Start blank. Add your own splits and lifts.
+          </p>
         </button>
       </div>
     </>
   );
 }
+
+const ONBOARDING_PRS: Array<{ id: string; label: string; unit: string; placeholder: string; desc: string }> = [
+  { id: "bench-press", label: "Bench Press",     unit: "kg",   placeholder: "80",  desc: "Flat barbell bench press. Bar to mid-chest, drive straight up." },
+  { id: "squat",       label: "Back Squat",      unit: "kg",   placeholder: "100", desc: "Barbell on upper back. Break at hips & knees, depth at parallel." },
+  { id: "deadlift",    label: "Deadlift",        unit: "kg",   placeholder: "120", desc: "Conventional barbell deadlift from the floor. Lock out hips at top." },
+  { id: "ohp",         label: "Overhead Press",  unit: "kg",   placeholder: "50",  desc: "Standing strict barbell press. No leg drive, bar finishes overhead." },
+  { id: "pull-ups",    label: "Pull-Ups (max)",  unit: "reps", placeholder: "10",  desc: "Strict bodyweight pull-ups, full hang to chin over bar. Max in one set." },
+  { id: "push-ups",    label: "Push-Ups (max)",  unit: "reps", placeholder: "30",  desc: "Strict push-ups, chest to floor, full lockout. Max unbroken." },
+];
 
 function PRStep({ onContinue }: { onContinue: () => void }) {
   const [vals, setVals] = useState<Record<string, string>>({});
@@ -616,11 +592,10 @@ function PRStep({ onContinue }: { onContinue: () => void }) {
   function commit() {
     const today = new Date().toISOString().slice(0, 10);
     const manualPRs: Record<string, { value: number; reps?: number; date: string }> = {};
-    for (const def of PR_CATALOG) {
-      const n = Number(vals[def.id]);
+    for (const pr of ONBOARDING_PRS) {
+      const n = Number(vals[pr.id]);
       if (n > 0) {
-        manualPRs[def.id] =
-          def.kind === "1RM" ? { value: n, reps: 1, date: today } : { value: n, date: today };
+        manualPRs[pr.id] = pr.unit === "kg" ? { value: n, reps: 1, date: today } : { value: n, date: today };
       }
     }
     if (Object.keys(manualPRs).length) {
@@ -632,85 +607,34 @@ function PRStep({ onContinue }: { onContinue: () => void }) {
   return (
     <>
       <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">Your PRs</h1>
-      <p className="text-sm text-[#8a8a8a] mb-4">
+      <p className="text-sm text-[#8a8a8a] mb-6">
         Drop your best lifts. Powers your athlete card. Leave blank to skip.
       </p>
-      <div className="bg-grit-card border border-grit divide-y divide-[#262626] mb-6 overflow-y-auto" style={{ maxHeight: "55vh" }}>
-        {PR_CATALOG.map((def) => {
-          const unit = def.kind === "1RM" ? "kg" : def.kind === "REPS" ? "reps" : "sec";
-          return (
-            <div key={def.id} className="flex items-center justify-between px-4 py-2.5 gap-3">
+      <div className="flex flex-col gap-2 mb-6">
+        {ONBOARDING_PRS.map((pr) => (
+          <div key={pr.id} className="bg-grit-card border border-grit px-3 py-2.5">
+            <div className="flex items-center gap-3">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-grit truncate">{def.label}</p>
-                <p className="text-[10px] text-grit-dim leading-snug">{def.desc}</p>
+                <p className="text-sm font-bold text-grit truncate">{pr.label}</p>
+                <p className="label-cap text-[9px] text-grit-dim">{pr.unit === "kg" ? "1-rep max" : "max reps"}</p>
               </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <input
-                  value={vals[def.id] ?? ""}
-                  onChange={(e) => setVals((v) => ({ ...v, [def.id]: e.target.value }))}
-                  inputMode="decimal"
-                  placeholder="—"
-                  className="input-grit w-20 text-right py-1.5"
-                />
-                <span className="label-cap text-[10px] text-grit-dim w-8">{unit}</span>
-              </div>
+              <input
+                value={vals[pr.id] ?? ""}
+                onChange={(e) => setVals((v) => ({ ...v, [pr.id]: e.target.value }))}
+                inputMode="decimal"
+                placeholder={pr.placeholder}
+                className="input-grit w-20 text-right"
+              />
+              <span className="label-cap text-[10px] text-grit-dim w-8">{pr.unit}</span>
             </div>
-          );
-        })}
-      </div>
-      <div className="mt-auto flex flex-col gap-3">
-        <button onClick={commit} className="btn-grit">
-          Continue
-        </button>
-        <button onClick={onContinue} className="btn-ghost">
-          Skip
-        </button>
-      </div>
-    </>
-  );
-}
-
-function TourStep({ onContinue }: { onContinue: () => void }) {
-  const tools = [
-    { Icon: Camera, t: "AI MEAL SCAN", d: "Snap your plate — get calories and macros in seconds.", where: "Diet tab" },
-    { Icon: MessageSquare, t: "AI COACH", d: "24/7 strength coach. Ask anything, get a real answer.", where: "Profile → Coach" },
-    { Icon: Scan, t: "PHYSIQUE SCANNER", d: "AI grades body fat, muscle and symmetry from a photo.", where: "Progress tab" },
-    { Icon: Images, t: "PROGRESS PICTURES", d: "Side-by-side check-ins to see the transformation.", where: "Progress tab" },
-    { Icon: Activity, t: "AI RUN COACH", d: "Live tracking with pacing tips and your next session.", where: "Cardio tab" },
-  ];
-  return (
-    <>
-      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">Your AI toolkit</h1>
-      <p className="text-sm text-[#8a8a8a] mb-6">
-        Built in. Always on. Find them anywhere you see the spark.
-      </p>
-      <div className="flex flex-col gap-3 mb-8">
-        {tools.map(({ Icon, t, d, where }) => (
-          <div
-            key={t}
-            className="p-4 flex gap-3"
-            style={{
-              background: "rgba(20,20,20,0.85)",
-              border: "1px solid rgba(255,255,255,0.06)",
-            }}
-          >
-            <div
-              className="w-10 h-10 flex items-center justify-center shrink-0"
-              style={{ background: "rgba(225,6,0,0.15)", color: "#E10600" }}
-            >
-              <Icon size={18} />
-            </div>
-            <div className="min-w-0">
-              <p className="label-cap text-sm text-grit">{t}</p>
-              <p className="text-xs text-grit-dim mt-1 leading-relaxed">{d}</p>
-              <p className="text-[10px] text-accent-red mt-1 label-cap">{where}</p>
-            </div>
+            <p className="text-[11px] text-[#8a8a8a] mt-1.5 leading-snug">{pr.desc}</p>
           </div>
         ))}
       </div>
-      <button onClick={onContinue} className="btn-grit mt-auto">
-        Let's go
-      </button>
+      <div className="mt-auto flex flex-col gap-3">
+        <button onClick={commit} className="btn-grit">Continue</button>
+        <button onClick={onContinue} className="btn-ghost">Skip</button>
+      </div>
     </>
   );
 }

@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
 import { Camera, Trophy, Loader2, Sparkles, Flame, X, Trash2 } from "lucide-react";
-import { useServerFn } from "@tanstack/react-start";
+
 import { useAppState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
 import { isoDay, calculateStreak } from "@/lib/calc";
@@ -28,7 +28,7 @@ function ProgressPage() {
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [viewScan, setViewScan] = useState<PhysiqueScan | null>(null);
-  const analyze = useServerFn(analyzePhysique);
+  const analyze = analyzePhysique;
 
   const streak = calculateStreak(state.completedDates);
   const totalSessions = state.sessions.filter((s) => s.endedAt).length;

@@ -1,46 +1,30 @@
 import { useEffect, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
-import { useLocation } from "@tanstack/react-router";
+
 import { supabase } from "@/integrations/supabase/client";
 import { getMyProfile, saveProfile } from "@/lib/profile.functions";
-import { logSessionEvent } from "@/lib/session-diagnostics";
 
 /**
  * Blocking modal: if the signed-in user has no username yet, force them to
  * pick one. Saves instantly and dismisses.
  */
 export function UsernameGate() {
-  const fetchProfile = useServerFn(getMyProfile);
-  const save = useServerFn(saveProfile);
-  const location = useLocation();
+  const fetchProfile = getMyProfile;
+  const save = saveProfile;
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const skipGate = location.pathname === "/auth" || location.pathname === "/onboarding";
 
   async function check() {
     try {
-      if (skipGate) {
-        setOpen(false);
-        logSessionEvent("username-gate:skipped", { path: location.pathname });
-        return;
-      }
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         setOpen(false);
         return;
       }
       const profile = await fetchProfile().catch(() => null);
-      const shouldOpen = Boolean(profile?.onboarded && !profile.username);
-      setOpen(shouldOpen);
-      logSessionEvent("username-gate:checked", {
-        shouldOpen,
-        onboarded: Boolean(profile?.onboarded),
-        hasUsername: Boolean(profile?.username),
-      });
+      if (profile && !profile.username) setOpen(true);
+      else setOpen(false);
     } catch {
       /* ignore */
     }
@@ -51,14 +35,11 @@ export function UsernameGate() {
     const { data } = supabase.auth.onAuthStateChange(() => check());
     return () => data.subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
+  }, []);
 
   if (!open) return null;
 
-  const clean = value
-    .toLowerCase()
-    .replace(/[^a-z0-9_]/g, "")
-    .slice(0, 20);
+  const clean = value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20);
   const valid = clean.length >= 3;
 
   async function submit() {

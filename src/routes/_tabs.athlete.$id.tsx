@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
+
 import { ArrowLeft, Loader2, UserPlus, UserCheck, Trophy, Flag, Ban } from "lucide-react";
 import { toast } from "sonner";
 import { getAthleteCard, toggleFollow } from "@/lib/social.functions";
@@ -18,12 +18,12 @@ type Card = Awaited<ReturnType<typeof getAthleteCard>>;
 function AthletePage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
-  const _get = useServerFn(getAthleteCard);
-  const _toggle = useServerFn(toggleFollow);
-  const _block = useServerFn(blockUser);
-  const _unblock = useServerFn(unblockUser);
-  const _isBlocked = useServerFn(isBlocked);
-  const _report = useServerFn(reportContent);
+  const _get = getAthleteCard;
+  const _toggle = toggleFollow;
+  const _block = blockUser;
+  const _unblock = unblockUser;
+  const _isBlocked = isBlocked;
+  const _report = reportContent;
   const [card, setCard] = useState<Card | null>(null);
   const [busy, setBusy] = useState(false);
   const [blocked, setBlocked] = useState(false);

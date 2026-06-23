@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
+
 import { ChevronLeft, Send, Sparkles, Crown, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAppState } from "@/lib/storage";
@@ -44,7 +44,7 @@ function CoachPage() {
   const navigate = useNavigate();
   const { isPro, loading: proLoading } = usePro();
   const [state] = useAppState();
-  const chat = useServerFn(coachChat);
+  const chat = coachChat;
   const [messages, setMessages] = useState<Msg[]>(() => loadThread());
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);

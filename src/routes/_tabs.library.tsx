@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
+
 import { useState } from "react";
 import {
   listExercises,
@@ -59,9 +59,9 @@ const FOCUSES = [
 ];
 
 function LibraryPage() {
-  const list = useServerFn(listExercises);
-  const gen = useServerFn(generateExerciseBatch);
-  const count = useServerFn(countExercises);
+  const list = listExercises;
+  const gen = generateExerciseBatch;
+  const count = countExercises;
 
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("ALL");
   const [equipment, setEquipment] = useState<(typeof EQUIPMENT)[number]>("ALL");

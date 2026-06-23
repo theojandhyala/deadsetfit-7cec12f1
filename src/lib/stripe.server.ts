@@ -1,6 +1,5 @@
 import Stripe from "stripe";
-
-export type StripeEnv = "sandbox" | "live";
+import { Buffer } from "node:buffer";
 
 const getEnv = (key: string): string => {
   const value = process.env[key];
@@ -8,17 +7,18 @@ const getEnv = (key: string): string => {
   return value;
 };
 
-export function createStripeClient(env: StripeEnv): Stripe {
-  const apiKey = env === "sandbox"
-    ? getEnv("STRIPE_SANDBOX_API_KEY")
-    : getEnv("STRIPE_LIVE_API_KEY");
-  return new Stripe(apiKey, { apiVersion: "2026-03-25.dahlia" });
-}
+export type StripeEnv = "sandbox" | "live";
 
 export function getConnectionApiKey(env: StripeEnv): string {
   return env === "sandbox"
     ? getEnv("STRIPE_SANDBOX_API_KEY")
     : getEnv("STRIPE_LIVE_API_KEY");
+}
+
+export function createStripeClient(env: StripeEnv): Stripe {
+  return new Stripe(getConnectionApiKey(env), {
+    apiVersion: "2026-03-25.dahlia",
+  });
 }
 
 export function getStripeErrorMessage(error: unknown): string {
@@ -30,16 +30,12 @@ export function getStripeErrorMessage(error: unknown): string {
   return "Stripe request failed";
 }
 
-export async function verifyWebhook(
-  req: Request,
-  env: StripeEnv,
-): Promise<{ type: string; data: { object: any } }> {
+export async function verifyWebhook(req: Request, env: StripeEnv): Promise<{ type: string; data: { object: any } }> {
   const signature = req.headers.get("stripe-signature");
   const body = await req.text();
-  const secret =
-    env === "sandbox"
-      ? getEnv("PAYMENTS_SANDBOX_WEBHOOK_SECRET")
-      : getEnv("PAYMENTS_LIVE_WEBHOOK_SECRET");
+  const secret = env === "sandbox"
+    ? getEnv("PAYMENTS_SANDBOX_WEBHOOK_SECRET")
+    : getEnv("PAYMENTS_LIVE_WEBHOOK_SECRET");
 
   if (!signature || !body) throw new Error("Missing signature or body");
 
@@ -62,12 +58,7 @@ export async function verifyWebhook(
     false,
     ["sign"],
   );
-  const signed = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    new TextEncoder().encode(`${timestamp}.${body}`),
-  );
-  const { Buffer } = await import("node:buffer");
+  const signed = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${timestamp}.${body}`));
   const expected = Buffer.from(new Uint8Array(signed)).toString("hex");
 
   if (!v1Signatures.includes(expected)) throw new Error("Invalid webhook signature");

@@ -1,8 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { getMySubscriptionStatus } from "@/lib/payments.functions";
 import { getStripeEnvironment, isPaymentsConfigured } from "@/lib/stripe";
+import { getSubscriptionStatus } from "@/lib/payments.functions";
 
 type ProState = {
   isPro: boolean;
@@ -23,7 +22,6 @@ export function ProProvider({ children }: { children: ReactNode }) {
   const [priceId, setPriceId] = useState<string | null>(null);
   const [currentPeriodEnd, setCurrentPeriodEnd] = useState<string | null>(null);
   const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(false);
-  const getSubscriptionStatus = useServerFn(getMySubscriptionStatus);
 
   const refresh = useCallback(async () => {
     if (!isPaymentsConfigured()) {
@@ -31,42 +29,21 @@ export function ProProvider({ children }: { children: ReactNode }) {
       return;
     }
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) {
-        setIsPro(false);
-        setLoading(false);
-        return;
-      }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setIsPro(false); setLoading(false); return; }
       const env = getStripeEnvironment();
-      const { subscription } = await getSubscriptionStatus({ data: { environment: env } });
-      if (subscription) {
-        const active =
-          (["active", "trialing", "past_due"].includes(subscription.status as string) &&
-            (!subscription.current_period_end ||
-              new Date(subscription.current_period_end as string) > new Date())) ||
-          (subscription.status === "canceled" &&
-            subscription.current_period_end &&
-            new Date(subscription.current_period_end as string) > new Date());
-        setIsPro(!!active);
-        setStatus(subscription.status as string | null);
-        setPriceId(subscription.price_id as string | null);
-        setCurrentPeriodEnd(subscription.current_period_end as string | null);
-        setCancelAtPeriodEnd(!!subscription.cancel_at_period_end);
-      } else {
-        setIsPro(false);
-        setStatus(null);
-        setPriceId(null);
-        setCurrentPeriodEnd(null);
-        setCancelAtPeriodEnd(false);
-      }
+      const data = await getSubscriptionStatus({ data: { environment: env } });
+      setIsPro(data.isPro);
+      setStatus(data.status);
+      setPriceId(data.priceId);
+      setCurrentPeriodEnd(data.currentPeriodEnd);
+      setCancelAtPeriodEnd(data.cancelAtPeriodEnd);
     } catch (e) {
       console.warn("usePro refresh failed", e);
     } finally {
       setLoading(false);
     }
-  }, [getSubscriptionStatus]);
+  }, []);
 
   useEffect(() => {
     refresh();
@@ -74,37 +51,13 @@ export function ProProvider({ children }: { children: ReactNode }) {
       if (event === "SIGNED_IN" || event === "SIGNED_OUT") refresh();
     });
 
-    let channel: ReturnType<typeof supabase.channel> | null = null;
-    (async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) return;
-      channel = supabase
-        .channel(`sub-${session.user.id}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "subscriptions",
-            filter: `user_id=eq.${session.user.id}`,
-          },
-          () => refresh(),
-        )
-        .subscribe();
-    })();
-
     return () => {
       data.subscription.unsubscribe();
-      if (channel) supabase.removeChannel(channel);
     };
   }, [refresh]);
 
   return (
-    <ProContext.Provider
-      value={{ isPro, loading, status, priceId, currentPeriodEnd, cancelAtPeriodEnd, refresh }}
-    >
+    <ProContext.Provider value={{ isPro, loading, status, priceId, currentPeriodEnd, cancelAtPeriodEnd, refresh }}>
       {children}
     </ProContext.Provider>
   );
@@ -112,16 +65,7 @@ export function ProProvider({ children }: { children: ReactNode }) {
 
 export function usePro(): ProState {
   const ctx = useContext(ProContext);
-  if (!ctx)
-    return {
-      isPro: false,
-      loading: false,
-      status: null,
-      priceId: null,
-      currentPeriodEnd: null,
-      cancelAtPeriodEnd: false,
-      refresh: async () => {},
-    };
+  if (!ctx) return { isPro: false, loading: false, status: null, priceId: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, refresh: async () => {} };
   return ctx;
 }
 
@@ -135,16 +79,13 @@ const PaywallContext = createContext<PaywallCtx | null>(null);
 
 export function PaywallProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<{ open: boolean; feature: string; description?: string }>({
-    open: false,
-    feature: "",
+    open: false, feature: "",
   });
   const open = useCallback((opts: { feature: string; description?: string }) => {
     setState({ open: true, feature: opts.feature, description: opts.description });
   }, []);
   const close = useCallback(() => setState((s) => ({ ...s, open: false })), []);
-  return (
-    <PaywallContext.Provider value={{ open, close, state }}>{children}</PaywallContext.Provider>
-  );
+  return <PaywallContext.Provider value={{ open, close, state }}>{children}</PaywallContext.Provider>;
 }
 export function usePaywall(): PaywallCtx {
   const ctx = useContext(PaywallContext);
