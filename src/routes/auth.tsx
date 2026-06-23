@@ -78,24 +78,18 @@ export function AuthPage() {
     if (password.length < 6) { toast.error("Password must be at least 6 characters"); return; }
     setBusy(true);
     try {
-      const { error } = await supabase.auth.signUp({ email: email.toLowerCase(), password });
-      if (error) throw error;
-      // Try immediate sign-in (works when email confirmation is disabled)
-      const { error: signInErr } = await supabase.auth.signInWithPassword({ email: email.toLowerCase(), password });
-      if (signInErr) {
-        toast.success("Account created! Check your email to confirm, then sign in.");
-        setMode("signin");
-        return;
-      }
+      const res = await fetch("/api/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.toLowerCase(), password }),
+      });
+      const data = await res.json() as { access_token?: string; refresh_token?: string; error?: string };
+      if (!res.ok || data.error) throw new Error(data.error ?? "Sign up failed");
+      await supabase.auth.setSession({ access_token: data.access_token!, refresh_token: data.refresh_token! });
       navigated.current = true;
       navigate({ to: "/train", replace: true });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Sign up failed";
-      if (msg.toLowerCase().includes("already registered")) {
-        toast.error("Account already exists — try signing in instead.");
-      } else {
-        toast.error(msg);
-      }
+      toast.error(err instanceof Error ? err.message : "Sign up failed");
     } finally {
       setBusy(false);
     }

@@ -28,18 +28,6 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           VITE_PAYMENTS_CLIENT_TOKEN: ${{ secrets.VITE_PAYMENTS_CLIENT_TOKEN }}
 
-      - name: Bundle SSR worker
-        run: |
-          npx esbuild cf-worker-entry.js \
-            --bundle \
-            --outfile=dist/client/_worker.js \
-            --platform=browser \
-            --format=esm \
-            --target=es2022 \
-            --conditions=workerd,worker,browser \
-            --external:node:* \
-            --log-level=info
-
       - name: Create Pages project if needed
         run: npx wrangler pages project create deadsetfit --production-branch=main || true
         env:
