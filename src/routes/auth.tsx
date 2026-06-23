@@ -13,15 +13,15 @@ export const Route = createFileRoute("/auth")({
 export function AuthPage() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup" | "forgot" | "reset">("signin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [forgotEmail, setForgotEmail] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [busy, setBusy] = useState(false);
   const navigated = useRef(false);
-  const modeRef = useRef(mode);
-  modeRef.current = mode;
+
+  // Uncontrolled refs — no rerenders on keystroke
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const newPasswordRef = useRef<HTMLInputElement>(null);
+  const forgotEmailRef = useRef<HTMLInputElement>(null);
 
   // Detect password-reset link in URL hash
   useEffect(() => {
@@ -30,38 +30,32 @@ export function AuthPage() {
     }
   }, []);
 
-  // Auto-redirect if already signed in
+  // Auto-redirect if already signed in (check once on mount only)
   useEffect(() => {
-    navigated.current = false; // reset on mount so re-visiting /auth works
+    navigated.current = false;
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session && !navigated.current && modeRef.current !== "reset") {
+      if (session && !navigated.current && mode !== "reset") {
         navigated.current = true;
         navigate({ to: "/train", replace: true });
       }
     });
-
-    const { data } = supabase.auth.onAuthStateChange((event, session) => {
-      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session && !navigated.current) {
-        if (modeRef.current === "reset") return;
-        navigated.current = true;
-        navigate({ to: "/train", replace: true });
-      }
-    });
-    return () => data.subscription.unsubscribe();
-  }, [navigate]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSignIn(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim()) { toast.error("Enter your email"); return; }
+    const email = emailRef.current?.value.trim() ?? "";
+    const password = passwordRef.current?.value ?? "";
+    if (!email) { toast.error("Enter your email"); return; }
     if (!password) { toast.error("Enter your password"); return; }
     setBusy(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
+        email: email.toLowerCase(),
         password,
       });
       if (error) throw error;
-      // onAuthStateChange handles navigation
+      navigated.current = true;
+      navigate({ to: "/train", replace: true });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Sign in failed";
       if (msg.toLowerCase().includes("invalid login")) {
@@ -78,26 +72,19 @@ export function AuthPage() {
 
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim() || !email.includes("@")) { toast.error("Enter a valid email"); return; }
+    const email = emailRef.current?.value.trim() ?? "";
+    const password = passwordRef.current?.value ?? "";
+    if (!email) { toast.error("Enter your email"); return; }
+    if (!password) { toast.error("Enter your password"); return; }
     if (password.length < 6) { toast.error("Password must be at least 6 characters"); return; }
     setBusy(true);
     try {
-      const result = await signUpUser({ data: { email: email.trim().toLowerCase(), password } });
-      // Set the session returned by the server so the user is logged in immediately
-      await supabase.auth.setSession({
-        access_token: result.access_token,
-        refresh_token: result.refresh_token,
-      });
+      const result = await signUpUser({ data: { email: email.toLowerCase(), password } });
+      await supabase.auth.setSession({ access_token: result.access_token, refresh_token: result.refresh_token });
       navigated.current = true;
       navigate({ to: "/train", replace: true });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Sign up failed";
-      if (msg.toLowerCase().includes("already exists") || msg.toLowerCase().includes("already registered")) {
-        toast.error("That email is already registered — try signing in");
-        setMode("signin");
-      } else {
-        toast.error(msg);
-      }
+      toast.error(err instanceof Error ? err.message : "Sign up failed");
     } finally {
       setBusy(false);
     }
@@ -105,18 +92,18 @@ export function AuthPage() {
 
   async function handleForgot(e: React.FormEvent) {
     e.preventDefault();
-    if (!forgotEmail.trim()) return;
+    const email = forgotEmailRef.current?.value.trim() ?? "";
+    if (!email) { toast.error("Enter your email"); return; }
     setBusy(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
-        redirectTo: window.location.origin + "/auth",
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth#type=recovery`,
       });
       if (error) throw error;
-      toast.success("Reset link sent — check your email");
-      setForgotEmail("");
+      toast.success("Reset link sent — check your inbox");
       setMode("signin");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to send reset email");
+      toast.error(err instanceof Error ? err.message : "Failed to send reset link");
     } finally {
       setBusy(false);
     }
@@ -124,7 +111,8 @@ export function AuthPage() {
 
   async function handleReset(e: React.FormEvent) {
     e.preventDefault();
-    if (newPassword.length < 6) { toast.error("Password must be at least 6 characters"); return; }
+    const newPassword = newPasswordRef.current?.value ?? "";
+    if (!newPassword || newPassword.length < 6) { toast.error("Password must be at least 6 characters"); return; }
     setBusy(true);
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
@@ -167,14 +155,13 @@ export function AuthPage() {
           className="w-full"
           style={{ background: "rgba(28,29,33,0.95)", border: "1px solid rgba(225,6,0,0.2)", borderRadius: 20, padding: 28, backdropFilter: "blur(20px)", boxShadow: "0 0 60px rgba(225,6,0,0.06), 0 20px 60px rgba(0,0,0,0.4)" }}
         >
-
           {/* ── Reset password ── */}
           {mode === "reset" && (
             <>
               <h2 className="text-lg font-bold text-white mb-1">Set New Password</h2>
               <p className="text-xs mb-5" style={{ color: "#8A8A8A" }}>Choose a new password for your account.</p>
               <form onSubmit={handleReset} className="space-y-3">
-                <PasswordInput value={newPassword} onChange={setNewPassword} show={showPass} onToggle={() => setShowPass(v => !v)} placeholder="New password" autoComplete="new-password" />
+                <PasswordField inputRef={newPasswordRef} show={showPass} onToggle={() => setShowPass(v => !v)} placeholder="New password" autoComplete="new-password" />
                 <SubmitBtn busy={busy} label="Set Password" />
               </form>
             </>
@@ -186,7 +173,7 @@ export function AuthPage() {
               <h2 className="text-lg font-bold text-white mb-1">Reset Password</h2>
               <p className="text-xs mb-5" style={{ color: "#8A8A8A" }}>We'll email you a reset link.</p>
               <form onSubmit={handleForgot} className="space-y-3">
-                <EmailInput value={forgotEmail} onChange={setForgotEmail} />
+                <EmailField inputRef={forgotEmailRef} />
                 <SubmitBtn busy={busy} label="Send Reset Link" />
               </form>
               <button type="button" onClick={() => setMode("signin")} className="w-full mt-4 text-xs font-semibold" style={{ color: "#8A8A8A" }}>
@@ -216,13 +203,12 @@ export function AuthPage() {
               <form onSubmit={mode === "signin" ? handleSignIn : handleSignUp} className="space-y-3">
                 <div>
                   <label className="block text-xs font-semibold mb-1.5" style={{ color: "#8A8A8A" }}>Email</label>
-                  <EmailInput value={email} onChange={setEmail} />
+                  <EmailField inputRef={emailRef} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold mb-1.5" style={{ color: "#8A8A8A" }}>Password</label>
-                  <PasswordInput
-                    value={password}
-                    onChange={setPassword}
+                  <PasswordField
+                    inputRef={passwordRef}
                     show={showPass}
                     onToggle={() => setShowPass(v => !v)}
                     placeholder={mode === "signup" ? "Min. 6 characters" : "Password"}
@@ -255,17 +241,16 @@ export function AuthPage() {
   );
 }
 
-function EmailInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function EmailField({ inputRef }: { inputRef: React.RefObject<HTMLInputElement | null> }) {
   return (
     <input
+      ref={inputRef}
       type="email"
       required
       autoCapitalize="none"
       autoCorrect="off"
       autoComplete="email"
       placeholder="your@email.com"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
       className="w-full px-4 py-3.5 text-sm text-white rounded-xl"
       style={{ background: "#0A0A0A", border: "1.5px solid #262626", outline: "none" }}
       onFocus={(e) => (e.target.style.borderColor = "#E10600")}
@@ -274,19 +259,22 @@ function EmailInput({ value, onChange }: { value: string; onChange: (v: string) 
   );
 }
 
-function PasswordInput({ value, onChange, show, onToggle, placeholder, autoComplete }: {
-  value: string; onChange: (v: string) => void; show: boolean; onToggle: () => void; placeholder?: string; autoComplete?: string;
+function PasswordField({ inputRef, show, onToggle, placeholder, autoComplete }: {
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  show: boolean;
+  onToggle: () => void;
+  placeholder?: string;
+  autoComplete?: string;
 }) {
   return (
     <div className="relative">
       <input
+        ref={inputRef}
         type={show ? "text" : "password"}
         required
         minLength={6}
         autoComplete={autoComplete ?? "current-password"}
         placeholder={placeholder ?? "Password"}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
         className="w-full px-4 py-3.5 text-sm text-white rounded-xl pr-10"
         style={{ background: "#0A0A0A", border: "1.5px solid #262626", outline: "none" }}
         onFocus={(e) => (e.target.style.borderColor = "#E10600")}

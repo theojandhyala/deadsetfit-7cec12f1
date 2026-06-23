@@ -27,9 +27,9 @@ const TOOLS = [
     Icon: Images,
   },
   {
-    to: "/run",
-    label: "Run Coach",
-    desc: "AI splits & tips",
+    to: "/progress",
+    label: "Progress",
+    desc: "View your gains",
     Icon: Activity,
   },
 ] as const;

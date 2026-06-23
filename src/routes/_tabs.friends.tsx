@@ -726,11 +726,13 @@ function League({ userId }: { userId: string }) {
       )}
       {sharing && data.me && (
         <RankShareCard
-          rank={data.me.rank || 0}
-          league={data.me.league}
-          points={data.me.grit_points ?? 0}
+          gritPoints={data.me.grit_points ?? 0}
           displayName={data.me.display_name || "Athlete"}
           username={data.me.username}
+          streak={0}
+          prs={[]}
+          sessions={0}
+          overall={0}
           onClose={() => setSharing(false)}
         />
       )}
