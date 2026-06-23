@@ -40,11 +40,5 @@ export default defineConfig({
   build: {
     outDir: "dist/client",
     emptyOutDir: true,
-    rollupOptions: {
-      input: {
-        main: fileURLToPath(new URL("index.html", import.meta.url)),
-        auth: fileURLToPath(new URL("auth.html", import.meta.url)),
-      },
-    },
   },
 });
