@@ -8,12 +8,6 @@
     { "pattern": "deadsetfit.org/api/*", "zone_name": "deadsetfit.org" },
     { "pattern": "www.deadsetfit.org/api/*", "zone_name": "deadsetfit.org" }
   ],
-  "assets": {
-    "directory": "./dist/client",
-    "binding": "ASSETS",
-    "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
-  },
   "observability": {
     "enabled": true
   }
