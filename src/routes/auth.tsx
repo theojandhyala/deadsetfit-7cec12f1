@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Eye, X } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -27,12 +27,13 @@ export function AuthPage() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmail = emailRef.current?.value.trim().toLowerCase() ?? "";
+    const password = passwordRef.current?.value ?? "";
     if (!normalizedEmail || !password || busy) return;
 
     setBusy(true);
@@ -61,10 +62,10 @@ export function AuthPage() {
   }
 
   async function forgotPassword() {
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmail = emailRef.current?.value.trim().toLowerCase() ?? "";
     if (!normalizedEmail) {
       toast.error("Enter your email first");
-      document.getElementById("auth-email")?.focus();
+      emailRef.current?.focus();
       return;
     }
     const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
@@ -134,6 +135,8 @@ export function AuthPage() {
             </label>
             <input
               id="auth-email"
+              ref={emailRef}
+              name="email"
               type="email"
               inputMode="email"
               autoComplete="email"
@@ -142,8 +145,10 @@ export function AuthPage() {
               spellCheck={false}
               required
               placeholder="your@email.com"
-              value={email}
-              onChange={(event) => setEmail(event.currentTarget.value)}
+              data-testid="auth-email"
+              onInput={(event) => {
+                event.currentTarget.dataset.lastValue = event.currentTarget.value;
+              }}
               className="mb-[18px] h-[62px] w-full rounded-[18px] border border-white/[0.055] bg-[#050505] px-[22px] text-[17px] font-bold text-grit caret-accent-red outline-none placeholder:text-[#777680] focus:border-accent-red focus:shadow-[0_0_0_1px_rgba(230,50,34,0.45)]"
             />
 
@@ -153,13 +158,17 @@ export function AuthPage() {
             <div className="relative">
               <input
                 id="auth-password"
+                ref={passwordRef}
+                name="password"
                 type={showPassword ? "text" : "password"}
                 autoComplete={mode === "signup" ? "new-password" : "current-password"}
                 required
                 minLength={6}
                 placeholder="Password"
-                value={password}
-                onChange={(event) => setPassword(event.currentTarget.value)}
+                data-testid="auth-password"
+                onInput={(event) => {
+                  event.currentTarget.dataset.lastValue = event.currentTarget.value;
+                }}
                 className="h-[62px] w-full rounded-[18px] border border-white/[0.055] bg-[#050505] px-[22px] pr-[58px] text-[17px] font-bold text-grit caret-accent-red outline-none placeholder:text-[#777680] focus:border-accent-red focus:shadow-[0_0_0_1px_rgba(230,50,34,0.45)]"
               />
               <button
@@ -167,7 +176,7 @@ export function AuthPage() {
                 aria-label={showPassword ? "Hide password" : "Show password"}
                 onClick={() => {
                   setShowPassword((value) => !value);
-                  document.getElementById("auth-password")?.focus();
+                  passwordRef.current?.focus();
                 }}
                 className="absolute right-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full text-[#737280]"
               >
