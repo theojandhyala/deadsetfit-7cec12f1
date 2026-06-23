@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Eye, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -27,30 +27,19 @@ export function AuthPage() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const emailRef = useRef<HTMLInputElement>(null);
-  const passwordRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) navigate({ to: "/train", replace: true });
-    });
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) navigate({ to: "/train", replace: true });
-    }).catch(() => {});
-    return () => data.subscription.unsubscribe();
-  }, [navigate]);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const email = emailRef.current?.value.trim().toLowerCase() ?? "";
-    const password = passwordRef.current?.value ?? "";
-    if (!email || !password || busy) return;
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !password || busy) return;
 
     setBusy(true);
     try {
       if (mode === "signup") {
         const { data, error } = await supabase.auth.signUp({
-          email,
+          email: normalizedEmail,
           password,
           options: { emailRedirectTo: `${window.location.origin}/auth` },
         });
@@ -59,7 +48,7 @@ export function AuthPage() {
         if (data.session) navigate({ to: "/onboarding", replace: true });
         else toast.success("Check your email to confirm your account");
       } else {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
         if (error) throw error;
         rememberSession(data.session);
         navigate({ to: "/train", replace: true });
@@ -72,13 +61,13 @@ export function AuthPage() {
   }
 
   async function forgotPassword() {
-    const email = emailRef.current?.value.trim().toLowerCase() ?? "";
-    if (!email) {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
       toast.error("Enter your email first");
-      emailRef.current?.focus();
+      document.getElementById("auth-email")?.focus();
       return;
     }
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
       redirectTo: `${window.location.origin}/auth`,
     });
     if (error) toast.error(error.message);
@@ -145,7 +134,6 @@ export function AuthPage() {
             </label>
             <input
               id="auth-email"
-              ref={emailRef}
               type="email"
               inputMode="email"
               autoComplete="email"
@@ -154,6 +142,8 @@ export function AuthPage() {
               spellCheck={false}
               required
               placeholder="your@email.com"
+              value={email}
+              onChange={(event) => setEmail(event.currentTarget.value)}
               className="mb-[18px] h-[62px] w-full rounded-[18px] border border-white/[0.055] bg-[#050505] px-[22px] text-[17px] font-bold text-grit caret-accent-red outline-none placeholder:text-[#777680] focus:border-accent-red focus:shadow-[0_0_0_1px_rgba(230,50,34,0.45)]"
             />
 
@@ -163,12 +153,13 @@ export function AuthPage() {
             <div className="relative">
               <input
                 id="auth-password"
-                ref={passwordRef}
                 type={showPassword ? "text" : "password"}
                 autoComplete={mode === "signup" ? "new-password" : "current-password"}
                 required
                 minLength={6}
                 placeholder="Password"
+                value={password}
+                onChange={(event) => setPassword(event.currentTarget.value)}
                 className="h-[62px] w-full rounded-[18px] border border-white/[0.055] bg-[#050505] px-[22px] pr-[58px] text-[17px] font-bold text-grit caret-accent-red outline-none placeholder:text-[#777680] focus:border-accent-red focus:shadow-[0_0_0_1px_rgba(230,50,34,0.45)]"
               />
               <button
@@ -176,7 +167,7 @@ export function AuthPage() {
                 aria-label={showPassword ? "Hide password" : "Show password"}
                 onClick={() => {
                   setShowPassword((value) => !value);
-                  passwordRef.current?.focus();
+                  document.getElementById("auth-password")?.focus();
                 }}
                 className="absolute right-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full text-[#737280]"
               >
