@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { signUpUser } from "@/lib/profile.functions";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
@@ -78,28 +79,8 @@ export function AuthPage() {
     if (password.length < 6) { toast.error("Password must be at least 6 characters"); return; }
     setBusy(true);
     try {
-      // Try signup first
-      const { error: signUpError } = await supabase.auth.signUp({
-        email: email.toLowerCase(),
-        password,
-      });
-      // Ignore "already registered" — just try signing in
-      if (signUpError && !signUpError.message.toLowerCase().includes("already registered")) {
-        throw signUpError;
-      }
-      // Now sign in with the credentials
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: email.toLowerCase(),
-        password,
-      });
-      if (signInError) {
-        if (signInError.message.toLowerCase().includes("email not confirmed")) {
-          toast.error("Please confirm your email first — check your inbox.");
-        } else {
-          throw signInError;
-        }
-        return;
-      }
+      const result = await signUpUser({ data: { email: email.toLowerCase(), password } });
+      await supabase.auth.setSession({ access_token: result.access_token, refresh_token: result.refresh_token });
       navigated.current = true;
       navigate({ to: "/train", replace: true });
     } catch (err: unknown) {

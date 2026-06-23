@@ -28,6 +28,22 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           VITE_PAYMENTS_CLIENT_TOKEN: ${{ secrets.VITE_PAYMENTS_CLIENT_TOKEN }}
 
+      - name: Bundle SSR worker for Cloudflare Pages
+        run: |
+          npx esbuild dist/server/server.js \
+            --bundle \
+            --outfile=dist/client/_worker.js \
+            --platform=browser \
+            --format=esm \
+            --target=es2022 \
+            --conditions=workerd,worker,browser \
+            --external:node:* \
+            --log-level=info
+
+      - name: Write _routes.json to bypass worker for static assets
+        run: |
+          printf '{"version":1,"include":["/*"],"exclude":["/assets/*","/favicon.ico","/manifest.json","/robots.txt","/sitemap.xml","/llms.txt"]}' > dist/client/_routes.json
+
       - name: Create Pages project if needed
         run: npx wrangler pages project create deadsetfit --production-branch=main || true
         env:
