@@ -66,6 +66,18 @@ export default {
       }
     }
 
-    return server.fetch(request, env, ctx);
+    try {
+      return await server.fetch(request, env, ctx);
+    } catch (e) {
+      // SSR crashed — fall back to SPA index.html so the client-side app loads
+      if (env.ASSETS) {
+        try {
+          const indexReq = new Request(new URL('/index.html', request.url).toString(), { headers: request.headers });
+          const res = await env.ASSETS.fetch(indexReq);
+          if (res.status !== 404) return res;
+        } catch {}
+      }
+      return new Response('Internal Server Error: ' + (e && e.message ? e.message : String(e)), { status: 500 });
+    }
   }
 };
