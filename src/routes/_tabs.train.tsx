@@ -644,12 +644,15 @@ function TrainPage() {
             {(day?.exerciseIds || []).map((id) => {
               const ex = getExercise(id);
               if (!ex) return null;
+              const ov = day?.overrides?.[id];
+              const sets = ov?.sets ?? ex.sets;
+              const reps = ov?.reps ?? ex.reps;
               const pr = bestSet(state.logs, id);
               return (
                 <ExerciseCard
                   key={id}
                   name={ex.name}
-                  sets={`${ex.sets} × ${ex.reps}`}
+                  sets={`${sets} × ${reps}`}
                   tags={[ex.skill]}
                   pr={pr}
                   videoId={ex.videoId}
