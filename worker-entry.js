@@ -53,11 +53,6 @@ export default {
       return handleSignup(request, env);
     }
 
-    // Redirect root to auth (no landing page)
-    if (path === '/' || path === '') {
-      return Response.redirect(new URL('/auth', request.url).toString(), 302);
-    }
-
     // Serve static assets via ASSETS binding
     if (env.ASSETS) {
       const isAsset = path.startsWith('/assets/') || STATIC_RE.test(path);
