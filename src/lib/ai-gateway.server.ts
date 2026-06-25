@@ -61,10 +61,13 @@ export async function chatVisionJSON<T = unknown>(opts: {
   user: string;
   imageDataUrl: string;
 }): Promise<T> {
-  const match = opts.imageDataUrl.match(/^data:(image\/[a-z]+);base64,(.+)$/s);
+  const match = opts.imageDataUrl.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/s);
   if (!match) throw new Error("Invalid image data URL");
   const mediaType = match[1];
   const base64 = match[2];
+
+  // Decode to Uint8Array — works in both Node.js and Cloudflare Workers (no Buffer needed)
+  const binary = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
 
   const { text } = await generateText({
     model: model(),
@@ -75,7 +78,7 @@ export async function chatVisionJSON<T = unknown>(opts: {
         content: [
           {
             type: "image",
-            image: Buffer.from(base64, "base64"),
+            image: binary,
             mediaType,
           },
           { type: "text", text: opts.user },

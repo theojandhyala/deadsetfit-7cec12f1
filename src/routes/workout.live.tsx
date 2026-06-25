@@ -26,13 +26,68 @@ interface BuiltExercise {
   targetReps: string;
 }
 
-const WARMUP_EXERCISES = [
-  { name: "Jumping Jacks", reps: "30 reps", durationSec: 40 },
-  { name: "Arm Circles", reps: "20 each direction", durationSec: 30 },
-  { name: "Hip Circles", reps: "10 each direction", durationSec: 30 },
-  { name: "Leg Swings", reps: "10 each leg", durationSec: 30 },
-  { name: "Inchworm", reps: "5 reps", durationSec: 40 },
-];
+type WarmupEx = { name: string; reps: string; durationSec: number };
+
+const WARMUP_BY_GROUP: Record<string, WarmupEx[]> = {
+  CHEST: [
+    { name: "Arm Circles", reps: "20 each direction", durationSec: 30 },
+    { name: "Band Pull-Aparts", reps: "15 reps", durationSec: 30 },
+    { name: "Push-Up Negatives", reps: "5 slow reps", durationSec: 40 },
+    { name: "Shoulder Rolls", reps: "10 each direction", durationSec: 25 },
+    { name: "Inchworm", reps: "5 reps", durationSec: 40 },
+  ],
+  BACK: [
+    { name: "Cat-Cow", reps: "10 reps", durationSec: 30 },
+    { name: "Arm Circles", reps: "20 each direction", durationSec: 30 },
+    { name: "Scapula Pull-Downs", reps: "12 reps", durationSec: 30 },
+    { name: "Dead Hang", reps: "30 second hold", durationSec: 40 },
+    { name: "Inchworm", reps: "5 reps", durationSec: 40 },
+  ],
+  LEGS: [
+    { name: "Bodyweight Squats", reps: "15 reps", durationSec: 40 },
+    { name: "Leg Swings", reps: "10 each leg", durationSec: 30 },
+    { name: "Hip Circles", reps: "10 each direction", durationSec: 30 },
+    { name: "Walking Lunges", reps: "10 each leg", durationSec: 40 },
+    { name: "Glute Bridges", reps: "15 reps", durationSec: 35 },
+  ],
+  SHOULDERS: [
+    { name: "Arm Circles", reps: "20 each direction", durationSec: 30 },
+    { name: "Band Dislocates", reps: "10 reps", durationSec: 30 },
+    { name: "Face Pulls", reps: "15 reps light", durationSec: 30 },
+    { name: "Shoulder Rolls", reps: "10 each direction", durationSec: 25 },
+    { name: "Inchworm", reps: "5 reps", durationSec: 40 },
+  ],
+  ARMS: [
+    { name: "Wrist Circles", reps: "10 each direction", durationSec: 25 },
+    { name: "Arm Circles", reps: "20 each direction", durationSec: 30 },
+    { name: "Light Band Curls", reps: "15 reps", durationSec: 30 },
+    { name: "Tricep Stretch", reps: "30s each arm", durationSec: 35 },
+    { name: "Jumping Jacks", reps: "30 reps", durationSec: 40 },
+  ],
+  CORE: [
+    { name: "Dead Bugs", reps: "10 each side", durationSec: 40 },
+    { name: "Cat-Cow", reps: "10 reps", durationSec: 30 },
+    { name: "Hip Circles", reps: "10 each direction", durationSec: 30 },
+    { name: "Jumping Jacks", reps: "30 reps", durationSec: 40 },
+    { name: "Inchworm", reps: "5 reps", durationSec: 40 },
+  ],
+  DEFAULT: [
+    { name: "Jumping Jacks", reps: "30 reps", durationSec: 40 },
+    { name: "Arm Circles", reps: "20 each direction", durationSec: 30 },
+    { name: "Hip Circles", reps: "10 each direction", durationSec: 30 },
+    { name: "Leg Swings", reps: "10 each leg", durationSec: 30 },
+    { name: "Inchworm", reps: "5 reps", durationSec: 40 },
+  ],
+};
+
+function getWarmupForExercises(exercises: BuiltExercise[]): WarmupEx[] {
+  const groups = exercises.flatMap((e) => e.primary_muscles.map((m) => m.toUpperCase()));
+  const priority = ["LEGS", "CHEST", "BACK", "SHOULDERS", "ARMS", "CORE"];
+  for (const g of priority) {
+    if (groups.some((m) => m.includes(g.slice(0, 4)))) return WARMUP_BY_GROUP[g];
+  }
+  return WARMUP_BY_GROUP.DEFAULT;
+}
 
 const COOLDOWN_STRETCHES = [
   { name: "Chest Stretch", instruction: "Clasp hands behind back, open chest wide", durationSec: 30 },
@@ -343,7 +398,7 @@ function LiveWorkoutPage() {
       <PhaseTimer
         phaseLabel="WARM UP"
         icon={<Dumbbell size={32} />}
-        items={WARMUP_EXERCISES.map((e) => ({ name: e.name, detail: e.reps, durationSec: e.durationSec }))}
+        items={getWarmupForExercises(built?.exercises ?? []).map((e) => ({ name: e.name, detail: e.reps, durationSec: e.durationSec }))}
         onFinish={() => { warmupCompleted.current = true; setStage("workout"); }}
         onSkip={() => setStage("workout")}
       />

@@ -26,6 +26,8 @@ import { generateSchedule } from "@/lib/ai.functions";
 import { ProBanner } from "@/components/ProBanner";
 import { InsightsWidget } from "@/components/InsightsWidget";
 import { AIToolbox } from "@/components/AIToolbox";
+import { usePaywall } from "@/hooks/usePro";
+import { Camera } from "lucide-react";
 import type { DayKey, Schedule, Program } from "@/lib/types";
 
 const DAY_KEYS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
@@ -89,6 +91,7 @@ export const Route = createFileRoute("/_tabs/train")({
 
 function TrainPage() {
   const [state, set] = useAppState();
+  const { open: openPaywall } = usePaywall();
   const [selectedDay, setSelectedDay] = useState<DayKey>(todayKey());
   const [videoState, setVideoState] = useState<{
     videoId?: string;
@@ -337,6 +340,30 @@ function TrainPage() {
             </Link>
           ))}
         </div>
+      </div>
+
+      {/* Physique Scan — PRO */}
+      <div className="px-5 mb-5">
+        <button
+          onClick={() => openPaywall({
+            feature: "Physique Scan",
+            description: "Take photos from 3 angles and our AI will identify your muscle imbalances and weaknesses — then build a programme targeting them.",
+          })}
+          className="w-full flex items-center gap-4 p-4 press text-left"
+          style={{ background: "linear-gradient(135deg,#1a0606 0%,#141414 100%)", border: "1.5px solid rgba(225,6,0,0.4)", borderRadius: 12 }}
+        >
+          <div className="w-10 h-10 flex items-center justify-center rounded-full" style={{ background: "rgba(225,6,0,0.15)", border: "1px solid rgba(225,6,0,0.4)" }}>
+            <Camera size={18} style={{ color: "#E10600" }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="display text-sm font-extrabold uppercase text-white">Physique Scan</span>
+              <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ background: "#E10600", color: "#fff" }}>PRO</span>
+            </div>
+            <p className="text-[11px] mt-0.5" style={{ color: "#8A8A8A" }}>Scan your body · detect weaknesses · build your programme</p>
+          </div>
+          <span style={{ color: "#E10600", fontSize: 18 }}>›</span>
+        </button>
       </div>
 
       {/* Stats row */}

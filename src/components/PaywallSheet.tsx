@@ -3,9 +3,11 @@ import { Crown, X, Check } from "lucide-react";
 import { usePaywall } from "@/hooks/usePro";
 
 const PRO_PERKS = [
+  "Physique Scan — AI-powered body analysis & weakness detection",
   "AI Coach — unlimited messages",
   "Featured training programs (5/3/1, nSuns, PHUL, more)",
   "Advanced analytics & PR history charts",
+  "Schedule generation tuned to your physique scan results",
   "Share workouts & PRs as cards",
   "Priority support",
 ];

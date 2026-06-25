@@ -14,6 +14,8 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { StateSync } from "../components/StateSync";
 import { UsernameGate } from "../components/UsernameGate";
 import { Toaster } from "../components/ui/sonner";
+import { PaywallProvider } from "../hooks/usePro";
+import { PaywallSheet } from "../components/PaywallSheet";
 
 function NotFoundComponent() {
   return (
@@ -184,11 +186,14 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <StateSync />
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
-      <UsernameGate />
-      <Toaster />
+      <PaywallProvider>
+        <StateSync />
+        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+        <Outlet />
+        <UsernameGate />
+        <PaywallSheet />
+        <Toaster />
+      </PaywallProvider>
     </QueryClientProvider>
   );
 }
