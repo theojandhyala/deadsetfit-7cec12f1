@@ -53,11 +53,9 @@ export default {
       return handleSignup(request, env);
     }
 
-    // Diagnostic endpoint
-    if (path === '/ping') {
-      return new Response(JSON.stringify({ ok: true, assets: !!env.ASSETS }), {
-        headers: { 'content-type': 'application/json' },
-      });
+    // Redirect root to auth (no landing page)
+    if (path === '/' || path === '') {
+      return Response.redirect(new URL('/auth', request.url).toString(), 302);
     }
 
     // Serve static assets via ASSETS binding
@@ -76,11 +74,10 @@ export default {
         const res = await env.ASSETS.fetch(indexReq);
         const html = await res.text();
         return new Response(html, {
-          status: res.status === 404 ? 404 : 200,
+          status: 200,
           headers: {
             'content-type': 'text/html; charset=utf-8',
             'cache-control': 'no-store',
-            'x-html-bytes': String(html.length),
           },
         });
       } catch (e) {

@@ -4,7 +4,7 @@
 import server from './dist/server/server.js';
 import { writeFileSync } from 'node:fs';
 
-const req = new Request('http://localhost/');
+const req = new Request('http://localhost/auth');
 const res = await server.fetch(req, {}, {});
 
 if (!res.ok) {
