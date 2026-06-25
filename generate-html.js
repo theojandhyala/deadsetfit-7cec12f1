@@ -1,17 +1,28 @@
 #!/usr/bin/env node
-// Runs the SSR server locally to generate dist/client/index.html.
-// React uses hydrateRoot(document, ...) so it needs proper server-rendered HTML.
+// Generates a minimal SPA shell HTML from the SSR server's <head> content.
+// We keep the full <head> (stylesheets, preloads, meta) but strip the SSR body
+// so React always does a clean client-side render with no hydration mismatch.
 import server from './dist/server/server.js';
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, readdirSync } from 'node:fs';
 
-const req = new Request('http://localhost/');
-const res = await server.fetch(req, {}, {});
+const res = await server.fetch(new Request('http://localhost/'), {}, {});
+const full = await res.text();
 
-if (!res.ok) {
-  console.error('SSR server returned', res.status);
-  process.exit(1);
-}
+// Extract <head> content
+const headMatch = full.match(/<head>([\s\S]*?)<\/head>/);
+const head = headMatch ? headMatch[1] : '';
 
-const html = await res.text();
+// Find the client entry JS
+const assets = readdirSync('dist/client/assets');
+const entryJs = assets.find(f => f.startsWith('index-') && f.endsWith('.js'));
+
+const html = `<!DOCTYPE html>
+<html lang="en">
+<head>${head}</head>
+<body style="margin:0;background:#0a0a0a">
+<script type="module" src="/assets/${entryJs}"></script>
+</body>
+</html>`;
+
 writeFileSync('dist/client/index.html', html);
-console.log('Generated dist/client/index.html (' + html.length + ' bytes)');
+console.log('Generated dist/client/index.html (entry: ' + entryJs + ')');
