@@ -28,17 +28,16 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           VITE_PAYMENTS_CLIENT_TOKEN: ${{ secrets.VITE_PAYMENTS_CLIENT_TOKEN }}
 
-      - name: Bundle SSR worker
+      - name: Generate SPA index.html
+        run: node generate-html.js
+
+      - name: Bundle worker
         run: |
-          POLYFILL='if(typeof MessageChannel==="undefined"){var _MC=function(){this.port1={postMessage:function(){},close:function(){},onmessage:null};this.port2={postMessage:function(){},close:function(){},onmessage:null}};globalThis.MessageChannel=_MC;}'
           npx esbuild worker-entry.js \
             --bundle \
             --platform=browser \
             --target=esnext \
             --format=esm \
-            --external:"node:*" \
-            --define:process.env.NODE_ENV='"production"' \
-            "--banner:js=${POLYFILL}" \
             --outfile=dist/client/_worker.js
 
       - name: Create Pages project if needed
