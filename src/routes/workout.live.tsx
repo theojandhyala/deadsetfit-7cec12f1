@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { X, Check, Play, Trophy, Share2 } from "lucide-react";
+import { X, Check, Play, Trophy, Share2, Dumbbell, Wind } from "lucide-react";
 import { useAppState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
 import { defaultSchedule, isoDay, todayKey } from "@/lib/calc";
@@ -25,6 +25,22 @@ interface BuiltExercise {
   targetSets: number;
   targetReps: string;
 }
+
+const WARMUP_EXERCISES = [
+  { name: "Jumping Jacks", reps: "30 reps", durationSec: 40 },
+  { name: "Arm Circles", reps: "20 each direction", durationSec: 30 },
+  { name: "Hip Circles", reps: "10 each direction", durationSec: 30 },
+  { name: "Leg Swings", reps: "10 each leg", durationSec: 30 },
+  { name: "Inchworm", reps: "5 reps", durationSec: 40 },
+];
+
+const COOLDOWN_STRETCHES = [
+  { name: "Chest Stretch", instruction: "Clasp hands behind back, open chest wide", durationSec: 30 },
+  { name: "Hip Flexor Stretch", instruction: "Lunge forward, drop back knee, push hips forward", durationSec: 40 },
+  { name: "Hamstring Stretch", instruction: "Sit on floor, reach for your toes", durationSec: 40 },
+  { name: "Shoulder Cross-Body", instruction: "Pull one arm across your chest, hold", durationSec: 30 },
+  { name: "Child's Pose", instruction: "Kneel, sit back on heels, arms forward on floor", durationSec: 40 },
+];
 
 function buildDay(
   state: ReturnType<typeof useAppState>[0],
@@ -69,6 +85,101 @@ const DAY_SHORT: Record<DayKey, string> = {
   MON: "Mon", TUE: "Tue", WED: "Wed", THU: "Thu", FRI: "Fri", SAT: "Sat", SUN: "Sun",
 };
 
+function CountdownCircle({ totalSec, remainSec }: { totalSec: number; remainSec: number }) {
+  const r = 40;
+  const circ = 2 * Math.PI * r;
+  const progress = remainSec / totalSec;
+  return (
+    <svg width="100" height="100" viewBox="0 0 100 100" className="-rotate-90">
+      <circle cx="50" cy="50" r={r} fill="none" stroke="#262626" strokeWidth="6" />
+      <circle
+        cx="50" cy="50" r={r}
+        fill="none"
+        stroke="#E10600"
+        strokeWidth="6"
+        strokeDasharray={circ}
+        strokeDashoffset={circ * (1 - progress)}
+        strokeLinecap="round"
+        style={{ transition: "stroke-dashoffset 1s linear" }}
+      />
+    </svg>
+  );
+}
+
+function PhaseTimer({
+  items,
+  onFinish,
+  icon,
+  phaseLabel,
+}: {
+  items: { name: string; detail: string; durationSec: number }[];
+  onFinish: () => void;
+  icon: React.ReactNode;
+  phaseLabel: string;
+}) {
+  const [idx, setIdx] = useState(0);
+  const [remain, setRemain] = useState(items[0].durationSec);
+
+  const current = items[idx];
+
+  useEffect(() => {
+    setRemain(items[idx].durationSec);
+  }, [idx, items]);
+
+  useEffect(() => {
+    if (remain <= 0) {
+      if (idx < items.length - 1) {
+        setIdx((i) => i + 1);
+      } else {
+        onFinish();
+      }
+      return;
+    }
+    const t = setTimeout(() => setRemain((r) => r - 1), 1000);
+    return () => clearTimeout(t);
+  }, [remain, idx, items.length, onFinish]);
+
+  function next() {
+    if (idx < items.length - 1) {
+      setIdx((i) => i + 1);
+    } else {
+      onFinish();
+    }
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col" style={{ background: "#0a0a0a", paddingTop: "env(safe-area-inset-top)" }}>
+      <div className="px-4 pt-3 pb-2 flex items-center justify-between">
+        <div className="text-center w-full">
+          <p className="label-cap text-[10px] text-accent-red">{phaseLabel}</p>
+          <p className="display text-sm uppercase font-extrabold text-grit">
+            {idx + 1} / {items.length}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
+        <div className="text-grit-dim mb-2">{icon}</div>
+        <div className="relative flex items-center justify-center">
+          <CountdownCircle totalSec={current.durationSec} remainSec={remain} />
+          <span className="absolute display text-2xl font-extrabold text-grit tabular-nums">{remain}</span>
+        </div>
+        <div className="text-center">
+          <p className="display text-2xl font-extrabold uppercase text-grit leading-tight">{current.name}</p>
+          <p className="text-sm text-grit-dim mt-2">{current.detail}</p>
+        </div>
+      </div>
+
+      <div className="border-t border-grit p-4 grid grid-cols-2 gap-3">
+        <button onClick={onFinish} className="btn-ghost py-3">Skip All</button>
+        <button onClick={next} className="btn-grit py-3">
+          {idx < items.length - 1 ? "Next" : "Done"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function LiveWorkoutPage() {
   const [state, set] = useAppState();
   const nav = useNavigate();
@@ -77,7 +188,7 @@ function LiveWorkoutPage() {
   const [startedAt] = useState(() => new Date().toISOString());
   const [videoQuery, setVideoQuery] = useState<string | null>(null);
   const [videoTitle, setVideoTitle] = useState("");
-  const [stage, setStage] = useState<"workout" | "pr-ask" | "pr-form" | "finished">("workout");
+  const [stage, setStage] = useState<"warmup" | "workout" | "cooldown" | "pr-ask" | "pr-form" | "finished">("warmup");
   const [prExerciseId, setPrExerciseId] = useState<string | null>(null);
   const [prWeight, setPrWeight] = useState("");
   const [prReps, setPrReps] = useState("");
@@ -213,6 +324,30 @@ function LiveWorkoutPage() {
     persistAndFinish(buildSession(prExerciseId, w, r));
   }
 
+  // WARM UP
+  if (stage === "warmup") {
+    return (
+      <PhaseTimer
+        phaseLabel="WARM UP"
+        icon={<Dumbbell size={32} />}
+        items={WARMUP_EXERCISES.map((e) => ({ name: e.name, detail: e.reps, durationSec: e.durationSec }))}
+        onFinish={() => setStage("workout")}
+      />
+    );
+  }
+
+  // COOL DOWN
+  if (stage === "cooldown") {
+    return (
+      <PhaseTimer
+        phaseLabel="COOL DOWN"
+        icon={<Wind size={32} />}
+        items={COOLDOWN_STRETCHES.map((e) => ({ name: e.name, detail: e.instruction, durationSec: e.durationSec }))}
+        onFinish={() => setStage("pr-ask")}
+      />
+    );
+  }
+
   if (stage === "finished" && finishedSession) {
     return (
       <>
@@ -320,7 +455,7 @@ function LiveWorkoutPage() {
     );
   }
 
-  // MAIN — exercise checklist
+  // MAIN — exercise list
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "#0a0a0a", paddingTop: "env(safe-area-inset-top)" }}>
       <div className="flex items-center justify-between px-4 pt-3 pb-2">
@@ -375,7 +510,7 @@ function LiveWorkoutPage() {
       </div>
 
       <div className="border-t border-grit p-4">
-        <button onClick={() => setStage("pr-ask")} className="btn-grit w-full py-4">
+        <button onClick={() => setStage("cooldown")} className="btn-grit w-full py-4">
           <Check size={16} className="mr-2" /> Completed Workout
         </button>
       </div>
@@ -462,6 +597,3 @@ function BigStat({ label, value, accent }: { label: string; value: string; accen
     </div>
   );
 }
-
-
-
