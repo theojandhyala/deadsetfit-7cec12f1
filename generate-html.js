@@ -1,30 +1,32 @@
 #!/usr/bin/env node
-import server from './dist/server/server.js';
-import { writeFileSync, readdirSync } from 'node:fs';
+// Generates dist/client/index.html for SPA fallback.
+// Runs after `bun run build` to create a static shell the CF Pages worker can serve.
+import { writeFileSync, readdirSync } from "node:fs";
 
-const res = await server.fetch(new Request('http://localhost/'), {}, {});
-const full = await res.text();
+const assets = readdirSync("dist/client/assets");
+const mainJs = assets.find((f) => f.startsWith("index-") && f.endsWith(".js") && !f.includes("chunk"));
+const mainCss = assets.find((f) => f.endsWith(".css"));
 
-const headMatch = full.match(/<head>([\s\S]*?)<\/head>/);
-const head = headMatch ? headMatch[1] : '';
-
-const tsrMatch = full.match(/<script[^>]+id="\$tsr-stream-barrier"[^>]*>([\s\S]*?)<\/script>/);
-const tsrContent = tsrMatch
-  ? tsrMatch[1].replace(/,ssr:!0/g, ',ssr:!1').replace(/,ssr:true/g, ',ssr:false')
-  : '';
-const tsrScript = tsrContent ? `<script>${tsrContent}</script>` : '';
-
-const assets = readdirSync('dist/client/assets');
-const entryJs = assets.find(f => f.startsWith('index-') && f.endsWith('.js') && !f.includes('chunk'));
+if (!mainJs) throw new Error("Could not find main JS entry in dist/client/assets");
 
 const html = `<!DOCTYPE html>
 <html lang="en">
-<head>${head}</head>
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>DEADSET — Train. Build. Become.</title>
+<meta name="theme-color" content="#0a0a0a"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+${mainCss ? `<link rel="stylesheet" href="/assets/${mainCss}"/>` : ""}
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800;900&display=swap"/>
+</head>
 <body style="margin:0;background:#0a0a0a">
-${tsrScript}
-<script type="module" src="/assets/${entryJs}"></script>
+<div id="root"></div>
+<script type="module" src="/assets/${mainJs}"></script>
 </body>
 </html>`;
 
-writeFileSync('dist/client/index.html', html);
-console.log('Generated dist/client/index.html (' + html.length + ' bytes, ssr:false)');
+writeFileSync("dist/client/index.html", html);
+console.log(`Generated dist/client/index.html (JS: ${mainJs}, CSS: ${mainCss})`);

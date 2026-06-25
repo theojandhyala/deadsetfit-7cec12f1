@@ -5,6 +5,9 @@ export default defineConfig({
   server: {
     preset: "cloudflare-pages",
   },
+  client: {
+    entry: "./src/client.tsx",
+  },
   vite: {
     plugins: () => [tsConfigPaths()],
   },
