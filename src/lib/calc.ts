@@ -189,6 +189,8 @@ export function maxRepsFor(logs: SetLog[], exerciseId: string) {
 //   • Protein target hit × 10/day (this week)
 //   • Weekly photo check-in × 50
 //   • Measurements logged this week × 20
+//   • Warmup completed × 10/session (this week)
+//   • Cooldown completed × 10/session (this week)
 // Decays 100 if no activity in last 48h.
 export interface GritScoreBreakdown {
   streak: number;
@@ -197,6 +199,8 @@ export interface GritScoreBreakdown {
   proteinHit: number;
   checkIns: number;
   measurements: number;
+  warmups: number;
+  cooldowns: number;
   decay: number;
   total: number;
 }
@@ -210,6 +214,8 @@ export function calculateGritScore(state: AppState): GritScoreBreakdown {
       proteinHit: 0,
       checkIns: 0,
       measurements: 0,
+      warmups: 0,
+      cooldowns: 0,
       decay: 0,
       total: 0,
     };
@@ -244,6 +250,8 @@ export function calculateGritScore(state: AppState): GritScoreBreakdown {
 
   const checkIns = (state.checkIns || []).filter((c) => c.date >= weekAgoISO).length;
   const measurements = (state.measurements || []).filter((m) => m.date >= weekAgoISO).length;
+  const warmups = (state.warmupDates || []).filter(d => d >= weekAgoISO).length;
+  const cooldowns = (state.cooldownDates || []).filter(d => d >= weekAgoISO).length;
 
   // Decay: any activity in last 48h?
   const lastActivity = Math.max(
@@ -260,7 +268,9 @@ export function calculateGritScore(state: AppState): GritScoreBreakdown {
     caloriesHit * 10 +
     proteinHit * 10 +
     checkIns * 50 +
-    measurements * 20 -
+    measurements * 20 +
+    warmups * 10 +
+    cooldowns * 10 -
     decay;
 
   return {
@@ -270,6 +280,8 @@ export function calculateGritScore(state: AppState): GritScoreBreakdown {
     proteinHit,
     checkIns,
     measurements,
+    warmups,
+    cooldowns,
     decay,
     total: Math.max(0, Math.min(1000, raw)),
   };

@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { X, Check, Play, Trophy, Share2, Dumbbell, Wind } from "lucide-react";
 import { useAppState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
@@ -109,11 +109,13 @@ function CountdownCircle({ totalSec, remainSec }: { totalSec: number; remainSec:
 function PhaseTimer({
   items,
   onFinish,
+  onSkip,
   icon,
   phaseLabel,
 }: {
   items: { name: string; detail: string; durationSec: number }[];
   onFinish: () => void;
+  onSkip: () => void;
   icon: React.ReactNode;
   phaseLabel: string;
 }) {
@@ -171,7 +173,7 @@ function PhaseTimer({
       </div>
 
       <div className="border-t border-grit p-4 grid grid-cols-2 gap-3">
-        <button onClick={onFinish} className="btn-ghost py-3">Skip All</button>
+        <button onClick={onSkip} className="btn-ghost py-3">Skip All</button>
         <button onClick={next} className="btn-grit py-3">
           {idx < items.length - 1 ? "Next" : "Done"}
         </button>
@@ -184,6 +186,9 @@ function LiveWorkoutPage() {
   const [state, set] = useAppState();
   const nav = useNavigate();
 
+  const warmupCompleted = useRef(false);
+  const cooldownCompleted = useRef(false);
+
   const [dayKey, setDayKey] = useState<DayKey>(todayKey());
   const [startedAt] = useState(() => new Date().toISOString());
   const [videoQuery, setVideoQuery] = useState<string | null>(null);
@@ -195,6 +200,7 @@ function LiveWorkoutPage() {
   const [celebrate, setCelebrate] = useState<{ name: string; weight: number; reps: number; prevBest: number } | null>(null);
   const [finishedSession, setFinishedSession] = useState<WorkoutSession | null>(null);
   const [share, setShare] = useState(false);
+  const [gritEarned, setGritEarned] = useState<{ warmup: boolean; cooldown: boolean } | null>(null);
 
   const built = useMemo(() => buildDay(state, dayKey), [state, dayKey]);
 
@@ -285,6 +291,8 @@ function LiveWorkoutPage() {
 
   function persistAndFinish(session: WorkoutSession) {
     const day = isoDay();
+    const didWarmup = warmupCompleted.current;
+    const didCooldown = cooldownCompleted.current;
     set((st) => {
       const newLogs = [...st.logs];
       session.exercises.forEach((e) =>
@@ -302,8 +310,13 @@ function LiveWorkoutPage() {
         sessions: [...st.sessions, session],
         logs: newLogs,
         completedDates: st.completedDates.includes(day) ? st.completedDates : [...st.completedDates, day],
+        warmupDates: didWarmup && !(st.warmupDates || []).includes(day)
+          ? [...(st.warmupDates || []), day] : (st.warmupDates || []),
+        cooldownDates: didCooldown && !(st.cooldownDates || []).includes(day)
+          ? [...(st.cooldownDates || []), day] : (st.cooldownDates || []),
       };
     });
+    setGritEarned({ warmup: didWarmup, cooldown: didCooldown });
     setFinishedSession(session);
     setStage("finished");
   }
@@ -331,7 +344,8 @@ function LiveWorkoutPage() {
         phaseLabel="WARM UP"
         icon={<Dumbbell size={32} />}
         items={WARMUP_EXERCISES.map((e) => ({ name: e.name, detail: e.reps, durationSec: e.durationSec }))}
-        onFinish={() => setStage("workout")}
+        onFinish={() => { warmupCompleted.current = true; setStage("workout"); }}
+        onSkip={() => setStage("workout")}
       />
     );
   }
@@ -343,7 +357,8 @@ function LiveWorkoutPage() {
         phaseLabel="COOL DOWN"
         icon={<Wind size={32} />}
         items={COOLDOWN_STRETCHES.map((e) => ({ name: e.name, detail: e.instruction, durationSec: e.durationSec }))}
-        onFinish={() => setStage("pr-ask")}
+        onFinish={() => { cooldownCompleted.current = true; setStage("pr-ask"); }}
+        onSkip={() => setStage("pr-ask")}
       />
     );
   }
@@ -357,6 +372,7 @@ function LiveWorkoutPage() {
           onShare={() => setShare(true)}
           share={share}
           onCloseShare={() => setShare(false)}
+          gritEarned={gritEarned}
         />
         {celebrate && (
           <PRCelebration
@@ -545,12 +561,14 @@ function FinishedScreen({
   onShare,
   share,
   onCloseShare,
+  gritEarned,
 }: {
   session: WorkoutSession;
   onClose: () => void;
   onShare: () => void;
   share: boolean;
   onCloseShare: () => void;
+  gritEarned?: { warmup: boolean; cooldown: boolean } | null;
 }) {
   const durationMin = Math.max(
     1,
@@ -574,6 +592,35 @@ function FinishedScreen({
           <BigStat label="PRS" value={String(session.prCount)} accent={session.prCount > 0} />
           <BigStat label="GRIT" value="+" accent />
         </div>
+
+        {gritEarned && (gritEarned.warmup || gritEarned.cooldown) && (
+          <div className="mt-4 space-y-2">
+            <p className="label-cap text-[10px] text-grit-dim">GRIT EARNED</p>
+            {gritEarned.warmup && (
+              <div className="flex items-center justify-between bg-grit-card border border-grit p-3">
+                <span className="text-sm text-grit">Warm Up Completed</span>
+                <span className="display font-extrabold text-accent-red">+10</span>
+              </div>
+            )}
+            {gritEarned.cooldown && (
+              <div className="flex items-center justify-between bg-grit-card border border-grit p-3">
+                <span className="text-sm text-grit">Cool Down Completed</span>
+                <span className="display font-extrabold text-accent-red">+10</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between bg-grit-card border border-grit p-3">
+              <span className="text-sm text-grit">Workout Complete</span>
+              <span className="display font-extrabold text-accent-red">+15 STREAK</span>
+            </div>
+            <p className="text-xs text-grit-dim text-center mt-2 italic">
+              {gritEarned.warmup && gritEarned.cooldown
+                ? "Full routine locked in. That's how DEADSET athletes train."
+                : gritEarned.warmup
+                ? "Warmed up right. Add the cool down next time for max recovery."
+                : "Cool down done. Add warm up next session to protect your joints."}
+            </p>
+          </div>
+        )}
 
         <div className="mt-auto pt-6 grid grid-cols-2 gap-3">
           <button onClick={onClose} className="btn-ghost">Done</button>
