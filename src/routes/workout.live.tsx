@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { X, Check, Play, Trophy, Share2, Flame } from "lucide-react";
+import { X, Check, Play, Trophy, Share2 } from "lucide-react";
 import { useAppState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
 import { defaultSchedule, isoDay, todayKey } from "@/lib/calc";
@@ -463,5 +463,5 @@ function BigStat({ label, value, accent }: { label: string; value: string; accen
   );
 }
 
-// Suppress unused lucide import warning if Flame stays available for future use
-void Flame;
+
+
