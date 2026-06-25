@@ -19,6 +19,8 @@ export const DEFAULT_STATE: AppState = {
   waterTargetMl: 3000,
   hydrationAlertsEnabled: true,
   manualPRs: {},
+  warmupDates: [],
+  cooldownDates: [],
   units: "kg",
   remindersEnabled: true,
 };

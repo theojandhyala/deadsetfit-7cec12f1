@@ -97,7 +97,6 @@ export function StateSync() {
       logSessionEvent("state-sync:auth-change", { event, hasSession: Boolean(session) });
       if (event === "SIGNED_OUT") {
         disableRemoteSync();
-        clearLocalState();
         clearRemoteStateStatus();
         activeUserId = null;
         return;

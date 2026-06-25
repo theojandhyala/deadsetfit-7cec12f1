@@ -221,6 +221,8 @@ export interface AppState {
   hydrationAlertsEnabled: boolean;
   challengeRecords?: ChallengeRecord[];
   manualPRs?: Record<string, { value: number; reps?: number; date: string }>;
+  warmupDates?: string[];   // ISO dates when user completed warm up
+  cooldownDates?: string[]; // ISO dates when user completed cool down
   units?: "kg" | "lb";
   remindersEnabled?: boolean;
 }
