@@ -909,6 +909,30 @@ function ScanModal({
           <Block title="WEAKNESSES" items={a.weaknesses} color="#E10600" />
           <Block title="FOCUS NEXT" items={a.focus} color="#f5f5f0" />
         </div>
+        {a.exerciseRecommendations && a.exerciseRecommendations.length > 0 && (
+          <div className="bg-grit-card rounded-2xl p-4 mb-4">
+            <p className="label-cap text-[#E10600] text-[10px] mb-2">RECOMMENDED EXERCISES</p>
+            <div className="space-y-2">
+              {a.exerciseRecommendations.map((rec) => {
+                const ex = getExercise(rec.exerciseId);
+                if (!ex) return null;
+                return (
+                  <Link
+                    key={rec.exerciseId}
+                    to="/lift/$exerciseId"
+                    params={{ exerciseId: rec.exerciseId }}
+                    className="block border border-[#262626] rounded-xl p-3 hover:border-[#E10600] transition-colors"
+                  >
+                    <p className="display text-sm uppercase font-extrabold text-white">{ex.name}</p>
+                    <p className="text-[10px] text-[#8A8A8A] uppercase tracking-wider mt-0.5">
+                      {rec.reason}
+                    </p>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
         {a.leanMassNote && (
           <p className="text-xs text-[#8A8A8A] uppercase tracking-wider mb-4">{a.leanMassNote}</p>
         )}
