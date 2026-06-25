@@ -29,7 +29,7 @@ jobs:
           VITE_PAYMENTS_CLIENT_TOKEN: ${{ secrets.VITE_PAYMENTS_CLIENT_TOKEN }}
 
       - name: Bundle SSR worker
-        run: npx esbuild worker-entry.js --bundle --platform=browser --target=esnext --format=esm --external:"node:*" --outfile=dist/client/_worker.js
+        run: npx esbuild worker-entry.js --bundle --platform=browser --target=esnext --format=esm --external:"node:*" --define:process.env.NODE_ENV='"production"' --outfile=dist/client/_worker.js
 
       - name: Create Pages project if needed
         run: npx wrangler pages project create deadsetfit --production-branch=main || true
