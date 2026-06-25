@@ -53,6 +53,13 @@ export default {
       return handleSignup(request, env);
     }
 
+    // Diagnostic endpoint
+    if (path === '/ping') {
+      return new Response(JSON.stringify({ ok: true, assets: !!env.ASSETS }), {
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+
     // Serve static assets via ASSETS binding
     if (env.ASSETS) {
       const isAsset = path.startsWith('/assets/') || STATIC_RE.test(path);
@@ -67,19 +74,20 @@ export default {
       try {
         const indexReq = new Request(new URL('/index.html', request.url).toString(), { headers: request.headers });
         const res = await env.ASSETS.fetch(indexReq);
-        if (res.status !== 404) {
-          // Return with correct content-type and no-cache for HTML
-          return new Response(res.body, {
-            status: 200,
-            headers: {
-              'content-type': 'text/html; charset=utf-8',
-              'cache-control': 'no-store',
-            },
-          });
-        }
-      } catch {}
+        const html = await res.text();
+        return new Response(html, {
+          status: res.status === 404 ? 404 : 200,
+          headers: {
+            'content-type': 'text/html; charset=utf-8',
+            'cache-control': 'no-store',
+            'x-html-bytes': String(html.length),
+          },
+        });
+      } catch (e) {
+        return new Response('ASSETS error: ' + String(e), { status: 500 });
+      }
     }
 
-    return new Response('Not found', { status: 404 });
+    return new Response('No ASSETS binding', { status: 500 });
   }
 };
