@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff, Zap, Trophy, Brain } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
@@ -138,22 +138,40 @@ export function AuthPage() {
     >
       {/* Ambient glow */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
-        <div style={{ position: "absolute", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(225,6,0,0.18) 0%, transparent 70%)", filter: "blur(80px)", top: -120, left: "50%", transform: "translateX(-50%)" }} />
+        <div style={{ position: "absolute", width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, rgba(225,6,0,0.15) 0%, transparent 70%)", filter: "blur(80px)", top: -150, left: "50%", transform: "translateX(-50%)" }} />
       </div>
 
       <div className="relative z-10 w-full max-w-sm flex flex-col items-center">
         {/* Logo */}
-        <div className="text-center mb-10">
+        <div className="text-center mb-6">
           <div className="inline-flex items-center gap-1 mb-3">
-            <div style={{ width: 3, height: 28, background: "#E10600", borderRadius: 2 }} />
+            <div style={{ width: 3, height: 32, background: "#E10600", borderRadius: 2 }} />
             <span className="display font-extrabold text-5xl tracking-tight" style={{ fontStyle: "italic", color: "#ffffff", letterSpacing: "-0.02em" }}>
               DEAD<span style={{ color: "#E10600" }}>SET</span>
             </span>
           </div>
           <p className="text-[11px] font-bold uppercase tracking-[0.3em]" style={{ color: "#6B7280" }}>
-            Forge Your Body
+            Train Smarter. Get Stronger.
           </p>
         </div>
+
+        {/* Value props — shown only on sign up tab */}
+        {mode === "signup" && (
+          <div className="w-full mb-5 grid grid-cols-3 gap-2">
+            {[
+              { Icon: Zap, label: "AI Schedule", sub: "Built for you" },
+              { Icon: Brain, label: "AI Coach", sub: "Always on" },
+              { Icon: Trophy, label: "Track PRs", sub: "& celebrate" },
+            ].map(({ Icon, label, sub }) => (
+              <div key={label} className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl" style={{ background: "rgba(225,6,0,0.08)", border: "1px solid rgba(225,6,0,0.2)" }}>
+                <Icon size={16} style={{ color: "#E10600" }} />
+                <span className="text-[10px] font-bold text-white text-center leading-tight">{label}</span>
+                <span className="text-[9px] text-center" style={{ color: "#6B7280" }}>{sub}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
 
         {/* Card */}
         <div
@@ -229,7 +247,7 @@ export function AuthPage() {
                   </div>
                 )}
 
-                <SubmitBtn busy={busy} label={mode === "signin" ? "Sign In" : "Create Account"} />
+                <SubmitBtn busy={busy} label={mode === "signin" ? "Sign In" : "Start Training — It's Free"} />
               </form>
             </>
           )}

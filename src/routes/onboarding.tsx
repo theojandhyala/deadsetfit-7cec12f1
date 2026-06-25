@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Check, Zap, Camera, MessageSquare, Scan, Images, Activity } from "lucide-react";
+import { Check, Zap, Camera, MessageSquare, Scan, Trophy } from "lucide-react";
 import { GritLogo } from "@/components/GritLogo";
 import { getState, setLocalStateOwner, setState } from "@/lib/storage";
 import { defaultSchedule } from "@/lib/calc";
@@ -578,32 +578,35 @@ function emptySchedule(): import("@/lib/types").Schedule {
 function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
   return (
     <>
-      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">
-        How do you want to start?
+      <p className="label-cap text-accent-red mb-3 text-[10px]">STEP 1 OF 1 MINUTE</p>
+      <h1 className="display text-4xl font-extrabold uppercase text-grit mb-2 leading-none">
+        Let's build your programme.
       </h1>
-      <p className="text-sm text-[#8a8a8a] mb-8">Pick one. You can change everything later.</p>
+      <p className="text-sm mb-8" style={{ color: "#8A8A8A" }}>Answer 3 questions and we'll generate a full weekly training schedule tuned to your goal and equipment.</p>
       <div className="flex flex-col gap-3">
         <button
           onClick={() => onPick("GENERATE")}
-          className="bg-grit-card border-2 border-accent-red p-6 text-left hover:bg-[#1a0a08] transition-colors"
+          className="border-2 border-accent-red p-6 text-left transition-colors"
+          style={{ background: "linear-gradient(135deg,#1a0606 0%,#0a0a0a 100%)" }}
         >
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-2">
             <Zap size={14} className="text-accent-red" />
-            <span className="label-cap text-accent-red">RECOMMENDED</span>
+            <span className="label-cap text-accent-red text-[10px]">FASTEST — RECOMMENDED</span>
           </div>
-          <span className="display text-2xl uppercase tracking-wide font-extrabold text-grit block">
-            Generate Schedule
+          <span className="display text-2xl uppercase font-extrabold text-white block leading-tight">
+            Generate My Schedule
           </span>
-          <p className="text-xs text-[#8a8a8a] mt-1">Answer 3 questions. We build your week.</p>
+          <p className="text-xs mt-1.5" style={{ color: "#8A8A8A" }}>3 questions. 10 seconds. Full programme ready.</p>
         </button>
         <button
           onClick={() => onPick("BUILD")}
-          className="bg-grit-card border border-grit p-6 text-left hover:border-accent-red transition-colors"
+          className="border border-grit p-6 text-left transition-colors"
+          style={{ background: "#141414" }}
         >
-          <span className="display text-2xl uppercase tracking-wide font-extrabold text-grit block">
-            Build Your Own
+          <span className="display text-2xl uppercase font-extrabold text-grit block leading-tight">
+            I'll Build My Own
           </span>
-          <p className="text-xs text-[#8a8a8a] mt-1">Start blank. Add your own splits and lifts.</p>
+          <p className="text-xs mt-1.5" style={{ color: "#8A8A8A" }}>Start with a blank week. Full control.</p>
         </button>
       </div>
     </>
@@ -672,11 +675,11 @@ function PRStep({ onContinue }: { onContinue: () => void }) {
 
 function TourStep({ onContinue }: { onContinue: () => void }) {
   const tools = [
-    { Icon: Camera, t: "AI MEAL SCAN", d: "Snap your plate — get calories and macros in seconds.", where: "Diet tab" },
-    { Icon: MessageSquare, t: "AI COACH", d: "24/7 strength coach. Ask anything, get a real answer.", where: "Profile → Coach" },
-    { Icon: Scan, t: "PHYSIQUE SCANNER", d: "AI grades body fat, muscle and symmetry from a photo.", where: "Progress tab" },
-    { Icon: Images, t: "PROGRESS PICTURES", d: "Side-by-side check-ins to see the transformation.", where: "Progress tab" },
-    { Icon: Activity, t: "AI RUN COACH", d: "Live tracking with pacing tips and your next session.", where: "Cardio tab" },
+    { Icon: Zap, t: "YOUR SCHEDULE", d: "AI-built for your goal, equipment, and days available. Edit anytime.", where: "Train tab" },
+    { Icon: Camera, t: "AI MEAL SCAN", d: "Snap your plate — get accurate calories and macros instantly.", where: "Diet tab" },
+    { Icon: MessageSquare, t: "AI COACH", d: "24/7 strength and nutrition coach. Real answers, no fluff.", where: "Profile → Coach" },
+    { Icon: Scan, t: "PHYSIQUE SCAN", d: "Upload a photo — AI maps your muscle imbalances and weak points to target. Pro feature.", where: "Train tab" },
+    { Icon: Trophy, t: "PR CELEBRATIONS", d: "Log a new personal best and we make it a moment.", where: "After your workout" },
   ];
   return (
     <>
@@ -708,8 +711,8 @@ function TourStep({ onContinue }: { onContinue: () => void }) {
           </div>
         ))}
       </div>
-      <button onClick={onContinue} className="btn-grit mt-auto">
-        Let's go
+      <button onClick={onContinue} className="btn-grit mt-auto" style={{ fontSize: "1rem", letterSpacing: "0.05em" }}>
+        Start Training →
       </button>
     </>
   );
