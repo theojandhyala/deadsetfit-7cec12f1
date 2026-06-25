@@ -25,66 +25,6 @@ const ProfileSchema = z.object({
   public_stats: z.record(z.string(), z.any()).optional(),
 });
 
-/**
- * Sign up a new user using the admin API so the account is immediately
- * confirmed and the user can sign in straight away without checking email.
- * Returns session tokens on success.
- */
-export const signUpUser = createServerFn({ method: "POST" })
-  .inputValidator((input) =>
-    z
-      .object({
-        email: z.string().email(),
-        password: z.string().min(6).max(128),
-        display_name: z.string().min(1).max(60).optional(),
-      })
-      .parse(input),
-  )
-  .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const displayName =
-      data.display_name?.trim() ||
-      data.email.split("@")[0]?.replace(/[^a-zA-Z0-9_ -]/g, "").slice(0, 60) ||
-      "DEADSET Athlete";
-
-    // Create user with email pre-confirmed so they can sign in immediately
-    const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
-      email: data.email,
-      password: data.password,
-      email_confirm: true,
-      user_metadata: { display_name: displayName },
-    });
-    if (error) {
-      const message = error.message.toLowerCase().includes("already")
-        ? "An account with this email already exists"
-        : error.message;
-      throw new Error(message);
-    }
-
-    const { error: profileError } = await supabaseAdmin
-      .from("profiles")
-      .upsert({ id: created.user.id, display_name: displayName }, { onConflict: "id" });
-    if (profileError) throw new Error(profileError.message);
-
-    // Sign in immediately and return session tokens
-    const anon = createClient(
-      (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL)!,
-      (process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY)!,
-      { auth: { persistSession: false, autoRefreshToken: false } },
-    );
-    const { data: signIn, error: signInErr } = await anon.auth.signInWithPassword({
-      email: data.email,
-      password: data.password,
-    });
-    if (signInErr || !signIn.session) throw new Error("Account created but sign-in failed — try signing in manually");
-
-    return {
-      ok: true as const,
-      userId: created.user.id,
-      access_token: signIn.session.access_token,
-      refresh_token: signIn.session.refresh_token,
-    };
-  });
 
 export const saveProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
