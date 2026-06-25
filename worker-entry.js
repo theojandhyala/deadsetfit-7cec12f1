@@ -1,5 +1,3 @@
-import server from './dist/server/server.js';
-
 const STATIC_RE = /\.(css|js|mjs|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|webp|avif|map|txt|xml)$/i;
 
 async function handleSignup(request, env) {
@@ -64,20 +62,24 @@ export default {
           if (res.status !== 404) return res;
         } catch {}
       }
+
+      // Serve index.html for all app routes (SPA mode)
+      try {
+        const indexReq = new Request(new URL('/index.html', request.url).toString(), { headers: request.headers });
+        const res = await env.ASSETS.fetch(indexReq);
+        if (res.status !== 404) {
+          // Return with correct content-type and no-cache for HTML
+          return new Response(res.body, {
+            status: 200,
+            headers: {
+              'content-type': 'text/html; charset=utf-8',
+              'cache-control': 'no-store',
+            },
+          });
+        }
+      } catch {}
     }
 
-    try {
-      return await server.fetch(request, env, ctx);
-    } catch (e) {
-      // SSR crashed — fall back to SPA index.html so the client-side app loads
-      if (env.ASSETS) {
-        try {
-          const indexReq = new Request(new URL('/index.html', request.url).toString(), { headers: request.headers });
-          const res = await env.ASSETS.fetch(indexReq);
-          if (res.status !== 404) return res;
-        } catch {}
-      }
-      return new Response('Internal Server Error: ' + (e && e.message ? e.message : String(e)), { status: 500 });
-    }
+    return new Response('Not found', { status: 404 });
   }
 };
