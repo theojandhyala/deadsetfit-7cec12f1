@@ -186,6 +186,10 @@ export interface PhysiqueScan {
     weaknesses: string[];
     focus: string[];
     verdict: string;
+    exerciseRecommendations?: {
+      exerciseId: string;
+      reason: string;
+    }[];
   };
 }
 
