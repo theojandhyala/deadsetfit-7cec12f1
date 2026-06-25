@@ -55,6 +55,8 @@ export type DayKey = "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN";
 export interface DaySchedule {
   label: string;
   exerciseIds: string[];
+  /** Per-exercise overrides for sets/reps targets. Keyed by exerciseId. */
+  overrides?: Record<string, { sets?: number; reps?: string }>;
 }
 
 export type Schedule = Record<DayKey, DaySchedule>;
