@@ -460,30 +460,70 @@ function TrainPage() {
           {/* Selected exercises */}
           {(day?.exerciseIds?.length || 0) > 0 && (
             <>
-              <p className="label-cap mb-2">Selected ({day!.exerciseIds.length})</p>
-              <div className="flex flex-wrap gap-1.5 mb-3">
+              <p className="label-cap mb-2">Selected ({day!.exerciseIds.length}) — tap × to remove, edit sets/reps</p>
+              <div className="flex flex-col gap-2 mb-3">
                 {day!.exerciseIds.map((id) => {
                   const ex = getExercise(id);
                   if (!ex) return null;
+                  const ov = day!.overrides?.[id];
+                  const sets = ov?.sets ?? ex.sets;
+                  const reps = ov?.reps ?? ex.reps;
+                  const updateOverride = (next: { sets?: number; reps?: string }) =>
+                    set((s) => {
+                      const sched = { ...(s.schedule || schedule) };
+                      const cur = sched[selectedDay] || { label: day?.label || "REST", exerciseIds: [] };
+                      const overrides = { ...(cur.overrides || {}) };
+                      overrides[id] = { ...(overrides[id] || {}), ...next };
+                      sched[selectedDay] = { ...cur, overrides };
+                      return { ...s, schedule: sched };
+                    });
                   return (
-                    <button
+                    <div
                       key={id}
-                      onClick={() =>
-                        set((s) => {
-                          const sched = { ...(s.schedule || schedule) };
-                          const cur = sched[selectedDay]?.exerciseIds || [];
-                          sched[selectedDay] = {
-                            ...(sched[selectedDay] || { label: day?.label || "REST" }),
-                            exerciseIds: cur.filter((x) => x !== id),
-                          };
-                          return { ...s, schedule: sched };
-                        })
-                      }
-                      className="text-[10px] px-2.5 py-1.5 rounded-full flex items-center gap-1 font-semibold"
-                    style={{ background: "rgba(225,6,0,0.12)", color: "#E10600", border: "1px solid rgba(225,6,0,0.4)" }}
+                      className="p-2.5 flex items-center gap-2"
+                      style={{ background: "rgba(225,6,0,0.08)", border: "1px solid rgba(225,6,0,0.35)", borderRadius: 10 }}
                     >
-                      {ex.name} ×
-                    </button>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold uppercase truncate text-white">{ex.name}</p>
+                      </div>
+                      <input
+                        inputMode="numeric"
+                        value={sets}
+                        onChange={(e) => {
+                          const n = Math.max(1, Math.min(20, Number(e.target.value) || 1));
+                          updateOverride({ sets: n });
+                        }}
+                        className="w-12 h-9 text-center text-sm font-bold bg-black text-white border border-grit"
+                        aria-label="sets"
+                      />
+                      <span className="text-grit-dim text-xs">×</span>
+                      <input
+                        value={reps}
+                        onChange={(e) => updateOverride({ reps: e.target.value })}
+                        className="w-16 h-9 text-center text-sm font-bold bg-black text-white border border-grit"
+                        aria-label="reps"
+                      />
+                      <button
+                        onClick={() =>
+                          set((s) => {
+                            const sched = { ...(s.schedule || schedule) };
+                            const cur = sched[selectedDay]?.exerciseIds || [];
+                            const overrides = { ...(sched[selectedDay]?.overrides || {}) };
+                            delete overrides[id];
+                            sched[selectedDay] = {
+                              ...(sched[selectedDay] || { label: day?.label || "REST" }),
+                              exerciseIds: cur.filter((x) => x !== id),
+                              overrides,
+                            };
+                            return { ...s, schedule: sched };
+                          })
+                        }
+                        className="w-8 h-8 flex items-center justify-center text-accent-red font-bold"
+                        aria-label="remove"
+                      >
+                        ×
+                      </button>
+                    </div>
                   );
                 })}
               </div>
