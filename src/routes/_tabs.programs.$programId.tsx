@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, ChevronUp, ChevronDown, X, Plus, Sparkles, Loader2, Search } from "lucide-react";
@@ -29,6 +29,87 @@ function toRef(ex: LibraryExercise): ProgramExerciseRef {
   };
 }
 
+// Isolated row component so sets/reps inputs have their own local state.
+// This prevents the controlled-input cursor-jump and the "snaps to 0" bug
+// when the user clears the field to type a new value.
+function ExerciseRow({
+  item,
+  idx,
+  total,
+  onMove,
+  onRemove,
+  onUpdate,
+}: {
+  item: ProgramExerciseRef;
+  idx: number;
+  total: number;
+  onMove: (id: string, dir: -1 | 1) => void;
+  onRemove: (id: string) => void;
+  onUpdate: (id: string, sets: number, reps: string) => void;
+}) {
+  const [sets, setSets] = useState(String(item.sets));
+  const [reps, setReps] = useState(item.reps);
+
+  // Sync if the item changes from outside (e.g. day switch reuses same id)
+  useEffect(() => { setSets(String(item.sets)); }, [item.sets]);
+  useEffect(() => { setReps(item.reps); }, [item.reps]);
+
+  function commitSets(raw: string) {
+    const n = Math.max(1, parseInt(raw, 10) || 1);
+    setSets(String(n));
+    onUpdate(item.id, n, reps);
+  }
+
+  function commitReps(raw: string) {
+    const val = raw.trim() || item.reps;
+    setReps(val);
+    onUpdate(item.id, parseInt(sets, 10) || item.sets, val);
+  }
+
+  return (
+    <div className="bg-grit-card border border-grit p-3">
+      <div className="flex items-start gap-2">
+        <div className="flex flex-col">
+          <button onClick={() => onMove(item.id, -1)} disabled={idx === 0} className="p-1 disabled:opacity-30">
+            <ChevronUp size={14} className="text-grit-dim" />
+          </button>
+          <button onClick={() => onMove(item.id, 1)} disabled={idx === total - 1} className="p-1 disabled:opacity-30">
+            <ChevronDown size={14} className="text-grit-dim" />
+          </button>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="display uppercase font-extrabold text-grit text-sm truncate">{item.name}</div>
+          <div className="text-[10px] label-cap text-grit-dim mt-0.5">
+            {item.equipment} · {item.primary_muscles.slice(0, 3).join(" · ")}
+          </div>
+          <div className="flex gap-2 mt-2">
+            <input
+              inputMode="numeric"
+              value={sets}
+              onChange={(e) => setSets(e.target.value)}
+              onBlur={(e) => commitSets(e.target.value)}
+              className="w-14 px-2 py-1 text-xs"
+              style={{ background: "#0a0a0a", border: "1px solid #2a2a2a", color: "#f5f5f0" }}
+            />
+            <span className="label-cap text-grit-dim text-[10px] self-center">SETS ×</span>
+            <input
+              value={reps}
+              onChange={(e) => setReps(e.target.value)}
+              onBlur={(e) => commitReps(e.target.value)}
+              className="flex-1 px-2 py-1 text-xs"
+              style={{ background: "#0a0a0a", border: "1px solid #2a2a2a", color: "#f5f5f0" }}
+            />
+            <span className="label-cap text-grit-dim text-[10px] self-center">REPS</span>
+          </div>
+        </div>
+        <button onClick={() => onRemove(item.id)} className="p-1">
+          <X size={16} className="text-grit-dim" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function BuilderPage() {
   const { programId } = Route.useParams();
   const navigate = useNavigate();
@@ -39,6 +120,13 @@ function BuilderPage() {
   const [picker, setPicker] = useState(false);
   const [search, setSearch] = useState("");
   const [suggestOpen, setSuggestOpen] = useState(false);
+
+  // Local label state prevents cursor-jump from uppercase transformation on every keystroke
+  // and prevents stale-closure day mixups when the user clicks another day mid-edit.
+  const [labelDraft, setLabelDraft] = useState(program?.days["MON"].label ?? "");
+  useEffect(() => {
+    if (program) setLabelDraft(program.days[day].label);
+  }, [day, program?.days[day]?.label]);
 
   const list = useServerFn(listExercises);
   const suggest = useServerFn(smartSuggest);
@@ -100,18 +188,23 @@ function BuilderPage() {
     }));
   }
 
-  function setLabel(label: string) {
-    update((p) => ({ ...p, days: { ...p.days, [day]: { ...p.days[day], label: label.toUpperCase() } } }));
+  function commitLabel(label: string) {
+    const upper = label.toUpperCase();
+    setLabelDraft(upper);
+    update((p) => ({ ...p, days: { ...p.days, [day]: { ...p.days[day], label: upper } } }));
   }
+
   function rename(name: string) {
     update((p) => ({ ...p, name: name.toUpperCase().slice(0, 40) }));
   }
+
   function addExercise(ex: LibraryExercise) {
     update((p) => {
       if (p.days[day].items.some((i) => i.id === ex.id)) return p;
       return { ...p, days: { ...p.days, [day]: { ...p.days[day], items: [...p.days[day].items, toRef(ex)] } } };
     });
   }
+
   function addCustomExercise(name: string) {
     const clean = name.trim().slice(0, 60);
     if (clean.length < 2) {
@@ -134,9 +227,11 @@ function BuilderPage() {
     toast.success(`Added "${clean}"`);
     setSearch("");
   }
+
   function removeItem(id: string) {
     update((p) => ({ ...p, days: { ...p.days, [day]: { ...p.days[day], items: p.days[day].items.filter((i) => i.id !== id) } } }));
   }
+
   function move(id: string, dir: -1 | 1) {
     update((p) => {
       const items = [...p.days[day].items];
@@ -148,12 +243,20 @@ function BuilderPage() {
       return { ...p, days: { ...p.days, [day]: { ...p.days[day], items } } };
     });
   }
+
   function setSetsReps(id: string, sets: number, reps: string) {
     update((p) => ({
       ...p,
-      days: { ...p.days, [day]: { ...p.days[day], items: p.days[day].items.map((i) => i.id === id ? { ...i, sets, reps } : i) } },
+      days: {
+        ...p.days,
+        [day]: {
+          ...p.days[day],
+          items: p.days[day].items.map((i) => i.id === id ? { ...i, sets, reps } : i),
+        },
+      },
     }));
   }
+
   function applySuggestion(suggestedIds: string[]) {
     const refs = suggestedIds
       .map((id) => exercises.find((e) => e.id === id))
@@ -161,10 +264,17 @@ function BuilderPage() {
       .map((e) => toRef(e as LibraryExercise));
     update((p) => ({
       ...p,
-      days: { ...p.days, [day]: { ...p.days[day], items: [...p.days[day].items, ...refs.filter((r) => !p.days[day].items.some((i) => i.id === r.id))] } },
+      days: {
+        ...p.days,
+        [day]: {
+          ...p.days[day],
+          items: [...p.days[day].items, ...refs.filter((r) => !p.days[day].items.some((i) => i.id === r.id))],
+        },
+      },
     }));
     toast.success(`Added ${refs.length} to ${day}`);
   }
+
   function activateAndTrain() {
     set((s) => ({ ...s, activeProgramId: programId }));
     navigate({ to: "/train" });
@@ -209,13 +319,15 @@ function BuilderPage() {
         </div>
       </div>
 
-      {/* Day label input */}
+      {/* Day label input — local draft state prevents cursor-jump and wrong-day updates */}
       <div className="px-5 mb-4">
         <label className="label-cap text-grit-dim text-[10px] block mb-1">Day Label</label>
         <input
-          value={d.label}
-          onChange={(e) => setLabel(e.target.value)}
-          className="input-grit"
+          key={day}
+          value={labelDraft}
+          onChange={(e) => setLabelDraft(e.target.value)}
+          onBlur={(e) => commitLabel(e.target.value)}
+          className="input-grit uppercase"
         />
       </div>
 
@@ -233,7 +345,7 @@ function BuilderPage() {
         </button>
       </div>
 
-      {/* Items */}
+      {/* Items — key includes day so ExerciseRow local state resets on day switch */}
       <div className="px-5 space-y-2">
         {d.items.length === 0 && (
           <div className="bg-grit-card border border-grit p-6 text-center">
@@ -241,44 +353,15 @@ function BuilderPage() {
           </div>
         )}
         {d.items.map((it, idx) => (
-          <div key={it.id} className="bg-grit-card border border-grit p-3">
-            <div className="flex items-start gap-2">
-              <div className="flex flex-col">
-                <button onClick={() => move(it.id, -1)} disabled={idx === 0} className="p-1 disabled:opacity-30">
-                  <ChevronUp size={14} className="text-grit-dim" />
-                </button>
-                <button onClick={() => move(it.id, 1)} disabled={idx === d.items.length - 1} className="p-1 disabled:opacity-30">
-                  <ChevronDown size={14} className="text-grit-dim" />
-                </button>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="display uppercase font-extrabold text-grit text-sm truncate">{it.name}</div>
-                <div className="text-[10px] label-cap text-grit-dim mt-0.5">
-                  {it.equipment} · {it.primary_muscles.slice(0, 3).join(" · ")}
-                </div>
-                <div className="flex gap-2 mt-2">
-                  <input
-                    inputMode="numeric"
-                    value={it.sets}
-                    onChange={(e) => setSetsReps(it.id, Number(e.target.value) || 0, it.reps)}
-                    className="w-14 px-2 py-1 text-xs"
-                    style={{ background: "#0a0a0a", border: "1px solid #2a2a2a", color: "#f5f5f0" }}
-                  />
-                  <span className="label-cap text-grit-dim text-[10px] self-center">SETS ×</span>
-                  <input
-                    value={it.reps}
-                    onChange={(e) => setSetsReps(it.id, it.sets, e.target.value)}
-                    className="flex-1 px-2 py-1 text-xs"
-                    style={{ background: "#0a0a0a", border: "1px solid #2a2a2a", color: "#f5f5f0" }}
-                  />
-                  <span className="label-cap text-grit-dim text-[10px] self-center">REPS</span>
-                </div>
-              </div>
-              <button onClick={() => removeItem(it.id)} className="p-1">
-                <X size={16} className="text-grit-dim" />
-              </button>
-            </div>
-          </div>
+          <ExerciseRow
+            key={`${day}-${it.id}`}
+            item={it}
+            idx={idx}
+            total={d.items.length}
+            onMove={move}
+            onRemove={removeItem}
+            onUpdate={setSetsReps}
+          />
         ))}
       </div>
 
