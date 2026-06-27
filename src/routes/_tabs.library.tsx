@@ -171,7 +171,7 @@ function LibraryPage() {
         <p className="text-grit-dim text-sm label-cap">Loading…</p>
       ) : (
         <ul className="space-y-2 pb-6">
-          {data?.exercises.map((ex) => (
+          {data?.exercises?.map((ex) => (
             <li key={ex.id}>
               <button
                 onClick={() => setOpen(ex)}

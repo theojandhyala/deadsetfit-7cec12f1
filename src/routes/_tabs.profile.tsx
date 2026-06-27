@@ -62,7 +62,7 @@ function ProfilePage() {
   const fifa = computeFifaStats(state);
   const startW = p.startingWeightKg ?? p.weightKg;
   const delta = p.weightKg - startW;
-  const bmi = (p.weightKg / Math.pow(p.heightCm / 100, 2)).toFixed(1);
+  const bmi = p.heightCm > 0 ? (p.weightKg / Math.pow(p.heightCm / 100, 2)).toFixed(1) : "—";
 
   async function save() {
     if (!p) return;
@@ -301,7 +301,7 @@ function ProfilePage() {
               <Stat label="Age" v={`${p.age} yrs`} />
               <Stat label="BMI" v={bmi} />
               <Stat label="Gender" v={p.gender} />
-              <Stat label="Equipment" v={p.equipment.replace("_"," ")} />
+              <Stat label="Equipment" v={(p.equipment ?? "").replace("_", " ") || "—"} />
               {p.weakness && <Stat label="Focus Area" v={p.weakness} />}
               {p.injuries && <Stat label="Injuries" v={p.injuries} />}
             </>

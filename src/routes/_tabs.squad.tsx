@@ -481,6 +481,10 @@ function Friends() {
       await _toggle({ data: { userId: id } });
       setStats(s => s ? { ...s, following: s.following + (currentlyFollowing ? -1 : 1) } : s);
     } catch (e) {
+      // Roll back all optimistic updates on failure
+      setResults(arr => arr?.map(r => r.id === id ? { ...r, following: currentlyFollowing } : r) ?? null);
+      setSuggested(arr => arr?.filter(r => r.id !== id) ?? null);
+      setNearby(n => n ? { ...n, athletes: n.athletes.map(a => a.id === id ? { ...a, following: currentlyFollowing } : a) } : n);
       toast.error(e instanceof Error ? e.message : "Failed");
     } finally { setBusy(null); }
   }

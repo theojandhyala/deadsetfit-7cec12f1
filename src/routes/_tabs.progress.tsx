@@ -545,6 +545,7 @@ function MeasurementsChart({ entries }: { entries: { date: string; chest: number
     { k: "legs", color: "#7aa3cc" },
   ];
   const all = entries.flatMap((e) => keys.map((k) => e[k.k])).filter((v) => v > 0);
+  if (all.length === 0) return <p className="text-xs text-[#8a8a8a] py-4 text-center">Enter measurements to see chart.</p>;
   const min = Math.min(...all), max = Math.max(...all);
   const range = max - min || 1;
   return (

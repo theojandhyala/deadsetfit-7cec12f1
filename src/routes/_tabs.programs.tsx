@@ -64,8 +64,8 @@ function ProgramsPage() {
 
       <ul className="space-y-2 mb-6">
         {state.programs.map((p) => {
-          const filled = DAYS.reduce((a, d) => a + p.days[d].items.length, 0);
-          const trainingDays = DAYS.filter((d) => p.days[d].label !== "REST").length;
+          const filled = DAYS.reduce((a, d) => a + (p.days[d]?.items ?? []).length, 0);
+          const trainingDays = DAYS.filter((d) => (p.days[d]?.label ?? "REST") !== "REST").length;
           const isActive = p.id === state.activeProgramId;
           return (
             <li key={p.id} className="bg-grit-card border" style={{ borderColor: isActive ? "#e63222" : "#262626" }}>

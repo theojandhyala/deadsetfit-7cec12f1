@@ -117,6 +117,7 @@ function LiveWorkoutPage() {
   }
 
   const current = session.exercises[activeIdx];
+  if (!current && session.exercises.length > 0) { setActiveIdx(0); return null; }
   const totalEx = session.exercises.length;
   const progress = Math.min(100, Math.round((totals.sets / Math.max(1, session.exercises.reduce((a, e) => a + e.targetSets, 0))) * 100));
 

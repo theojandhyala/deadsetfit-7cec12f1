@@ -56,7 +56,9 @@ export function StateSync() {
     }
 
     withTimeout(supabase.auth.getSession(), { data: { session: null }, error: null }).then(({ data: { session } }) => {
-      if (session?.user?.id) {
+      // Guard: if the onAuthStateChange INITIAL_SESSION event already fired and
+      // set activeUserId, don't call pull() a second time (prevents data-loss race).
+      if (session?.user?.id && !activeUserId) {
         activeUserId = session.user.id;
         pull(session.user.id);
       }

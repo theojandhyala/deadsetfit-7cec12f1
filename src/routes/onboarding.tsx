@@ -134,6 +134,9 @@ function Onboarding() {
         .then(() => navigate({ to: "/train", replace: true }))
         .catch((e: Error) => {
           toast.error(e.message || "Couldn't save profile");
+          // Ensure onboarded flag reaches the DB even if the full save failed,
+          // so the user isn't redirected back to onboarding on their next login.
+          save({ data: { onboarded: true } }).catch(() => {});
           navigate({ to: "/train", replace: true });
         });
     } else {

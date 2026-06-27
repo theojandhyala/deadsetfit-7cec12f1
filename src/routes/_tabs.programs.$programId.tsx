@@ -123,7 +123,7 @@ function BuilderPage() {
 
   // Local label state prevents cursor-jump from uppercase transformation on every keystroke
   // and prevents stale-closure day mixups when the user clicks another day mid-edit.
-  const [labelDraft, setLabelDraft] = useState(program?.days["MON"].label ?? "");
+  const [labelDraft, setLabelDraft] = useState(program?.days["MON"]?.label ?? "");
   useEffect(() => {
     if (program) setLabelDraft(program.days[day].label);
   }, [day, program?.days[day]?.label]);

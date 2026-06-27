@@ -46,6 +46,11 @@ export function AuthPage() {
           options: { emailRedirectTo: window.location.origin },
         });
         if (error) throw error;
+        if (!data.session) {
+          // Email confirmation is required — don't navigate until confirmed
+          toast.success("Check your email to confirm your account, then sign in.");
+          return;
+        }
         toast.success("Welcome to DEADSET");
         navigate({ to: "/onboarding", replace: true });
       } else {

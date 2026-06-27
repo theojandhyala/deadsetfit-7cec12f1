@@ -195,7 +195,7 @@ function TrainPage() {
           {DAY_KEYS.map((k) => {
             const active = k === selectedDay;
             const isToday = k === todayKey();
-            const lbl = (activeProgram ? activeProgram.days[k].label : schedule[k]?.label)?.split(" — ")[0] || "REST";
+            const lbl = (activeProgram ? activeProgram.days[k]?.label : schedule[k]?.label)?.split(" — ")[0] || "REST";
             return (
               <button key={k} onClick={() => setSelectedDay(k)}
                 className="flex-shrink-0 min-w-[68px] p-2 border text-center"

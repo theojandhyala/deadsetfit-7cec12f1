@@ -69,7 +69,7 @@ export function UsernameGate() {
           <span className="text-2xl font-display font-extrabold text-grit-dim pb-2">@</span>
           <input
             autoFocus
-            value={clean}
+            value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && submit()}
             className="bg-transparent outline-none text-2xl font-display font-extrabold text-grit flex-1 pb-2 min-w-0"
