@@ -528,12 +528,28 @@ function DietPage() {
             </p>
           </div>
         )}
-        {isPro && !state.mealPlan && !loading && (
+        {isPro && loading && (
+          <div className="mb-2">
+            <AsyncStatus loading loadingLabel="Generating your meal plan…" />
+          </div>
+        )}
+        {isPro && !state.mealPlan && !loading && !error && (
           <div className="bg-grit-card border border-grit p-5 text-sm text-[#8a8a8a]">
             Tap Generate to get AI meal suggestions tuned to your goal.
           </div>
         )}
-        {error && <p className="text-sm text-accent-red mb-2">{error}</p>}
+        {error && !loading && (
+          <div className="mb-2">
+            <AsyncStatus
+              error={error}
+              onRetry={() => {
+                setError(null);
+                void loadMeals();
+              }}
+              retryLabel="Regenerate"
+            />
+          </div>
+        )}
         {state.mealPlan &&
           (["breakfast", "lunch", "dinner", "snack"] as const).map((k) => {
             const m = state.mealPlan![k];
