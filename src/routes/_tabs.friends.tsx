@@ -513,7 +513,7 @@ function Feed({ userId }: { userId: string }) {
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => setComposerOpen(true)}
+              onClick={() => setComposing(true)}
               className="bg-accent-red text-white px-5 py-2.5 text-xs font-bold uppercase tracking-widest hover:bg-accent-red/90 rounded-2xl"
             >
               Post something
