@@ -19,6 +19,7 @@ import { generateMeals, swapMeal } from "@/lib/ai.functions";
 import { analyzeFoodPhoto, lookupBarcode, weeklyNutritionReport } from "@/lib/diet.functions";
 import type { Meal, MealPlan, FoodLogItem } from "@/lib/types";
 import { usePro } from "@/hooks/usePro";
+import { AsyncStatus } from "@/components/AsyncStatus";
 
 export const Route = createFileRoute("/_tabs/diet")({
   head: () => ({ meta: [{ title: "DEADSET — Diet" }] }),
@@ -322,14 +323,37 @@ function DietPage() {
             <span className="label-cap">Manual</span>
           </button>
         </div>
+        {analyzing && (
+          <div className="mt-2">
+            <AsyncStatus loading loadingLabel="Analyzing photo…" />
+          </div>
+        )}
+        {barcodeLoad && (
+          <div className="mt-2">
+            <AsyncStatus loading loadingLabel="Looking up barcode…" />
+          </div>
+        )}
         {error && (
-          error.includes("Pro") ? (
-            <p className="text-xs text-accent-red mt-2">
-              <Link to="/upgrade" className="underline">{error}</Link>
-            </p>
-          ) : (
-            <p className="text-xs text-accent-red mt-2">{error}</p>
-          )
+          <div className="mt-2">
+            {error.includes("Pro") ? (
+              <p className="text-xs text-accent-red">
+                <Link to="/upgrade" className="underline">{error}</Link>
+              </p>
+            ) : (
+              <AsyncStatus
+                error={error}
+                onRetry={() => {
+                  setError(null);
+                  if (analyzing || barcodeLoad) return;
+                  // Retry whichever action last triggered — barcode has an
+                  // input field, so re-open the sheet; otherwise re-open the
+                  // photo picker.
+                  if (barcodeVal) void doBarcode();
+                  else fileRef.current?.click();
+                }}
+              />
+            )}
+          </div>
         )}
       </div>
 
