@@ -27,6 +27,7 @@ function ProgressPage() {
   const [legs, setLegs] = useState("");
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
+  const lastScanFileRef = useRef<File | null>(null);
   const [viewScan, setViewScan] = useState<PhysiqueScan | null>(null);
   const analyze = useServerFn(analyzePhysique);
 
@@ -48,6 +49,7 @@ function ProgressPage() {
   }
 
   async function runScan(file: File) {
+    lastScanFileRef.current = file;
     setScanError(null);
     const dataUrl = await new Promise<string>((res, rej) => {
       const r = new FileReader();
@@ -74,11 +76,17 @@ function ProgressPage() {
       };
       set((s) => ({ ...s, physiqueScans: [...s.physiqueScans, scan] }));
       setViewScan(scan);
+      lastScanFileRef.current = null;
     } catch (e) {
       setScanError(e instanceof Error ? e.message : "Scan failed");
     } finally {
       setScanning(false);
     }
+  }
+
+  function retryScan() {
+    if (lastScanFileRef.current) void runScan(lastScanFileRef.current);
+    else scanRef.current?.click();
   }
 
   function togglePhoto(id: string) {
