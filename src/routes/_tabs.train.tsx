@@ -23,6 +23,8 @@ import { useAppState } from "@/lib/storage";
 import { EXERCISES, getExercise } from "@/lib/exercises";
 import { calculateGritScore, calculateStreak, defaultSchedule, isoDay, todayKey } from "@/lib/calc";
 import { generateSchedule } from "@/lib/ai.functions";
+import { AsyncStatus } from "@/components/AsyncStatus";
+import { toast } from "sonner";
 import { ProBanner } from "@/components/ProBanner";
 import { InsightsWidget } from "@/components/InsightsWidget";
 import { AIToolbox } from "@/components/AIToolbox";
@@ -167,8 +169,13 @@ function TrainPage() {
         cleaned[k] = { label: d?.label || "REST", exerciseIds: ids };
       }
       set((s) => ({ ...s, schedule: hasAny ? cleaned : buildFromDefault() }));
-    } catch {
-      // Silent fallback so the user never sees an error — build a solid default split.
+    } catch (e) {
+      // Non-blocking: we still build a solid default split so the user is
+      // never stranded — but surface a toast so they know AI was unavailable
+      // and can retry from the generator button.
+      const msg = e instanceof Error ? e.message : "AI generator unavailable";
+      setGenError(msg);
+      toast.error(`${msg} — using a default split`);
       set((s) => ({ ...s, schedule: buildFromDefault() }));
     } finally {
       setGenLoading(false);
@@ -314,7 +321,16 @@ function TrainPage() {
             </div>
           );
         })()}
-        {genError && <p className="text-xs mt-2" style={{ color: "#E10600" }}>{genError}</p>}
+        {genLoading && (
+          <div className="mt-2">
+            <AsyncStatus loading loadingLabel="Building your schedule…" />
+          </div>
+        )}
+        {genError && !genLoading && (
+          <div className="mt-2">
+            <AsyncStatus error={genError} onRetry={handleGenerate} retryLabel="Retry AI generator" />
+          </div>
+        )}
       </div>
 
       <ProBanner />
