@@ -9,6 +9,7 @@ import { analyzePhysique } from "@/lib/physique.functions";
 import type { PhysiqueScan } from "@/lib/types";
 import { QuickLogFAB } from "@/components/QuickLogFAB";
 import { PRList, groupForMuscle } from "@/components/PRList";
+import { AsyncStatus } from "@/components/AsyncStatus";
 
 export const Route = createFileRoute("/_tabs/progress")({
   head: () => ({ meta: [{ title: "DEADSET — Progress" }] }),
@@ -364,7 +365,11 @@ function ProgressPage() {
           )}
           {scanning ? "Analyzing..." : latestScan ? "New Scan" : "Take Physique Scan"}
         </button>
-        {scanError && <p className="text-sm text-[#E10600] mt-2">{scanError}</p>}
+        {scanError && (
+          <div className="mt-2">
+            <AsyncStatus error={scanError} onRetry={retryScan} retryLabel="Retry scan" />
+          </div>
+        )}
         {state.physiqueScans.length > 1 && (
           <div className="grid grid-cols-4 gap-1 mt-3">
             {state.physiqueScans
