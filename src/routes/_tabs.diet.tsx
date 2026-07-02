@@ -19,6 +19,7 @@ import { generateMeals, swapMeal } from "@/lib/ai.functions";
 import { analyzeFoodPhoto, lookupBarcode, weeklyNutritionReport } from "@/lib/diet.functions";
 import type { Meal, MealPlan, FoodLogItem } from "@/lib/types";
 import { usePro } from "@/hooks/usePro";
+import { AsyncStatus } from "@/components/AsyncStatus";
 
 export const Route = createFileRoute("/_tabs/diet")({
   head: () => ({ meta: [{ title: "DEADSET — Diet" }] }),
@@ -322,14 +323,37 @@ function DietPage() {
             <span className="label-cap">Manual</span>
           </button>
         </div>
+        {analyzing && (
+          <div className="mt-2">
+            <AsyncStatus loading loadingLabel="Analyzing photo…" />
+          </div>
+        )}
+        {barcodeLoad && (
+          <div className="mt-2">
+            <AsyncStatus loading loadingLabel="Looking up barcode…" />
+          </div>
+        )}
         {error && (
-          error.includes("Pro") ? (
-            <p className="text-xs text-accent-red mt-2">
-              <Link to="/upgrade" className="underline">{error}</Link>
-            </p>
-          ) : (
-            <p className="text-xs text-accent-red mt-2">{error}</p>
-          )
+          <div className="mt-2">
+            {error.includes("Pro") ? (
+              <p className="text-xs text-accent-red">
+                <Link to="/upgrade" className="underline">{error}</Link>
+              </p>
+            ) : (
+              <AsyncStatus
+                error={error}
+                onRetry={() => {
+                  setError(null);
+                  if (analyzing || barcodeLoad) return;
+                  // Retry whichever action last triggered — barcode has an
+                  // input field, so re-open the sheet; otherwise re-open the
+                  // photo picker.
+                  if (barcodeVal) void doBarcode();
+                  else fileRef.current?.click();
+                }}
+              />
+            )}
+          </div>
         )}
       </div>
 
@@ -504,12 +528,28 @@ function DietPage() {
             </p>
           </div>
         )}
-        {isPro && !state.mealPlan && !loading && (
+        {isPro && loading && (
+          <div className="mb-2">
+            <AsyncStatus loading loadingLabel="Generating your meal plan…" />
+          </div>
+        )}
+        {isPro && !state.mealPlan && !loading && !error && (
           <div className="bg-grit-card border border-grit p-5 text-sm text-[#8a8a8a]">
             Tap Generate to get AI meal suggestions tuned to your goal.
           </div>
         )}
-        {error && <p className="text-sm text-accent-red mb-2">{error}</p>}
+        {error && !loading && (
+          <div className="mb-2">
+            <AsyncStatus
+              error={error}
+              onRetry={() => {
+                setError(null);
+                void loadMeals();
+              }}
+              retryLabel="Regenerate"
+            />
+          </div>
+        )}
         {state.mealPlan &&
           (["breakfast", "lunch", "dinner", "snack"] as const).map((k) => {
             const m = state.mealPlan![k];

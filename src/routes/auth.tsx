@@ -133,7 +133,7 @@ export function AuthPage() {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center px-5 py-10"
+      className="min-h-screen flex flex-col items-center justify-center px-5 py-10 overflow-x-hidden"
       style={{ background: "#0A0B0D", paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       {/* Ambient glow */}

@@ -955,10 +955,16 @@ function Friends() {
   useEffect(() => {
     _suggest()
       .then(setSuggested)
-      .catch(() => {});
+      .catch((e) => {
+        setSuggested([]);
+        toast.error(e instanceof Error ? e.message : "Couldn't load suggested athletes");
+      });
     _stats()
       .then(setStats)
-      .catch(() => {});
+      .catch(() => {
+        // Non-critical: header stats fall back to defaults.
+        setStats({ following: 0, followers: 0 });
+      });
     _getFollowing()
       .then(setFollowing)
       .catch(() => setFollowing([]));
@@ -968,10 +974,16 @@ function Friends() {
         setCityInput(l.city ?? "");
         setCountryInput(l.country ?? "");
       })
-      .catch(() => {});
+      .catch(() => {
+        // Non-critical: user can still set location manually.
+        setMyLoc({ city: null, country: null });
+      });
     _nearby()
       .then(setNearby)
-      .catch(() => {});
+      .catch(() => {
+        // Non-critical: nearby list just stays empty.
+        setNearby({ items: [], meCity: null, meCountry: null } as unknown as NearbyData);
+      });
   }, []);
 
   useEffect(() => {
