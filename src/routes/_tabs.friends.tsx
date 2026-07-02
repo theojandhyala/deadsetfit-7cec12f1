@@ -499,8 +499,26 @@ function Feed({ userId }: { userId: string }) {
       )}
 
       {posts.length === 0 && (
-        <div className="rounded-2xl p-6 text-center text-sm text-[#8a8a8a]">
-          Feed is empty. Be the first to post.
+        <div className="bg-grit-card border border-grit p-8 flex flex-col items-center text-center gap-4 rounded-2xl">
+          <div className="p-4 border border-grit text-grit-dim rounded-2xl">
+            <Users size={32} />
+          </div>
+          <div>
+            <p className="display text-lg font-extrabold uppercase text-grit tracking-wide">
+              Feed is quiet
+            </p>
+            <p className="text-xs text-grit-dim mt-1 uppercase tracking-wider">
+              Follow athletes or drop the first post
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setComposerOpen(true)}
+              className="bg-accent-red text-white px-5 py-2.5 text-xs font-bold uppercase tracking-widest hover:bg-accent-red/90 rounded-2xl"
+            >
+              Post something
+            </button>
+          </div>
         </div>
       )}
 
