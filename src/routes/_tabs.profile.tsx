@@ -91,7 +91,10 @@ function ProfilePage() {
   useEffect(() => {
     if (!p) return;
     const stats = buildPublicStats(state);
-    persist({ data: { public_stats: stats } }).catch(() => {});
+    persist({ data: { public_stats: stats } }).catch((e) => {
+      // Background sync — log for debuggability, no toast (would spam on every change).
+      console.warn("[profile] public_stats sync failed", e);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     state.manualPRs && JSON.stringify(state.manualPRs),
@@ -218,7 +221,9 @@ function ProfilePage() {
     r.onload = () => {
       const url = String(r.result);
       set((s) => (s.profile ? { ...s, profile: { ...s.profile, avatarDataUrl: url } } : s));
-      persist({ data: { avatar_url: url } }).catch(() => {});
+      persist({ data: { avatar_url: url } }).catch((e) => {
+        toast.error(e instanceof Error ? e.message : "Couldn't save photo");
+      });
     };
     r.readAsDataURL(file);
   }
@@ -252,7 +257,9 @@ function ProfilePage() {
     try {
       // Push any unsaved local state to the server BEFORE auth is dropped.
       if (p) {
-        await persist({ data: { public_stats: buildPublicStats(state) } }).catch(() => {});
+        await persist({ data: { public_stats: buildPublicStats(state) } }).catch((e) => {
+          console.warn("[profile] logout stats flush failed", e);
+        });
       }
       await flushRemoteState();
     } finally {
