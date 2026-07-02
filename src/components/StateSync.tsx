@@ -111,20 +111,34 @@ export function StateSync() {
       }
     });
 
-    // Proactively refresh session when the user returns to the app
+    // Proactively refresh session when the user returns to the app.
+    // Uses exponential backoff on failure so a flaky network can't leave
+    // the user stranded with an expired token.
     const refresh = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        recordSessionSnapshot("state-sync:refresh-check", session ?? null);
-        if (session) {
+      const attempts = [0, 800, 2400];
+      for (let i = 0; i < attempts.length; i++) {
+        if (attempts[i]) await new Promise((r) => setTimeout(r, attempts[i]));
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          recordSessionSnapshot("state-sync:refresh-check", session ?? null);
+          if (!session) return;
           const expiresIn = (session.expires_at ?? 0) - Math.floor(Date.now() / 1000);
-          if (expiresIn < 300) {
-            await supabase.auth.refreshSession();
-            logSessionEvent("state-sync:session-refreshed", { expiresIn });
+          if (expiresIn >= 300) return;
+          const { error } = await supabase.auth.refreshSession();
+          if (!error) {
+            logSessionEvent("state-sync:session-refreshed", { expiresIn, attempt: i });
+            return;
           }
+          logSessionEvent("state-sync:refresh-error", {
+            attempt: i,
+            message: error.message,
+          });
+        } catch (e) {
+          logSessionEvent("state-sync:refresh-throw", {
+            attempt: i,
+            message: e instanceof Error ? e.message : "unknown",
+          });
         }
-      } catch {
-        /* ignore */
       }
     };
 

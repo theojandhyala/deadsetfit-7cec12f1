@@ -26,6 +26,28 @@ const config: CapacitorConfig = {
   ios: {
     contentInset: "always",
     backgroundColor: "#0a0a0a",
+    // Info.plist usage description overrides. Copy these into
+    // ios/App/App/Info.plist after `npx cap add ios` if Capacitor doesn't merge them.
+    // Apple requires clear, specific reasons for every sensitive permission.
+    infoPlist: {
+      NSCameraUsageDescription:
+        "DEADSET uses the camera to scan meals for macro tracking and to capture physique photos for AI-guided coaching.",
+      NSPhotoLibraryUsageDescription:
+        "DEADSET reads photos so you can import progress pictures and meals from your library.",
+      NSPhotoLibraryAddUsageDescription:
+        "DEADSET saves progress pictures, PR share cards, and workout summaries to your photo library.",
+      NSMotionUsageDescription:
+        "DEADSET reads motion data to track steps, runs, and workout intensity for your training log.",
+      NSLocationWhenInUseUsageDescription:
+        "DEADSET uses your location during runs to record distance, pace, and route on the map.",
+      NSMicrophoneUsageDescription:
+        "DEADSET uses the microphone only when you record voice notes with the AI coach.",
+      NSHealthShareUsageDescription:
+        "DEADSET reads workout, heart rate, and body metrics from Apple Health to enrich your training analytics.",
+      NSHealthUpdateUsageDescription:
+        "DEADSET writes completed workouts and body measurements back to Apple Health so your data stays in sync.",
+      ITSAppUsesNonExemptEncryption: false,
+    },
   },
   android: {
     backgroundColor: "#0a0a0a",
