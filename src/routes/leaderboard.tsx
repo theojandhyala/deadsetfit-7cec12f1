@@ -55,6 +55,7 @@ function LeaderboardPage() {
   const [cat, setCat] = useState<LeaderboardCategory>("OVERALL");
   const [rows, setRows] = useState<LeaderboardRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [meId, setMeId] = useState<string | null>(null);
   const prevRanks = useRef<Record<string, number>>(loadRanks());
 
@@ -62,8 +63,9 @@ function LeaderboardPage() {
     supabase.auth.getUser().then(({ data }) => setMeId(data.user?.id ?? null));
   }, []);
 
-  useEffect(() => {
+  const loadBoard = () => {
     setLoading(true);
+    setError(null);
     fetchBoard({ data: { category: cat } })
       .then(({ rows: r }) => {
         setRows(r);
@@ -71,9 +73,17 @@ function LeaderboardPage() {
         r.forEach((row, i) => { updated[`${cat}:${row.id}`] = i + 1; });
         saveRanks(updated);
       })
-      .catch(() => setRows([]))
+      .catch((e) => {
+        setRows([]);
+        setError(e instanceof Error ? e.message : "Couldn't load leaderboard");
+      })
       .finally(() => setLoading(false));
-  }, [cat, fetchBoard]);
+  };
+
+  useEffect(() => {
+    loadBoard();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cat]);
 
   const myRank = meId ? rows.findIndex((r) => r.id === meId) + 1 : 0;
 
@@ -125,9 +135,26 @@ function LeaderboardPage() {
 
       {loading && <p className="text-center py-12 text-grit-dim text-sm">Loading…</p>}
 
-      {!loading && rows.length === 0 && (
-        <div className="mx-3 p-8 text-center text-sm text-grit-dim" style={{ border: "1px solid #262626" }}>
-          No ranked athletes yet. Log lifts to appear here.
+      {!loading && !error && rows.length === 0 && (
+        <div className="mx-3 p-8 flex flex-col items-center text-center gap-4 rounded-2xl" style={{ border: "1px solid #262626", background: "#141414" }}>
+          <div className="p-4 border border-grit rounded-2xl text-grit-dim">
+            <Trophy size={28} />
+          </div>
+          <div>
+            <p className="display text-lg font-extrabold uppercase text-grit tracking-wide">No ranked athletes</p>
+            <p className="text-xs text-grit-dim mt-1 uppercase tracking-wider">Log a lift to appear on the board</p>
+          </div>
+          <Link to="/train" className="bg-accent-red text-white px-5 py-2.5 text-xs font-bold uppercase tracking-widest rounded-2xl">
+            Log a lift
+          </Link>
+        </div>
+      )}
+
+      {!loading && error && (
+        <div className="mx-3 p-6 flex flex-col items-center text-center gap-3 rounded-2xl" style={{ border: "1px solid rgba(225,6,0,0.4)", background: "rgba(225,6,0,0.06)" }}>
+          <p className="label-cap text-xs text-accent-red">Couldn't load leaderboard</p>
+          <p className="text-[11px] text-grit-dim">{error}</p>
+          <button onClick={loadBoard} className="btn-grit px-4 py-2 text-xs">Retry</button>
         </div>
       )}
 
