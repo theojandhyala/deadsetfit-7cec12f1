@@ -14,7 +14,7 @@ export const analyzeFoodPhoto = createServerFn({ method: "POST" })
     const { chatVisionJSON } = await import("./ai-gateway.server");
     const sys = `You are a nutritionist. Identify the meal in the photo and estimate macros for the visible portion. Reply with strict JSON only:
 {"name":"...","calories":0,"protein":0,"carbs":0,"fats":0,"confidence":"low|medium|high","notes":"..."}`;
-    return await chatVisionJSON<{
+    const raw = await chatVisionJSON<{
       name: string;
       calories: number;
       protein: number;
@@ -27,6 +27,21 @@ export const analyzeFoodPhoto = createServerFn({ method: "POST" })
       user: "Identify this food and estimate nutrition for the visible portion.",
       imageDataUrl: data.imageDataUrl,
     });
+    // Sanitize model output: macros must be finite non-negative numbers even
+    // if the model replies with strings like "350 kcal" or omits fields.
+    const num = (v: unknown, max: number) => {
+      const n = typeof v === "string" ? parseFloat(v) : Number(v);
+      return Number.isFinite(n) ? Math.min(Math.max(0, Math.round(n)), max) : 0;
+    };
+    return {
+      name: typeof raw?.name === "string" && raw.name.trim() ? raw.name.slice(0, 120) : "Unknown meal",
+      calories: num(raw?.calories, 5000),
+      protein: num(raw?.protein, 500),
+      carbs: num(raw?.carbs, 1000),
+      fats: num(raw?.fats, 500),
+      confidence: ["low", "medium", "high"].includes(raw?.confidence) ? raw.confidence : "low",
+      notes: typeof raw?.notes === "string" ? raw.notes.slice(0, 300) : "",
+    };
   });
 
 // === Barcode lookup via Open Food Facts (no API key) ===

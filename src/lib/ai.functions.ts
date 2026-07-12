@@ -3,6 +3,15 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertPro } from "@/lib/require-pro.server";
 
+const VALID_EXERCISE_IDS = [
+  "bench-press","incline-db-press","cable-fly","dips","push-ups",
+  "deadlift","pull-ups","lat-pulldown","seated-row","face-pull",
+  "squat","rdl","leg-press","lunges","leg-curl",
+  "ohp","lateral-raise","front-raise","rear-delt-fly",
+  "barbell-curl","hammer-curl","skull-crushers","tricep-pushdown",
+  "plank","hanging-leg-raise","cable-crunch","ab-wheel",
+];
+
 const ScheduleInput = z.object({
   goal: z.string(),
   experience: z.string(),
@@ -23,10 +32,25 @@ Use only these exerciseIds: bench-press, incline-db-press, cable-fly, dips, push
 Labels must be uppercase, e.g. "PUSH — CHEST / SHOULDERS / TRICEPS", "PULL — BACK / BICEPS", "LEGS — QUADS / HAMS / GLUTES", "REST".
 Include exactly ${data.daysPerWeek} training days and the rest as REST with empty exerciseIds.`;
     const user = `Goal: ${data.goal}. Experience: ${data.experience}. Days/week: ${data.daysPerWeek}. Equipment: ${data.equipment}. Build the split.`;
-    return await chatJSON<{ days: Record<string, { label: string; exerciseIds: string[] }> }>({
+    const raw = await chatJSON<{ days: Record<string, { label: string; exerciseIds: string[] }> }>({
       system: sys,
       user,
     });
+    // Sanitize the model output: keep only known exercise ids and guarantee
+    // all 7 day keys exist so downstream UI never sees a malformed schedule.
+    const DAY_KEYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+    const days: Record<string, { label: string; exerciseIds: string[] }> = {};
+    for (const k of DAY_KEYS) {
+      const d = raw?.days?.[k];
+      const ids = Array.isArray(d?.exerciseIds)
+        ? d.exerciseIds.filter((id) => VALID_EXERCISE_IDS.includes(id))
+        : [];
+      days[k] = {
+        label: typeof d?.label === "string" && d.label.trim() ? d.label : "REST",
+        exerciseIds: ids,
+      };
+    }
+    return { days };
   });
 
 const MealsInput = z.object({
