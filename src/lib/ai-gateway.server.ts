@@ -1,20 +1,28 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { createAnthropic } from "@ai-sdk/anthropic";
 import { generateText } from "ai";
 
-const MODEL = "gemini-2.0-flash";
+const GEMINI_MODEL = "gemini-2.0-flash";
+const ANTHROPIC_MODEL = "claude-opus-4-8";
 
-function gateway() {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("Missing GEMINI_API_KEY — add it to Cloudflare Pages environment variables.");
-  return createOpenAICompatible({
-    name: "gemini",
-    baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
-    apiKey,
-  });
-}
-
+// Use whichever provider key is configured in the deployment environment.
+// Gemini takes precedence if both are present.
 function model() {
-  return gateway()(MODEL);
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (geminiKey) {
+    return createOpenAICompatible({
+      name: "gemini",
+      baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+      apiKey: geminiKey,
+    })(GEMINI_MODEL);
+  }
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  if (anthropicKey) {
+    return createAnthropic({ apiKey: anthropicKey })(ANTHROPIC_MODEL);
+  }
+  throw new Error(
+    "Missing AI key — set GEMINI_API_KEY or ANTHROPIC_API_KEY in Cloudflare Pages environment variables.",
+  );
 }
 
 function extractJSON<T>(text: string): T {

@@ -81,6 +81,8 @@ function handleHealth(env) {
     supabaseServiceKey: !!env.SUPABASE_SERVICE_ROLE_KEY,
     supabaseAnonKey: !!env.VITE_SUPABASE_PUBLISHABLE_KEY,
     geminiKey: !!env.GEMINI_API_KEY,
+    anthropicKey: !!env.ANTHROPIC_API_KEY,
+    aiReady: !!(env.GEMINI_API_KEY || env.ANTHROPIC_API_KEY),
     stripeSandboxKey: !!env.STRIPE_SANDBOX_API_KEY,
     stripeLiveKey: !!env.STRIPE_LIVE_API_KEY,
     webhookSandboxSecret: !!env.PAYMENTS_SANDBOX_WEBHOOK_SECRET,
