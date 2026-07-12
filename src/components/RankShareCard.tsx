@@ -106,12 +106,7 @@ export function RankShareCard({
     ctx.fillStyle = "#1a1a1a";
     ctx.fillRect(avatarX - avatarR, avatarY - avatarR, avatarR * 2, avatarR * 2);
 
-    if (avatarDataUrl) {
-      const img = new Image();
-      img.src = avatarDataUrl;
-      // Draw synchronously if cached
-      try { ctx.drawImage(img, avatarX - avatarR, avatarY - avatarR, avatarR * 2, avatarR * 2); } catch { /* */ }
-    } else {
+    function drawAvatarPlaceholder() {
       ctx.fillStyle = "#222";
       ctx.fillRect(avatarX - avatarR, avatarY - avatarR, avatarR * 2, avatarR * 2);
       ctx.fillStyle = "#555";
@@ -120,8 +115,30 @@ export function RankShareCard({
       ctx.fillText((displayName || "A")[0].toUpperCase(), avatarX, avatarY + 60);
       ctx.textAlign = "left";
     }
-    ctx.restore();
 
+    if (avatarDataUrl) {
+      const img = new Image();
+      img.src = avatarDataUrl;
+      img
+        .decode()
+        .then(() => {
+          ctx.drawImage(img, avatarX - avatarR, avatarY - avatarR, avatarR * 2, avatarR * 2);
+        })
+        .catch(() => {
+          // Fall back to the placeholder circle if the image fails to load.
+          drawAvatarPlaceholder();
+        })
+        .then(() => {
+          ctx.restore();
+          finishRender();
+        });
+      return;
+    }
+    drawAvatarPlaceholder();
+    ctx.restore();
+    finishRender();
+
+    function finishRender() {
     // ── Rank emblem (below avatar) ───────────────────────────────
     const embX = W / 2, embY = 700;
     const embR = 110;
@@ -266,7 +283,8 @@ export function RankShareCard({
     ctx.fillText("DEADSETFIT.ORG  ·  #DEADSET  ·  #GYMTOK", W / 2, H - 44);
     ctx.textAlign = "left";
 
-    setDataUrl(c.toDataURL("image/png"));
+    setDataUrl(c!.toDataURL("image/png"));
+    }
   }, [gritPoints, displayName, username, avatarDataUrl, streak, prs, sessions, overall]);
 
   async function shareNow() {

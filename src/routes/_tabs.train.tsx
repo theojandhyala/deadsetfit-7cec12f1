@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import {
   Loader2,
@@ -28,7 +28,7 @@ import { toast } from "sonner";
 import { ProBanner } from "@/components/ProBanner";
 import { InsightsWidget } from "@/components/InsightsWidget";
 import { AIToolbox } from "@/components/AIToolbox";
-import { usePaywall } from "@/hooks/usePro";
+import { usePaywall, usePro } from "@/hooks/usePro";
 import { Camera } from "lucide-react";
 import type { DayKey, Schedule, Program } from "@/lib/types";
 
@@ -94,6 +94,8 @@ export const Route = createFileRoute("/_tabs/train")({
 function TrainPage() {
   const [state, set] = useAppState();
   const { open: openPaywall } = usePaywall();
+  const { isPro } = usePro();
+  const navigate = useNavigate();
   const [selectedDay, setSelectedDay] = useState<DayKey>(todayKey());
   const [videoState, setVideoState] = useState<{
     videoId?: string;
@@ -361,10 +363,16 @@ function TrainPage() {
       {/* Physique Scan — PRO */}
       <div className="px-5 mb-5">
         <button
-          onClick={() => openPaywall({
-            feature: "Physique Scan",
-            description: "Take photos from 3 angles and our AI will identify your muscle imbalances and weaknesses — then build a programme targeting them.",
-          })}
+          onClick={() => {
+            if (isPro) {
+              navigate({ to: "/progress" });
+            } else {
+              openPaywall({
+                feature: "Physique Scan",
+                description: "Take photos from 3 angles and our AI will identify your muscle imbalances and weaknesses — then build a programme targeting them.",
+              });
+            }
+          }}
           className="w-full flex items-center gap-4 p-4 press text-left"
           style={{ background: "linear-gradient(135deg,#1a0606 0%,#141414 100%)", border: "1.5px solid rgba(225,6,0,0.4)", borderRadius: 12 }}
         >
@@ -418,7 +426,7 @@ function TrainPage() {
             const active = k === selectedDay;
             const isToday = k === todayKey();
             const lbl =
-              (activeProgram ? activeProgram.days[k].label : schedule[k]?.label)?.split(" — ")[0] ||
+              (activeProgram ? activeProgram.days[k]?.label : schedule[k]?.label)?.split(" — ")[0] ||
               "REST";
             const isRest = lbl === "REST";
             return (

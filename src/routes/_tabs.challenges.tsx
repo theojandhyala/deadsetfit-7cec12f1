@@ -141,7 +141,7 @@ function ChallengesPage() {
             <div className="flex items-center gap-1.5">
               <Zap size={12} style={{ color: "#E10600" }} />
               <span className="text-xs font-bold text-white">
-                {CHALLENGES.filter(c => { const b = bestRecord(state.challengeRecords, c.id); return b; }).reduce((s, c) => s + c.xp, 0)} XP earned
+                {CHALLENGES.filter(c => { const b = bestRecord(state.challengeRecords, c.id); return b && b.value >= c.target; }).reduce((s, c) => s + c.xp, 0)} XP earned
               </span>
             </div>
           </div>

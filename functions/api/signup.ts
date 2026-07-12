@@ -46,7 +46,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     });
 
     const session = await tokenRes.json();
-    return Response.json(session, { status: tokenRes.ok ? 200 : 400 });
+    if (!tokenRes.ok) {
+      // Account was created but auto sign-in failed — tell the user the
+      // truth instead of a generic failure that makes them retry signup.
+      return Response.json(
+        { error: "Account created — please sign in with your email and password" },
+        { status: 400 }
+      );
+    }
+    return Response.json(session, { status: 200 });
   } catch (err) {
     return Response.json({ error: "Sign up failed" }, { status: 500 });
   }

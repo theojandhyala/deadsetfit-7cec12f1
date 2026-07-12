@@ -217,7 +217,7 @@ const GENERIC_MULTIPLIERS: Record<StrengthLevel, number> = {
   Advanced: 1.0,
   Elite: 1.25,
 };
-const BIG4_IDS = ["bench-press", "squat", "deadlift", "overhead-press"] as const;
+const BIG4_IDS = ["bench-press", "squat", "deadlift", "ohp"] as const;
 type Big4Id = (typeof BIG4_IDS)[number];
 
 function getStandardKg(exerciseId: string, level: StrengthLevel, bw: number): number {

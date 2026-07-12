@@ -16,9 +16,9 @@ import {
   Copy,
   Check,
 } from "lucide-react";
-import { useAppState, flushRemoteState } from "@/lib/storage";
+import { useAppState, flushRemoteState, clearLocalState } from "@/lib/storage";
 import { supabase } from "@/integrations/supabase/client";
-import { calculateStreak, calculateGritScore, gritBadge, badgeColor } from "@/lib/calc";
+import { calculateStreak, calculateGritScore, gritBadge, badgeColor, isoDay } from "@/lib/calc";
 import { getRank, rankProgress, pointsToNextTier } from "@/lib/rank";
 import { saveProfile } from "@/lib/profile.functions";
 import { deleteMyAccount } from "@/lib/account.functions";
@@ -244,7 +244,7 @@ function ProfilePage() {
           [def.id]: {
             value,
             reps: def.kind === "1RM" ? reps || 1 : undefined,
-            date: new Date().toISOString().slice(0, 10),
+            date: isoDay(),
           },
         },
       }));
@@ -266,6 +266,8 @@ function ProfilePage() {
       toast.dismiss("logout");
     }
     await supabase.auth.signOut();
+    // Clear local app state so the next visitor on this device doesn't see this user's data.
+    clearLocalState();
     toast.success("Signed out — your data is saved");
     navigate({ to: "/auth", replace: true });
   }
@@ -505,7 +507,7 @@ function ProfilePage() {
       </section>
 
       {/* Share Profile */}
-      {p.username && <ShareProfileCard username={p.username} />}
+      {session && <ShareProfileCard userId={session.userId} />}
 
       {/* Rank share card modal */}
       {showRankCard && (
@@ -538,7 +540,7 @@ function ProfilePage() {
           className="overflow-hidden"
           style={{ background: "#141414", border: "1.5px solid #262626", borderRadius: 14 }}
         >
-          {PR_CATALOG.map((def, i) => {
+          {PR_CATALOG.filter((def) => ["bench-press", "squat", "deadlift"].includes(def.id)).map((def, i) => {
             const pr = state.manualPRs?.[def.id];
             return (
               <div key={def.id} style={{ borderTop: i > 0 ? "1px solid #262626" : "none" }}>
@@ -846,8 +848,8 @@ function Select({
   );
 }
 
-function ShareProfileCard({ username }: { username: string }) {
-  const profileUrl = `https://deadsetfit.org/u/${username}`;
+function ShareProfileCard({ userId }: { userId: string }) {
+  const profileUrl = `https://deadsetfit.org/athlete/${userId}`;
   const [copied, setCopied] = useState(false);
 
   async function copyLink() {

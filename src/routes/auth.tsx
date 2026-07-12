@@ -29,11 +29,15 @@ export function AuthPage() {
     }
   }, []);
 
-  // Auto-redirect if already signed in (check once on mount only)
+  // Auto-redirect if already signed in (check once on mount only).
+  // Check the URL hash directly (not `mode`) — the recovery link creates a
+  // session before React state updates, and the stale closure would
+  // otherwise yank the user to /train before they can set a new password.
   useEffect(() => {
     navigated.current = false;
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session && !navigated.current && mode !== "reset") {
+      const isRecovery = window.location.hash.includes("type=recovery");
+      if (session && !navigated.current && !isRecovery) {
         navigated.current = true;
         navigate({ to: "/train", replace: true });
       }

@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Check, Zap, Camera, MessageSquare, Scan, Trophy } from "lucide-react";
 import { GritLogo } from "@/components/GritLogo";
 import { getState, setLocalStateOwner, setState } from "@/lib/storage";
-import { defaultSchedule } from "@/lib/calc";
+import { defaultSchedule, isoDay } from "@/lib/calc";
 import { getExercise } from "@/lib/exercises";
 import { getMyProfile, saveProfile } from "@/lib/profile.functions";
 import { profileFromAccount, profileQuestionsComplete, withTimeout } from "@/lib/account-restore";
@@ -617,7 +617,7 @@ function PRStep({ onContinue }: { onContinue: () => void }) {
   const [vals, setVals] = useState<Record<string, string>>({});
 
   function commit() {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = isoDay();
     const manualPRs: Record<string, { value: number; reps?: number; date: string }> = {};
     for (const def of PR_CATALOG) {
       const n = Number(vals[def.id]);
@@ -639,7 +639,7 @@ function PRStep({ onContinue }: { onContinue: () => void }) {
         Drop your best lifts. Powers your athlete card. Leave blank to skip.
       </p>
       <div className="bg-grit-card border border-grit divide-y divide-[#262626] mb-6 overflow-y-auto" style={{ maxHeight: "55vh" }}>
-        {PR_CATALOG.map((def) => {
+        {PR_CATALOG.filter((def) => ["bench-press", "squat", "deadlift"].includes(def.id)).map((def) => {
           const unit = def.kind === "1RM" ? "kg" : def.kind === "REPS" ? "reps" : "sec";
           return (
             <div key={def.id} className="flex items-center justify-between px-4 py-2.5 gap-3">

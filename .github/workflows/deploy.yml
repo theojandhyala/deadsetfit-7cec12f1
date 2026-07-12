@@ -35,9 +35,14 @@ jobs:
         run: |
           npx esbuild worker-entry.js \
             --bundle \
-            --platform=browser \
+            --platform=neutral \
+            --main-fields=module,main \
+            --conditions=workerd,worker,browser \
+            --external:node:* \
             --target=esnext \
             --format=esm \
+            --minify \
+            --log-limit=0 \
             --outfile=dist/client/_worker.js
 
       - name: Create Pages project if needed

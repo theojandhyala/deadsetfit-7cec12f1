@@ -982,7 +982,7 @@ function Friends() {
       .then(setNearby)
       .catch(() => {
         // Non-critical: nearby list just stays empty.
-        setNearby({ items: [], meCity: null, meCountry: null } as unknown as NearbyData);
+        setNearby({ athletes: [], myCity: null, myCountry: null } as unknown as NearbyData);
       });
   }, []);
 
@@ -1022,7 +1022,7 @@ function Friends() {
       n
         ? {
             ...n,
-            athletes: n.athletes.map((a: NearbyAthlete) =>
+            athletes: (n.athletes ?? []).map((a: NearbyAthlete) =>
               a.id === id ? { ...a, following: !currentlyFollowing } : a,
             ),
           }

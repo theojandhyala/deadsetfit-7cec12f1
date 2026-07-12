@@ -6,9 +6,53 @@ type StripeEnv = "sandbox" | "live";
 let _supabase: any = null;
 function getSupabase(): any {
   if (!_supabase) {
-    _supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+    _supabase = createClient(url!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   }
   return _supabase;
+}
+
+// Some deployed databases predate the `product_id` / `environment` /
+// `current_period_start` columns. Retry writes without the optional columns
+// when the DB rejects them, and surface any remaining error so Stripe retries.
+const OPTIONAL_COLUMNS = ["product_id", "environment", "current_period_start"];
+
+function stripOptionalColumns(row: Record<string, unknown>) {
+  const copy = { ...row };
+  for (const col of OPTIONAL_COLUMNS) delete copy[col];
+  return copy;
+}
+
+function isMissingColumnError(error: { message?: string } | null): boolean {
+  return !!error?.message && /column .* does not exist|could not find .* column/i.test(error.message);
+}
+
+async function upsertSubscription(row: Record<string, unknown>) {
+  const sb = getSupabase();
+  let { error } = await sb
+    .from("subscriptions")
+    .upsert(row, { onConflict: "stripe_subscription_id" });
+  if (isMissingColumnError(error)) {
+    ({ error } = await sb
+      .from("subscriptions")
+      .upsert(stripOptionalColumns(row), { onConflict: "stripe_subscription_id" }));
+  }
+  if (error) throw new Error(`subscriptions upsert failed: ${error.message}`);
+}
+
+async function updateSubscription(stripeSubscriptionId: string, patch: Record<string, unknown>) {
+  const sb = getSupabase();
+  let { error } = await sb
+    .from("subscriptions")
+    .update(patch)
+    .eq("stripe_subscription_id", stripeSubscriptionId);
+  if (isMissingColumnError(error)) {
+    ({ error } = await sb
+      .from("subscriptions")
+      .update(stripOptionalColumns(patch))
+      .eq("stripe_subscription_id", stripeSubscriptionId));
+  }
+  if (error) throw new Error(`subscriptions update failed: ${error.message}`);
 }
 
 async function handleSubscriptionCreated(subscription: any, env: StripeEnv) {
@@ -24,26 +68,22 @@ async function handleSubscriptionCreated(subscription: any, env: StripeEnv) {
   const periodStart = item?.current_period_start ?? subscription.current_period_start;
   const periodEnd = item?.current_period_end ?? subscription.current_period_end;
 
-  await getSupabase()
-    .from("subscriptions")
-    .upsert(
-      {
-        user_id: userId,
-        stripe_subscription_id: subscription.id,
-        stripe_customer_id: subscription.customer,
-        product_id: productId,
-        price_id: priceId,
-        status: subscription.status,
-        current_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
-        current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
-        environment: env,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "stripe_subscription_id" },
-    );
+  await upsertSubscription({
+    user_id: userId,
+    stripe_subscription_id: subscription.id,
+    stripe_customer_id: subscription.customer,
+    product_id: productId,
+    price_id: priceId,
+    status: subscription.status,
+    current_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
+    current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
+    cancel_at_period_end: subscription.cancel_at_period_end || false,
+    environment: env,
+    updated_at: new Date().toISOString(),
+  });
 }
 
-async function handleSubscriptionUpdated(subscription: any, env: StripeEnv) {
+async function handleSubscriptionUpdated(subscription: any, _env: StripeEnv) {
   const item = subscription.items?.data?.[0];
   const priceId =
     item?.price?.lookup_key || item?.price?.metadata?.lovable_external_id || item?.price?.id;
@@ -51,30 +91,22 @@ async function handleSubscriptionUpdated(subscription: any, env: StripeEnv) {
   const periodStart = item?.current_period_start ?? subscription.current_period_start;
   const periodEnd = item?.current_period_end ?? subscription.current_period_end;
 
-  await getSupabase()
-    .from("subscriptions")
-    .update({
-      status: subscription.status,
-      product_id: productId,
-      price_id: priceId,
-      current_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
-      current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
-      cancel_at_period_end: subscription.cancel_at_period_end || false,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("stripe_subscription_id", subscription.id)
-    .eq("environment", env);
+  await updateSubscription(subscription.id, {
+    status: subscription.status,
+    product_id: productId,
+    price_id: priceId,
+    current_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
+    current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
+    cancel_at_period_end: subscription.cancel_at_period_end || false,
+    updated_at: new Date().toISOString(),
+  });
 }
 
-async function handleSubscriptionDeleted(subscription: any, env: StripeEnv) {
-  await getSupabase()
-    .from("subscriptions")
-    .update({
-      status: "canceled",
-      updated_at: new Date().toISOString(),
-    })
-    .eq("stripe_subscription_id", subscription.id)
-    .eq("environment", env);
+async function handleSubscriptionDeleted(subscription: any, _env: StripeEnv) {
+  await updateSubscription(subscription.id, {
+    status: "canceled",
+    updated_at: new Date().toISOString(),
+  });
 }
 
 async function handleWebhook(req: Request, env: StripeEnv) {
@@ -108,7 +140,8 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
           return Response.json({ received: true });
         } catch (e) {
           console.error("Webhook error:", e);
-          return new Response("Webhook error", { status: 400 });
+          // 500 (not 400) so Stripe retries transient DB failures.
+          return new Response("Webhook error", { status: 500 });
         }
       },
     },

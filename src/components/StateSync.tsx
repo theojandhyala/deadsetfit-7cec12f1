@@ -39,8 +39,17 @@ export function StateSync() {
         if (cancelled) return;
         if (res?.data) {
           try {
-            hydrateFromRemote(JSON.parse(res.data), userId);
-            logSessionEvent("state-sync:hydrated-remote", { user: userId.slice(0, 8) });
+            const hydrated = hydrateFromRemote(JSON.parse(res.data), userId);
+            if (hydrated) {
+              logSessionEvent("state-sync:hydrated-remote", { user: userId.slice(0, 8) });
+            } else {
+              // User made changes while the pull was in flight — local wins;
+              // push it so the fresher local state isn't lost.
+              logSessionEvent("state-sync:hydration-skipped-local-newer", {
+                user: userId.slice(0, 8),
+              });
+              await save({ data: { data: JSON.stringify(getState()) } }).catch(() => {});
+            }
           } catch (parseErr) {
             // Corrupted state — log but don't crash. Local state stays as-is.
             logSessionEvent("state-sync:hydration-parse-error", {

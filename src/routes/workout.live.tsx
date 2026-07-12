@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { X, Check, Play, Trophy, Share2, Dumbbell, Wind } from "lucide-react";
 import { useAppState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
-import { defaultSchedule, isoDay, todayKey } from "@/lib/calc";
+import { defaultSchedule, estimate1RM, isoDay, todayKey } from "@/lib/calc";
 import { VideoModal } from "@/components/VideoModal";
 import { ShareCard } from "@/components/ShareCard";
 import { PRCelebration } from "@/components/PRCelebration";
@@ -181,7 +181,8 @@ function PhaseTimer({
 
   useEffect(() => {
     setRemain(items[idx].durationSec);
-  }, [idx, items]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idx]);
 
   useEffect(() => {
     if (remain <= 0) {
@@ -311,17 +312,17 @@ function LiveWorkoutPage() {
     );
   }
 
-  function buildSession(prExId?: string, prWeightNum?: number, prRepsNum?: number): WorkoutSession {
+  function buildSession(prExId?: string, prWeightNum?: number, prRepsNum?: number, markPR = true): WorkoutSession {
     const exercises: WorkoutSessionExercise[] = built!.exercises.map((e) => {
-      const isPR = e.exerciseId === prExId && !!prWeightNum && !!prRepsNum;
+      const hasSet = e.exerciseId === prExId && !!prWeightNum && !!prRepsNum;
       return {
         exerciseId: e.exerciseId,
         name: e.name,
         primary_muscles: e.primary_muscles,
         targetSets: e.targetSets,
         targetReps: e.targetReps,
-        sets: isPR
-          ? [{ weight: prWeightNum!, reps: prRepsNum!, isPR: true }]
+        sets: hasSet
+          ? [{ weight: prWeightNum!, reps: prRepsNum!, isPR: markPR }]
           : [],
       };
     });
@@ -386,10 +387,15 @@ function LiveWorkoutPage() {
     const r = Number(prReps) || 0;
     if (!r) return;
     const ex = built!.exercises.find((e) => e.exerciseId === prExerciseId)!;
-    const prevBest = Math.max(0, ...state.logs.filter((l) => l.exerciseId === prExerciseId).map((l) => l.weight));
-    setCelebrate({ name: ex.name, weight: w, reps: r, prevBest });
-    try { navigator.vibrate?.([40, 60, 40]); } catch { /* noop */ }
-    persistAndFinish(buildSession(prExerciseId, w, r));
+    const prevLogs = state.logs.filter((l) => l.exerciseId === prExerciseId);
+    const prevBest = Math.max(0, ...prevLogs.map((l) => l.weight));
+    const prevBest1RM = Math.max(0, ...prevLogs.map((l) => estimate1RM(l.weight, l.reps)));
+    const isNewPR = w > prevBest || estimate1RM(w, r) > prevBest1RM;
+    if (isNewPR) {
+      setCelebrate({ name: ex.name, weight: w, reps: r, prevBest });
+      try { navigator.vibrate?.([40, 60, 40]); } catch { /* noop */ }
+    }
+    persistAndFinish(buildSession(prExerciseId, w, r, isNewPR));
   }
 
   // WARM UP

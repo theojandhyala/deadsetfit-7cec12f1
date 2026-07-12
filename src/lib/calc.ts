@@ -111,7 +111,12 @@ export function todayKey(): "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN
 }
 
 export function isoDay(date = new Date()) {
-  return date.toISOString().slice(0, 10);
+  // Local date parts, NOT toISOString() (UTC) — otherwise evening workouts
+  // in western timezones stamp tomorrow's date and corrupt streaks.
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 export function calculateStreak(completedDates: string[]) {
@@ -223,7 +228,7 @@ export function calculateGritScore(state: AppState): GritScoreBreakdown {
   const streak = calculateStreak(state.completedDates);
   const weekAgo = new Date();
   weekAgo.setDate(weekAgo.getDate() - 7);
-  const weekAgoISO = weekAgo.toISOString().slice(0, 10);
+  const weekAgoISO = isoDay(weekAgo);
 
   // PRs this week (from session.prCount)
   const prs = (state.sessions || [])

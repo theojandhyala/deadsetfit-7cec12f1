@@ -1,9 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertPro } from "@/lib/require-pro.server";
 
 const ScanInput = z.object({
-  imageDataUrl: z.string().startsWith("data:image/"),
+  imageDataUrl: z.string().startsWith("data:image/").max(5_000_000),
   goal: z.string(),
   weightKg: z.number().optional(),
 });
@@ -20,7 +21,8 @@ const VALID_EXERCISE_IDS = [
 export const analyzePhysique = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => ScanInput.parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    await assertPro(context.supabase, context.userId);
     const { chatVisionJSON } = await import("./ai-gateway.server");
     const sys = `You are an elite physique coach analyzing a progress photo. Reply with strict JSON only:
 {

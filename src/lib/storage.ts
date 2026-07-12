@@ -9,11 +9,14 @@ const listeners = new Set<() => void>();
 const syncListeners = new Set<() => void>();
 
 let remoteSyncEnabled = false;
-let suppressNextPush = false;
 let pushTimer: ReturnType<typeof setTimeout> | null = null;
 let pushSaver: ((json: string) => Promise<void>) | null = null;
 let syncUserId: string | null = null;
 let syncReady = false;
+// Counts local mutations so hydration can detect (and refuse to clobber)
+// changes the user made while the remote pull was in flight.
+let mutationCounter = 0;
+let mutationsAtLoadBegin = 0;
 
 function notifySync() {
   syncListeners.forEach((l) => l());
@@ -32,13 +35,10 @@ function read(): AppState {
 
 function write(state: AppState) {
   if (typeof window === "undefined") return;
+  mutationCounter++;
   localStorage.setItem(KEY, JSON.stringify(state));
   listeners.forEach((l) => l());
   if (remoteSyncEnabled && pushSaver) {
-    if (suppressNextPush) {
-      suppressNextPush = false;
-      return;
-    }
     if (pushTimer) clearTimeout(pushTimer);
     const saver = pushSaver;
     pushTimer = setTimeout(() => {
@@ -66,18 +66,26 @@ export function setState(updater: (s: AppState) => AppState) {
   write(next);
 }
 
-/** Replace local state from a remote payload without pushing it back. */
-export function hydrateFromRemote(remote: Partial<AppState>, userId?: string) {
-  suppressNextPush = true;
+/**
+ * Replace local state from a remote payload without pushing it back.
+ * Returns false (and leaves local state untouched) if the user mutated state
+ * while the remote pull was in flight — local wins and should be pushed
+ * instead, otherwise the fresher local changes would be silently lost.
+ */
+export function hydrateFromRemote(remote: Partial<AppState>, userId?: string): boolean {
+  if (typeof window === "undefined") return false;
+  if (mutationCounter !== mutationsAtLoadBegin) {
+    if (userId) localStorage.setItem(OWNER_KEY, userId);
+    return false;
+  }
   const current = read();
   const merged = { ...DEFAULT_STATE, ...current, ...remote } as AppState;
   if (!remote.profile && current.profile) merged.profile = current.profile;
   if (!remote.schedule && current.schedule) merged.schedule = current.schedule;
-  if (typeof window !== "undefined") {
-    localStorage.setItem(KEY, JSON.stringify(merged));
-    if (userId) localStorage.setItem(OWNER_KEY, userId);
-  }
+  localStorage.setItem(KEY, JSON.stringify(merged));
+  if (userId) localStorage.setItem(OWNER_KEY, userId);
   listeners.forEach((l) => l());
+  return true;
 }
 
 export function clearLocalState() {
@@ -91,6 +99,7 @@ export function clearLocalState() {
 export function beginRemoteStateLoad(userId: string) {
   syncUserId = userId;
   syncReady = false;
+  mutationsAtLoadBegin = mutationCounter;
   notifySync();
 }
 

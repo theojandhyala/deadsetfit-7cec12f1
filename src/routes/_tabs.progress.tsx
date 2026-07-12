@@ -52,16 +52,16 @@ function ProgressPage() {
   async function runScan(file: File) {
     lastScanFileRef.current = file;
     setScanError(null);
-    const dataUrl = await new Promise<string>((res, rej) => {
-      const r = new FileReader();
-      r.onload = () => res(r.result as string);
-      r.onerror = rej;
-      r.readAsDataURL(file);
-    });
-    // downscale to keep payload small
-    const small = await downscale(dataUrl, 768);
     setScanning(true);
     try {
+      const dataUrl = await new Promise<string>((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result as string);
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
+      // downscale to keep payload small
+      const small = await downscale(dataUrl, 768);
       const analysis = await analyze({
         data: {
           imageDataUrl: small,
@@ -705,7 +705,7 @@ function ConsistencyHeatmap({ completedDates }: { completedDates: string[] }) {
     for (let d = 0; d < 7; d++) {
       const dt = new Date(start);
       dt.setDate(start.getDate() + w * 7 + d);
-      const iso = dt.toISOString().slice(0, 10);
+      const iso = isoDay(dt);
       col.push({ date: iso, count: countMap.get(iso) ?? 0 });
     }
     weeks.push(col);
@@ -797,7 +797,7 @@ function StreakCalendar({ completedDates }: { completedDates: string[] }) {
     for (let d = 0; d < 7; d++) {
       const dt = new Date(start);
       dt.setDate(start.getDate() + w * 7 + d);
-      const iso = dt.toISOString().slice(0, 10);
+      const iso = isoDay(dt);
       col.push({ date: iso, done: set.has(iso), isToday: iso === isoDay() });
     }
     cells.push(col);
@@ -1012,8 +1012,9 @@ function Block({ title, items, color }: { title: string; items: string[]; color:
 }
 
 async function downscale(dataUrl: string, maxDim: number): Promise<string> {
-  return new Promise((res) => {
+  return new Promise((res, rej) => {
     const img = new Image();
+    img.onerror = () => rej(new Error("Couldn't read that image. Try a JPEG or PNG."));
     img.onload = () => {
       const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
       const w = Math.round(img.width * scale);

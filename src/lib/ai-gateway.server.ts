@@ -35,11 +35,16 @@ function extractJSON<T>(text: string): T {
   }
 }
 
+// Hard deadline on every LLM call so a hung upstream request can't leave the
+// UI spinning forever.
+const LLM_TIMEOUT_MS = 60_000;
+
 export async function chatJSON<T = unknown>(opts: { system: string; user: string }): Promise<T> {
   const { text } = await generateText({
     model: model(),
     system: opts.system + "\nIMPORTANT: Respond with valid JSON only, no markdown, no prose.",
     prompt: opts.user,
+    abortSignal: AbortSignal.timeout(LLM_TIMEOUT_MS),
   });
   return extractJSON<T>(text);
 }
@@ -52,6 +57,7 @@ export async function chatText(opts: {
     model: model(),
     system: opts.system,
     messages: opts.messages.map((m) => ({ role: m.role, content: m.content })),
+    abortSignal: AbortSignal.timeout(LLM_TIMEOUT_MS),
   });
   return text;
 }
@@ -61,7 +67,7 @@ export async function chatVisionJSON<T = unknown>(opts: {
   user: string;
   imageDataUrl: string;
 }): Promise<T> {
-  const match = opts.imageDataUrl.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/s);
+  const match = opts.imageDataUrl.match(/^data:(image\/[\w.+-]+);base64,(.+)$/s);
   if (!match) throw new Error("Invalid image data URL");
   const mediaType = match[1];
   const base64 = match[2];
@@ -85,6 +91,7 @@ export async function chatVisionJSON<T = unknown>(opts: {
         ],
       },
     ],
+    abortSignal: AbortSignal.timeout(LLM_TIMEOUT_MS),
   });
   return extractJSON<T>(text);
 }
