@@ -74,8 +74,12 @@ export function setState(updater: (s: AppState) => AppState) {
  */
 export function hydrateFromRemote(remote: Partial<AppState>, userId?: string): boolean {
   if (typeof window === "undefined") return false;
-  if (mutationCounter !== mutationsAtLoadBegin) {
-    if (userId) localStorage.setItem(OWNER_KEY, userId);
+  // "Local wins" only applies when the local state already belongs to this
+  // user (a continuation on the same device). On a fresh or foreign device
+  // the remote copy is authoritative even if a tap landed during the pull —
+  // otherwise near-default local state would overwrite real remote history.
+  const isOwnDevice = !!userId && getLocalStateOwner() === userId;
+  if (isOwnDevice && mutationCounter !== mutationsAtLoadBegin) {
     return false;
   }
   const current = read();

@@ -32,6 +32,10 @@ export function StateSync() {
 
     async function pull(userId: string) {
       logSessionEvent("state-sync:pull-start", { user: userId.slice(0, 8) });
+      // If local state belongs to a different user, wipe it BEFORE pulling —
+      // otherwise their data merges into (or gets pushed to) this account.
+      const owner = getLocalStateOwner();
+      if (owner && owner !== userId) clearLocalState();
       beginRemoteStateLoad(userId);
       try {
         // 10s timeout — Cloudflare cold starts can be slow
@@ -82,10 +86,14 @@ export function StateSync() {
           message: e instanceof Error ? e.message : "unknown",
         });
         console.warn("state pull failed", e);
-        // Still enable sync so future changes are saved even if initial pull failed
-        enableRemoteSync(async (json) => {
-          await save({ data: { data: json } }).catch(() => {});
-        });
+        // Only enable sync if the local state already belongs to this user.
+        // On a fresh device a failed pull means we have nothing but defaults —
+        // pushing those would overwrite the user's real remote data.
+        if (getLocalStateOwner() === userId) {
+          enableRemoteSync(async (json) => {
+            await save({ data: { data: json } }).catch(() => {});
+          });
+        }
       } finally {
         if (!cancelled) finishRemoteStateLoad(userId);
       }

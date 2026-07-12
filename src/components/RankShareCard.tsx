@@ -31,6 +31,9 @@ export function RankShareCard({
   const [dataUrl, setDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
+    // Guards the async avatar path against drawing a stale render after
+    // the effect re-runs with new props.
+    let cancelled = false;
     const c = canvasRef.current;
     if (!c) return;
     const W = 1080, H = 1920;
@@ -122,13 +125,15 @@ export function RankShareCard({
       img
         .decode()
         .then(() => {
+          if (cancelled) return;
           ctx.drawImage(img, avatarX - avatarR, avatarY - avatarR, avatarR * 2, avatarR * 2);
         })
         .catch(() => {
           // Fall back to the placeholder circle if the image fails to load.
-          drawAvatarPlaceholder();
+          if (!cancelled) drawAvatarPlaceholder();
         })
         .then(() => {
+          if (cancelled) return;
           ctx.restore();
           finishRender();
         });
@@ -285,6 +290,9 @@ export function RankShareCard({
 
     setDataUrl(c!.toDataURL("image/png"));
     }
+    return () => {
+      cancelled = true;
+    };
   }, [gritPoints, displayName, username, avatarDataUrl, streak, prs, sessions, overall]);
 
   async function shareNow() {
