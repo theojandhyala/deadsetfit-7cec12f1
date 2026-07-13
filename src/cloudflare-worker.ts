@@ -10,9 +10,6 @@ interface Env {
   STRIPE_SANDBOX_API_KEY?: string;
   PAYMENTS_LIVE_WEBHOOK_SECRET?: string;
   PAYMENTS_SANDBOX_WEBHOOK_SECRET?: string;
-  AI_PROVIDER?: string;
-  ANTHROPIC_API_KEY?: string;
-  GEMINI_API_KEY?: string;
   VITE_PAYMENTS_CLIENT_TOKEN?: string;
 }
 
@@ -27,9 +24,6 @@ const RUNTIME_ENV_KEYS = [
   "STRIPE_SANDBOX_API_KEY",
   "PAYMENTS_LIVE_WEBHOOK_SECRET",
   "PAYMENTS_SANDBOX_WEBHOOK_SECRET",
-  "AI_PROVIDER",
-  "ANTHROPIC_API_KEY",
-  "GEMINI_API_KEY",
   "VITE_PAYMENTS_CLIENT_TOKEN",
 ] as const;
 
@@ -114,9 +108,6 @@ function handleHealth(env: Env): Response {
         configured(env.SUPABASE_URL) &&
         configured(env.SUPABASE_PUBLISHABLE_KEY) &&
         configured(env.SUPABASE_SERVICE_ROLE_KEY),
-      ai: configured(env.ANTHROPIC_API_KEY) || configured(env.GEMINI_API_KEY),
-      anthropic: configured(env.ANTHROPIC_API_KEY),
-      gemini: configured(env.GEMINI_API_KEY),
       stripeLive:
         configured(env.STRIPE_LIVE_API_KEY) &&
         configured(env.VITE_PAYMENTS_CLIENT_TOKEN),
