@@ -19,7 +19,9 @@ import {
   Search,
 } from "lucide-react";
 import { useAppState } from "@/lib/storage";
+import { usePro } from "@/hooks/usePro";
 import { isoDay } from "@/lib/calc";
+import { openPaywall } from "@/lib/paywall-events";
 import type { ChallengeRecord } from "@/lib/types";
 import { createPost, searchAthletes } from "@/lib/social.functions";
 import { toast } from "sonner";
@@ -352,6 +354,16 @@ function ChallengesPage() {
           >
             <Icon size={13} />
             <span className="text-[11px] font-bold uppercase tracking-wider">{label}</span>
+            {id === "H2H" && (
+              <span
+                className="label-cap text-[8px] text-accent-red border border-accent-red/40 rounded px-1.5"
+                style={
+                  tab === id ? { color: "#fff", borderColor: "rgba(255,255,255,0.5)" } : undefined
+                }
+              >
+                PRO
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -554,6 +566,10 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const { isPro, loading: proLoading } = usePro();
+  // Creating an H2H challenge is Pro-only; viewing/accepting stays free.
+  // While entitlement is loading, treat as unlocked (never flash a lock at paying users).
+  const h2hLocked = !proLoading && !isPro;
   const _search = searchAthletes;
   const _createPost = createPost;
 
@@ -578,6 +594,10 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
 
   async function sendChallenge() {
     if (!selected || !challenge) return;
+    if (h2hLocked) {
+      openPaywall("h2h");
+      return;
+    }
     setSending(true);
     try {
       const targetName = selected.display_name || selected.username || "friend";

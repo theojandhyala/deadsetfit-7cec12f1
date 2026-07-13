@@ -60,16 +60,16 @@ const PRO_FEATURES = [
     icon: Zap,
     color: "#00BCD4",
     title: "Custom Program Builder",
-    desc: "Build your own split day by day from the full exercise library. Sets, reps and order — all yours.",
+    desc: "Build unlimited custom splits day by day from the full exercise library. Sets, reps and order — all yours.",
   },
 ];
 
-const COMPARE_ROWS = [
+const COMPARE_ROWS: { label: string; free: boolean | string; pro: boolean | string }[] = [
   { label: "Workout logging", free: true, pro: true },
   { label: "Basic programs", free: true, pro: true },
   { label: "Social feed & kudos", free: true, pro: true },
   { label: "Challenges (basic)", free: true, pro: true },
-  { label: "Custom split builder", free: true, pro: true },
+  { label: "Custom split builder", free: "1 program", pro: "Unlimited" },
   { label: "Streak Armor", free: false, pro: true },
   { label: "Advanced analytics", free: false, pro: true },
   { label: "H2H Challenges", free: false, pro: true },
@@ -329,10 +329,18 @@ function UpgradePage() {
                   style={{ background: i % 2 === 0 ? "#141414" : "#17181C", borderBottom: i < COMPARE_ROWS.length - 1 ? "1px solid #262626" : "none" }}
                 >
                   <span className="text-xs text-white col-span-1">{row.label}</span>
-                  <span className="text-center text-sm font-bold" style={{ color: row.free ? "#FAFAFA" : "#3a3a3a" }}>
-                    {row.free ? "✓" : "✗"}
+                  <span
+                    className={`text-center font-bold ${typeof row.free === "string" ? "text-[10px] uppercase tracking-wider" : "text-sm"}`}
+                    style={{ color: row.free ? "#FAFAFA" : "#3a3a3a" }}
+                  >
+                    {typeof row.free === "string" ? row.free : row.free ? "✓" : "✗"}
                   </span>
-                  <span className="text-center text-sm font-bold" style={{ color: "#E10600" }}>✓</span>
+                  <span
+                    className={`text-center font-bold ${typeof row.pro === "string" ? "text-[10px] uppercase tracking-wider" : "text-sm"}`}
+                    style={{ color: "#E10600" }}
+                  >
+                    {typeof row.pro === "string" ? row.pro : "✓"}
+                  </span>
                 </div>
               ))}
             </div>

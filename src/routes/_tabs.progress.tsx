@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
-import { Camera, Trophy, Flame, Trash2 } from "lucide-react";
+import { Camera, Trophy, Flame, Trash2, Lock } from "lucide-react";
 
 import { useAppState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
@@ -8,6 +8,8 @@ import { isoDay, calculateStreak } from "@/lib/calc";
 import { QuickLogFAB } from "@/components/QuickLogFAB";
 import { PRList } from "@/components/PRList";
 import { groupForMuscle } from "@/lib/pr-groups";
+import { usePro } from "@/hooks/usePro";
+import { openPaywall } from "@/lib/paywall-events";
 
 export const Route = createFileRoute("/_tabs/progress")({
   head: () => ({ meta: [{ title: "DEADSET — Progress" }] }),
@@ -16,6 +18,8 @@ export const Route = createFileRoute("/_tabs/progress")({
 
 function ProgressPage() {
   const [state, set] = useAppState();
+  const { isPro, loading } = usePro();
+  const analyticsLocked = !loading && !isPro;
   const photoRef = useRef<HTMLInputElement>(null);
   const [compare, setCompare] = useState<string[]>([]);
   const [weight, setWeight] = useState("");
@@ -216,6 +220,46 @@ function ProgressPage() {
       .slice(0, 3);
   }, [state.logs, state.sessions]);
 
+  // Weekly tonnage: last 8 ISO weeks from sessions, legacy logs as per-week fallback
+  const weeklyTonnage = useMemo(() => {
+    const monday = new Date();
+    monday.setHours(0, 0, 0, 0);
+    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+    const weeks = Array.from({ length: 8 }, (_, i) => {
+      const start = new Date(monday);
+      start.setDate(monday.getDate() - (7 - i) * 7);
+      return {
+        startMs: start.getTime(),
+        endMs: start.getTime() + 7 * 24 * 3600 * 1000,
+        label: `${start.getDate()}/${start.getMonth() + 1}`,
+        isCurrent: i === 7,
+        sessionVol: 0,
+        logVol: 0,
+      };
+    });
+    const bucket = (iso: string) => {
+      const t = new Date(iso).getTime();
+      return weeks.find((w) => t >= w.startMs && t < w.endMs);
+    };
+    state.sessions.forEach((s) => {
+      const wk = bucket(s.startedAt);
+      if (!wk) return;
+      wk.sessionVol += s.exercises.reduce(
+        (a, e) => a + e.sets.reduce((b, x) => b + x.weight * x.reps, 0),
+        0,
+      );
+    });
+    state.logs.forEach((l) => {
+      const wk = bucket(l.date);
+      if (wk) wk.logVol += l.weight * l.reps;
+    });
+    return weeks.map((w) => ({
+      label: w.label,
+      isCurrent: w.isCurrent,
+      volume: w.sessionVol > 0 ? w.sessionVol : w.logVol,
+    }));
+  }, [state.logs, state.sessions]);
+
   return (
     <div
       style={{ background: "#0A0A0A", minHeight: "100vh" }}
@@ -250,65 +294,136 @@ function ProgressPage() {
         </div>
       </section>
 
-      {/* Training Consistency Heatmap */}
+      {/* Advanced Analytics (Pro) */}
       <section className="px-5 mb-6">
-        <p className="label-cap mb-2">Training Consistency</p>
-        <div className="rounded-2xl p-4 overflow-x-auto">
-          <ConsistencyHeatmap completedDates={state.completedDates} />
+        <div className="deadset-section-title">
+          <div className="flex items-center gap-2">
+            <h2 className="display text-xl font-extrabold uppercase text-grit leading-none">
+              Advanced Analytics
+            </h2>
+            <span className="label-cap text-accent-red border border-accent-red/40 rounded px-1.5">
+              Pro
+            </span>
+          </div>
+        </div>
+        <div className="relative">
+          <div
+            className={
+              analyticsLocked ? "pointer-events-none select-none blur-[6px] opacity-60" : undefined
+            }
+          >
+            {/* Training Consistency Heatmap */}
+            <div className="mb-6">
+              <p className="label-cap mb-2">Training Consistency</p>
+              <div className="rounded-2xl p-4 overflow-x-auto">
+                <ConsistencyHeatmap completedDates={state.completedDates} />
+              </div>
+            </div>
+
+            {/* Weekly Tonnage */}
+            <div className="mb-6">
+              <p className="label-cap mb-2">Weekly Tonnage (8 Weeks)</p>
+              <div className="rounded-2xl p-4 flex flex-col gap-2">
+                {(() => {
+                  const max = Math.max(...weeklyTonnage.map((w) => w.volume), 1);
+                  return weeklyTonnage.map((wk) => (
+                    <div key={wk.label}>
+                      <div className="flex justify-between text-xs uppercase font-bold tracking-wider mb-1">
+                        <span className={wk.isCurrent ? "text-accent-red" : "text-white"}>
+                          {wk.label}
+                        </span>
+                        <span className="text-[#8A8A8A]">
+                          {Math.round(wk.volume).toLocaleString()}kg
+                        </span>
+                      </div>
+                      <div className="h-2 bg-[#0a0a0a]">
+                        <div
+                          className="h-full"
+                          style={{
+                            width: `${(wk.volume / max) * 100}%`,
+                            background: wk.isCurrent ? "#E10600" : "#7a1410",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </div>
+
+            {/* Strength Curves */}
+            {strengthCurves.length > 0 && (
+              <div className="mb-6">
+                <p className="label-cap mb-2">Strength Curves</p>
+                <div className="flex flex-col gap-3">
+                  {strengthCurves.map((c) => (
+                    <div
+                      key={c.name}
+                      className="rounded-2xl p-4"
+                      style={{ background: "#141414", border: "1.5px solid #262626" }}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="display text-sm uppercase font-extrabold text-white truncate">
+                          {c.name}
+                        </p>
+                        <p className="display text-lg font-extrabold text-[#E10600]">
+                          {Math.max(...c.points.map((p) => p.weight))}KG
+                        </p>
+                      </div>
+                      <LineChart points={c.points.map((p) => p.weight)} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Body Part Split */}
+            {bodyParts.length > 0 && (
+              <div>
+                <p className="label-cap mb-2">Body Part Volume (30d)</p>
+                <div className="rounded-2xl p-4 flex flex-col gap-2">
+                  {(() => {
+                    const max = Math.max(...bodyParts.map((b) => b[1]));
+                    return bodyParts.map(([name, vol]) => (
+                      <div key={name}>
+                        <div className="flex justify-between text-xs uppercase font-bold tracking-wider mb-1">
+                          <span className="text-white">{name}</span>
+                          <span className="text-[#8A8A8A]">
+                            {Math.round(vol).toLocaleString()}kg
+                          </span>
+                        </div>
+                        <div className="h-2 bg-[#0a0a0a]">
+                          <div
+                            className="h-full bg-[#E10600]"
+                            style={{ width: `${(vol / max) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+            )}
+          </div>
+          {analyticsLocked && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="bg-grit-card border p-4 max-w-[260px] text-center">
+                <Lock size={20} className="text-accent-red mx-auto mb-2" />
+                <p className="label-cap mb-1">Advanced Analytics</p>
+                <p className="text-xs text-grit-dim mb-3">
+                  Volume balance, tonnage, curves and heatmap.
+                </p>
+                <button
+                  onClick={() => openPaywall("advanced-analytics")}
+                  className="btn-grit px-4 py-2 text-xs"
+                >
+                  Unlock With Pro
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </section>
-
-      {/* Strength Curves */}
-      {strengthCurves.length > 0 && (
-        <section className="px-5 mb-6">
-          <p className="label-cap mb-2">Strength Curves</p>
-          <div className="flex flex-col gap-3">
-            {strengthCurves.map((c) => (
-              <div
-                key={c.name}
-                className="rounded-2xl p-4"
-                style={{ background: "#141414", border: "1.5px solid #262626" }}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <p className="display text-sm uppercase font-extrabold text-white truncate">
-                    {c.name}
-                  </p>
-                  <p className="display text-lg font-extrabold text-[#E10600]">
-                    {Math.max(...c.points.map((p) => p.weight))}KG
-                  </p>
-                </div>
-                <LineChart points={c.points.map((p) => p.weight)} />
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Body Part Split */}
-      {bodyParts.length > 0 && (
-        <section className="px-5 mb-6">
-          <p className="label-cap mb-2">Body Part Volume (30d)</p>
-          <div className="rounded-2xl p-4 flex flex-col gap-2">
-            {(() => {
-              const max = Math.max(...bodyParts.map((b) => b[1]));
-              return bodyParts.map(([name, vol]) => (
-                <div key={name}>
-                  <div className="flex justify-between text-xs uppercase font-bold tracking-wider mb-1">
-                    <span className="text-white">{name}</span>
-                    <span className="text-[#8A8A8A]">{Math.round(vol).toLocaleString()}kg</span>
-                  </div>
-                  <div className="h-2 bg-[#0a0a0a]">
-                    <div
-                      className="h-full bg-[#E10600]"
-                      style={{ width: `${(vol / max) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              ));
-            })()}
-          </div>
-        </section>
-      )}
 
       {/* Weight */}
       <section className="px-5 mb-6">

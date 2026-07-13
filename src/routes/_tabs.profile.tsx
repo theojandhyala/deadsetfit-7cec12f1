@@ -103,16 +103,19 @@ function ProfilePage() {
     };
   }, []);
 
-  // Auto-push public_stats whenever logs / manualPRs / sessions change.
+  // Auto-push public_stats + grit whenever logs / manualPRs / sessions change.
+  // grit_points powers the RANK leaderboard and league placement server-side.
+  const gritTotal = calculateGritScore(state).total;
   useEffect(() => {
     if (!p) return;
     const stats = buildPublicStats(state);
-    persist({ data: { public_stats: stats } }).catch(() => {});
+    persist({ data: { public_stats: stats, grit_points: gritTotal } }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     manualPRKey,
     state.logs.length,
     state.sessions.length,
+    gritTotal,
     p?.weightKg,
     p?.heightCm,
     p?.goal,

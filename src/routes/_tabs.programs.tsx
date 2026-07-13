@@ -1,7 +1,10 @@
+import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useAppState } from "@/lib/storage";
-import type { DayKey, Program, SplitType } from "@/lib/types";
-import { Plus, Check, Trash2, ChevronRight } from "lucide-react";
+import { usePro } from "@/hooks/usePro";
+import { openPaywall } from "@/lib/paywall-events";
+import type { DayKey, Program, ProgramExerciseRef, SplitType } from "@/lib/types";
+import { Plus, Check, Trash2, Lock } from "lucide-react";
 
 export const Route = createFileRoute("/_tabs/programs")({
   head: () => ({ meta: [{ title: "DEADSET — Programs" }] }),
@@ -78,24 +81,144 @@ const SPLIT_TEMPLATES: { type: SplitType; name: string; days: Record<DayKey, str
   },
 ];
 
+type FeaturedExercise = {
+  name: string;
+  equipment: string;
+  muscles: string[];
+  sets: number;
+  reps: string;
+};
+
+type FeaturedDay = { label: string; items: FeaturedExercise[] };
+
+const fx = (
+  name: string,
+  equipment: string,
+  muscles: string[],
+  sets: number,
+  reps: string,
+): FeaturedExercise => ({ name, equipment, muscles, sets, reps });
+
+const REST_DAY: FeaturedDay = { label: "REST", items: [] };
+
+const SL_WORKOUT_A: FeaturedDay = {
+  label: "WORKOUT A",
+  items: [
+    fx("Squat", "barbell", ["quads", "glutes"], 5, "5"),
+    fx("Bench Press", "barbell", ["chest", "triceps"], 5, "5"),
+    fx("Barbell Row", "barbell", ["lats", "upper back"], 5, "5"),
+    fx("Dip", "bodyweight", ["chest", "triceps"], 3, "8-10"),
+    fx("Plank", "bodyweight", ["abs"], 3, "60s"),
+  ],
+};
+
+const SL_WORKOUT_B: FeaturedDay = {
+  label: "WORKOUT B",
+  items: [
+    fx("Squat", "barbell", ["quads", "glutes"], 5, "5"),
+    fx("Overhead Press", "barbell", ["shoulders", "triceps"], 5, "5"),
+    fx("Deadlift", "barbell", ["hamstrings", "glutes", "lower back"], 1, "5"),
+    fx("Chin-Up", "bodyweight", ["lats", "biceps"], 3, "8-10"),
+    fx("Hanging Knee Raise", "bodyweight", ["abs"], 3, "10-15"),
+  ],
+};
+
+const ARNOLD_CHEST_BACK: FeaturedDay = {
+  label: "CHEST/BACK",
+  items: [
+    fx("Bench Press", "barbell", ["chest", "triceps"], 4, "8-12"),
+    fx("Incline Bench Press", "barbell", ["chest", "shoulders"], 4, "8-12"),
+    fx("Dumbbell Flye", "dumbbell", ["chest"], 3, "10-12"),
+    fx("Wide-Grip Pull-Up", "bodyweight", ["lats", "upper back"], 4, "8-12"),
+    fx("Barbell Row", "barbell", ["lats", "upper back"], 4, "8-12"),
+    fx("Dumbbell Pullover", "dumbbell", ["chest", "lats"], 3, "10-12"),
+  ],
+};
+
+const ARNOLD_SHOULDERS_ARMS: FeaturedDay = {
+  label: "SHOULDERS/ARMS",
+  items: [
+    fx("Seated Dumbbell Press", "dumbbell", ["shoulders"], 4, "8-12"),
+    fx("Dumbbell Lateral Raise", "dumbbell", ["shoulders"], 4, "10-12"),
+    fx("Rear Delt Flye", "dumbbell", ["rear delts"], 3, "10-12"),
+    fx("Barbell Curl", "barbell", ["biceps"], 4, "8-12"),
+    fx("Incline Dumbbell Curl", "dumbbell", ["biceps"], 3, "10-12"),
+    fx("Close-Grip Bench Press", "barbell", ["triceps", "chest"], 4, "8-12"),
+    fx("Triceps Pushdown", "cable", ["triceps"], 3, "10-12"),
+  ],
+};
+
+const ARNOLD_LEGS: FeaturedDay = {
+  label: "LEGS",
+  items: [
+    fx("Squat", "barbell", ["quads", "glutes"], 4, "8-12"),
+    fx("Leg Press", "machine", ["quads", "glutes"], 4, "10-12"),
+    fx("Romanian Deadlift", "barbell", ["hamstrings", "glutes"], 4, "8-12"),
+    fx("Barbell Lunge", "barbell", ["quads", "glutes"], 3, "10-12"),
+    fx("Lying Leg Curl", "machine", ["hamstrings"], 4, "10-12"),
+    fx("Standing Calf Raise", "machine", ["calves"], 5, "12-15"),
+  ],
+};
+
+/** nSuns tier-1 wave: 5,3,1+ then back-off triples and fives (last set AMRAP). */
+const NSUNS_T1 = "5,3,1+,3x3,3x5+";
+/** nSuns tier-2 volume wave. */
+const NSUNS_T2 = "5,5,3,5,7,4,6,8";
+
 const FEATURED_PROGRAMS: {
   name: string;
   tagline: string;
   level: string;
-  days: Record<DayKey, string>;
+  days: Record<DayKey, FeaturedDay>;
 }[] = [
   {
     name: "5/3/1 BBB",
     tagline: "Wendler's classic strength builder",
     level: "INTERMEDIATE",
     days: {
-      MON: "OHP DAY",
-      TUE: "DEADLIFT DAY",
-      WED: "REST",
-      THU: "BENCH DAY",
-      FRI: "SQUAT DAY",
-      SAT: "REST",
-      SUN: "REST",
+      MON: {
+        label: "OHP DAY",
+        items: [
+          fx("Overhead Press", "barbell", ["shoulders", "triceps"], 3, "5,3,1+"),
+          fx("Overhead Press (BBB)", "barbell", ["shoulders", "triceps"], 5, "10"),
+          fx("Chin-Up", "bodyweight", ["lats", "biceps"], 5, "10"),
+          fx("Face Pull", "cable", ["rear delts", "upper back"], 3, "15-20"),
+          fx("Dumbbell Lateral Raise", "dumbbell", ["shoulders"], 3, "12-15"),
+        ],
+      },
+      TUE: {
+        label: "DEADLIFT DAY",
+        items: [
+          fx("Deadlift", "barbell", ["hamstrings", "glutes", "lower back"], 3, "5,3,1+"),
+          fx("Deadlift (BBB)", "barbell", ["hamstrings", "glutes", "lower back"], 5, "10"),
+          fx("Barbell Row", "barbell", ["lats", "upper back"], 4, "8-10"),
+          fx("Hanging Leg Raise", "bodyweight", ["abs"], 5, "10-15"),
+          fx("Back Extension", "bodyweight", ["lower back", "glutes"], 3, "12-15"),
+        ],
+      },
+      WED: REST_DAY,
+      THU: {
+        label: "BENCH DAY",
+        items: [
+          fx("Bench Press", "barbell", ["chest", "triceps"], 3, "5,3,1+"),
+          fx("Bench Press (BBB)", "barbell", ["chest", "triceps"], 5, "10"),
+          fx("Dumbbell Row", "dumbbell", ["lats", "upper back"], 5, "10"),
+          fx("Incline Dumbbell Press", "dumbbell", ["chest", "shoulders"], 3, "10-12"),
+          fx("Triceps Pushdown", "cable", ["triceps"], 3, "12-15"),
+        ],
+      },
+      FRI: {
+        label: "SQUAT DAY",
+        items: [
+          fx("Squat", "barbell", ["quads", "glutes"], 3, "5,3,1+"),
+          fx("Squat (BBB)", "barbell", ["quads", "glutes"], 5, "10"),
+          fx("Leg Curl", "machine", ["hamstrings"], 3, "10-12"),
+          fx("Ab Wheel Rollout", "bodyweight", ["abs"], 3, "10-15"),
+          fx("Standing Calf Raise", "machine", ["calves"], 4, "12-15"),
+        ],
+      },
+      SAT: REST_DAY,
+      SUN: REST_DAY,
     },
   },
   {
@@ -103,13 +226,13 @@ const FEATURED_PROGRAMS: {
     tagline: "Linear progression for beginners",
     level: "BEGINNER",
     days: {
-      MON: "WORKOUT A",
-      TUE: "REST",
-      WED: "WORKOUT B",
-      THU: "REST",
-      FRI: "WORKOUT A",
-      SAT: "REST",
-      SUN: "REST",
+      MON: SL_WORKOUT_A,
+      TUE: REST_DAY,
+      WED: SL_WORKOUT_B,
+      THU: REST_DAY,
+      FRI: SL_WORKOUT_A,
+      SAT: REST_DAY,
+      SUN: REST_DAY,
     },
   },
   {
@@ -117,13 +240,54 @@ const FEATURED_PROGRAMS: {
     tagline: "Power Hypertrophy Upper Lower",
     level: "INTERMEDIATE",
     days: {
-      MON: "UPPER POWER",
-      TUE: "LOWER POWER",
-      WED: "REST",
-      THU: "UPPER HYPER",
-      FRI: "LOWER HYPER",
-      SAT: "REST",
-      SUN: "REST",
+      MON: {
+        label: "UPPER POWER",
+        items: [
+          fx("Bench Press", "barbell", ["chest", "triceps"], 4, "3-5"),
+          fx("Barbell Row", "barbell", ["lats", "upper back"], 4, "3-5"),
+          fx("Incline Dumbbell Press", "dumbbell", ["chest", "shoulders"], 3, "6-10"),
+          fx("Lat Pulldown", "cable", ["lats"], 3, "6-10"),
+          fx("Overhead Press", "barbell", ["shoulders", "triceps"], 3, "5-8"),
+          fx("Barbell Curl", "barbell", ["biceps"], 3, "6-10"),
+          fx("Skullcrusher", "barbell", ["triceps"], 3, "6-10"),
+        ],
+      },
+      TUE: {
+        label: "LOWER POWER",
+        items: [
+          fx("Squat", "barbell", ["quads", "glutes"], 4, "3-5"),
+          fx("Deadlift", "barbell", ["hamstrings", "glutes", "lower back"], 3, "3-5"),
+          fx("Leg Press", "machine", ["quads", "glutes"], 4, "10-15"),
+          fx("Leg Curl", "machine", ["hamstrings"], 4, "6-10"),
+          fx("Standing Calf Raise", "machine", ["calves"], 4, "6-10"),
+        ],
+      },
+      WED: REST_DAY,
+      THU: {
+        label: "UPPER HYPER",
+        items: [
+          fx("Incline Bench Press", "barbell", ["chest", "shoulders"], 4, "8-12"),
+          fx("Dumbbell Flye", "dumbbell", ["chest"], 3, "8-12"),
+          fx("Seated Cable Row", "cable", ["lats", "upper back"], 4, "8-12"),
+          fx("One-Arm Dumbbell Row", "dumbbell", ["lats", "upper back"], 3, "8-12"),
+          fx("Dumbbell Lateral Raise", "dumbbell", ["shoulders"], 3, "8-12"),
+          fx("Incline Dumbbell Curl", "dumbbell", ["biceps"], 3, "8-12"),
+          fx("Cable Triceps Extension", "cable", ["triceps"], 3, "8-12"),
+        ],
+      },
+      FRI: {
+        label: "LOWER HYPER",
+        items: [
+          fx("Front Squat", "barbell", ["quads"], 4, "8-12"),
+          fx("Barbell Lunge", "barbell", ["quads", "glutes"], 3, "8-12"),
+          fx("Leg Extension", "machine", ["quads"], 4, "10-15"),
+          fx("Lying Leg Curl", "machine", ["hamstrings"], 4, "10-15"),
+          fx("Seated Calf Raise", "machine", ["calves"], 4, "8-12"),
+          fx("Standing Calf Raise", "machine", ["calves"], 3, "8-12"),
+        ],
+      },
+      SAT: REST_DAY,
+      SUN: REST_DAY,
     },
   },
   {
@@ -131,13 +295,13 @@ const FEATURED_PROGRAMS: {
     tagline: "6-day high volume bodybuilding",
     level: "ADVANCED",
     days: {
-      MON: "CHEST/BACK",
-      TUE: "SHOULDERS/ARMS",
-      WED: "LEGS",
-      THU: "CHEST/BACK",
-      FRI: "SHOULDERS/ARMS",
-      SAT: "LEGS",
-      SUN: "REST",
+      MON: ARNOLD_CHEST_BACK,
+      TUE: ARNOLD_SHOULDERS_ARMS,
+      WED: ARNOLD_LEGS,
+      THU: ARNOLD_CHEST_BACK,
+      FRI: ARNOLD_SHOULDERS_ARMS,
+      SAT: ARNOLD_LEGS,
+      SUN: REST_DAY,
     },
   },
   {
@@ -145,22 +309,92 @@ const FEATURED_PROGRAMS: {
     tagline: "High-frequency strength variant",
     level: "ADVANCED",
     days: {
-      MON: "BENCH/OHP",
-      TUE: "SQUAT/DEADLIFT",
-      WED: "OHP/BENCH",
-      THU: "REST",
-      FRI: "BENCH/CLOSE GRIP",
-      SAT: "DEADLIFT/FRONT SQUAT",
-      SUN: "REST",
+      MON: {
+        label: "BENCH/OHP",
+        items: [
+          fx("Bench Press", "barbell", ["chest", "triceps"], 9, NSUNS_T1),
+          fx("Overhead Press", "barbell", ["shoulders", "triceps"], 8, NSUNS_T2),
+          fx("Dumbbell Row", "dumbbell", ["lats", "upper back"], 4, "8-12"),
+          fx("Dumbbell Lateral Raise", "dumbbell", ["shoulders"], 3, "12-15"),
+          fx("Triceps Pushdown", "cable", ["triceps"], 3, "10-12"),
+        ],
+      },
+      TUE: {
+        label: "SQUAT/SUMO DL",
+        items: [
+          fx("Squat", "barbell", ["quads", "glutes"], 9, NSUNS_T1),
+          fx("Sumo Deadlift", "barbell", ["hamstrings", "glutes"], 8, NSUNS_T2),
+          fx("Leg Curl", "machine", ["hamstrings"], 3, "10-12"),
+          fx("Hanging Leg Raise", "bodyweight", ["abs"], 3, "10-15"),
+        ],
+      },
+      WED: {
+        label: "OHP/INCLINE",
+        items: [
+          fx("Overhead Press", "barbell", ["shoulders", "triceps"], 9, NSUNS_T1),
+          fx("Incline Bench Press", "barbell", ["chest", "shoulders"], 8, NSUNS_T2),
+          fx("Chin-Up", "bodyweight", ["lats", "biceps"], 3, "8-12"),
+          fx("Face Pull", "cable", ["rear delts", "upper back"], 3, "15-20"),
+        ],
+      },
+      THU: REST_DAY,
+      FRI: {
+        label: "BENCH/CLOSE GRIP",
+        items: [
+          fx("Bench Press", "barbell", ["chest", "triceps"], 9, NSUNS_T1),
+          fx("Close-Grip Bench Press", "barbell", ["triceps", "chest"], 8, NSUNS_T2),
+          fx("Barbell Row", "barbell", ["lats", "upper back"], 4, "8-10"),
+          fx("Dumbbell Flye", "dumbbell", ["chest"], 3, "12-15"),
+        ],
+      },
+      SAT: {
+        label: "DEADLIFT/FRONT SQUAT",
+        items: [
+          fx("Deadlift", "barbell", ["hamstrings", "glutes", "lower back"], 9, NSUNS_T1),
+          fx("Front Squat", "barbell", ["quads"], 8, NSUNS_T2),
+          fx("Back Extension", "bodyweight", ["lower back", "glutes"], 3, "10-12"),
+          fx("Ab Wheel Rollout", "bodyweight", ["abs"], 3, "10-15"),
+        ],
+      },
+      SUN: REST_DAY,
     },
   },
 ];
 
+const FEATURED_NAMES = new Set(FEATURED_PROGRAMS.map((p) => p.name.toUpperCase()));
+
+function featuredRef(exercise: FeaturedExercise): ProgramExerciseRef {
+  const slug = exercise.name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return {
+    id: `custom-${slug}`,
+    name: exercise.name,
+    equipment: exercise.equipment,
+    primary_muscles: [...exercise.muscles],
+    youtube_query: `${exercise.name} form`,
+    sets: exercise.sets,
+    reps: exercise.reps,
+  };
+}
+
 function ProgramsPage() {
   const [state, set] = useAppState();
   const nav = useNavigate();
+  const { isPro, loading } = usePro();
+  const locked = !loading && !isPro;
+  const [preview, setPreview] = useState<string | null>(null);
+
+  const customProgramCount = state.programs.filter(
+    (p) => !FEATURED_NAMES.has(p.name.trim().toUpperCase()),
+  ).length;
 
   function create(template: (typeof SPLIT_TEMPLATES)[number]) {
+    if (locked && customProgramCount >= 1) {
+      openPaywall("custom-programs");
+      return;
+    }
     const id = crypto.randomUUID();
     const program: Program = {
       id,
@@ -176,6 +410,10 @@ function ProgramsPage() {
   }
 
   function createFeatured(p: (typeof FEATURED_PROGRAMS)[number]) {
+    if (locked) {
+      openPaywall("featured-programs");
+      return;
+    }
     const id = crypto.randomUUID();
     const program: Program = {
       id,
@@ -183,7 +421,10 @@ function ProgramsPage() {
       splitType: "CUSTOM",
       createdAt: new Date().toISOString(),
       days: Object.fromEntries(
-        DAYS.map((d) => [d, { label: p.days[d], items: [] }]),
+        DAYS.map((d) => [
+          d,
+          { label: p.days[d].label, items: p.days[d].items.map(featuredRef) },
+        ]),
       ) as unknown as Program["days"],
     };
     set((s) => ({ ...s, programs: [...s.programs, program], activeProgramId: id }));
@@ -276,30 +517,69 @@ function ProgramsPage() {
 
       <p className="label-cap text-grit-dim text-xs mb-2">★ Featured programs</p>
       <ul className="space-y-2 mb-6">
-        {FEATURED_PROGRAMS.map((p) => (
-          <li key={p.name}>
-            <button
-              onClick={() => createFeatured(p)}
-              className="w-full bg-grit-card border border-grit p-4 flex items-center justify-between text-left"
-            >
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="display uppercase font-extrabold text-grit text-base truncate">
-                    {p.name}
-                  </span>
-                  <span className="text-[9px] px-1.5 py-0.5 border border-grit text-grit-dim label-cap">
-                    {p.level}
-                  </span>
+        {FEATURED_PROGRAMS.map((p) => {
+          const open = preview === p.name;
+          const trainingDays = DAYS.filter((d) => p.days[d].label !== "REST");
+          return (
+            <li key={p.name} className="bg-grit-card border border-grit">
+              <button
+                onClick={() => createFeatured(p)}
+                className="w-full p-4 flex items-center justify-between text-left press"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="display uppercase font-extrabold text-grit text-base truncate">
+                      {p.name}
+                    </span>
+                    <span className="shrink-0 text-[9px] px-1.5 py-0.5 border border-grit text-grit-dim label-cap">
+                      {p.level}
+                    </span>
+                    <span className="shrink-0 text-[9px] py-0.5 label-cap text-accent-red border border-accent-red/40 rounded px-1.5">
+                      PRO
+                    </span>
+                  </div>
+                  <div className="text-xs text-grit-dim truncate">{p.tagline}</div>
                 </div>
-                <div className="text-xs text-grit-dim truncate">{p.tagline}</div>
+                {locked ? (
+                  <Lock size={16} className="text-grit-dim shrink-0" />
+                ) : (
+                  <Plus size={18} className="text-accent-red shrink-0" />
+                )}
+              </button>
+              <div className="px-4 pb-3">
+                <button
+                  onClick={() => setPreview(open ? null : p.name)}
+                  className="btn-ghost px-3 py-1 text-[10px] press"
+                >
+                  {open ? "Hide preview" : "Preview"}
+                </button>
+                {open && (
+                  <div className="mt-3 space-y-2.5">
+                    {trainingDays.map((d) => (
+                      <div key={d}>
+                        <p className="label-cap text-grit-dim text-[10px] mb-0.5">
+                          {d} · {p.days[d].label}
+                        </p>
+                        <p className="text-xs text-grit leading-relaxed">
+                          {p.days[d].items.map((it) => it.name).join(" · ")}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              <Plus size={18} className="text-accent-red shrink-0" />
-            </button>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
 
       <p className="label-cap text-grit-dim text-xs mb-2">+ New from template</p>
+      {locked && customProgramCount >= 1 && (
+        <p className="text-[10px] text-grit-dim mb-2">
+          Free includes 1 custom program — <span className="text-accent-red">Pro</span> unlocks
+          unlimited.
+        </p>
+      )}
       <ul className="space-y-2">
         {SPLIT_TEMPLATES.map((t) => (
           <li key={t.type}>

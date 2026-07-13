@@ -1,13 +1,16 @@
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { Share2, Sparkles, Target, Trophy, Zap } from "lucide-react";
+import { Lock, Share2, Sparkles, Target, Trophy, Zap } from "lucide-react";
 
 import { RankEmblem } from "@/components/RankEmblem";
 import { RankShareCard } from "@/components/RankShareCard";
+import { usePro } from "@/hooks/usePro";
 import { calculateGritScore, calculateStreak, isoDay } from "@/lib/calc";
 import { buildHeadlinePRs, computeFifaStats } from "@/lib/fifa-stats";
+import { openPaywall } from "@/lib/paywall-events";
 import { getRank, pointsToNextTier, rankProgress } from "@/lib/rank";
+import type { Rank } from "@/lib/rank";
 import type { AppState } from "@/lib/types";
 
 type RankedArenaProps = {
@@ -15,8 +18,16 @@ type RankedArenaProps = {
   compact?: boolean;
 };
 
+// One representative point value per tier, top of the ladder first (see src/lib/rank.ts).
+const LADDER_TIER_MINS = [990, 940, 850, 760, 600, 420, 250, 120, 0];
+const LADDER: Rank[] = LADDER_TIER_MINS.map((points) => getRank(points));
+
+type LadderSegment = { key: number; hidden: boolean; ranks: Rank[] };
+
 export function RankedArena({ state, compact = false }: RankedArenaProps) {
   const [shareOpen, setShareOpen] = useState(false);
+  const [ladderOpen, setLadderOpen] = useState(false);
+  const { isPro, loading: proLoading } = usePro();
   const score = calculateGritScore(state);
   const rank = getRank(score.total);
   const progress = rankProgress(score.total);
@@ -24,6 +35,27 @@ export function RankedArena({ state, compact = false }: RankedArenaProps) {
   const streak = calculateStreak(state.completedDates);
   const fifa = computeFifaStats(state);
   const today = isoDay();
+
+  // Free users only see their current tier and its immediate neighbours;
+  // Pro (or while entitlement is still loading) sees the whole ladder.
+  const showFullLadder = proLoading || isPro;
+  const tierIdx = LADDER.findIndex((t) => t.tier === rank.tier);
+
+  const ladderSegments = useMemo(() => {
+    const segments: LadderSegment[] = [];
+    LADDER.forEach((tier, i) => {
+      const hidden = !showFullLadder && Math.abs(i - tierIdx) > 1;
+      const last = segments[segments.length - 1];
+      if (last && last.hidden === hidden) last.ranks.push(tier);
+      else segments.push({ key: i, hidden, ranks: [tier] });
+    });
+    return segments;
+  }, [showFullLadder, tierIdx]);
+
+  const hiddenSegments = ladderSegments.filter((s) => s.hidden);
+  const overlaySegment = hiddenSegments.length
+    ? hiddenSegments.reduce((a, b) => (b.ranks.length > a.ranks.length ? b : a))
+    : null;
 
   const quests = useMemo(() => {
     const workoutDone = state.completedDates.includes(today);
@@ -112,6 +144,64 @@ export function RankedArena({ state, compact = false }: RankedArenaProps) {
             <MiniStat label="SESSIONS" value={String(state.sessions.length)} icon={<Target size={12} />} />
           </div>
 
+          <div className="relative mt-4 border-t border-white/10 pt-3">
+            <div className="flex items-center justify-between mb-2">
+              <p className="label-cap text-[10px] text-grit-dim">LEAGUE LADDER</p>
+              <div className="flex items-center gap-2">
+                {!showFullLadder && (
+                  <span className="label-cap text-[9px] text-accent-red border border-accent-red/40 rounded px-1.5">
+                    PRO
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setLadderOpen((v) => !v)}
+                  className="label-cap text-[10px] text-grit-dim press"
+                >
+                  {ladderOpen ? "Collapse" : "Full ladder"}
+                </button>
+              </div>
+            </div>
+            {!ladderOpen ? (
+              <div className="space-y-1.5">
+                {LADDER.filter((_, i) => Math.abs(i - tierIdx) <= 1).map((tier) => (
+                  <LadderRow key={tier.tier} tier={tier} isCurrent={tier.tier === rank.tier} />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {ladderSegments.map((seg) => (
+                  <div key={seg.key} className="relative">
+                    <div
+                      className={
+                        "space-y-1.5" +
+                        (seg.hidden ? " blur-[4px] opacity-50 pointer-events-none select-none" : "")
+                      }
+                      aria-hidden={seg.hidden || undefined}
+                    >
+                      {seg.ranks.map((tier) => (
+                        <LadderRow key={tier.tier} tier={tier} isCurrent={tier.tier === rank.tier} />
+                      ))}
+                    </div>
+                    {seg === overlaySegment && (
+                      <div className="absolute inset-0 z-10 flex items-center justify-center gap-2">
+                        <Lock size={13} className="text-accent-red" />
+                        <span className="label-cap text-[10px] text-grit">FULL LEAGUES — PRO</span>
+                        <button
+                          type="button"
+                          onClick={() => openPaywall("leagues")}
+                          className="btn-ghost text-xs"
+                        >
+                          Unlock
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {!compact && (
             <div className="relative mt-4 border-t border-white/10 pt-3">
               <div className="flex items-center justify-between mb-2">
@@ -157,6 +247,36 @@ export function RankedArena({ state, compact = false }: RankedArenaProps) {
         />
       )}
     </>
+  );
+}
+
+function LadderRow({ tier, isCurrent }: { tier: Rank; isCurrent: boolean }) {
+  return (
+    <div
+      className="flex items-center gap-2 rounded-xl border px-3 py-1.5"
+      style={{
+        borderColor: isCurrent ? `${tier.color}59` : "rgba(255,255,255,.08)",
+        background: isCurrent
+          ? `linear-gradient(90deg, ${tier.color}1f, rgba(0,0,0,.35))`
+          : "rgba(0,0,0,.3)",
+      }}
+    >
+      <span className="text-sm leading-none">{tier.icon}</span>
+      <span
+        className="label-cap text-[10px] flex-1 truncate"
+        style={isCurrent ? { color: tier.color } : undefined}
+      >
+        {tier.tier}
+      </span>
+      {isCurrent && (
+        <span className="label-cap text-[8px]" style={{ color: tier.color }}>
+          YOU
+        </span>
+      )}
+      <span className="text-[9px] font-semibold text-grit-dim">
+        {tier.minPoints}–{tier.maxPoints}
+      </span>
+    </div>
   );
 }
 

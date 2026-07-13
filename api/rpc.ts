@@ -449,6 +449,7 @@ const handlers: Record<string, Handler> = {
       avatar_url: z.string().max(2_000_000).optional(),
       onboarded: z.boolean().optional(),
       public_stats: z.record(z.string(), z.any()).optional(),
+      grit_points: z.number().int().min(0).max(1000).optional(),
     });
     const d = ProfileSchema.parse(data);
     if (d.username) {

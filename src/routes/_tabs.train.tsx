@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Play, ListPlus, Flame, Trophy, Heart, Pencil } from "lucide-react";
+import { Play, ListPlus, Flame, Trophy, Heart, Pencil, Shield, Lock } from "lucide-react";
 
 import { VideoModal } from "@/components/VideoModal";
 import { Reminders } from "@/components/Reminders";
@@ -14,6 +14,8 @@ import { useAppState } from "@/lib/storage";
 import { EXERCISES, getExercise } from "@/lib/exercises";
 import { calculateGritScore, calculateStreak, defaultSchedule, isoDay, todayKey } from "@/lib/calc";
 import { ProBanner } from "@/components/ProBanner";
+import { usePro } from "@/hooks/usePro";
+import { openPaywall } from "@/lib/paywall-events";
 import type { DayKey, Schedule, Program, Exercise } from "@/lib/types";
 
 const DAY_KEYS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
@@ -118,6 +120,20 @@ function TrainPage() {
   const programDay = activeProgram?.days[selectedDay];
   const score = calculateGritScore(state);
   const streak = calculateStreak(state.completedDates);
+
+  const { isPro, loading: proLoading } = usePro();
+  const armorLocked = !proLoading && !isPro;
+  const armorShields = Math.max(0, Math.min(3, state.streakArmor?.shields ?? 0));
+  const armorSavedDate = (() => {
+    const used = state.streakArmor?.usedDates;
+    if (!used || used.length === 0) return null;
+    for (const daysAgo of [1, 2]) {
+      const d = new Date();
+      d.setDate(d.getDate() - daysAgo);
+      if (used.includes(isoDay(d))) return d;
+    }
+    return null;
+  })();
 
   useEffect(() => {
     if (!editMode) return;
@@ -276,14 +292,45 @@ function TrainPage() {
                   {selectedHype.line}
                 </p>
               </div>
-              <Link
-                to="/profile"
-                className="deadset-glass-strip rounded-2xl px-3 py-2 text-right shrink-0"
-              >
-                <p className="label-cap text-[8px]">GRIT</p>
-                <p className="display text-2xl font-black text-grit leading-none">{score.total}</p>
-                <p className="text-[10px] text-grit-dim mt-1">{streak}d streak</p>
-              </Link>
+              <div className="flex flex-col items-end gap-1.5 shrink-0">
+                <Link to="/profile" className="deadset-glass-strip rounded-2xl px-3 py-2 text-right">
+                  <p className="label-cap text-[8px]">GRIT</p>
+                  <p className="display text-2xl font-black text-grit leading-none">
+                    {score.total}
+                  </p>
+                  <p className="text-[10px] text-grit-dim mt-1">{streak}d streak</p>
+                </Link>
+                {armorLocked ? (
+                  <button
+                    onClick={() => openPaywall("streak-armor")}
+                    className="press relative flex items-center gap-1 pr-1"
+                    aria-label="Unlock Streak Armor"
+                  >
+                    {[0, 1, 2].map((i) => (
+                      <Shield key={i} size={14} className="text-grit-dim" />
+                    ))}
+                    <Lock size={10} className="absolute -top-1 -right-0.5 text-grit-dim" />
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    {isPro && <span className="label-cap text-[8px] text-grit-dim mr-0.5">ARMOR</span>}
+                    {[0, 1, 2].map((i) => (
+                      <Shield
+                        key={i}
+                        size={14}
+                        className={i < armorShields ? "text-accent-red fill-current" : "text-grit-dim"}
+                      />
+                    ))}
+                  </div>
+                )}
+                {armorSavedDate && (
+                  <p className="text-[10px] text-grit-dim text-right leading-snug max-w-[10rem]">
+                    Streak Armor saved your{" "}
+                    {armorSavedDate.toLocaleDateString(undefined, { weekday: "short" })} —{" "}
+                    {armorShields} left this month
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="mt-5 flex gap-2">

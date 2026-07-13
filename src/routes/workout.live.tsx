@@ -1,15 +1,16 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
-import { X, Check, Play, Trophy, Share2, Flame } from "lucide-react";
+import { X, Check, Play, Trophy, Share2, Flame, Calculator } from "lucide-react";
 import { useAppState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
-import { defaultSchedule, isoDay, todayKey } from "@/lib/calc";
+import { defaultSchedule, isoDay, todayKey, plateBreakdown, warmupRamp } from "@/lib/calc";
 import { emitGritEarned } from "@/lib/grit-events";
 import { VideoModal } from "@/components/VideoModal";
 import { ShareCard } from "@/components/ShareCard";
 import { GritEarnedLayer } from "@/components/GritEarnedLayer";
 import type {
+  AppState,
   WorkoutSession,
   WorkoutSessionExercise,
   CompletedSet,
@@ -84,6 +85,49 @@ function buildSession(
       };
     }),
   };
+}
+
+/**
+ * Historical bests for an exercise, merging manual set logs with every
+ * session's logged sets (the gatherLogs idiom, collapsed to the two numbers
+ * PR detection needs). Weight PRs compare against the heaviest set ever;
+ * bodyweight (0 kg) PRs compare against the best bodyweight rep count.
+ */
+function bestsFor(state: AppState, exerciseId: string): { bestWeight: number; bestBwReps: number } {
+  let bestWeight = 0;
+  let bestBwReps = 0;
+  const consider = (weight: number, reps: number) => {
+    if (weight > bestWeight) bestWeight = weight;
+    if (weight === 0 && reps > bestBwReps) bestBwReps = reps;
+  };
+  state.logs.forEach((l) => {
+    if (l.exerciseId === exerciseId) consider(l.weight, l.reps);
+  });
+  state.sessions.forEach((s) =>
+    s.exercises.forEach((e) => {
+      if (e.exerciseId !== exerciseId) return;
+      e.sets.forEach((cs) => consider(cs.weight, cs.reps));
+    }),
+  );
+  return { bestWeight, bestBwReps };
+}
+
+/** Last logged set for an exercise from the most recent other session. */
+function prefillFromHistory(
+  state: AppState,
+  currentSessionId: string,
+  exerciseId: string,
+): { weight: string; reps: string } {
+  const sorted = [...state.sessions].sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+  for (const s of sorted) {
+    if (s.id === currentSessionId) continue;
+    for (const e of s.exercises) {
+      if (e.exerciseId !== exerciseId) continue;
+      const last = e.sets[e.sets.length - 1];
+      if (last) return { weight: String(last.weight), reps: String(last.reps) };
+    }
+  }
+  return { weight: "", reps: "" };
 }
 
 function DayPickerRow({
@@ -269,11 +313,25 @@ function LiveWorkoutPage() {
   const [videoTitle, setVideoTitle] = useState("");
   const [finished, setFinished] = useState(false);
   const [share, setShare] = useState(false);
-  const [prPromptOpen, setPrPromptOpen] = useState(false);
-  const [prMode, setPrMode] = useState<"ask" | "form">("ask");
-  const [prExerciseId, setPrExerciseId] = useState("");
-  const [prWeight, setPrWeight] = useState("");
-  const [prReps, setPrReps] = useState("1");
+  const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
+  const [restNow, setRestNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (restEndsAt === null) return;
+    setRestNow(Date.now());
+    const t = setInterval(() => setRestNow(Date.now()), 250);
+    return () => clearInterval(t);
+  }, [restEndsAt]);
+
+  const restLeft =
+    restEndsAt === null ? null : Math.max(0, Math.ceil((restEndsAt - restNow) / 1000));
+
+  // Auto-dismiss the rest banner shortly after hitting zero (with a pulse).
+  useEffect(() => {
+    if (restLeft !== 0) return;
+    const t = setTimeout(() => setRestEndsAt(null), 900);
+    return () => clearTimeout(t);
+  }, [restLeft]);
 
   const totals = useMemo(() => {
     if (!session) return { vol: 0, sets: 0, prs: 0 };
@@ -295,10 +353,15 @@ function LiveWorkoutPage() {
     [session],
   );
 
-  useEffect(() => {
-    if (!session?.exercises.length) return;
-    setPrExerciseId((current) => current || session.exercises[0].exerciseId);
-  }, [session]);
+  // Prefill: previous set of this exercise in this session, else the last
+  // logged set from the most recent session containing it, else empty.
+  const prefill = useMemo(() => {
+    const ex = session?.exercises[activeIdx];
+    if (!session || !ex) return { weight: "", reps: "" };
+    const last = ex.sets[ex.sets.length - 1];
+    if (last) return { weight: String(last.weight), reps: String(last.reps) };
+    return prefillFromHistory(state, session.id, ex.exerciseId);
+  }, [state, session, activeIdx]);
 
   if (!session) {
     const active = state.programs.find((p) => p.id === state.activeProgramId);
@@ -349,46 +412,63 @@ function LiveWorkoutPage() {
 
   const current = session.exercises[activeIdx];
   const totalEx = session.exercises.length;
-  const progress = Math.round(((activeIdx + 1) / Math.max(1, totalEx)) * 100);
+  const progress = Math.min(100, Math.round((totals.sets / Math.max(1, plannedSets)) * 100));
 
-  function finishWorkout(pr?: { exerciseId: string; weight: number; reps: number }) {
-    const prExercise = pr
-      ? (session!.exercises.find((e) => e.exerciseId === pr.exerciseId) ?? session!.exercises[0])
-      : null;
-    const prSet: CompletedSet | null = pr ? { weight: pr.weight, reps: pr.reps, isPR: true } : null;
-    const finalExercises = prSet
-      ? session!.exercises.map((e) =>
-          e.exerciseId === prExercise!.exerciseId ? { ...e, sets: [prSet] } : e,
-        )
-      : session!.exercises;
-    const finalVolume = prSet ? prSet.weight * prSet.reps : 0;
-    const finalPrCount = prSet ? 1 : 0;
-
-    const day = isoDay();
-    set((st) => {
-      const sessions = st.sessions.map((s) =>
+  function logSet(weight: number, reps: number) {
+    const ex = session!.exercises[activeIdx];
+    if (!ex) return;
+    const { bestWeight, bestBwReps } = bestsFor(state, ex.exerciseId);
+    const isPR = weight > 0 ? weight > bestWeight : reps > bestBwReps;
+    const newSet: CompletedSet = isPR ? { weight, reps, isPR: true } : { weight, reps };
+    set((st) => ({
+      ...st,
+      sessions: st.sessions.map((s) =>
         s.id === session!.id
           ? {
               ...s,
-              exercises: finalExercises,
-              totalVolume: finalVolume,
-              prCount: finalPrCount,
-              endedAt: new Date().toISOString(),
+              exercises: s.exercises.map((e, i) =>
+                i === activeIdx ? { ...e, sets: [...e.sets, newSet] } : e,
+              ),
             }
           : s,
+      ),
+    }));
+    if (isPR) emitGritEarned(25, `NEW PR — ${ex.name.toUpperCase()}`, "pr");
+    setRestEndsAt(Date.now() + 90_000);
+  }
+
+  function finishWorkout() {
+    const day = isoDay();
+    const endedAt = new Date().toISOString();
+    set((st) => {
+      const live = st.sessions.find((s) => s.id === session!.id);
+      if (!live) return st;
+      let totalVolume = 0;
+      let prCount = 0;
+      live.exercises.forEach((e) =>
+        e.sets.forEach((cs) => {
+          totalVolume += cs.weight * cs.reps;
+          if (cs.isPR) prCount += 1;
+        }),
       );
       const newLogs = [...st.logs];
-      if (pr) {
-        newLogs.push({
-          exerciseId: pr.exerciseId,
-          weight: pr.weight,
-          reps: pr.reps,
-          date: new Date().toISOString(),
+      live.exercises.forEach((e) => {
+        let best: CompletedSet | null = null;
+        e.sets.forEach((cs) => {
+          if (cs.weight <= 0) return;
+          if (!best || cs.weight > best.weight || (cs.weight === best.weight && cs.reps > best.reps))
+            best = cs;
         });
-      }
+        if (best) {
+          const b: CompletedSet = best;
+          newLogs.push({ exerciseId: e.exerciseId, weight: b.weight, reps: b.reps, date: endedAt });
+        }
+      });
       return {
         ...st,
-        sessions,
+        sessions: st.sessions.map((s) =>
+          s.id === live.id ? { ...s, totalVolume, prCount, endedAt } : s,
+        ),
         logs: newLogs,
         activeSessionId: null,
         completedDates: st.completedDates.includes(day)
@@ -396,8 +476,9 @@ function LiveWorkoutPage() {
           : [...st.completedDates, day],
       };
     });
+    setRestEndsAt(null);
     setFinished(true);
-    emitGritEarned(pr ? 75 : 50, pr ? "PR LOCKED" : "WORKOUT COMPLETE", pr ? "pr" : "quest");
+    emitGritEarned(50, "WORKOUT COMPLETE", "quest");
   }
 
   function discardWorkout() {
@@ -447,13 +528,13 @@ function LiveWorkoutPage() {
 
       <div className="grid grid-cols-3 border-b border-grit bg-grit-card">
         <Stat label="EXERCISES" value={`${totalEx}`} />
-        <Stat label="PLANNED SETS" value={`${plannedSets}`} />
+        <Stat label="SETS" value={`${totals.sets}/${plannedSets}`} />
         <Stat label="PRS" value={`${totals.prs}`} accent={totals.prs > 0} />
       </div>
 
       <div className="flex gap-2 overflow-x-auto px-4 py-3 border-b border-grit">
         {session.exercises.map((e, i) => {
-          const done = i < activeIdx;
+          const done = e.targetSets > 0 && e.sets.length >= e.targetSets;
           const active = i === activeIdx;
           return (
             <button
@@ -507,30 +588,52 @@ function LiveWorkoutPage() {
           </div>
         </div>
 
-        <div className="mt-5 bg-grit-card border border-grit rounded-2xl p-4">
-          <p className="label-cap text-accent-red text-[10px]">DO THIS</p>
-          <div className="grid grid-cols-2 gap-3 mt-3">
-            <div className="border border-grit rounded-xl p-3">
-              <p className="label-cap text-[10px]">Sets</p>
-              <p className="display text-3xl font-extrabold text-grit leading-none mt-1">
-                {current.targetSets}
-              </p>
-            </div>
-            <div className="border border-grit rounded-xl p-3">
-              <p className="label-cap text-[10px]">Reps</p>
-              <p className="display text-3xl font-extrabold text-grit leading-none mt-1">
-                {current.targetReps}
-              </p>
-            </div>
-          </div>
-          <p className="text-sm text-grit-dim mt-4 leading-relaxed">
-            Follow the plan. No logging during the workout. At the end, just tell DEADSET if you hit
-            a PR.
-          </p>
-        </div>
+        <SetLogger
+          key={`${session.id}:${activeIdx}`}
+          exercise={current}
+          initialWeight={prefill.weight}
+          initialReps={prefill.reps}
+          onLog={logSet}
+        />
       </div>
 
-      <div className="border-t border-grit p-4 grid grid-cols-2 gap-3">
+      {restLeft !== null && (
+        <div
+          className="border-t border-grit bg-grit-card px-4 py-3 flex items-center justify-between gap-3 animate-slide-up"
+          style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+        >
+          <div className="min-w-0">
+            <p className="label-cap text-[10px] text-accent-red">REST</p>
+            <p
+              className={`font-mono text-3xl font-extrabold tabular-nums leading-none mt-0.5 ${
+                restLeft === 0 ? "animate-pulse text-accent-red" : "text-grit"
+              }`}
+            >
+              {String(Math.floor(restLeft / 60)).padStart(2, "0")}:
+              {String(restLeft % 60).padStart(2, "0")}
+            </p>
+          </div>
+          <div className="flex flex-shrink-0 gap-2">
+            <button
+              onClick={() => setRestEndsAt((t) => (t === null ? null : t + 30_000))}
+              className="btn-ghost press px-3 py-2 text-xs"
+            >
+              +30s
+            </button>
+            <button
+              onClick={() => setRestEndsAt(null)}
+              className="btn-ghost press px-3 py-2 text-xs"
+            >
+              Skip
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div
+        className="border-t border-grit p-4 grid grid-cols-2 gap-3"
+        style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+      >
         <button
           onClick={() => setActiveIdx((i) => Math.min(totalEx - 1, i + 1))}
           disabled={activeIdx >= totalEx - 1}
@@ -540,9 +643,8 @@ function LiveWorkoutPage() {
         </button>
         <button
           onClick={() => {
-            setPrPromptOpen(true);
-            setPrMode("ask");
-            setPrExerciseId(current.exerciseId);
+            if (totals.sets === 0 && !confirm("No sets logged — finish anyway?")) return;
+            finishWorkout();
           }}
           className="btn-grit"
         >
@@ -553,27 +655,6 @@ function LiveWorkoutPage() {
 
       {videoQuery && (
         <VideoModal query={videoQuery} title={videoTitle} onClose={() => setVideoQuery(null)} />
-      )}
-      {prPromptOpen && (
-        <PRFinishModal
-          mode={prMode}
-          exercises={session.exercises}
-          exerciseId={prExerciseId}
-          weight={prWeight}
-          reps={prReps}
-          onMode={setPrMode}
-          onExerciseId={setPrExerciseId}
-          onWeight={setPrWeight}
-          onReps={setPrReps}
-          onCancel={() => setPrPromptOpen(false)}
-          onNoPR={() => finishWorkout()}
-          onSavePR={() => {
-            const weight = Number(prWeight);
-            const reps = Number(prReps) || 1;
-            if (!prExerciseId || !weight) return;
-            finishWorkout({ exerciseId: prExerciseId, weight, reps });
-          }}
-        />
       )}
       <GritEarnedLayer />
     </div>
@@ -613,121 +694,143 @@ function Timer({ startedAt }: { startedAt: string }) {
   );
 }
 
-function PRFinishModal({
-  mode,
-  exercises,
-  exerciseId,
-  weight,
-  reps,
-  onMode,
-  onExerciseId,
-  onWeight,
-  onReps,
-  onCancel,
-  onNoPR,
-  onSavePR,
+function SetLogger({
+  exercise,
+  initialWeight,
+  initialReps,
+  onLog,
 }: {
-  mode: "ask" | "form";
-  exercises: WorkoutSessionExercise[];
-  exerciseId: string;
-  weight: string;
-  reps: string;
-  onMode: (mode: "ask" | "form") => void;
-  onExerciseId: (id: string) => void;
-  onWeight: (value: string) => void;
-  onReps: (value: string) => void;
-  onCancel: () => void;
-  onNoPR: () => void;
-  onSavePR: () => void;
+  exercise: WorkoutSessionExercise;
+  initialWeight: string;
+  initialReps: string;
+  onLog: (weight: number, reps: number) => void;
 }) {
-  const canSave = Number(weight) > 0 && Number(reps) > 0 && !!exerciseId;
+  const [weight, setWeight] = useState(initialWeight);
+  const [reps, setReps] = useState(initialReps);
+  const [platesOpen, setPlatesOpen] = useState(false);
+  const weightNum = Number(weight) || 0;
+  const plates = platesOpen && weightNum >= 20 ? plateBreakdown(weightNum) : null;
+  const ramp = exercise.sets.length === 0 && weightNum >= 30 ? warmupRamp(weightNum) : [];
+  const canLog = weight.trim() !== "" && Number(reps) > 0;
+
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/75 px-4 pb-4"
-      onClick={onCancel}
-    >
-      <div
-        className="w-full max-w-md rounded-[24px] border border-accent-red/60 bg-grit-card p-5 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {mode === "ask" ? (
-          <>
-            <p className="label-cap text-accent-red text-[10px]">FINISH WORKOUT</p>
-            <h2 className="display text-3xl font-extrabold uppercase text-grit leading-none mt-2">
-              Did you hit a PR?
-            </h2>
-            <p className="text-sm text-grit-dim mt-3 leading-relaxed">
-              If not, you’re done. DEADSET will mark the workout complete and give you the grit for
-              showing up.
-            </p>
-            <div className="grid grid-cols-2 gap-3 mt-5">
-              <button onClick={onNoPR} className="btn-ghost py-3">
-                No PR
-              </button>
-              <button onClick={() => onMode("form")} className="btn-grit py-3">
-                Yes
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <p className="label-cap text-accent-red text-[10px]">LOG THE PR</p>
-            <h2 className="display text-3xl font-extrabold uppercase text-grit leading-none mt-2">
-              What did you hit?
-            </h2>
-            <div className="mt-5 space-y-3">
-              <div>
-                <label className="label-cap block mb-1">Exercise</label>
-                <select
-                  value={exerciseId}
-                  onChange={(e) => onExerciseId(e.target.value)}
-                  className="input-grit"
-                >
-                  {exercises.map((e) => (
-                    <option key={e.exerciseId} value={e.exerciseId}>
-                      {e.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label-cap block mb-1">Weight (kg)</label>
-                  <input
-                    inputMode="decimal"
-                    value={weight}
-                    onChange={(e) => onWeight(e.target.value)}
-                    placeholder="100"
-                    className="input-grit"
-                  />
-                </div>
-                <div>
-                  <label className="label-cap block mb-1">Reps</label>
-                  <input
-                    inputMode="numeric"
-                    value={reps}
-                    onChange={(e) => onReps(e.target.value)}
-                    placeholder="1"
-                    className="input-grit"
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3 mt-5">
-              <button onClick={() => onMode("ask")} className="btn-ghost py-3">
-                Back
-              </button>
-              <button onClick={onSavePR} disabled={!canSave} className="btn-grit py-3">
-                <Trophy size={16} className="mr-2" />
-                Save PR
-              </button>
-            </div>
-          </>
-        )}
+    <div className="mt-5 bg-grit-card border border-grit rounded-2xl p-4">
+      <div className="flex items-center justify-between">
+        <p className="label-cap text-accent-red text-[10px]">LOG YOUR SETS</p>
+        <p className="label-cap text-[10px] text-grit-dim">
+          {exercise.sets.length}/{exercise.targetSets} · {exercise.targetReps} reps
+        </p>
       </div>
+
+      {ramp.length > 0 && (
+        <div className="mt-3 flex items-center gap-1.5 flex-wrap">
+          <span className="label-cap text-[9px] text-grit-dim">WARM-UP</span>
+          {ramp.map((w) => (
+            <span
+              key={w.pct}
+              className="text-[10px] text-grit-dim border border-grit rounded-full px-2 py-0.5"
+            >
+              {w.weight}kg×{w.reps}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {exercise.sets.length > 0 && (
+        <div className="mt-3 space-y-1.5">
+          {exercise.sets.map((s, i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between border border-grit rounded-xl px-3 py-2"
+            >
+              <span className="label-cap text-[10px] text-grit-dim">SET {i + 1}</span>
+              <span className="display text-lg font-extrabold text-grit leading-none">
+                {s.weight > 0 ? `${s.weight} kg × ${s.reps}` : `${s.reps} reps`}
+                {s.isPR && <Flame size={14} className="inline ml-2 text-accent-red" />}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="grid grid-cols-[1fr_1fr_auto] gap-2 mt-3">
+        <div className="relative">
+          <input
+            inputMode="decimal"
+            value={weight}
+            onChange={(e) => setWeight(e.target.value.replace(/[^0-9.]/g, ""))}
+            placeholder="kg"
+            className="input-grit pr-9"
+            aria-label="Weight (kg)"
+          />
+          <button
+            onClick={() => setPlatesOpen((v) => !v)}
+            className={`absolute right-1.5 top-1/2 -translate-y-1/2 p-1 press ${
+              platesOpen ? "text-accent-red" : "text-grit-dim"
+            }`}
+            aria-label="Plate calculator"
+          >
+            <Calculator size={16} />
+          </button>
+        </div>
+        <input
+          inputMode="numeric"
+          value={reps}
+          onChange={(e) => setReps(e.target.value.replace(/[^0-9]/g, ""))}
+          placeholder="reps"
+          className="input-grit"
+          aria-label="Reps"
+        />
+        <button
+          onClick={() => {
+            if (!canLog) return;
+            onLog(weightNum, Number(reps));
+          }}
+          disabled={!canLog}
+          className="btn-grit px-4 disabled:opacity-40"
+        >
+          <Check size={16} className="mr-1" />
+          Log
+        </button>
+      </div>
+
+      {platesOpen && (
+        <div className="mt-3 border border-grit rounded-xl px-3 py-2.5">
+          {plates ? (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="label-cap text-[9px] text-grit-dim">PER SIDE</span>
+              {plates.perSide.length === 0 ? (
+                <span className="text-[11px] text-grit-dim">bar only</span>
+              ) : (
+                plates.perSide.map((p, i) => (
+                  <span
+                    key={i}
+                    className="display text-xs font-extrabold text-grit border border-accent-red/40 rounded-full px-2 py-0.5"
+                  >
+                    {p}
+                  </span>
+                ))
+              )}
+              <span className="label-cap text-[9px] text-grit-dim ml-auto">BAR {plates.barKg}KG</span>
+              {plates.remainderKg > 0 && (
+                <span className="text-[10px] text-grit-dim w-full">
+                  +{plates.remainderKg}kg unloadable with standard plates
+                </span>
+              )}
+            </div>
+          ) : (
+            <p className="text-[11px] text-grit-dim">Enter a weight of 20kg+ to see the plate math.</p>
+          )}
+        </div>
+      )}
+
+      <p className="text-xs text-grit-dim mt-3 leading-relaxed">
+        Log every working set — PRs are detected automatically against your history.
+      </p>
     </div>
   );
 }
+
 function FinishedScreen({
   session,
   onClose,
@@ -741,7 +844,7 @@ function FinishedScreen({
   share: boolean;
   onCloseShare: () => void;
 }) {
-  const plannedSets = session.exercises.reduce((s, e) => s + e.targetSets, 0);
+  const setsLogged = session.exercises.reduce((s, e) => s + e.sets.length, 0);
   const durationMin = Math.max(
     1,
     Math.round(
@@ -764,9 +867,17 @@ function FinishedScreen({
         <div className="grid grid-cols-2 gap-3 mt-8">
           <BigStat label="EXERCISES" value={String(session.exercises.length)} />
           <BigStat label="DURATION" value={`${durationMin}min`} />
-          <BigStat label="PLANNED SETS" value={String(plannedSets)} />
+          <BigStat label="SETS LOGGED" value={String(setsLogged)} />
           <BigStat label="PRS" value={String(session.prCount)} accent={session.prCount > 0} />
         </div>
+        {session.totalVolume > 0 && (
+          <div className="bg-grit-card border border-grit p-4 mt-3">
+            <p className="label-cap text-[10px] text-grit-dim">TOTAL VOLUME</p>
+            <p className="display text-3xl font-extrabold mt-1 text-grit">
+              {Math.round(session.totalVolume).toLocaleString()} <span className="text-sm text-grit-dim">kg</span>
+            </p>
+          </div>
+        )}
 
         <div className="mt-auto pt-6 grid grid-cols-2 gap-3">
           <button onClick={onClose} className="btn-ghost">
