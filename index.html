@@ -42,11 +42,13 @@
       </main>
     </div>
     <script>
-      // Boot watchdog: if the entry module never executes (e.g. a poisoned
-      // immutable cache entry after a deploy), re-import it with a
-      // cache-busting query so the browser fetches a fresh copy.
+      // Boot watchdog: if the entry module or the app stylesheet never load
+      // (e.g. a poisoned immutable cache entry after a deploy), re-fetch them
+      // with a cache-busting query so the browser gets a fresh copy. Without
+      // this, one bad response mid-deploy leaves a device broken for a year.
       (function () {
         var RETRY_KEY = "deadset_boot_retry_v2";
+        var CSS_KEY = "deadset_css_retry_v1";
         function showBootFailure() {
           var root = document.getElementById("root");
           if (!root) return;
@@ -59,8 +61,34 @@
             '<button onclick="window.location.reload()" style="appearance:none;border:0;background:#E10600;color:white;padding:14px 22px;font-weight:900;letter-spacing:.12em;text-transform:uppercase">Reload DEADSET</button>' +
             "</div></main>";
         }
+        function healCss() {
+          try {
+            var link = document.querySelector('link[rel="stylesheet"][href*="/assets/"]');
+            if (!link) return;
+            var healthy = false;
+            for (var i = 0; i < document.styleSheets.length; i++) {
+              var sheet = document.styleSheets[i];
+              if (sheet.href && sheet.href.indexOf("/assets/") !== -1) {
+                try {
+                  healthy = !!(sheet.cssRules && sheet.cssRules.length > 50);
+                } catch (e) {
+                  healthy = false; // same-origin sheet unreadable = poisoned response
+                }
+              }
+            }
+            if (healthy || sessionStorage.getItem(CSS_KEY)) return;
+            sessionStorage.setItem(CSS_KEY, "1");
+            var fresh = document.createElement("link");
+            fresh.rel = "stylesheet";
+            fresh.href = link.href.split("?")[0] + "?boot=" + Date.now();
+            document.head.appendChild(fresh);
+          } catch (e) {
+            /* best effort */
+          }
+        }
         window.addEventListener("load", function () {
           setTimeout(function () {
+            healCss();
             if (window.__DEADSET_BOOT_OK) return;
             var entry = document.querySelector('script[type="module"][src]');
             if (!entry || sessionStorage.getItem(RETRY_KEY)) {
