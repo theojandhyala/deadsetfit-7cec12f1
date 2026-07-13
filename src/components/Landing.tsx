@@ -21,15 +21,11 @@ import {
   Zap,
 } from "lucide-react";
 
-import aboutImg from "@/assets/landing-about.jpg";
-import benefitsImg from "@/assets/landing-benefits.jpg";
-import heroImg from "@/assets/gym-hero.jpg";
-
 const NAV = [
   { label: "FEATURES", id: "features" },
   { label: "SYSTEM", id: "about" },
   { label: "RESULTS", id: "benefits" },
-  { label: "PROOF", id: "reviews" },
+  { label: "PRICING", id: "pricing" },
   { label: "FAQ", id: "faq" },
 ];
 
@@ -101,7 +97,7 @@ function Section({
 }
 
 function Hero() {
-  const proof = ["Streak armor", "PR tracking", "Friends + ranks", "Weekly leagues"];
+  const proof = ["Live set logging", "Auto PR detection", "Streak Armor", "Weekly leagues"];
   const metrics = [
     { label: "Today's plan", value: "Push strength", Icon: Target },
     { label: "Readiness", value: "87%", Icon: Gauge },
@@ -113,9 +109,8 @@ function Hero() {
       <div
         className="absolute inset-0 -z-10"
         style={{
-          backgroundImage: `linear-gradient(90deg, rgba(5,5,5,0.98) 0%, rgba(7,7,7,0.9) 42%, rgba(7,7,7,0.46) 78%, rgba(5,5,5,0.72) 100%), linear-gradient(180deg, rgba(5,5,5,0.1) 0%, #050505 100%), url(${heroImg})`,
-          backgroundPosition: "center right",
-          backgroundSize: "cover",
+          background:
+            "radial-gradient(ellipse 60% 50% at 78% 32%, rgba(225,6,0,0.16), transparent 68%), radial-gradient(ellipse 42% 38% at 12% 78%, rgba(230,50,34,0.08), transparent 70%), linear-gradient(180deg, #060606 0%, #050505 100%)",
         }}
         aria-hidden="true"
       />
@@ -125,7 +120,7 @@ function Hero() {
           backgroundImage:
             "linear-gradient(rgba(255,255,255,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.12) 1px, transparent 1px)",
           backgroundSize: "44px 44px",
-          maskImage: "linear-gradient(90deg, black, transparent 78%)",
+          maskImage: "radial-gradient(ellipse 70% 60% at 50% 40%, black, transparent 85%)",
         }}
         aria-hidden="true"
       />
@@ -222,46 +217,69 @@ function Hero() {
 }
 
 function Features() {
-  const items = [
-    {
-      Icon: Camera,
-      t: "PROGRESS PHOTOS",
-      d: "Weekly check-ins side by side, plus weight and measurements, so change is obvious.",
-    },
-    {
-      Icon: Utensils,
-      t: "FOOD + MACRO LOG",
-      d: "Barcode lookup, fast presets and manual entry. Calories, protein and water, tracked honestly.",
-    },
-    {
-      Icon: CalendarDays,
-      t: "SPLIT BUILDER",
-      d: "Build your week day by day: pick the muscles, set the sets and reps, pull from the full library.",
-    },
+  const items: { Icon: typeof Camera; t: string; d: string; pro?: boolean }[] = [
     {
       Icon: Dumbbell,
-      t: "WORKOUT TRACKING",
-      d: "Log sets quickly, finish sessions, spot PRs, and keep the record clean.",
+      t: "LIVE SET LOGGING",
+      d: "Log every set as you lift — weight × reps, prefilled from your last session, crash-safe.",
     },
     {
-      Icon: LineChart,
-      t: "PROGRESS OVER TIME",
-      d: "See bodyweight, measurements, consistency, and lifting history in one place.",
+      Icon: Zap,
+      t: "AUTO PR DETECTION",
+      d: "Every set is checked against your full history. Real PRs, detected — not self-reported.",
     },
     {
-      Icon: Trophy,
-      t: "LEADERBOARDS",
-      d: "Compete with friends and climb ranked arenas without losing sight of your own plan.",
-    },
-    {
-      Icon: Cloud,
-      t: "CLOUD SYNC",
-      d: "Keep your profile and training state available across devices.",
+      Icon: Gauge,
+      t: "PLATE MATH + WARM-UPS",
+      d: "Per-side plate breakdown for any weight, and a warm-up ramp into your working sets.",
     },
     {
       Icon: ShieldCheck,
-      t: "CONTROL YOUR DATA",
-      d: "Export your history and manage account data from inside the app.",
+      t: "STREAK ARMOR",
+      d: "Miss a day, keep the fire. Three shields a month auto-protect your streak.",
+      pro: true,
+    },
+    {
+      Icon: LineChart,
+      t: "STRENGTH STANDARDS",
+      d: "Your big three classified untrained → elite against bodyweight, with rep-max tables.",
+      pro: true,
+    },
+    {
+      Icon: Flame,
+      t: "MUSCLE RECOVERY",
+      d: "Per-muscle readiness computed from the volume you actually logged. Train what's fresh.",
+      pro: true,
+    },
+    {
+      Icon: Utensils,
+      t: "NUTRITION + MACROS",
+      d: "Barcode lookup, fast logging, weekly averages, protein per kg and macro split.",
+    },
+    {
+      Icon: Camera,
+      t: "PROGRESS PHOTOS",
+      d: "Weekly check-ins compared side by side with dates and bodyweight delta.",
+    },
+    {
+      Icon: CalendarDays,
+      t: "PROGRAMS THAT WORK",
+      d: "Build your own split, or run 5/3/1, StrongLifts, PHUL, Arnold and nSuns — fully loaded.",
+    },
+    {
+      Icon: Trophy,
+      t: "RANKED LEAGUES",
+      d: "Nine divisions from Bronze to DEADSET. Grit-ranked leaderboards, real competition.",
+    },
+    {
+      Icon: Medal,
+      t: "CHALLENGES + BADGES",
+      d: "25 tests from entry to ELITE tier, with a trophy case that proves the work.",
+    },
+    {
+      Icon: Cloud,
+      t: "SYNC + YOUR DATA",
+      d: "Signed-in state syncs across devices. Export your history whenever you want.",
     },
   ];
   return (
@@ -283,7 +301,14 @@ function Features() {
               <Icon size={18} />
             </div>
             <div>
-              <p className="label-cap text-sm text-grit">{f.t}</p>
+              <p className="label-cap flex items-center gap-2 text-sm text-grit">
+                {f.t}
+                {f.pro && (
+                  <span className="label-cap rounded border border-accent-red/40 px-1 text-[8px] text-accent-red">
+                    PRO
+                  </span>
+                )}
+              </p>
               <p className="mt-1 text-xs leading-relaxed text-grit-dim">{f.d}</p>
             </div>
           </div>
@@ -303,14 +328,28 @@ function About() {
   return (
     <Section id="about" className="overflow-hidden">
       <div
-        className="absolute inset-0 -z-10 opacity-50"
+        className="absolute inset-0 -z-10"
         style={{
-          backgroundImage: `linear-gradient(90deg, #0a0a0a 0%, rgba(10,10,10,0.58) 100%), url(${aboutImg})`,
-          backgroundPosition: "center right",
-          backgroundSize: "cover",
+          background:
+            "radial-gradient(ellipse 55% 65% at 88% 50%, rgba(225,6,0,0.10), transparent 70%), #0a0a0a",
         }}
         aria-hidden="true"
       />
+      <div
+        className="pointer-events-none absolute -right-10 top-1/2 -z-10 hidden -translate-y-1/2 select-none lg:block"
+        aria-hidden="true"
+      >
+        <span
+          className="display text-[11rem] font-black uppercase leading-none"
+          style={{
+            fontStyle: "italic",
+            color: "transparent",
+            WebkitTextStroke: "1px rgba(230,50,34,0.22)",
+          }}
+        >
+          GRIT
+        </span>
+      </div>
       <div className="max-w-2xl">
         <h2
           className="display mb-4 text-4xl font-extrabold sm:text-5xl"
@@ -366,21 +405,62 @@ function Benefits() {
   return (
     <Section id="benefits" className="bg-grit-card/30">
       <div className="grid items-center gap-10 lg:grid-cols-2">
-        <div className="relative aspect-square overflow-hidden lg:h-[500px] lg:aspect-auto">
-          <img
-            src={benefitsImg}
-            alt="Athlete training"
-            loading="lazy"
-            width={1024}
-            height={1280}
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-          <div
-            className="absolute inset-0"
-            style={{
-              background: "linear-gradient(90deg, transparent 0%, rgba(10,10,10,0.45) 100%)",
-            }}
-          />
+        <div className="relative mx-auto w-full max-w-[400px]">
+          <div className="absolute -inset-8 rounded-[42px] bg-accent-red/10 blur-3xl" aria-hidden="true" />
+          <div className="relative overflow-hidden border border-white/10 bg-black/55 p-4 shadow-2xl backdrop-blur-xl">
+            <div className="mb-3 flex items-center justify-between border-b border-white/10 pb-3">
+              <div>
+                <p className="label-cap text-[9px] text-accent-red">LIVE · PUSH DAY</p>
+                <p className="display text-lg font-black uppercase text-grit">Bench Press</p>
+              </div>
+              <div className="text-right">
+                <p className="label-cap text-[8px] text-grit-dim">ELAPSED</p>
+                <p className="font-mono text-sm font-extrabold tabular-nums text-grit">32:15</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {[
+                { set: 1, txt: "80 kg × 8", pr: false },
+                { set: 2, txt: "80 kg × 8", pr: false },
+                { set: 3, txt: "82.5 kg × 6", pr: true },
+              ].map((s) => (
+                <div
+                  key={s.set}
+                  className="flex items-center justify-between border border-white/10 bg-white/[0.035] px-3 py-2.5"
+                >
+                  <span className="label-cap text-[9px] text-grit-dim">SET {s.set}</span>
+                  <span className="display text-base font-extrabold text-grit">
+                    {s.txt}
+                    {s.pr && <Flame size={13} className="ml-2 inline text-accent-red" />}
+                  </span>
+                </div>
+              ))}
+              <div className="flex items-center justify-between border border-accent-red/30 bg-accent-red/10 px-3 py-2.5">
+                <div>
+                  <p className="label-cap text-[8px] text-accent-red">NEW PR DETECTED</p>
+                  <p className="text-xs font-bold text-grit">82.5kg beats your 80kg best</p>
+                </div>
+                <Trophy size={16} className="text-accent-red" />
+              </div>
+              <div className="flex items-center justify-between border border-white/10 bg-black/45 px-3 py-2.5">
+                <div>
+                  <p className="label-cap text-[8px] text-grit-dim">REST</p>
+                  <p className="font-mono text-lg font-extrabold tabular-nums text-grit">01:24</p>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {[25, 2.5, 1.25].map((p) => (
+                    <span
+                      key={p}
+                      className="display rounded-full border border-accent-red/40 px-2 py-0.5 text-[10px] font-extrabold text-grit"
+                    >
+                      {p}
+                    </span>
+                  ))}
+                  <span className="label-cap ml-1 text-[7px] text-grit-dim">PER SIDE</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         <div>
           <h2
@@ -458,11 +538,97 @@ function Reviews() {
   );
 }
 
+function Pricing() {
+  const free = [
+    "Live set logging + auto PR detection",
+    "Split builder + 1 custom program",
+    "Food, water and macro logging",
+    "Progress photos, weight, measurements",
+    "Challenges, feed and leaderboards",
+  ];
+  const pro = [
+    "Streak Armor — 3 shields a month",
+    "Strength standards + rep-max tables",
+    "Muscle recovery tracking",
+    "Advanced nutrition + photo comparison",
+    "Featured programs + unlimited customs",
+    "Full leagues, elite challenges + badges",
+  ];
+  return (
+    <Section id="pricing" className="bg-[#050505]">
+      <div className="mb-12 text-center">
+        <h2
+          className="display mb-3 text-4xl font-extrabold sm:text-5xl"
+          style={{ fontStyle: "italic" }}
+        >
+          START FREE.
+          <span className="text-accent-red"> GO PRO WHEN IT MATTERS.</span>
+        </h2>
+        <p className="text-grit-dim">No card required to start. Cancel any time.</p>
+      </div>
+      <div className="mx-auto grid max-w-3xl gap-4 sm:grid-cols-2">
+        <div className="deadset-card-soft flex flex-col p-6">
+          <p className="label-cap text-sm text-grit">FREE</p>
+          <p className="display mt-2 text-4xl font-black text-grit">
+            £0<span className="label-cap ml-1 text-[10px] text-grit-dim">forever</span>
+          </p>
+          <ul className="mt-5 flex-1 space-y-2.5">
+            {free.map((f) => (
+              <li key={f} className="flex items-start gap-2.5 text-xs text-grit-dim">
+                <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-grit-dim" />
+                {f}
+              </li>
+            ))}
+          </ul>
+          <Link to="/auth" className="btn-ghost mt-6 w-full py-3 text-center text-sm">
+            Start training
+          </Link>
+        </div>
+        <div
+          className="relative flex flex-col p-6"
+          style={{
+            background: "linear-gradient(160deg, rgba(225,6,0,0.12), rgba(20,20,20,0.9))",
+            border: "1px solid rgba(225,6,0,0.4)",
+            boxShadow: "0 0 60px rgba(225,6,0,0.12)",
+          }}
+        >
+          <span className="label-cap absolute -top-2.5 left-6 border border-accent-red/50 bg-[#050505] px-2 py-0.5 text-[9px] text-accent-red">
+            MOST SERIOUS
+          </span>
+          <p className="label-cap text-sm text-accent-red">DEADSET PRO</p>
+          <p className="display mt-2 text-4xl font-black text-grit">
+            £4.99<span className="label-cap ml-1 text-[10px] text-grit-dim">/ month</span>
+          </p>
+          <p className="label-cap mt-1 text-[10px] text-grit-dim">or £39.99/yr — 2 months free</p>
+          <ul className="mt-5 flex-1 space-y-2.5">
+            {pro.map((f) => (
+              <li key={f} className="flex items-start gap-2.5 text-xs text-grit">
+                <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-accent-red" />
+                {f}
+              </li>
+            ))}
+          </ul>
+          <Link to="/auth" className="btn-grit mt-6 w-full py-3 text-center text-sm">
+            Go Pro
+          </Link>
+        </div>
+      </div>
+      <p className="mt-6 text-center text-[10px] text-grit-dim">
+        Prices shown in GBP — local currency applied at checkout.
+      </p>
+    </Section>
+  );
+}
+
 function FAQ() {
   const faqs = [
     {
       q: "Is DEADSET free to use?",
       a: "Yes. You can start tracking workouts and progress for free, no card required.",
+    },
+    {
+      q: "What does Pro cost?",
+      a: "£4.99/month or £39.99/year (about two months free). Local currency is applied at checkout, and you can cancel any time.",
     },
     {
       q: "Can I use DEADSET on multiple devices?",
@@ -561,6 +727,7 @@ export function Landing() {
       <About />
       <Benefits />
       <Reviews />
+      <Pricing />
       <FAQ />
       <Footer />
     </div>
