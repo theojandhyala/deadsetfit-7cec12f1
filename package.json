@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "check": "tsc --noEmit && eslint . && vite build",
-    "deploy:cloudflare": "npm run build && wrangler deploy --keep-vars && wrangler pages deploy dist/client --project-name deadsetfit --branch main",
+    "build": "vite build && node scripts/check-css-build.mjs",
+    "check": "tsc --noEmit && eslint . && vite build && node scripts/check-css-build.mjs",
+    "appstore:check": "npm run check && node scripts/appstore-check.mjs",
+    "deploy:cloudflare": "node scripts/deploy-cloudflare.mjs",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
@@ -15,6 +16,8 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "@capacitor/core": "^8.4.1",
+    "@capacitor/ios": "^8.4.1",
     "@hookform/resolvers": "^5.2.2",
     "@lovable.dev/cloud-auth-js": "^1.1.2",
     "@radix-ui/react-accordion": "^1.2.12",
@@ -83,6 +86,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.4.1",
     "@eslint/js": "^9.32.0",
     "@types/node": "^22.16.5",
     "@types/react": "^19.2.0",
@@ -97,7 +101,7 @@
     "prettier": "^3.7.3",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
-    "vite": "^7.3.1",
+    "vite": "^7.3.6",
     "wrangler": "^4.98.0"
   }
 }

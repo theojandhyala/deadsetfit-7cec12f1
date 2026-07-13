@@ -1,4 +1,6 @@
 import type { HeadlinePR } from "@/lib/fifa-stats";
+import { RankEmblem } from "@/components/RankEmblem";
+import { getRank } from "@/lib/rank";
 
 /**
  * FIFA-style athlete card.
@@ -12,6 +14,7 @@ export function FifaCard({
   badge,
   badgeColor: badgeC,
   overall,
+  gritPoints,
   prs,
   weightKg,
   heightCm,
@@ -25,6 +28,7 @@ export function FifaCard({
   badge: string;
   badgeColor: string;
   overall: number;
+  gritPoints?: number;
   prs: HeadlinePR[];
   weightKg?: number;
   heightCm?: number;
@@ -32,40 +36,37 @@ export function FifaCard({
   experience?: string;
   compact?: boolean;
 }) {
+  const rank = getRank(gritPoints ?? overall ?? 0);
   return (
     <div
-      className={"relative border-2 overflow-hidden " + (compact ? "p-3" : "p-5")}
+      className={"relative overflow-hidden border " + (compact ? "rounded-2xl p-3" : "rounded-[22px] p-4")}
       style={{
-        borderColor: badgeC,
-        background: "linear-gradient(135deg, #0d0d0d 0%, #1a0a08 45%, #2a0d0a 100%)",
-        boxShadow: `0 0 24px -8px ${badgeC}`,
+        borderColor: `${badgeC}66`,
+        background:
+          "radial-gradient(circle at 90% 0%, rgba(230,50,34,0.18), transparent 36%), linear-gradient(145deg, rgba(22,23,27,.98), rgba(9,9,10,.98) 62%, rgba(0,0,0,.98))",
+        boxShadow: `0 18px 48px rgba(0,0,0,.26), inset 0 1px 0 rgba(255,255,255,.06)`,
       }}
     >
-      {/* Header row: overall + badge + avatar */}
-      <div className="flex items-start gap-4">
-        <div className="flex flex-col items-center" style={{ minWidth: 64 }}>
-          <span
-            className="display font-extrabold leading-none"
-            style={{ fontSize: compact ? "2.5rem" : "3.5rem", color: badgeC }}
-          >
-            {overall || "—"}
-          </span>
-          <span className="label-cap text-[10px] mt-1" style={{ color: badgeC }}>
-            {badge}
+      {/* Header row: rank + badge + avatar */}
+      <div className="flex items-start gap-3">
+        <div className="flex flex-col items-center" style={{ minWidth: compact ? 48 : 56 }}>
+          <RankEmblem gritPoints={gritPoints ?? overall ?? 0} size="sm" showLabel={false} />
+          <span className="label-cap text-[8px] mt-1.5 text-center leading-tight" style={{ color: rank.color }}>
+            {rank.label}
           </span>
         </div>
         <div
-          className="rounded-full border-2 overflow-hidden bg-[#1a1a1a] flex items-center justify-center shrink-0"
+          className="rounded-full border overflow-hidden bg-[#1a1a1a] flex items-center justify-center shrink-0"
           style={{
-            borderColor: badgeC,
-            width: compact ? 56 : 72,
-            height: compact ? 56 : 72,
+            borderColor: `${badgeC}99`,
+            width: compact ? 52 : 62,
+            height: compact ? 52 : 62,
           }}
         >
           {avatarUrl ? (
             <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
           ) : (
-            <span className="display text-2xl font-extrabold text-grit">
+            <span className="display text-xl font-extrabold text-grit">
               {(name || "A")[0].toUpperCase()}
             </span>
           )}
@@ -76,6 +77,8 @@ export function FifaCard({
           </p>
           {username && <p className="text-[11px] text-grit-dim truncate">@{username}</p>}
           <div className="text-[10px] text-grit-dim mt-1 flex gap-2 flex-wrap label-cap">
+            <span>{overall || "—"} OVR</span>
+            <span>· {badge}</span>
             {goal && <span>{goal}</span>}
             {experience && <span>· {experience}</span>}
             {weightKg && <span>· {weightKg}kg</span>}
@@ -85,7 +88,7 @@ export function FifaCard({
       </div>
 
       {/* PR grid — 6 headline lifts */}
-      <div className="grid grid-cols-3 gap-2 mt-4">
+      <div className="grid grid-cols-3 gap-2 mt-3">
         {prs.map((pr) => (
           <PRTile key={pr.id} label={pr.label} value={pr.value} unit={pr.unit} color={badgeC} />
         ))}
@@ -107,7 +110,7 @@ function PRTile({
 }) {
   const hasValue = value > 0;
   return (
-    <div className="border border-[#262626] bg-black/40 px-2 py-2">
+    <div className="rounded-xl border border-white/10 bg-black/35 px-2 py-2">
       <p className="label-cap text-[9px] text-grit-dim leading-none">{label}</p>
       <p
         className="display font-extrabold tabular-nums leading-none mt-1.5"

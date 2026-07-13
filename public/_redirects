@@ -1,3 +1,4 @@
 /auth /auth/index.html 200
 /auth/ /auth/index.html 200
+/auth.html /auth/index.html 200
 /* /index.html 200

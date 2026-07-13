@@ -1,9 +1,22 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Trophy, Flame, Play, Pause, RotateCcw, Check, X, Plus, Minus,
-  Zap, ArrowLeft, Swords, TrendingUp, Crown,
-  ChevronRight, Search,
+  Trophy,
+  Flame,
+  Play,
+  Pause,
+  RotateCcw,
+  Check,
+  X,
+  Plus,
+  Minus,
+  Zap,
+  ArrowLeft,
+  Swords,
+  TrendingUp,
+  Crown,
+  ChevronRight,
+  Search,
 } from "lucide-react";
 import { useAppState } from "@/lib/storage";
 import { isoDay } from "@/lib/calc";
@@ -27,26 +40,186 @@ type Challenge = {
 };
 
 const CHALLENGES: Challenge[] = [
-  { id: "plank-1min", name: "60-Second Plank", tagline: "The entry test.", type: "time", target: 60, xp: 40, tier: "EASY" },
-  { id: "dead-hang", name: "60s Dead Hang", tagline: "Grip of steel.", type: "time", target: 60, xp: 50, tier: "EASY" },
-  { id: "squats-50", name: "50 Squats Speed Run", tagline: "Beat your clock.", type: "time", target: 90, xp: 50, tier: "EASY" },
-  { id: "pushups-30", name: "30 Push-ups Unbroken", tagline: "No stops. No drops.", type: "reps", target: 30, xp: 40, tier: "EASY" },
-  { id: "situps-50", name: "50 Sit-ups", tagline: "Core check.", type: "reps", target: 50, xp: 40, tier: "EASY" },
-  { id: "jumping-jacks-100", name: "100 Jumping Jacks", tagline: "Cardio warm-up.", type: "time", target: 90, xp: 30, tier: "EASY" },
-  { id: "plank-5min", name: "5-Minute Plank", tagline: "Brace. Breathe. Don't break.", type: "time", target: 300, xp: 150, tier: "BEAST" },
-  { id: "wall-sit-2min", name: "2-Minute Wall Sit", tagline: "Quads on fire.", type: "time", target: 120, xp: 80, tier: "BEAST" },
-  { id: "hollow-hold", name: "90s Hollow Hold", tagline: "Ab killer.", type: "time", target: 90, xp: 70, tier: "BEAST" },
-  { id: "pushups-max", name: "Max Push-ups", tagline: "One set. No rest. Go.", type: "reps", target: 50, xp: 60, tier: "BEAST" },
-  { id: "pullups-max", name: "Max Pull-ups", tagline: "Strict. No kipping.", type: "reps", target: 15, xp: 80, tier: "BEAST" },
-  { id: "burpees-50", name: "50 Burpees For Time", tagline: "Lungs vs legs.", type: "time", target: 300, xp: 100, tier: "BEAST" },
-  { id: "lunges-100", name: "100 Walking Lunges", tagline: "Glutes will hate you.", type: "reps", target: 100, xp: 90, tier: "BEAST" },
-  { id: "farmers-90s", name: "90s Farmer's Carry", tagline: "Grip + heart.", type: "time", target: 90, xp: 80, tier: "BEAST" },
-  { id: "plank-10min", name: "10-Minute Plank", tagline: "Legends only.", type: "time", target: 600, xp: 300, tier: "GOD" },
-  { id: "burpees-100", name: "100 Burpees", tagline: "Time attack. Survive.", type: "time", target: 600, xp: 120, tier: "GOD" },
-  { id: "pullups-30", name: "30 Strict Pull-ups", tagline: "Unbroken or bust.", type: "reps", target: 30, xp: 200, tier: "GOD" },
-  { id: "pushups-100", name: "100 Push-ups Unbroken", tagline: "No knee drops.", type: "reps", target: 100, xp: 180, tier: "GOD" },
-  { id: "deadhang-2min", name: "2-Minute Dead Hang", tagline: "Shoulders & soul.", type: "time", target: 120, xp: 150, tier: "GOD" },
-  { id: "murph", name: "Murph (Time)", tagline: "1mi · 100 pull · 200 push · 300 sq · 1mi", type: "time", target: 2700, xp: 500, tier: "GOD" },
+  {
+    id: "plank-1min",
+    name: "60-Second Plank",
+    tagline: "The entry test.",
+    type: "time",
+    target: 60,
+    xp: 40,
+    tier: "EASY",
+  },
+  {
+    id: "dead-hang",
+    name: "60s Dead Hang",
+    tagline: "Grip of steel.",
+    type: "time",
+    target: 60,
+    xp: 50,
+    tier: "EASY",
+  },
+  {
+    id: "squats-50",
+    name: "50 Squats Speed Run",
+    tagline: "Beat your clock.",
+    type: "time",
+    target: 90,
+    xp: 50,
+    tier: "EASY",
+  },
+  {
+    id: "pushups-30",
+    name: "30 Push-ups Unbroken",
+    tagline: "No stops. No drops.",
+    type: "reps",
+    target: 30,
+    xp: 40,
+    tier: "EASY",
+  },
+  {
+    id: "situps-50",
+    name: "50 Sit-ups",
+    tagline: "Core check.",
+    type: "reps",
+    target: 50,
+    xp: 40,
+    tier: "EASY",
+  },
+  {
+    id: "jumping-jacks-100",
+    name: "100 Jumping Jacks",
+    tagline: "Cardio warm-up.",
+    type: "time",
+    target: 90,
+    xp: 30,
+    tier: "EASY",
+  },
+  {
+    id: "plank-5min",
+    name: "5-Minute Plank",
+    tagline: "Brace. Breathe. Don't break.",
+    type: "time",
+    target: 300,
+    xp: 150,
+    tier: "BEAST",
+  },
+  {
+    id: "wall-sit-2min",
+    name: "2-Minute Wall Sit",
+    tagline: "Quads on fire.",
+    type: "time",
+    target: 120,
+    xp: 80,
+    tier: "BEAST",
+  },
+  {
+    id: "hollow-hold",
+    name: "90s Hollow Hold",
+    tagline: "Ab killer.",
+    type: "time",
+    target: 90,
+    xp: 70,
+    tier: "BEAST",
+  },
+  {
+    id: "pushups-max",
+    name: "Max Push-ups",
+    tagline: "One set. No rest. Go.",
+    type: "reps",
+    target: 50,
+    xp: 60,
+    tier: "BEAST",
+  },
+  {
+    id: "pullups-max",
+    name: "Max Pull-ups",
+    tagline: "Strict. No kipping.",
+    type: "reps",
+    target: 15,
+    xp: 80,
+    tier: "BEAST",
+  },
+  {
+    id: "burpees-50",
+    name: "50 Burpees For Time",
+    tagline: "Lungs vs legs.",
+    type: "time",
+    target: 300,
+    xp: 100,
+    tier: "BEAST",
+  },
+  {
+    id: "lunges-100",
+    name: "100 Walking Lunges",
+    tagline: "Glutes will hate you.",
+    type: "reps",
+    target: 100,
+    xp: 90,
+    tier: "BEAST",
+  },
+  {
+    id: "farmers-90s",
+    name: "90s Farmer's Carry",
+    tagline: "Grip + heart.",
+    type: "time",
+    target: 90,
+    xp: 80,
+    tier: "BEAST",
+  },
+  {
+    id: "plank-10min",
+    name: "10-Minute Plank",
+    tagline: "Legends only.",
+    type: "time",
+    target: 600,
+    xp: 300,
+    tier: "GOD",
+  },
+  {
+    id: "burpees-100",
+    name: "100 Burpees",
+    tagline: "Time attack. Survive.",
+    type: "time",
+    target: 600,
+    xp: 120,
+    tier: "GOD",
+  },
+  {
+    id: "pullups-30",
+    name: "30 Strict Pull-ups",
+    tagline: "Unbroken or bust.",
+    type: "reps",
+    target: 30,
+    xp: 200,
+    tier: "GOD",
+  },
+  {
+    id: "pushups-100",
+    name: "100 Push-ups Unbroken",
+    tagline: "No knee drops.",
+    type: "reps",
+    target: 100,
+    xp: 180,
+    tier: "GOD",
+  },
+  {
+    id: "deadhang-2min",
+    name: "2-Minute Dead Hang",
+    tagline: "Shoulders & soul.",
+    type: "time",
+    target: 120,
+    xp: 150,
+    tier: "GOD",
+  },
+  {
+    id: "murph",
+    name: "Murph (Time)",
+    tagline: "1mi · 100 pull · 200 push · 300 sq · 1mi",
+    type: "time",
+    target: 2700,
+    xp: 500,
+    tier: "GOD",
+  },
 ];
 
 const TIER_COLOR = { EASY: "#60a5fa", BEAST: "#fbbf24", GOD: "#E10600" };
@@ -123,9 +296,17 @@ function ChallengesPage() {
       <div className="px-5 mb-5">
         <div
           className="p-5 rounded-2xl overflow-hidden relative"
-          style={{ background: "linear-gradient(135deg, rgba(225,6,0,0.15) 0%, #141414 100%)", border: "1.5px solid rgba(225,6,0,0.3)" }}
+          style={{
+            background: "linear-gradient(135deg, rgba(225,6,0,0.15) 0%, #141414 100%)",
+            border: "1.5px solid rgba(225,6,0,0.3)",
+          }}
         >
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "#E10600" }}>Prove It</p>
+          <p
+            className="text-[10px] font-bold uppercase tracking-widest mb-1"
+            style={{ color: "#E10600" }}
+          >
+            Prove It
+          </p>
           <h1 className="display text-3xl font-extrabold text-white leading-tight">
             Daily <span style={{ color: "#E10600" }}>Challenges</span>
           </h1>
@@ -135,12 +316,18 @@ function ChallengesPage() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5">
               <Trophy size={12} style={{ color: "#FAFAFA" }} />
-              <span className="text-xs font-bold text-white">{beatenCount}/{CHALLENGES.length} beaten</span>
+              <span className="text-xs font-bold text-white">
+                {beatenCount}/{CHALLENGES.length} beaten
+              </span>
             </div>
             <div className="flex items-center gap-1.5">
               <Zap size={12} style={{ color: "#E10600" }} />
               <span className="text-xs font-bold text-white">
-                {CHALLENGES.filter(c => { const b = bestRecord(state.challengeRecords, c.id); return b; }).reduce((s, c) => s + c.xp, 0)} XP earned
+                {CHALLENGES.filter((c) => {
+                  const b = bestRecord(state.challengeRecords, c.id);
+                  return b;
+                }).reduce((s, c) => s + c.xp, 0)}{" "}
+                XP earned
               </span>
             </div>
           </div>
@@ -186,7 +373,13 @@ function ChallengesPage() {
   );
 }
 
-function GrindTab({ filtered, filter, setFilter, state, setActive }: {
+function GrindTab({
+  filtered,
+  filter,
+  setFilter,
+  state,
+  setActive,
+}: {
   filtered: Challenge[];
   filter: string;
   setFilter: (f: "ALL" | "EASY" | "BEAST" | "GOD" | "BEATEN") => void;
@@ -214,8 +407,13 @@ function GrindTab({ filtered, filter, setFilter, state, setActive }: {
 
       <div className="px-5 flex flex-col gap-3">
         {filtered.length === 0 && (
-          <div className="p-8 text-center rounded-2xl" style={{ background: "#141414", border: "1.5px solid #262626" }}>
-            <p className="text-sm" style={{ color: "#8A8A8A" }}>No challenges in this filter.</p>
+          <div
+            className="p-8 text-center rounded-2xl"
+            style={{ background: "#141414", border: "1.5px solid #262626" }}
+          >
+            <p className="text-sm" style={{ color: "#8A8A8A" }}>
+              No challenges in this filter.
+            </p>
           </div>
         )}
         {filtered.map((c) => {
@@ -229,7 +427,10 @@ function GrindTab({ filtered, filter, setFilter, state, setActive }: {
               key={c.id}
               onClick={() => setActive(c)}
               className="text-left rounded-2xl p-4 press relative overflow-hidden"
-              style={{ background: "#141414", border: `1.5px solid ${beat ? "#E10600" : "#262626"}` }}
+              style={{
+                background: "#141414",
+                border: `1.5px solid ${beat ? "#E10600" : "#262626"}`,
+              }}
             >
               {beat && (
                 <div
@@ -244,21 +445,33 @@ function GrindTab({ filtered, filter, setFilter, state, setActive }: {
                   <div className="flex items-center gap-2 mb-2">
                     <span
                       className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
-                      style={{ background: `${tierColor}18`, color: tierColor, border: `1px solid ${tierColor}40` }}
+                      style={{
+                        background: `${tierColor}18`,
+                        color: tierColor,
+                        border: `1px solid ${tierColor}40`,
+                      }}
                     >
                       {TIER_LABEL[c.tier]}
                     </span>
                     {beat && (
                       <span
                         className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full flex items-center gap-1"
-                        style={{ background: "rgba(225,6,0,0.15)", color: "#E10600", border: "1px solid rgba(225,6,0,0.3)" }}
+                        style={{
+                          background: "rgba(225,6,0,0.15)",
+                          color: "#E10600",
+                          border: "1px solid rgba(225,6,0,0.3)",
+                        }}
                       >
                         <Check size={9} /> Beaten
                       </span>
                     )}
                   </div>
-                  <p className="display text-lg font-extrabold text-white uppercase leading-tight">{c.name}</p>
-                  <p className="text-[11px] mt-0.5" style={{ color: "#8A8A8A" }}>{c.tagline}</p>
+                  <p className="display text-lg font-extrabold text-white uppercase leading-tight">
+                    {c.name}
+                  </p>
+                  <p className="text-[11px] mt-0.5" style={{ color: "#8A8A8A" }}>
+                    {c.tagline}
+                  </p>
                 </div>
                 <div className="text-right flex-shrink-0">
                   <div
@@ -277,7 +490,10 @@ function GrindTab({ filtered, filter, setFilter, state, setActive }: {
                     </div>
                   )}
                   {!best && (
-                    <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#6B7280" }}>
+                    <div
+                      className="text-[10px] font-bold uppercase tracking-wider"
+                      style={{ color: "#6B7280" }}
+                    >
                       New
                     </div>
                   )}
@@ -286,7 +502,10 @@ function GrindTab({ filtered, filter, setFilter, state, setActive }: {
 
               {best && (
                 <div className="mt-3">
-                  <div className="h-1 rounded-full overflow-hidden" style={{ background: "#262626" }}>
+                  <div
+                    className="h-1 rounded-full overflow-hidden"
+                    style={{ background: "#262626" }}
+                  >
                     <div
                       className="h-full rounded-full"
                       style={{
@@ -316,22 +535,46 @@ function GrindTab({ filtered, filter, setFilter, state, setActive }: {
 
 function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<{ id: string; display_name?: string | null; username?: string | null; avatar_url?: string | null; following?: boolean; level?: string | null }[] | null>(null);
-  const [selected, setSelected] = useState<{ id: string; username?: string | null; display_name?: string | null } | null>(null);
+  const [results, setResults] = useState<
+    | {
+        id: string;
+        display_name?: string | null;
+        username?: string | null;
+        avatar_url?: string | null;
+        following?: boolean;
+        level?: string | null;
+      }[]
+    | null
+  >(null);
+  const [selected, setSelected] = useState<{
+    id: string;
+    username?: string | null;
+    display_name?: string | null;
+  } | null>(null);
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const _search = searchAthletes;
   const _createPost = createPost;
 
+  const search = useCallback(async () => {
+    return _search({ data: { q: query.trim() } });
+  }, [_search, query]);
+
   useEffect(() => {
-    if (query.trim().length < 2) { setResults(null); return; }
+    if (query.trim().length < 2) {
+      setResults(null);
+      return;
+    }
     const t = setTimeout(async () => {
-      try { setResults(await _search({ data: { q: query.trim() } })); }
-      catch { /* ignore */ }
+      try {
+        setResults(await search());
+      } catch {
+        /* ignore */
+      }
     }, 300);
     return () => clearTimeout(t);
-  }, [query]);
+  }, [query, search]);
 
   async function sendChallenge() {
     if (!selected || !challenge) return;
@@ -369,7 +612,12 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
           Your challenge post is live. Now go do it first.
         </p>
         <button
-          onClick={() => { setSent(false); setSelected(null); setChallenge(null); setQuery(""); }}
+          onClick={() => {
+            setSent(false);
+            setSelected(null);
+            setChallenge(null);
+            setQuery("");
+          }}
           className="btn-grit px-8"
         >
           New Challenge
@@ -397,8 +645,14 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
               {(selected.display_name || selected.username || "A")[0].toUpperCase()}
             </div>
             <div className="flex-1">
-              <p className="font-bold text-white text-sm">{selected.display_name || selected.username}</p>
-              {selected.username && <p className="text-xs" style={{ color: "#8A8A8A" }}>@{selected.username}</p>}
+              <p className="font-bold text-white text-sm">
+                {selected.display_name || selected.username}
+              </p>
+              {selected.username && (
+                <p className="text-xs" style={{ color: "#8A8A8A" }}>
+                  @{selected.username}
+                </p>
+              )}
             </div>
             <button onClick={() => setSelected(null)} style={{ color: "#8A8A8A" }}>
               <X size={16} />
@@ -413,7 +667,7 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
               <Search size={14} style={{ color: "#8A8A8A" }} />
               <input
                 value={query}
-                onChange={e => setQuery(e.target.value)}
+                onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search by username..."
                 className="flex-1 bg-transparent text-sm text-white placeholder:text-[#6B7280] outline-none"
               />
@@ -421,12 +675,20 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
             {results && results.length > 0 && (
               <div
                 className="absolute left-0 right-0 top-full mt-1 rounded-xl overflow-hidden z-20"
-                style={{ background: "#141414", border: "1.5px solid #262626", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}
+                style={{
+                  background: "#141414",
+                  border: "1.5px solid #262626",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+                }}
               >
-                {results.slice(0, 6).map(r => (
+                {results.slice(0, 6).map((r) => (
                   <button
                     key={r.id}
-                    onClick={() => { setSelected(r); setQuery(""); setResults(null); }}
+                    onClick={() => {
+                      setSelected(r);
+                      setQuery("");
+                      setResults(null);
+                    }}
                     className="flex items-center gap-3 px-3 py-2.5 w-full text-left press"
                     style={{ borderBottom: "1px solid #262626" }}
                   >
@@ -438,7 +700,11 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
                     </div>
                     <div>
                       <p className="text-sm font-bold text-white">{r.display_name || r.username}</p>
-                      {r.username && <p className="text-xs" style={{ color: "#8A8A8A" }}>@{r.username}</p>}
+                      {r.username && (
+                        <p className="text-xs" style={{ color: "#8A8A8A" }}>
+                          @{r.username}
+                        </p>
+                      )}
                     </div>
                   </button>
                 ))}
@@ -449,7 +715,9 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
                 className="absolute left-0 right-0 top-full mt-1 rounded-xl p-4 text-center z-20"
                 style={{ background: "#141414", border: "1.5px solid #262626" }}
               >
-                <p className="text-sm" style={{ color: "#8A8A8A" }}>No athletes found</p>
+                <p className="text-sm" style={{ color: "#8A8A8A" }}>
+                  No athletes found
+                </p>
               </div>
             )}
           </div>
@@ -459,7 +727,10 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
       {/* Step 2: Pick challenge */}
       <div
         className="p-4 rounded-2xl"
-        style={{ background: "#141414", border: `1.5px solid ${challenge ? "#FAFAFA" : "#262626"}` }}
+        style={{
+          background: "#141414",
+          border: `1.5px solid ${challenge ? "#FAFAFA" : "#262626"}`,
+        }}
       >
         <p className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: "#8A8A8A" }}>
           2 — Pick The Challenge
@@ -474,7 +745,9 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
             </div>
             <div className="flex-1">
               <p className="font-bold text-white text-sm">{challenge.name}</p>
-              <p className="text-xs" style={{ color: "#8A8A8A" }}>{challenge.xp} XP · {challenge.tier}</p>
+              <p className="text-xs" style={{ color: "#8A8A8A" }}>
+                {challenge.xp} XP · {challenge.tier}
+              </p>
             </div>
             <button onClick={() => setChallenge(null)} style={{ color: "#8A8A8A" }}>
               <X size={16} />
@@ -482,7 +755,7 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
           </div>
         ) : (
           <div className="flex flex-col gap-2 max-h-64 overflow-y-auto no-scrollbar">
-            {CHALLENGES.map(c => (
+            {CHALLENGES.map((c) => (
               <button
                 key={c.id}
                 onClick={() => setChallenge(c)}
@@ -491,7 +764,9 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
               >
                 <div>
                   <p className="text-sm font-bold text-white">{c.name}</p>
-                  <p className="text-[10px]" style={{ color: "#8A8A8A" }}>{c.tagline}</p>
+                  <p className="text-[10px]" style={{ color: "#8A8A8A" }}>
+                    {c.tagline}
+                  </p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <span
@@ -500,7 +775,9 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
                   >
                     {c.tier}
                   </span>
-                  <span className="text-[10px] font-bold" style={{ color: "#E10600" }}>{c.xp} XP</span>
+                  <span className="text-[10px] font-bold" style={{ color: "#E10600" }}>
+                    {c.xp} XP
+                  </span>
                 </div>
               </button>
             ))}
@@ -536,11 +813,11 @@ function WarsTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
   const thisWeek = getWeekBounds(0);
   const lastWeek = getWeekBounds(-1);
 
-  const thisWeekSessions = (state.sessions ?? []).filter(s => {
+  const thisWeekSessions = (state.sessions ?? []).filter((s) => {
     const dt = new Date(s.date);
     return dt >= thisWeek.start && dt <= thisWeek.end;
   });
-  const lastWeekSessions = (state.sessions ?? []).filter(s => {
+  const lastWeekSessions = (state.sessions ?? []).filter((s) => {
     const dt = new Date(s.date);
     return dt >= lastWeek.start && dt <= lastWeek.end;
   });
@@ -553,7 +830,7 @@ function WarsTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
   const lastPRs = lastWeekSessions.reduce((sum, s) => sum + (s.prCount ?? 0), 0);
 
   const totalBeaten = (state.challengeRecords ?? []).reduce((set, r) => {
-    const c = CHALLENGES.find(c => c.id === r.challengeId);
+    const c = CHALLENGES.find((c) => c.id === r.challengeId);
     if (c && r.value >= c.target) set.add(r.challengeId);
     return set;
   }, new Set<string>()).size;
@@ -562,7 +839,7 @@ function WarsTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
 
   const weeks = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const weekSessionMap = new Map<string, number>();
-  thisWeekSessions.forEach(s => {
+  thisWeekSessions.forEach((s) => {
     const d = new Date(s.date);
     const key = weeks[d.getDay() === 0 ? 6 : d.getDay() - 1];
     weekSessionMap.set(key, (weekSessionMap.get(key) ?? 0) + 1);
@@ -573,11 +850,22 @@ function WarsTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
       {/* Weekly summary card */}
       <div
         className="p-5 rounded-2xl"
-        style={{ background: "linear-gradient(135deg, rgba(225,6,0,0.1) 0%, #141414 100%)", border: "1.5px solid rgba(225,6,0,0.25)" }}
+        style={{
+          background: "linear-gradient(135deg, rgba(225,6,0,0.1) 0%, #141414 100%)",
+          border: "1.5px solid rgba(225,6,0,0.25)",
+        }}
       >
-        <p className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: "#E10600" }}>This Week</p>
+        <p
+          className="text-[10px] font-bold uppercase tracking-widest mb-1"
+          style={{ color: "#E10600" }}
+        >
+          This Week
+        </p>
         <h2 className="display text-2xl font-extrabold text-white">
-          {thisWeekSessions.length} <span className="text-base font-semibold" style={{ color: "#8A8A8A" }}>sessions</span>
+          {thisWeekSessions.length}{" "}
+          <span className="text-base font-semibold" style={{ color: "#8A8A8A" }}>
+            sessions
+          </span>
         </h2>
         <div className="flex items-center gap-1 mt-1">
           {volDelta !== null && (
@@ -586,14 +874,15 @@ function WarsTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
               style={{ color: volDelta >= 0 ? "#FAFAFA" : "#FF5252" }}
             >
               {volDelta >= 0 ? <TrendingUp size={10} /> : null}
-              {volDelta >= 0 ? "+" : ""}{volDelta}% volume vs last week
+              {volDelta >= 0 ? "+" : ""}
+              {volDelta}% volume vs last week
             </span>
           )}
         </div>
 
         {/* Daily bar chart */}
         <div className="flex items-end gap-1.5 mt-4 h-14">
-          {weeks.map(day => {
+          {weeks.map((day) => {
             const count = weekSessionMap.get(day) ?? 0;
             const today = new Date();
             const todayKey = weeks[today.getDay() === 0 ? 6 : today.getDay() - 1];
@@ -610,7 +899,10 @@ function WarsTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
                     }}
                   />
                 </div>
-                <span className="text-[9px] font-bold" style={{ color: isToday ? "#E10600" : "#6B7280" }}>
+                <span
+                  className="text-[9px] font-bold"
+                  style={{ color: isToday ? "#E10600" : "#6B7280" }}
+                >
                   {day[0]}
                 </span>
               </div>
@@ -622,15 +914,40 @@ function WarsTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
       {/* Stats grid */}
       <div className="grid grid-cols-2 gap-3">
         {[
-          { label: "Sessions This Week", value: thisWeekSessions.length, sub: `${lastWeekSessions.length} last week`, color: "#E10600" },
-          { label: "Volume This Week", value: `${Math.round(thisVol / 1000)}t`, sub: `${Math.round(lastVol / 1000)}t last week`, color: "#E10600" },
+          {
+            label: "Sessions This Week",
+            value: thisWeekSessions.length,
+            sub: `${lastWeekSessions.length} last week`,
+            color: "#E10600",
+          },
+          {
+            label: "Volume This Week",
+            value: `${Math.round(thisVol / 1000)}t`,
+            sub: `${Math.round(lastVol / 1000)}t last week`,
+            color: "#E10600",
+          },
           { label: "PRs This Week", value: thisPRs, sub: `${lastPRs} last week`, color: "#FAFAFA" },
-          { label: "Challenges Beaten", value: totalBeaten, sub: `of ${CHALLENGES.length} total`, color: "#FAFAFA" },
-        ].map(s => (
-          <div key={s.label} className="p-4 rounded-2xl" style={{ background: "#141414", border: "1.5px solid #262626" }}>
-            <p className="display text-2xl font-extrabold" style={{ color: s.color }}>{s.value}</p>
-            <p className="text-[10px] font-bold uppercase tracking-wider mt-0.5 text-white">{s.label}</p>
-            <p className="text-[10px] mt-0.5" style={{ color: "#6B7280" }}>{s.sub}</p>
+          {
+            label: "Challenges Beaten",
+            value: totalBeaten,
+            sub: `of ${CHALLENGES.length} total`,
+            color: "#FAFAFA",
+          },
+        ].map((s) => (
+          <div
+            key={s.label}
+            className="p-4 rounded-2xl"
+            style={{ background: "#141414", border: "1.5px solid #262626" }}
+          >
+            <p className="display text-2xl font-extrabold" style={{ color: s.color }}>
+              {s.value}
+            </p>
+            <p className="text-[10px] font-bold uppercase tracking-wider mt-0.5 text-white">
+              {s.label}
+            </p>
+            <p className="text-[10px] mt-0.5" style={{ color: "#6B7280" }}>
+              {s.sub}
+            </p>
           </div>
         ))}
       </div>
@@ -657,41 +974,53 @@ function WarsTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
       </Link>
 
       {/* Best challenge scores */}
-      {CHALLENGES.filter(c => bestRecord(state.challengeRecords, c.id)).length > 0 && (
+      {CHALLENGES.filter((c) => bestRecord(state.challengeRecords, c.id)).length > 0 && (
         <div
           className="rounded-2xl overflow-hidden"
           style={{ background: "#141414", border: "1.5px solid #262626" }}
         >
-          <p className="px-4 py-3 text-xs font-bold uppercase tracking-wider" style={{ color: "#8A8A8A", borderBottom: "1px solid #262626" }}>
+          <p
+            className="px-4 py-3 text-xs font-bold uppercase tracking-wider"
+            style={{ color: "#8A8A8A", borderBottom: "1px solid #262626" }}
+          >
             Your Challenge Records
           </p>
-          {CHALLENGES.filter(c => bestRecord(state.challengeRecords, c.id)).slice(0, 5).map((c, i) => {
-            const best = bestRecord(state.challengeRecords, c.id)!;
-            const beat = best.value >= c.target;
-            return (
-              <div
-                key={c.id}
-                className="flex items-center justify-between px-4 py-3"
-                style={{ borderTop: i > 0 ? "1px solid #262626" : "none" }}
-              >
-                <div>
-                  <p className="text-sm font-bold text-white">{c.name}</p>
-                  <span
-                    className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full"
-                    style={{ background: `${TIER_COLOR[c.tier]}15`, color: TIER_COLOR[c.tier] }}
-                  >
-                    {c.tier}
-                  </span>
+          {CHALLENGES.filter((c) => bestRecord(state.challengeRecords, c.id))
+            .slice(0, 5)
+            .map((c, i) => {
+              const best = bestRecord(state.challengeRecords, c.id)!;
+              const beat = best.value >= c.target;
+              return (
+                <div
+                  key={c.id}
+                  className="flex items-center justify-between px-4 py-3"
+                  style={{ borderTop: i > 0 ? "1px solid #262626" : "none" }}
+                >
+                  <div>
+                    <p className="text-sm font-bold text-white">{c.name}</p>
+                    <span
+                      className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full"
+                      style={{ background: `${TIER_COLOR[c.tier]}15`, color: TIER_COLOR[c.tier] }}
+                    >
+                      {c.tier}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <p
+                      className="text-sm font-bold"
+                      style={{ color: beat ? "#E10600" : "#8A8A8A" }}
+                    >
+                      {c.type === "time" ? fmtTime(best.value) : `${best.value} reps`}
+                    </p>
+                    {beat && (
+                      <p className="text-[9px]" style={{ color: "#E10600" }}>
+                        ✓ beaten
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold" style={{ color: beat ? "#E10600" : "#8A8A8A" }}>
-                    {c.type === "time" ? fmtTime(best.value) : `${best.value} reps`}
-                  </p>
-                  {beat && <p className="text-[9px]" style={{ color: "#E10600" }}>✓ beaten</p>}
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
         </div>
       )}
     </div>
@@ -710,18 +1039,26 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
   useEffect(() => {
     if (running && isTime) {
       tickRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
-      return () => { if (tickRef.current) clearInterval(tickRef.current); };
+      return () => {
+        if (tickRef.current) clearInterval(tickRef.current);
+      };
     }
   }, [running, isTime]);
 
   function finish() {
     setRunning(false);
     const value = isTime ? seconds : reps;
-    if (value <= 0) { onClose(); return; }
+    if (value <= 0) {
+      onClose();
+      return;
+    }
     const beat = value >= challenge.target;
     set((s) => ({
       ...s,
-      challengeRecords: [...(s.challengeRecords || []), { challengeId: challenge.id, value, date: isoDay() }],
+      challengeRecords: [
+        ...(s.challengeRecords || []),
+        { challengeId: challenge.id, value, date: isoDay() },
+      ],
     }));
     setFinished({ value, beat });
   }
@@ -738,12 +1075,19 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
   const circ = 2 * Math.PI * r;
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center" onClick={onClose}
-      style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}>
+    <div
+      className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center"
+      onClick={onClose}
+      style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}
+    >
       <div
         className="w-full max-w-md relative rounded-t-3xl sm:rounded-3xl"
-        style={{ background: "#141414", border: "1.5px solid #262626", borderTop: `3px solid ${tierColor}` }}
-        onClick={e => e.stopPropagation()}
+        style={{
+          background: "#141414",
+          border: "1.5px solid #262626",
+          borderTop: `3px solid ${tierColor}`,
+        }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-3 sm:hidden">
@@ -755,13 +1099,18 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
         </button>
 
         <div className="p-6 pb-3">
-          <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: tierColor }}>
+          <span
+            className="text-[9px] font-bold uppercase tracking-widest"
+            style={{ color: tierColor }}
+          >
             {TIER_LABEL[challenge.tier]} Challenge
           </span>
           <h2 className="display text-2xl font-extrabold text-white uppercase leading-tight mt-1">
             {challenge.name}
           </h2>
-          <p className="text-xs mt-0.5" style={{ color: "#8A8A8A" }}>{challenge.tagline}</p>
+          <p className="text-xs mt-0.5" style={{ color: "#8A8A8A" }}>
+            {challenge.tagline}
+          </p>
         </div>
 
         {/* Ring timer for time challenges */}
@@ -769,14 +1118,34 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
           <div className="flex flex-col items-center py-4">
             <div className="relative" style={{ width: size, height: size }}>
               <svg width={size} height={size} className="-rotate-90 absolute inset-0">
-                <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#262626" strokeWidth={sw} />
-                <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={tierColor} strokeWidth={sw}
-                  strokeDasharray={`${circ * pct / 100} ${circ}`} strokeLinecap="round"
-                  style={{ transition: "stroke-dasharray 200ms linear" }} />
+                <circle
+                  cx={size / 2}
+                  cy={size / 2}
+                  r={r}
+                  fill="none"
+                  stroke="#262626"
+                  strokeWidth={sw}
+                />
+                <circle
+                  cx={size / 2}
+                  cy={size / 2}
+                  r={r}
+                  fill="none"
+                  stroke={tierColor}
+                  strokeWidth={sw}
+                  strokeDasharray={`${(circ * pct) / 100} ${circ}`}
+                  strokeLinecap="round"
+                  style={{ transition: "stroke-dasharray 200ms linear" }}
+                />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="display font-extrabold text-white" style={{ fontSize: 44 }}>{display}</span>
-                <span className="text-xs font-bold uppercase tracking-wider mt-1" style={{ color: "#8A8A8A" }}>
+                <span className="display font-extrabold text-white" style={{ fontSize: 44 }}>
+                  {display}
+                </span>
+                <span
+                  className="text-xs font-bold uppercase tracking-wider mt-1"
+                  style={{ color: "#8A8A8A" }}
+                >
                   Target: {fmtTime(challenge.target)}
                 </span>
               </div>
@@ -784,20 +1153,25 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
           </div>
         ) : (
           <div className="flex flex-col items-center py-6 gap-4">
-            <span className="display font-extrabold text-white" style={{ fontSize: 72 }}>{reps}</span>
+            <span className="display font-extrabold text-white" style={{ fontSize: 72 }}>
+              {reps}
+            </span>
             <div className="flex items-center gap-4">
               <button
-                onClick={() => setReps(r => Math.max(0, r - 1))}
+                onClick={() => setReps((r) => Math.max(0, r - 1))}
                 className="w-12 h-12 rounded-full flex items-center justify-center press"
                 style={{ background: "#141414", border: "1.5px solid #262626" }}
               >
                 <Minus size={20} style={{ color: "#8A8A8A" }} />
               </button>
-              <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#8A8A8A" }}>
+              <span
+                className="text-xs font-bold uppercase tracking-wider"
+                style={{ color: "#8A8A8A" }}
+              >
                 Target: {challenge.target} reps
               </span>
               <button
-                onClick={() => setReps(r => r + 1)}
+                onClick={() => setReps((r) => r + 1)}
                 className="w-12 h-12 rounded-full flex items-center justify-center press"
                 style={{ background: tierColor }}
               >
@@ -816,7 +1190,10 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
               border: `1.5px solid ${finished.beat ? "#E10600" : "#262626"}`,
             }}
           >
-            <p className="display text-xl font-extrabold" style={{ color: finished.beat ? "#E10600" : "#8A8A8A" }}>
+            <p
+              className="display text-xl font-extrabold"
+              style={{ color: finished.beat ? "#E10600" : "#8A8A8A" }}
+            >
               {finished.beat ? "🔥 BEATEN!" : "Not yet"}
             </p>
             <p className="text-sm mt-1" style={{ color: "#8A8A8A" }}>
@@ -825,7 +1202,9 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
               Target: {isTime ? fmtTime(challenge.target) : `${challenge.target} reps`}
             </p>
             {finished.beat && (
-              <p className="text-xs mt-1 font-bold" style={{ color: "#E10600" }}>+{challenge.xp} XP earned!</p>
+              <p className="text-xs mt-1 font-bold" style={{ color: "#E10600" }}>
+                +{challenge.xp} XP earned!
+              </p>
             )}
           </div>
         )}
@@ -833,17 +1212,27 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
         {/* Controls */}
         <div className="px-5 pb-6 flex gap-3">
           {finished ? (
-            <button onClick={onClose} className="btn-grit flex-1 py-3">Done</button>
+            <button onClick={onClose} className="btn-grit flex-1 py-3">
+              Done
+            </button>
           ) : (
             <>
               {isTime ? (
                 <>
                   <button
-                    onClick={() => running ? setRunning(false) : setRunning(true)}
+                    onClick={() => (running ? setRunning(false) : setRunning(true))}
                     className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm press"
                     style={{ background: running ? "#262626" : tierColor, color: "#fff" }}
                   >
-                    {running ? <><Pause size={16} /> Pause</> : <><Play size={16} /> {seconds > 0 ? "Resume" : "Start"}</>}
+                    {running ? (
+                      <>
+                        <Pause size={16} /> Pause
+                      </>
+                    ) : (
+                      <>
+                        <Play size={16} /> {seconds > 0 ? "Resume" : "Start"}
+                      </>
+                    )}
                   </button>
                   <button
                     onClick={finish}
@@ -856,7 +1245,10 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
               ) : (
                 <>
                   <button
-                    onClick={() => { setReps(0); setFinished(null); }}
+                    onClick={() => {
+                      setReps(0);
+                      setFinished(null);
+                    }}
                     className="py-3 px-4 rounded-2xl press"
                     style={{ background: "#262626", color: "#8A8A8A" }}
                   >

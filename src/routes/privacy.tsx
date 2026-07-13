@@ -63,8 +63,9 @@ function PrivacyPage() {
       <H>3. Sharing</H>
       <p>
         We do <b>not</b> sell your personal data. We share data only with: (a) infrastructure
-        providers that host the app (Supabase / Lovable Cloud); (b) authentication providers you
-        choose (Google, Apple); (c) authorities when legally required.
+        providers that host the app and APIs (Supabase, Cloudflare, and Stripe for payments); (b)
+        authentication providers you choose (Google, Apple); (c)
+        authorities when legally required.
       </p>
 
       <H>4. Public data</H>

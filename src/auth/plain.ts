@@ -1,6 +1,14 @@
+import { createClient, type Session } from "@supabase/supabase-js";
+
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+const publishableKey = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  import.meta.env.VITE_SUPABASE_ANON_KEY) as string | undefined;
+
 const sessionBackupKey = "deadset_auth_session_v1";
+const sessionCookieAccess = "deadset_at";
+const sessionCookieRefresh = "deadset_rt";
+const supabaseCookiePrefix = "deadset_sb_";
+const cookieMaxAge = 60 * 60 * 24 * 180;
 
 const form = document.getElementById("auth-form") as HTMLFormElement;
 const emailInput = document.getElementById("email") as HTMLInputElement;
@@ -10,7 +18,7 @@ const signinTab = document.getElementById("signin-tab") as HTMLButtonElement;
 const signupTab = document.getElementById("signup-tab") as HTMLButtonElement;
 const forgotButton = document.getElementById("forgot") as HTMLButtonElement;
 const message = document.getElementById("message") as HTMLDivElement;
-const togglePassword = document.getElementById("toggle-password") as HTMLButtonElement;
+const togglePassword = document.getElementById("toggle-password") as HTMLButtonElement | null;
 const closeButton = document.getElementById("close") as HTMLButtonElement;
 
 let mode: "signin" | "signup" = "signin";
@@ -25,16 +33,142 @@ function setBusy(busy: boolean) {
   signinTab.disabled = busy;
   signupTab.disabled = busy;
   forgotButton.disabled = busy;
-  submitButton.textContent = busy ? "Please wait…" : mode === "signup" ? "Create Account" : "Sign In";
+  submitButton.textContent = busy
+    ? "Please wait..."
+    : mode === "signup"
+      ? "Create Account"
+      : "Sign In";
 }
 
-function saveSession(payload: Record<string, unknown>) {
-  if (typeof payload.access_token !== "string" || typeof payload.refresh_token !== "string") return false;
-  localStorage.setItem(sessionBackupKey, JSON.stringify({
-    access_token: payload.access_token,
-    refresh_token: payload.refresh_token,
-  }));
-  return true;
+function cookieAttributes(maxAge = cookieMaxAge) {
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  return `; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`;
+}
+
+function setCookie(name: string, value: string) {
+  document.cookie = `${name}=${encodeURIComponent(value)}${cookieAttributes()}`;
+}
+
+function removeCookie(name: string) {
+  document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax`;
+}
+
+function getCookie(name: string) {
+  const prefix = `${name}=`;
+  const found = document.cookie
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(prefix));
+  if (!found) return null;
+  try {
+    return decodeURIComponent(found.slice(prefix.length));
+  } catch {
+    return null;
+  }
+}
+
+function cookieKey(key: string) {
+  return `${supabaseCookiePrefix}${btoa(key).replace(/=+$/g, "")}`;
+}
+
+function safeLocalStorageGet(key: string) {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeLocalStorageSet(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    /* cookie fallback still persists the session */
+  }
+}
+
+function safeLocalStorageRemove(key: string) {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    /* ignore */
+  }
+}
+
+function persistentAuthStorage() {
+  return {
+    getItem(key: string) {
+      return safeLocalStorageGet(key) ?? getCookie(cookieKey(key));
+    },
+    setItem(key: string, value: string) {
+      safeLocalStorageSet(key, value);
+      setCookie(cookieKey(key), value);
+    },
+    removeItem(key: string) {
+      safeLocalStorageRemove(key);
+      removeCookie(cookieKey(key));
+    },
+  };
+}
+
+function saveSessionBackup(session: Session) {
+  safeLocalStorageSet(
+    sessionBackupKey,
+    JSON.stringify({
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
+    }),
+  );
+  setCookie(sessionCookieAccess, session.access_token);
+  setCookie(sessionCookieRefresh, session.refresh_token);
+}
+
+function redirectUrl() {
+  if (window.location.protocol === "capacitor:" || window.location.protocol === "ionic:") {
+    return "https://deadsetfit.org/auth/";
+  }
+  return `${window.location.origin}/auth/`;
+}
+
+function destinationFor(session: Session, signingUp = false) {
+  if (signingUp || !session.user.id) return "/onboarding";
+  return "/train";
+}
+
+function errorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message.trim()) return error.message;
+  return fallback;
+}
+
+const supabase =
+  supabaseUrl && publishableKey
+    ? createClient(supabaseUrl, publishableKey, {
+        auth: {
+          storage: persistentAuthStorage(),
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+          flowType: "pkce",
+        },
+      })
+    : null;
+
+supabase?.auth.onAuthStateChange((event, session) => {
+  if (session) saveSessionBackup(session);
+  if (event === "PASSWORD_RECOVERY") {
+    setMessage("Password recovery opened. Sign in with your new password after resetting it.");
+  }
+});
+
+async function restoreExistingSession() {
+  if (!supabase) return;
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (session) {
+    saveSessionBackup(session);
+    window.location.replace(destinationFor(session));
+  }
 }
 
 function switchMode(next: "signin" | "signup") {
@@ -51,7 +185,7 @@ function switchMode(next: "signin" | "signup") {
 signinTab.addEventListener("click", () => switchMode("signin"));
 signupTab.addEventListener("click", () => switchMode("signup"));
 
-togglePassword.addEventListener("click", () => {
+togglePassword?.addEventListener("click", () => {
   const showing = passwordInput.type === "text";
   passwordInput.type = showing ? "password" : "text";
   togglePassword.setAttribute("aria-label", showing ? "Show password" : "Hide password");
@@ -69,24 +203,21 @@ forgotButton.addEventListener("click", async () => {
     emailInput.focus();
     return;
   }
-  if (!supabaseUrl || !publishableKey) {
+  if (!supabase) {
     setMessage("Authentication is not configured.", true);
     return;
   }
 
   setBusy(true);
-  setMessage("Sending reset email…");
+  setMessage("Sending reset email...");
   try {
-    const response = await fetch(`${supabaseUrl}/auth/v1/recover`, {
-      method: "POST",
-      headers: { apikey: publishableKey, "Content-Type": "application/json" },
-      body: JSON.stringify({ email, redirect_to: `${window.location.origin}/auth` }),
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectUrl(),
     });
-    const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
-    if (!response.ok) throw new Error(String(payload.msg ?? payload.message ?? payload.error_description ?? "Could not send reset email"));
+    if (error) throw error;
     setMessage("Password reset email sent.");
   } catch (error) {
-    setMessage(error instanceof Error ? error.message : "Could not send reset email", true);
+    setMessage(errorMessage(error, "Could not send reset email"), true);
   } finally {
     setBusy(false);
   }
@@ -97,7 +228,7 @@ form.addEventListener("submit", async (event) => {
   const email = emailInput.value.trim().toLowerCase();
   const password = passwordInput.value;
   if (!email || !password) return;
-  if (!supabaseUrl || !publishableKey) {
+  if (!supabase) {
     setMessage("Authentication is not configured.", true);
     return;
   }
@@ -105,29 +236,35 @@ form.addEventListener("submit", async (event) => {
   setBusy(true);
   setMessage("");
   try {
-    const endpoint = mode === "signin" ? "/auth/v1/token?grant_type=password" : "/auth/v1/signup";
-    const response = await fetch(`${supabaseUrl}${endpoint}`, {
-      method: "POST",
-      headers: { apikey: publishableKey, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    if (mode === "signup") {
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        ...(mode === "signup" ? { email_redirect_to: `${window.location.origin}/auth` } : {}),
-      }),
-    });
-    const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
-    if (!response.ok) throw new Error(String(payload.msg ?? payload.message ?? payload.error_description ?? "Authentication failed"));
-
-    if (saveSession(payload)) {
-      window.location.replace(mode === "signup" ? "/onboarding" : "/train");
+        options: { emailRedirectTo: redirectUrl() },
+      });
+      if (error) throw error;
+      if (data.session) {
+        saveSessionBackup(data.session);
+        window.location.replace(destinationFor(data.session, true));
+        return;
+      }
+      switchMode("signin");
+      setMessage("Check your email to confirm your account, then sign in.");
       return;
     }
 
-    switchMode("signin");
-    setMessage("Check your email to confirm your account, then sign in.");
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    if (!data.session) throw new Error("No session returned. Please try again.");
+    saveSessionBackup(data.session);
+    window.location.replace(destinationFor(data.session));
   } catch (error) {
-    setMessage(error instanceof Error ? error.message : "Authentication failed", true);
+    setMessage(errorMessage(error, "Authentication failed"), true);
   } finally {
     setBusy(false);
   }
+});
+
+void restoreExistingSession().catch(() => {
+  /* The form stays usable if session restore fails. */
 });

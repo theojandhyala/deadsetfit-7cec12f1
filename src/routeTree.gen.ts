@@ -16,8 +16,8 @@ import { Route as RecoveryRouteImport } from './routes/recovery'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
+import { Route as GuideRouteImport } from './routes/guide'
 import { Route as DisclaimerRouteImport } from './routes/disclaimer'
-import { Route as CoachRouteImport } from './routes/coach'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as TabsRouteImport } from './routes/_tabs'
 import { Route as IndexRouteImport } from './routes/index'
@@ -34,7 +34,6 @@ import { Route as TabsChallengesRouteImport } from './routes/_tabs.challenges'
 import { Route as TabsProgramsProgramIdRouteImport } from './routes/_tabs.programs.$programId'
 import { Route as TabsLiftExerciseIdRouteImport } from './routes/_tabs.lift.$exerciseId'
 import { Route as TabsAthleteIdRouteImport } from './routes/_tabs.athlete.$id'
-import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
 const UpgradeRoute = UpgradeRouteImport.update({
   id: '/upgrade',
@@ -71,14 +70,14 @@ const LeaderboardRoute = LeaderboardRouteImport.update({
   path: '/leaderboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GuideRoute = GuideRouteImport.update({
+  id: '/guide',
+  path: '/guide',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DisclaimerRoute = DisclaimerRouteImport.update({
   id: '/disclaimer',
   path: '/disclaimer',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CoachRoute = CoachRouteImport.update({
-  id: '/coach',
-  path: '/coach',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -160,18 +159,12 @@ const TabsAthleteIdRoute = TabsAthleteIdRouteImport.update({
   path: '/athlete/$id',
   getParentRoute: () => TabsRoute,
 } as any)
-const ApiPublicPaymentsWebhookRoute =
-  ApiPublicPaymentsWebhookRouteImport.update({
-    id: '/api/public/payments/webhook',
-    path: '/api/public/payments/webhook',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/coach': typeof CoachRoute
   '/disclaimer': typeof DisclaimerRoute
+  '/guide': typeof GuideRoute
   '/leaderboard': typeof LeaderboardRoute
   '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
@@ -192,13 +185,12 @@ export interface FileRoutesByFullPath {
   '/athlete/$id': typeof TabsAthleteIdRoute
   '/lift/$exerciseId': typeof TabsLiftExerciseIdRoute
   '/programs/$programId': typeof TabsProgramsProgramIdRoute
-  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/coach': typeof CoachRoute
   '/disclaimer': typeof DisclaimerRoute
+  '/guide': typeof GuideRoute
   '/leaderboard': typeof LeaderboardRoute
   '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
@@ -219,15 +211,14 @@ export interface FileRoutesByTo {
   '/athlete/$id': typeof TabsAthleteIdRoute
   '/lift/$exerciseId': typeof TabsLiftExerciseIdRoute
   '/programs/$programId': typeof TabsProgramsProgramIdRoute
-  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_tabs': typeof TabsRouteWithChildren
   '/auth': typeof AuthRoute
-  '/coach': typeof CoachRoute
   '/disclaimer': typeof DisclaimerRoute
+  '/guide': typeof GuideRoute
   '/leaderboard': typeof LeaderboardRoute
   '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
@@ -248,15 +239,14 @@ export interface FileRoutesById {
   '/_tabs/athlete/$id': typeof TabsAthleteIdRoute
   '/_tabs/lift/$exerciseId': typeof TabsLiftExerciseIdRoute
   '/_tabs/programs/$programId': typeof TabsProgramsProgramIdRoute
-  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/auth'
-    | '/coach'
     | '/disclaimer'
+    | '/guide'
     | '/leaderboard'
     | '/onboarding'
     | '/privacy'
@@ -277,13 +267,12 @@ export interface FileRouteTypes {
     | '/athlete/$id'
     | '/lift/$exerciseId'
     | '/programs/$programId'
-    | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
-    | '/coach'
     | '/disclaimer'
+    | '/guide'
     | '/leaderboard'
     | '/onboarding'
     | '/privacy'
@@ -304,14 +293,13 @@ export interface FileRouteTypes {
     | '/athlete/$id'
     | '/lift/$exerciseId'
     | '/programs/$programId'
-    | '/api/public/payments/webhook'
   id:
     | '__root__'
     | '/'
     | '/_tabs'
     | '/auth'
-    | '/coach'
     | '/disclaimer'
+    | '/guide'
     | '/leaderboard'
     | '/onboarding'
     | '/privacy'
@@ -332,15 +320,14 @@ export interface FileRouteTypes {
     | '/_tabs/athlete/$id'
     | '/_tabs/lift/$exerciseId'
     | '/_tabs/programs/$programId'
-    | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   TabsRoute: typeof TabsRouteWithChildren
   AuthRoute: typeof AuthRoute
-  CoachRoute: typeof CoachRoute
   DisclaimerRoute: typeof DisclaimerRoute
+  GuideRoute: typeof GuideRoute
   LeaderboardRoute: typeof LeaderboardRoute
   OnboardingRoute: typeof OnboardingRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -350,7 +337,6 @@ export interface RootRouteChildren {
   UpgradeRoute: typeof UpgradeRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   WorkoutLiveRoute: typeof WorkoutLiveRoute
-  ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -404,18 +390,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LeaderboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/guide': {
+      id: '/guide'
+      path: '/guide'
+      fullPath: '/guide'
+      preLoaderRoute: typeof GuideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/disclaimer': {
       id: '/disclaimer'
       path: '/disclaimer'
       fullPath: '/disclaimer'
       preLoaderRoute: typeof DisclaimerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/coach': {
-      id: '/coach'
-      path: '/coach'
-      fullPath: '/coach'
-      preLoaderRoute: typeof CoachRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -530,13 +516,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TabsAthleteIdRouteImport
       parentRoute: typeof TabsRoute
     }
-    '/api/public/payments/webhook': {
-      id: '/api/public/payments/webhook'
-      path: '/api/public/payments/webhook'
-      fullPath: '/api/public/payments/webhook'
-      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -584,8 +563,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   TabsRoute: TabsRouteWithChildren,
   AuthRoute: AuthRoute,
-  CoachRoute: CoachRoute,
   DisclaimerRoute: DisclaimerRoute,
+  GuideRoute: GuideRoute,
   LeaderboardRoute: LeaderboardRoute,
   OnboardingRoute: OnboardingRoute,
   PrivacyRoute: PrivacyRoute,
@@ -595,7 +574,6 @@ const rootRouteChildren: RootRouteChildren = {
   UpgradeRoute: UpgradeRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   WorkoutLiveRoute: WorkoutLiveRoute,
-  ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

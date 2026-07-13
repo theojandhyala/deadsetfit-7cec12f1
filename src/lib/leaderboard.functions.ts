@@ -1,6 +1,6 @@
 import { callRpc } from "./rpc-client";
 
-export type LeaderboardCategory = "OVERALL" | "BENCH" | "SQUAT" | "DEADLIFT" | "TOTAL";
+export type LeaderboardCategory = "RANK" | "OVERALL" | "TOTAL" | "BENCH" | "SQUAT" | "DEADLIFT";
 export type LeaderboardRow = {
   id: string;
   username: string | null;

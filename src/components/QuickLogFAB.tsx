@@ -6,10 +6,10 @@ export function QuickLogFAB() {
     <Link
       to="/workout/live"
       aria-label="Start workout"
-      className="fixed right-4 z-40 inline-flex items-center gap-2 px-4 py-3 bg-accent-red text-white font-extrabold uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-transform"
+      className="hidden sm:inline-flex fixed right-4 z-30 items-center gap-2 rounded-full px-4 py-3 bg-accent-red text-white font-extrabold uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-transform"
       style={{
-        bottom: "calc(80px + env(safe-area-inset-bottom))",
-        boxShadow: "0 8px 24px rgba(230,50,34,0.45)",
+        bottom: "calc(78px + env(safe-area-inset-bottom))",
+        boxShadow: "0 10px 28px rgba(230,50,34,0.32)",
       }}
     >
       <Zap size={16} strokeWidth={3} />

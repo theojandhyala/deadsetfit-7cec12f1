@@ -4,6 +4,7 @@ import { DEFAULT_STATE } from "./default-state";
 
 const KEY = "grit_app_state_v1";
 const OWNER_KEY = "grit_app_state_owner_v1";
+const PENDING_SYNC_KEY = "grit_app_state_pending_sync_v1";
 
 const listeners = new Set<() => void>();
 const syncListeners = new Set<() => void>();
@@ -41,9 +42,46 @@ function write(state: AppState) {
     }
     if (pushTimer) clearTimeout(pushTimer);
     const saver = pushSaver;
+    const json = JSON.stringify(state);
     pushTimer = setTimeout(() => {
-      saver(JSON.stringify(state)).catch((e) => console.warn("state sync failed", e));
+      saver(json)
+        .then(() => clearPendingRemoteState(json))
+        .catch((e) => {
+          markPendingRemoteState(json);
+          console.warn("state sync failed", e);
+        });
     }, 1200);
+  }
+}
+
+function markPendingRemoteState(json: string) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(PENDING_SYNC_KEY, json);
+  } catch {
+    /* ignore */
+  }
+}
+
+function readPendingRemoteState() {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(PENDING_SYNC_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function clearPendingRemoteState(json?: string) {
+  if (typeof window === "undefined") return;
+  try {
+    if (json) {
+      const current = localStorage.getItem(PENDING_SYNC_KEY);
+      if (current && current !== json) return;
+    }
+    localStorage.removeItem(PENDING_SYNC_KEY);
+  } catch {
+    /* ignore */
   }
 }
 
@@ -130,6 +168,12 @@ export function waitForRemoteState(userId: string, timeoutMs = 4000) {
 export function enableRemoteSync(saver: (json: string) => Promise<void>) {
   remoteSyncEnabled = true;
   pushSaver = saver;
+  const pending = readPendingRemoteState();
+  if (pending) {
+    saver(pending)
+      .then(() => clearPendingRemoteState(pending))
+      .catch((e) => console.warn("pending state sync failed", e));
+  }
 }
 
 /** Force-flush any pending push immediately and also push current state. */
@@ -139,9 +183,17 @@ export async function flushRemoteState() {
     clearTimeout(pushTimer);
     pushTimer = null;
   }
+  const pending = readPendingRemoteState();
   try {
-    await pushSaver(JSON.stringify(read()));
+    if (pending) {
+      await pushSaver(pending);
+      clearPendingRemoteState(pending);
+    }
+    const json = JSON.stringify(read());
+    await pushSaver(json);
+    clearPendingRemoteState(json);
   } catch (e) {
+    markPendingRemoteState(JSON.stringify(read()));
     console.warn("flushRemoteState failed", e);
   }
 }

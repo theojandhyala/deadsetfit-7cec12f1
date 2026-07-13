@@ -2,13 +2,14 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "deadset",
   "main": "./src/cloudflare-worker.ts",
+  "pages_build_output_dir": "dist/client",
   "compatibility_date": "2026-06-22",
   "compatibility_flags": ["nodejs_compat"],
   "routes": [
     { "pattern": "deadsetfit.org/api/*", "zone_name": "deadsetfit.org" },
-    { "pattern": "www.deadsetfit.org/api/*", "zone_name": "deadsetfit.org" }
+    { "pattern": "www.deadsetfit.org/api/*", "zone_name": "deadsetfit.org" },
   ],
   "observability": {
-    "enabled": true
-  }
+    "enabled": true,
+  },
 }

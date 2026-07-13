@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { getMyProfile, saveProfile } from "@/lib/profile.functions";
+import { flushRemoteState, useAppState } from "@/lib/storage";
 
 /**
  * Blocking modal: if the signed-in user has no username yet, force them to
@@ -10,6 +11,7 @@ import { getMyProfile, saveProfile } from "@/lib/profile.functions";
 export function UsernameGate() {
   const fetchProfile = getMyProfile;
   const save = saveProfile;
+  const [, setAppState] = useAppState();
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
   const [saving, setSaving] = useState(false);
@@ -17,7 +19,9 @@ export function UsernameGate() {
 
   async function check() {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) {
         setOpen(false);
         return;
@@ -39,7 +43,10 @@ export function UsernameGate() {
 
   if (!open) return null;
 
-  const clean = value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20);
+  const clean = value
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, "")
+    .slice(0, 20);
   const valid = clean.length >= 3;
 
   async function submit() {
@@ -48,6 +55,10 @@ export function UsernameGate() {
     setError(null);
     try {
       await save({ data: { username: clean, display_name: clean } });
+      setAppState((state) =>
+        state.profile ? { ...state, profile: { ...state.profile, username: clean } } : state,
+      );
+      await flushRemoteState().catch(() => {});
       setOpen(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save username");

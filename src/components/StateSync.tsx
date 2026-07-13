@@ -31,8 +31,11 @@ export function StateSync() {
 
     function prepareLocalState(userId: string) {
       // Local training data must never cross account boundaries. This also
-      // clears legacy/unowned state before the first authenticated sync.
-      if (getLocalStateOwner() !== userId) clearLocalState();
+      // clears another user's state before the first authenticated sync.
+      // Unowned state is allowed through so a brand-new account can finish
+      // onboarding and save its first setup instead of having it wiped.
+      const owner = getLocalStateOwner();
+      if (owner && owner !== userId) clearLocalState();
     }
 
     async function pull(userId: string) {
@@ -50,7 +53,9 @@ export function StateSync() {
         } else {
           // First sign-in on this account: push whatever's local so it isn't lost.
           const local = getState();
-          if (local.profile && getLocalStateOwner() === userId) {
+          const owner = getLocalStateOwner();
+          if (local.profile && (!owner || owner === userId)) {
+            setLocalStateOwner(userId);
             await save({ data: { data: JSON.stringify(local) } }).catch(() => {});
           }
           setLocalStateOwner(userId);
@@ -65,18 +70,21 @@ export function StateSync() {
       }
     }
 
-    withTimeout(supabase.auth.getSession(), { data: { session: null }, error: null }).then(({ data: { session } }) => {
-      if (session?.user?.id) {
-        activeUserId = session.user.id;
-        pull(session.user.id);
-      }
-    });
+    withTimeout(supabase.auth.getSession(), { data: { session: null }, error: null }).then(
+      ({ data: { session } }) => {
+        if (session?.user?.id) {
+          activeUserId = session.user.id;
+          pull(session.user.id);
+        }
+      },
+    );
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       const uid = session?.user?.id ?? null;
       if (event === "SIGNED_OUT") {
+        // Do not wipe local app state on a transient auth refresh/storage blip.
+        // Explicit logout navigates away and clears auth persistence itself.
         disableRemoteSync();
-        clearLocalState();
         clearRemoteStateStatus();
         activeUserId = null;
         return;

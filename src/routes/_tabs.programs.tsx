@@ -203,7 +203,7 @@ function ProgramsPage() {
   }
 
   return (
-    <div className="px-5 pt-6 pb-4" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+    <div className="px-5 pt-4 pb-4">
       <div className="flex items-center justify-between mb-1">
         <h1 className="display text-3xl font-extrabold uppercase text-grit">Programs</h1>
         <Link to="/train" className="label-cap text-grit-dim text-xs">

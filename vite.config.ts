@@ -3,28 +3,12 @@ import react from "@vitejs/plugin-react";
 import tsConfigPaths from "vite-tsconfig-paths";
 import tailwindcss from "@tailwindcss/vite";
 import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
-import { TanStackStartViteServerFn } from "@tanstack/start-vite-plugin";
 import { fileURLToPath, URL } from "node:url";
 
 const stub = (name: string) => fileURLToPath(new URL(`src/stubs/${name}`, import.meta.url));
 
-// Wrap the plugin to skip node_modules (the plugin's own regex erroneously matches
-// arrow-function definitions in library code, causing a transform error).
-function TanStackStartSrcOnly(opts: Parameters<typeof TanStackStartViteServerFn>[0]) {
-  const plugin = TanStackStartViteServerFn(opts) as any;
-  const originalTransform = plugin.transform?.bind(plugin);
-  if (originalTransform) {
-    plugin.transform = function (code: string, id: string, ...rest: unknown[]) {
-      if (id.includes("/node_modules/")) return null;
-      return originalTransform(code, id, ...rest);
-    };
-  }
-  return plugin;
-}
-
 export default defineConfig({
   plugins: [
-    TanStackStartSrcOnly({ env: "client" }),
     TanStackRouterVite({ target: "react", autoCodeSplitting: true }),
     tailwindcss(),
     react(),
@@ -43,7 +27,20 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: fileURLToPath(new URL("index.html", import.meta.url)),
+        authRoot: fileURLToPath(new URL("auth.html", import.meta.url)),
         auth: fileURLToPath(new URL("auth/index.html", import.meta.url)),
+      },
+      output: {
+        manualChunks(id) {
+          if (!id.includes("/node_modules/")) return;
+          if (id.includes("/@tanstack/")) return "vendor-tanstack";
+          if (id.includes("/@supabase/")) return "vendor-supabase";
+          if (id.includes("/lucide-react/")) return "vendor-icons";
+          if (id.includes("/react/") || id.includes("/react-dom/") || id.includes("/scheduler/")) {
+            return "vendor-react";
+          }
+          return "vendor";
+        },
       },
     },
   },

@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Crown, Loader2, TriangleAlert } from "lucide-react";
 import { usePro } from "@/hooks/usePro";
+import { verifyCheckoutSession } from "@/lib/payments.functions";
+import { getStripeEnvironment } from "@/lib/stripe";
 
 export const Route = createFileRoute("/checkout/return")({
   validateSearch: (search: Record<string, unknown>): { session_id?: string } => ({
@@ -15,18 +17,41 @@ function CheckoutReturn() {
   const { isPro, refresh } = usePro();
   const { session_id: sessionId } = Route.useSearch();
   const [timedOut, setTimedOut] = useState(false);
+  const [verifiedPro, setVerifiedPro] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!sessionId) return;
     // Webhook may race with redirect; poll a few times
     let i = 0;
-    void refresh();
+    const verify = async () => {
+      setVerifyError(null);
+      try {
+        const result = await verifyCheckoutSession({
+          data: { sessionId, environment: getStripeEnvironment() },
+        });
+        if (result.isPro) {
+          setVerifiedPro(true);
+          await refresh();
+          return;
+        }
+      } catch (error) {
+        setVerifyError(error instanceof Error ? error.message : "Could not verify checkout yet");
+      }
+      await refresh();
+    };
+    void verify();
     const id = setInterval(() => {
-      i++; refresh();
+      i++;
+      void verify();
+      if (verifiedPro || isPro) {
+        clearInterval(id);
+        return;
+      }
       if (i > 8) { clearInterval(id); setTimedOut(true); }
     }, 1500);
     return () => clearInterval(id);
-  }, [refresh, sessionId]);
+  }, [isPro, refresh, sessionId, verifiedPro]);
 
   if (!sessionId) {
     return (
@@ -41,7 +66,7 @@ function CheckoutReturn() {
 
   return (
     <div className="min-h-screen bg-grit-bg flex flex-col items-center justify-center px-6 text-center">
-      {isPro ? (
+      {isPro || verifiedPro ? (
         <>
           <Crown size={56} className="text-accent-red mb-4" />
           <h1 className="font-display text-4xl uppercase tracking-wider text-grit-text">You're Pro</h1>
@@ -54,8 +79,10 @@ function CheckoutReturn() {
         <>
           <TriangleAlert size={44} className="text-accent-red mb-4" />
           <h1 className="font-display text-3xl uppercase tracking-wider text-grit-text">Payment processing</h1>
-          <p className="mt-2 text-sm text-grit">Your payment may still be confirming. Check again shortly.</p>
-          <button onClick={() => { setTimedOut(false); void refresh(); }} className="mt-7 rounded bg-accent-red px-7 py-3 font-display text-sm uppercase tracking-widest text-white">Check again</button>
+          <p className="mt-2 text-sm text-grit">
+            {verifyError || "Your payment may still be confirming. Check again shortly."}
+          </p>
+          <button onClick={() => window.location.reload()} className="mt-7 rounded bg-accent-red px-7 py-3 font-display text-sm uppercase tracking-widest text-white">Check again</button>
           <Link to="/train" className="mt-4 text-xs uppercase tracking-widest text-grit">Back to training</Link>
         </>
       ) : (

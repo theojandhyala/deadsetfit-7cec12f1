@@ -1,16 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 import { useState } from "react";
-import {
-  listExercises,
-  generateExerciseBatch,
-  countExercises,
-  type LibraryExercise,
-} from "@/lib/library.functions";
+import { listExercises, countExercises, type LibraryExercise } from "@/lib/library.functions";
 import { MuscleDiagram } from "@/components/MuscleDiagram";
 import { VideoModal } from "@/components/VideoModal";
-import { toast } from "sonner";
 
 export const Route = createFileRoute("/_tabs/library")({
   head: () => ({ meta: [{ title: "DEADSET — Library" }] }),
@@ -29,38 +23,8 @@ const EQUIPMENT = [
   "KETTLEBELL",
 ] as const;
 
-// Generation plan: 25 focuses x 20 = 500 candidates (dedupe on slug)
-const FOCUSES = [
-  "barbell chest variations",
-  "dumbbell chest variations",
-  "cable & machine chest",
-  "barbell back rowing",
-  "dumbbell back rowing",
-  "cable back variations",
-  "lat & pull-up variations",
-  "barbell shoulder pressing",
-  "dumbbell shoulder pressing & raises",
-  "rear delt & rotator cuff",
-  "trap & upper-back",
-  "barbell biceps",
-  "dumbbell biceps & brachialis",
-  "cable & machine biceps",
-  "barbell & ez-bar triceps",
-  "cable triceps variations",
-  "barbell squat & lower-body strength",
-  "front squat & quad-focus",
-  "hip hinge & posterior chain",
-  "single-leg lower body",
-  "calf & lower-leg",
-  "anti-extension & anti-rotation core",
-  "loaded core flexion & obliques",
-  "kettlebell full-body",
-  "bands & bodyweight conditioning",
-];
-
 function LibraryPage() {
   const list = listExercises;
-  const gen = generateExerciseBatch;
   const count = countExercises;
 
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("ALL");
@@ -68,9 +32,8 @@ function LibraryPage() {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState<LibraryExercise | null>(null);
   const [video, setVideo] = useState<string | null>(null);
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["exercises", category, equipment, search],
     queryFn: () =>
       list({
@@ -84,33 +47,6 @@ function LibraryPage() {
   });
 
   const totalQ = useQuery({ queryKey: ["exercises-count"], queryFn: () => count() });
-
-  const buildAll = useMutation({
-    mutationFn: async () => {
-      setProgress({ done: 0, total: FOCUSES.length });
-      let added = 0;
-      for (let i = 0; i < FOCUSES.length; i++) {
-        try {
-          const r = await gen({ data: { focus: FOCUSES[i], batchSize: 20 } });
-          added += r.added;
-        } catch (err) {
-          console.error(err);
-        }
-        setProgress({ done: i + 1, total: FOCUSES.length });
-      }
-      return added;
-    },
-    onSuccess: (added) => {
-      toast.success(`Added ${added} new exercises`);
-      refetch();
-      totalQ.refetch();
-      setProgress(null);
-    },
-    onError: (e) => {
-      toast.error(e instanceof Error ? e.message : "Generation failed");
-      setProgress(null);
-    },
-  });
 
   return (
     <div className="px-4 pt-6">
@@ -160,21 +96,6 @@ function LibraryPage() {
           </button>
         ))}
       </div>
-
-      {(totalQ.data?.count ?? 0) < 100 && (
-        <button
-          onClick={() => buildAll.mutate()}
-          disabled={buildAll.isPending}
-          className="w-full py-3 mb-4 label-cap text-xs"
-          style={{ background: "#E10600", color: "#0a0a0a" }}
-        >
-          {progress
-            ? `Generating ${progress.done}/${progress.total}…`
-            : buildAll.isPending
-              ? "Working…"
-              : "AI: Build Full 500+ Library"}
-        </button>
-      )}
 
       {isLoading ? (
         <p className="text-grit-dim text-sm label-cap">Loading…</p>

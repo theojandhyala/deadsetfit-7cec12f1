@@ -8,6 +8,7 @@ import { getState, setLocalStateOwner, setState, waitForRemoteState } from "@/li
 import { defaultSchedule } from "@/lib/calc";
 import { getExercise } from "@/lib/exercises";
 import { getMyProfile, saveProfile } from "@/lib/profile.functions";
+import { saveUserState } from "@/lib/user-state.functions";
 import { profileFromAccount, profileQuestionsComplete, withTimeout } from "@/lib/account-restore";
 import type { Equipment, Experience, Gender, Goal, Profile, Weakness } from "@/lib/types";
 import { buildPublicStats } from "@/lib/fifa-stats";
@@ -40,9 +41,7 @@ function orderFor(mode: Mode | null): Step[] {
   const base: Step[] = ["mode"];
   if (!mode) return base;
   const schedule: Step[] =
-    mode === "GENERATE"
-      ? ["goal", "days", "equipment", "schedule"]
-      : ["goal", "days", "equipment"];
+    mode === "GENERATE" ? ["goal", "days", "equipment", "schedule"] : ["goal", "days", "equipment"];
   return [
     ...base,
     ...schedule,
@@ -66,6 +65,7 @@ function Onboarding() {
   const [userId, setUserId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Partial<Profile>>({});
   const save = saveProfile;
+  const saveFullState = saveUserState;
   const getProfile = getMyProfile;
   const ORDER = useMemo(() => orderFor(mode), [mode]);
   const step = ORDER[idx];
@@ -74,10 +74,9 @@ function Onboarding() {
     let cancelled = false;
     (async () => {
       const { supabase } = await import("@/integrations/supabase/client");
-      const { data: { session } } = await withTimeout(
-        supabase.auth.getSession(),
-        { data: { session: null }, error: null },
-      );
+      const {
+        data: { session },
+      } = await withTimeout(supabase.auth.getSession(), { data: { session: null }, error: null });
       if (cancelled) return;
       if (!session) {
         navigate({ to: "/auth", replace: true });
@@ -86,7 +85,10 @@ function Onboarding() {
       setUserId(session.user.id);
       await withTimeout(waitForRemoteState(session.user.id), undefined);
       if (cancelled) return;
-      const row = await withTimeout(getProfile().catch(() => null), null);
+      const row = await withTimeout(
+        getProfile().catch(() => null),
+        null,
+      );
       const accountProfile = profileQuestionsComplete(row) ? profileFromAccount(row) : null;
       if (accountProfile) {
         setState((current) => ({
@@ -133,9 +135,13 @@ function Onboarding() {
           onboarded: true,
         },
       })
-        .then(() => {
+        .then(async () => {
           setLocalStateOwner(userId);
-          setState((s) => ({ ...s, profile: p, schedule: sched }));
+          const nextState = { ...getState(), profile: p, schedule: sched };
+          setState(() => nextState);
+          await saveFullState({ data: { data: JSON.stringify(nextState) } }).catch(() => {
+            toast.warning("Setup saved locally. We'll keep trying to sync it.");
+          });
           navigate({ to: "/train", replace: true });
         })
         .catch((e: Error) => {
@@ -258,9 +264,7 @@ function Onboarding() {
             onPick={(v) => next({ equipment: v as Equipment })}
           />
         )}
-        {step === "schedule" && (
-          <SchedulePreview draft={draft} onContinue={() => next({})} />
-        )}
+        {step === "schedule" && <SchedulePreview draft={draft} onContinue={() => next({})} />}
         {step === "injuries" && (
           <Injuries onSubmit={(t) => next({ injuries: t })} onSkip={() => next({ injuries: "" })} />
         )}
@@ -440,10 +444,7 @@ function PhotoStep({ onSubmit, onSkip }: { onSubmit: (url: string) => void; onSk
         />
       </div>
       <div className="mt-auto flex flex-col gap-3">
-        <button
-          onClick={() => (preview ? onSubmit(preview) : onSkip())}
-          className="btn-grit"
-        >
+        <button onClick={() => (preview ? onSubmit(preview) : onSkip())} className="btn-grit">
           Finish Setup
         </button>
         {preview && (
@@ -486,8 +487,8 @@ function SchedulePreview({
         Schedule locked in
       </h1>
       <p className="text-sm text-[#8a8a8a] mb-6">
-        {draft.daysPerWeek} days · {(draft.equipment ?? "").replace("_", " ").toLowerCase()} · tuned for{" "}
-        {(draft.goal ?? "").toLowerCase()}. Tweak anytime in Programs.
+        {draft.daysPerWeek} days · {(draft.equipment ?? "").replace("_", " ").toLowerCase()} · tuned
+        for {(draft.goal ?? "").toLowerCase()}. Tweak anytime in Programs.
       </p>
       <div className="flex flex-col gap-1.5 mb-6">
         {DAYS.map((d) => {
@@ -509,9 +510,7 @@ function SchedulePreview({
                 </p>
                 {!isRest && (
                   <p className="text-[10px] text-grit-dim mt-1 truncate">
-                    {day.exerciseIds
-                      .map((id) => getExercise(id)?.name ?? id)
-                      .join(" · ")}
+                    {day.exerciseIds.map((id) => getExercise(id)?.name ?? id).join(" · ")}
                   </p>
                 )}
               </div>
@@ -542,9 +541,7 @@ function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
       <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">
         How do you want to start?
       </h1>
-      <p className="text-sm text-[#8a8a8a] mb-8">
-        Pick one. You can change everything later.
-      </p>
+      <p className="text-sm text-[#8a8a8a] mb-8">Pick one. You can change everything later.</p>
       <div className="flex flex-col gap-3">
         <button
           onClick={() => onPick("GENERATE")}
@@ -557,9 +554,7 @@ function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
           <span className="display text-2xl uppercase tracking-wide font-extrabold text-grit block">
             Generate Schedule
           </span>
-          <p className="text-xs text-[#8a8a8a] mt-1">
-            Answer 3 questions. We build your week.
-          </p>
+          <p className="text-xs text-[#8a8a8a] mt-1">Answer 3 questions. We build your week.</p>
         </button>
         <button
           onClick={() => onPick("BUILD")}
@@ -568,19 +563,41 @@ function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
           <span className="display text-2xl uppercase tracking-wide font-extrabold text-grit block">
             Build Your Own
           </span>
-          <p className="text-xs text-[#8a8a8a] mt-1">
-            Start blank. Add your own splits and lifts.
-          </p>
+          <p className="text-xs text-[#8a8a8a] mt-1">Start blank. Add your own splits and lifts.</p>
         </button>
       </div>
     </>
   );
 }
 
-const ONBOARDING_PRS: Array<{ id: string; label: string; unit: string; placeholder: string; desc: string }> = [
-  { id: "bench-press", label: "Bench Press",     unit: "kg",   placeholder: "80",  desc: "Flat barbell bench press. Bar to mid-chest, drive straight up." },
-  { id: "squat",       label: "Back Squat",      unit: "kg",   placeholder: "100", desc: "Barbell on upper back. Break at hips & knees, depth at parallel." },
-  { id: "deadlift",    label: "Deadlift",        unit: "kg",   placeholder: "120", desc: "Conventional barbell deadlift from the floor. Lock out hips at top." },
+const ONBOARDING_PRS: Array<{
+  id: string;
+  label: string;
+  unit: string;
+  placeholder: string;
+  desc: string;
+}> = [
+  {
+    id: "bench-press",
+    label: "Bench Press",
+    unit: "kg",
+    placeholder: "80",
+    desc: "Flat barbell bench press. Bar to mid-chest, drive straight up.",
+  },
+  {
+    id: "squat",
+    label: "Back Squat",
+    unit: "kg",
+    placeholder: "100",
+    desc: "Barbell on upper back. Break at hips & knees, depth at parallel.",
+  },
+  {
+    id: "deadlift",
+    label: "Deadlift",
+    unit: "kg",
+    placeholder: "120",
+    desc: "Conventional barbell deadlift from the floor. Lock out hips at top.",
+  },
 ];
 
 function PRStep({ onContinue }: { onContinue: () => void }) {
@@ -592,7 +609,8 @@ function PRStep({ onContinue }: { onContinue: () => void }) {
     for (const pr of ONBOARDING_PRS) {
       const n = Number(vals[pr.id]);
       if (n > 0) {
-        manualPRs[pr.id] = pr.unit === "kg" ? { value: n, reps: 1, date: today } : { value: n, date: today };
+        manualPRs[pr.id] =
+          pr.unit === "kg" ? { value: n, reps: 1, date: today } : { value: n, date: today };
       }
     }
     if (Object.keys(manualPRs).length) {
@@ -613,7 +631,9 @@ function PRStep({ onContinue }: { onContinue: () => void }) {
             <div className="flex items-center gap-3">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-grit truncate">{pr.label}</p>
-                <p className="label-cap text-[9px] text-grit-dim">{pr.unit === "kg" ? "1-rep max" : "max reps"}</p>
+                <p className="label-cap text-[9px] text-grit-dim">
+                  {pr.unit === "kg" ? "1-rep max" : "max reps"}
+                </p>
               </div>
               <input
                 value={vals[pr.id] ?? ""}
@@ -629,8 +649,12 @@ function PRStep({ onContinue }: { onContinue: () => void }) {
         ))}
       </div>
       <div className="mt-auto flex flex-col gap-3">
-        <button onClick={commit} className="btn-grit">Continue</button>
-        <button onClick={onContinue} className="btn-ghost">Skip</button>
+        <button onClick={commit} className="btn-grit">
+          Continue
+        </button>
+        <button onClick={onContinue} className="btn-ghost">
+          Skip
+        </button>
       </div>
     </>
   );

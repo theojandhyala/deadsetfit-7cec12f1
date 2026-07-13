@@ -1,26 +1,62 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { Loader2, Play, Plus, Sparkles, ListPlus, Flame, Trophy, Heart } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Play, ListPlus, Flame, Trophy, Heart, Pencil } from "lucide-react";
 
 import { VideoModal } from "@/components/VideoModal";
-import { RestTimer } from "@/components/RestTimer";
 import { Reminders } from "@/components/Reminders";
 import { DailyQuests } from "@/components/DailyQuests";
 import { Big3Card } from "@/components/Big3Card";
 import { WeeklyRecap } from "@/components/WeeklyRecap";
 import { QuickLogFAB } from "@/components/QuickLogFAB";
+import { RankedArena } from "@/components/RankedArena";
+import { TodayReadiness } from "@/components/TodayReadiness";
 import { useAppState } from "@/lib/storage";
 import { EXERCISES, getExercise } from "@/lib/exercises";
 import { calculateGritScore, calculateStreak, defaultSchedule, isoDay, todayKey } from "@/lib/calc";
-import { generateSchedule } from "@/lib/ai.functions";
 import { ProBanner } from "@/components/ProBanner";
-import type { DayKey, Schedule, Program } from "@/lib/types";
+import type { DayKey, Schedule, Program, Exercise } from "@/lib/types";
 
-const DAY_KEYS: DayKey[] = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
-const DAY_SHORT: Record<DayKey, string> = { MON:"Mon",TUE:"Tue",WED:"Wed",THU:"Thu",FRI:"Fri",SAT:"Sat",SUN:"Sun" };
-const DAY_FULL: Record<DayKey, string> = { MON:"Monday",TUE:"Tuesday",WED:"Wednesday",THU:"Thursday",FRI:"Friday",SAT:"Saturday",SUN:"Sunday" };
+const DAY_KEYS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+const DAY_SHORT: Record<DayKey, string> = {
+  MON: "Mon",
+  TUE: "Tue",
+  WED: "Wed",
+  THU: "Thu",
+  FRI: "Fri",
+  SAT: "Sat",
+  SUN: "Sun",
+};
+const DAY_FULL: Record<DayKey, string> = {
+  MON: "Monday",
+  TUE: "Tuesday",
+  WED: "Wednesday",
+  THU: "Thursday",
+  FRI: "Friday",
+  SAT: "Saturday",
+  SUN: "Sunday",
+};
 
-function dayHype(dayKey: DayKey, label: string, isToday: boolean): { eyebrow: string; line: string } {
+const SIMPLE_FOCUS = [
+  { key: "CHEST", label: "Chest", muscles: ["CHEST"] },
+  { key: "BACK", label: "Back", muscles: ["BACK"] },
+  { key: "LEGS", label: "Legs", muscles: ["LEGS"] },
+  { key: "SHOULDERS", label: "Shoulders", muscles: ["SHOULDERS"] },
+  { key: "ARMS", label: "Arms", muscles: ["ARMS"] },
+  { key: "CORE", label: "Core", muscles: ["CORE"] },
+  { key: "PUSH", label: "Push", muscles: ["CHEST", "SHOULDERS", "ARMS"] },
+  { key: "PULL", label: "Pull", muscles: ["BACK", "ARMS"] },
+  { key: "UPPER", label: "Upper", muscles: ["CHEST", "BACK", "SHOULDERS", "ARMS"] },
+  { key: "LOWER", label: "Lower", muscles: ["LEGS", "CORE"] },
+  { key: "FULL BODY", label: "Full body", muscles: ["CHEST", "BACK", "LEGS", "SHOULDERS", "CORE"] },
+] as const;
+
+type SimpleFocusKey = (typeof SIMPLE_FOCUS)[number]["key"];
+
+function dayHype(
+  dayKey: DayKey,
+  label: string,
+  isToday: boolean,
+): { eyebrow: string; line: string } {
   const focus = (label || "REST").split(" — ")[0];
   const isRest = focus === "REST" || !focus;
   const dayName = DAY_FULL[dayKey].toUpperCase();
@@ -50,7 +86,6 @@ function dayHype(dayKey: DayKey, label: string, isToday: boolean): { eyebrow: st
   };
 }
 
-
 export const Route = createFileRoute("/_tabs/train")({
   head: () => ({ meta: [{ title: "DEADSET — Train" }] }),
   component: TrainPage,
@@ -68,151 +103,308 @@ function TrainPage() {
     cue?: string;
   } | null>(null);
 
-  const [logFor, setLogFor] = useState<{ id: string; name: string } | null>(null);
-  const [resting, setResting] = useState<number | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [editSearch, setEditSearch] = useState("");
-  const [genLoading, setGenLoading] = useState(false);
-  const [genError, setGenError] = useState<string | null>(null);
+  const [easyFocus, setEasyFocus] = useState<SimpleFocusKey[]>(["UPPER"]);
+  const [easySets, setEasySets] = useState("3");
+  const [easyReps, setEasyReps] = useState("8-12");
 
-  const generate = generateSchedule;
-  const activeProgram: Program | undefined = state.programs.find((p) => p.id === state.activeProgramId);
-  const schedule: Schedule = state.schedule ?? (state.profile ? defaultSchedule(state.profile) : ({} as Schedule));
+  const activeProgram: Program | undefined = state.programs.find(
+    (p) => p.id === state.activeProgramId,
+  );
+  const schedule: Schedule =
+    state.schedule ?? (state.profile ? defaultSchedule(state.profile) : ({} as Schedule));
   const day = schedule[selectedDay];
   const programDay = activeProgram?.days[selectedDay];
   const score = calculateGritScore(state);
   const streak = calculateStreak(state.completedDates);
 
-  async function handleGenerate() {
-    setGenLoading(true); setGenError(null);
-    const profile = state.profile ?? ({
-      goal: "MAINTAIN",
-      experience: "BEGINNER",
-      gender: "OTHER",
-      age: 25,
-      weightKg: 75,
-      heightCm: 175,
-      daysPerWeek: 4,
-      equipment: "FULL_GYM",
-      username: "athlete",
-      startingWeightKg: 75,
-    } as unknown as NonNullable<typeof state.profile>);
-    const buildFromDefault = (): Schedule => {
-      const base = defaultSchedule(profile);
-      const cleaned: Schedule = {} as Schedule;
-      for (const k of DAY_KEYS) {
-        const d = base[k];
-        cleaned[k] = {
-          label: d?.label || "REST",
-          exerciseIds: (d?.exerciseIds || []).filter((id) => getExercise(id)),
+  useEffect(() => {
+    if (!editMode) return;
+    const current = schedule[selectedDay];
+    setEasySets(String(current?.sets ?? 3));
+    setEasyReps(current?.reps ?? "8-12");
+    // Only resync when changing day/opening edit mode; syncing on every schedule write
+    // would fight the mobile keyboard while the user is mid-edit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editMode, selectedDay]);
+
+  function toggleEasyFocus(key: SimpleFocusKey) {
+    setEasyFocus((current) =>
+      current.includes(key) ? current.filter((item) => item !== key) : [...current, key],
+    );
+  }
+
+  function easyMuscles() {
+    return Array.from(
+      new Set(
+        easyFocus.flatMap((key) => SIMPLE_FOCUS.find((focus) => focus.key === key)?.muscles ?? []),
+      ),
+    ) as Exercise["muscleGroup"][];
+  }
+
+  function buildEasyExercises() {
+    const muscles = easyMuscles();
+    const equipment = state.profile?.equipment ?? "FULL_GYM";
+    const picked: string[] = [];
+    for (const muscle of muscles) {
+      const candidates = EXERCISES.filter(
+        (exercise) =>
+          exercise.muscleGroup === muscle &&
+          (exercise.equipment.includes(equipment) || exercise.equipment.includes("BODYWEIGHT")),
+      ).slice(0, muscles.length <= 2 ? 3 : 2);
+      for (const exercise of candidates) {
+        if (!picked.includes(exercise.id)) picked.push(exercise.id);
+      }
+    }
+    return picked.slice(0, 6);
+  }
+
+  function applyEasyDay(rest = false) {
+    const sets = Math.max(1, Math.min(12, Number(easySets) || day?.sets || 3));
+    const reps = easyReps.trim() || "8-12";
+    const muscles = easyMuscles();
+    const label = rest
+      ? "REST"
+      : `${easyFocus.length === 1 ? easyFocus[0] : muscles.join(" / ")} — ${muscles.join(" / ")}`;
+    set((s) => ({
+      ...s,
+      schedule: {
+        ...(s.schedule || schedule),
+        [selectedDay]: {
+          label,
+          exerciseIds: rest ? [] : buildEasyExercises(),
+          sets,
+          reps,
+        },
+      },
+    }));
+  }
+
+  function updateDayTrainingDose(next: { sets?: number; reps?: string }) {
+    set((s) => {
+      const existingSchedule = s.schedule || schedule;
+      const currentDay = existingSchedule[selectedDay] ||
+        day || {
+          label: "REST",
+          exerciseIds: [],
         };
-      }
-      return cleaned;
-    };
-    try {
-      const res = await generate({ data: {
-        goal: profile.goal, experience: profile.experience,
-        daysPerWeek: profile.daysPerWeek, equipment: profile.equipment,
-      }});
-      const cleaned: Schedule = {} as Schedule;
-      let hasAny = false;
-      for (const k of DAY_KEYS) {
-        const d = res.days?.[k];
-        const ids = (d?.exerciseIds || []).filter((id) => getExercise(id));
-        if (ids.length) hasAny = true;
-        cleaned[k] = { label: d?.label || "REST", exerciseIds: ids };
-      }
-      set((s) => ({ ...s, schedule: hasAny ? cleaned : buildFromDefault() }));
-    } catch {
-      // Silent fallback so the user never sees an error — build a solid default split.
-      set((s) => ({ ...s, schedule: buildFromDefault() }));
-    } finally { setGenLoading(false); }
+      return {
+        ...s,
+        schedule: {
+          ...existingSchedule,
+          [selectedDay]: {
+            ...currentDay,
+            ...next,
+          },
+        },
+      };
+    });
+  }
+
+  function handleEasySetsChange(rawValue: string) {
+    const raw = rawValue.replace(/[^\d]/g, "").slice(0, 2);
+    setEasySets(raw);
+    if (!raw) return;
+    updateDayTrainingDose({ sets: Math.max(1, Math.min(12, Number(raw))) });
+  }
+
+  function handleEasySetsBlur() {
+    const clamped = Math.max(1, Math.min(12, Number(easySets) || day?.sets || 3));
+    setEasySets(String(clamped));
+    updateDayTrainingDose({ sets: clamped });
+  }
+
+  function handleEasyRepsChange(rawValue: string) {
+    const next = rawValue.slice(0, 16);
+    setEasyReps(next);
+    updateDayTrainingDose({ reps: next.trim() || "8-12" });
+  }
+
+  // Seeds a sensible starter week from the profile so the user has something to edit,
+  // then drops them straight into the manual builder.
+  function startBuildingSplit() {
+    const profile =
+      state.profile ??
+      ({
+        goal: "MAINTAIN",
+        experience: "BEGINNER",
+        gender: "OTHER",
+        age: 25,
+        weightKg: 75,
+        heightCm: 175,
+        daysPerWeek: 4,
+        equipment: "FULL_GYM",
+        username: "athlete",
+        startingWeightKg: 75,
+      } as unknown as NonNullable<typeof state.profile>);
+    const base = defaultSchedule(profile);
+    const cleaned: Schedule = {} as Schedule;
+    for (const k of DAY_KEYS) {
+      const d = base[k];
+      cleaned[k] = {
+        label: d?.label || "REST",
+        exerciseIds: (d?.exerciseIds || []).filter((id) => getExercise(id)),
+      };
+    }
+    set((s) => ({ ...s, schedule: cleaned }));
+    setEditMode(true);
   }
 
   function completeWorkout() {
     const day = isoDay();
-    set((s) => s.completedDates.includes(day) ? s : ({ ...s, completedDates: [...s.completedDates, day] }));
+    set((s) =>
+      s.completedDates.includes(day) ? s : { ...s, completedDates: [...s.completedDates, day] },
+    );
   }
 
+  const selectedLabel = (activeProgram ? programDay?.label : day?.label) || "REST";
+  const selectedHype = dayHype(selectedDay, selectedLabel, selectedDay === todayKey());
+
   return (
-    <div style={{ paddingTop: "env(safe-area-inset-top)" }}>
-      <header className="px-5 pt-6 pb-4 flex items-center justify-between">
-        <Link to="/profile" className="flex items-center gap-2.5">
-          <div className="flex flex-col leading-tight">
-            <span className="label-cap text-[9px]">PWR</span>
-            <span className="display text-lg font-extrabold text-grit">{score.total}</span>
+    <div className="deadset-page">
+      <header className="deadset-section">
+        <div className="deadset-hero-card p-5">
+          <div className="relative">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="label-cap text-accent-red">{selectedHype.eyebrow}</p>
+                <h1 className="display text-[2.45rem] font-black uppercase text-grit leading-[0.92] mt-2">
+                  {selectedLabel}
+                </h1>
+                <p className="text-sm text-grit-dim mt-3 leading-relaxed max-w-[28rem]">
+                  {selectedHype.line}
+                </p>
+              </div>
+              <Link
+                to="/profile"
+                className="deadset-glass-strip rounded-2xl px-3 py-2 text-right shrink-0"
+              >
+                <p className="label-cap text-[8px]">GRIT</p>
+                <p className="display text-2xl font-black text-grit leading-none">{score.total}</p>
+                <p className="text-[10px] text-grit-dim mt-1">{streak}d streak</p>
+              </Link>
+            </div>
+
+            <div className="mt-5 flex gap-2">
+              {(() => {
+                const today = todayKey();
+                const programItems = activeProgram?.days[today]?.items.length || 0;
+                const scheduleItems = schedule[today]?.exerciseIds?.length || 0;
+                const todaysItems = programItems || scheduleItems;
+                const hasSchedule = !!state.schedule || !!activeProgram;
+                const canStart = todaysItems > 0;
+                if (canStart) {
+                  return (
+                    <Link
+                      to="/workout/live"
+                      className="btn-grit flex-1 min-h-[54px] text-sm flex items-center justify-center rounded-2xl"
+                    >
+                      <Flame size={18} className="mr-2" /> Start Workout
+                    </Link>
+                  );
+                }
+                if (!hasSchedule) {
+                  return (
+                    <button
+                      onClick={startBuildingSplit}
+                      className="btn-grit flex-1 min-h-[54px] text-sm flex items-center justify-center rounded-2xl"
+                    >
+                      <Pencil size={18} className="mr-2" />
+                      Build My Split
+                    </button>
+                  );
+                }
+                return (
+                  <Link
+                    to="/workout/live"
+                    className="btn-ghost flex-1 min-h-[54px] text-sm flex items-center justify-center rounded-2xl"
+                  >
+                    Train Another Day
+                  </Link>
+                );
+              })()}
+              <button
+                onClick={() => setEditMode((v) => !v)}
+                className="btn-ghost min-h-[54px] px-4 rounded-2xl"
+                style={{ color: editMode ? "#e63222" : "#f5f5f0" }}
+              >
+                {editMode ? "Done" : "Edit"}
+              </button>
+            </div>
+
+            <div className="mt-4 flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+              {DAY_KEYS.map((k) => {
+                const active = k === selectedDay;
+                const isToday = k === todayKey();
+                const lbl =
+                  (activeProgram ? activeProgram.days[k].label : schedule[k]?.label)?.split(
+                    " — ",
+                  )[0] || "REST";
+                return (
+                  <button
+                    key={k}
+                    onClick={() => setSelectedDay(k)}
+                    className="flex-shrink-0 min-w-[74px] rounded-2xl px-3 py-2.5 border text-center press"
+                    style={{
+                      borderColor: active ? "#e63222" : "rgba(255,255,255,.10)",
+                      background: active ? "rgba(230,50,34,.16)" : "rgba(0,0,0,.30)",
+                    }}
+                  >
+                    <div
+                      className="label-cap text-[9px]"
+                      style={{ color: isToday ? "#e63222" : "#8a8a8a" }}
+                    >
+                      {DAY_SHORT[k]}
+                    </div>
+                    <div className="text-[11px] font-black uppercase mt-1 text-grit truncate">
+                      {lbl}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <div className="w-px h-6 bg-grit" />
-          <div className="flex items-center gap-1">
-            <Flame size={14} className="text-accent-red" />
-            <span className="display text-lg font-extrabold text-grit">{streak}</span>
-          </div>
-        </Link>
-        <div className="flex items-center gap-4">
-          <Link to="/programs" className="label-cap text-grit-dim text-xs flex items-center gap-1">
-            <ListPlus size={14} /> PROGRAMS
-          </Link>
-          <button onClick={() => setEditMode((v) => !v)} className="label-cap" style={{ color: editMode ? "#e63222" : "#8a8a8a" }}>
-            {editMode ? "DONE" : "EDIT"}
-          </button>
         </div>
       </header>
+      <TodayReadiness state={state} schedule={schedule} />
       <ProBanner />
       <Reminders />
 
-      <div className="px-5 mb-5"><Big3Card state={state} /></div>
-      <div className="px-5 mb-5"><WeeklyRecap state={state} /></div>
+      <div className="deadset-section">
+        <div className="grid grid-cols-3 gap-2">
+          <Link
+            to="/programs"
+            className="btn-ghost rounded-2xl py-3 flex items-center justify-center gap-2 text-xs"
+          >
+            <ListPlus size={14} /> Plan
+          </Link>
+          <Link
+            to="/challenges"
+            className="btn-ghost rounded-2xl py-3 flex items-center justify-center gap-2 text-xs"
+          >
+            <Trophy size={14} /> Arena
+          </Link>
+          <Link
+            to="/recovery"
+            className="btn-ghost rounded-2xl py-3 flex items-center justify-center gap-2 text-xs"
+          >
+            <Heart size={14} /> Recover
+          </Link>
+        </div>
+      </div>
 
-
-
-      {/* ===== QUICK ACTIONS — everything you need, up top ===== */}
-      {(() => {
-        const today = todayKey();
-        const todaysItems = activeProgram
-          ? (activeProgram.days[today]?.items.length || 0)
-          : (schedule[today]?.exerciseIds?.length || 0);
-        const hasSchedule = !!state.schedule || !!activeProgram;
-        const canStart = todaysItems > 0;
-        return (
-          <div className="px-5 mb-5">
-            <div className="grid grid-cols-1 gap-2">
-              {canStart ? (
-                <Link to="/workout/live" className="btn-grit w-full text-base py-4 flex items-center justify-center">
-                  <Flame size={18} className="mr-2" /> Start Today's Workout
-                </Link>
-              ) : !hasSchedule ? (
-                <button onClick={handleGenerate} disabled={genLoading} className="btn-grit w-full text-base py-4 flex items-center justify-center">
-                  {genLoading ? <Loader2 className="animate-spin mr-2" size={18} /> : <Sparkles size={18} className="mr-2" />}
-                  Generate My Schedule
-                </button>
-              ) : (
-                <div className="bg-grit-card border border-grit p-3 text-center">
-                  <p className="label-cap text-accent-red text-[10px]">REST DAY</p>
-                  <p className="text-xs text-grit-dim mt-1">No exercises today — recover & come back stronger.</p>
-                </div>
-              )}
-              <div className="grid grid-cols-3 gap-2">
-                <Link to="/programs" className="btn-ghost py-2.5 flex items-center justify-center gap-2 text-xs">
-                  <ListPlus size={14} /> Schedule
-                </Link>
-                <Link to="/challenges" className="btn-ghost py-2.5 flex items-center justify-center gap-2 text-xs">
-                  <Trophy size={14} /> Challenge
-                </Link>
-                <Link to="/recovery" className="btn-ghost py-2.5 flex items-center justify-center gap-2 text-xs">
-                  <Heart size={14} /> Recovery
-                </Link>
-              </div>
-            </div>
-            {genError && <p className="text-xs text-accent-red mt-2">{genError}</p>}
-          </div>
-        );
-      })()}
+      <section className="deadset-section">
+        <RankedArena state={state} compact />
+      </section>
+      <div className="deadset-section">
+        <Big3Card state={state} />
+      </div>
+      <div className="deadset-section">
+        <WeeklyRecap state={state} />
+      </div>
 
       <DailyQuests />
-
-
-
-
 
       {activeProgram && (
         <div className="px-5 mb-3">
@@ -222,168 +414,284 @@ function TrainPage() {
             className="block bg-grit-card border border-accent-red px-3 py-2"
           >
             <p className="label-cap text-[9px] text-accent-red">ACTIVE PROGRAM</p>
-            <p className="display uppercase font-extrabold text-grit text-sm truncate">{activeProgram.name}</p>
+            <p className="display uppercase font-extrabold text-grit text-sm truncate">
+              {activeProgram.name}
+            </p>
           </Link>
         </div>
       )}
 
-      {/* Weekly strip */}
-      <div className="px-5 mb-4">
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-          {DAY_KEYS.map((k) => {
-            const active = k === selectedDay;
-            const isToday = k === todayKey();
-            const lbl = (activeProgram ? activeProgram.days[k].label : schedule[k]?.label)?.split(" — ")[0] || "REST";
-            return (
-              <button key={k} onClick={() => setSelectedDay(k)}
-                className="flex-shrink-0 min-w-[68px] p-2 border text-center"
-                style={{
-                  borderColor: active ? "#e63222" : "#262626",
-                  background: active ? "#1a1a1a" : "transparent",
-                }}>
-                <div className="label-cap" style={{ color: isToday ? "#e63222" : undefined }}>{DAY_SHORT[k]}</div>
-                <div className="text-xs font-bold uppercase mt-1 text-grit truncate">{lbl}</div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Today header */}
-      {(() => {
-        const rawLabel = (activeProgram ? programDay?.label : day?.label) || "REST";
-        const hype = dayHype(selectedDay, rawLabel, selectedDay === todayKey());
-        return (
-          <div className="px-5 mb-5">
-            <p className="label-cap text-accent-red">{hype.eyebrow}</p>
-            <h1 className="display text-3xl font-extrabold uppercase text-grit leading-tight mt-1">
-              {rawLabel}
-            </h1>
-            <p className="text-sm text-grit-dim mt-2 leading-snug">{hype.line}</p>
-          </div>
-        );
-      })()}
-
-
-
       {/* Edit mode: assign muscle group + searchable exercise picker */}
       {editMode && (
-        <div className="px-5 mb-5 bg-grit-card border border-grit p-4">
-          <p className="label-cap mb-3">Edit {DAY_SHORT[selectedDay]}</p>
-          <label className="label-cap block mb-1">Label</label>
-          <input
-            value={day?.label || ""}
-            onChange={(e) => set((s) => ({ ...s, schedule: { ...(s.schedule || schedule), [selectedDay]: { ...(s.schedule?.[selectedDay] || day), label: e.target.value.toUpperCase() } } }))}
-            className="input-grit mb-3"
-          />
+        <div className="deadset-section">
+          <div className="bg-grit-card border border-grit p-4">
+            <div className="mb-5 rounded-[1.4rem] border border-accent-red/60 bg-black/30 p-4">
+              <p className="label-cap text-accent-red text-[10px]">EASY SCHEDULE BUILDER</p>
+              <h2 className="display text-2xl font-extrabold uppercase text-grit leading-none mt-1">
+                {DAY_FULL[selectedDay]}
+              </h2>
+              <p className="text-xs text-grit-dim mt-2 leading-relaxed">
+                Pick what you want to train, choose sets and reps, then DEADSET fills the day with
+                exercises. Use the search below only if you want to fine-tune.
+              </p>
 
-          {/* Selected exercises */}
-          {(day?.exerciseIds?.length || 0) > 0 && (
-            <>
-              <p className="label-cap mb-2">Selected ({day!.exerciseIds.length})</p>
-              <div className="flex flex-wrap gap-1.5 mb-3">
-                {day!.exerciseIds.map((id) => {
-                  const ex = getExercise(id);
-                  if (!ex) return null;
+              <p className="label-cap text-[10px] mt-4 mb-2">1. Muscles / split</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {SIMPLE_FOCUS.map((focus) => {
+                  const active = easyFocus.includes(focus.key);
                   return (
                     <button
-                      key={id}
-                      onClick={() => set((s) => {
-                        const sched = { ...(s.schedule || schedule) };
-                        const cur = sched[selectedDay]?.exerciseIds || [];
-                        sched[selectedDay] = { ...(sched[selectedDay] || { label: day?.label || "REST" }), exerciseIds: cur.filter((x) => x !== id) };
-                        return { ...s, schedule: sched };
-                      })}
-                      className="text-[10px] px-2 py-1 border border-accent-red text-accent-red uppercase font-bold tracking-wider flex items-center gap-1"
+                      key={focus.key}
+                      onClick={() => toggleEasyFocus(focus.key)}
+                      className="border px-3 py-3 text-left rounded-2xl press"
+                      style={{
+                        borderColor: active ? "#e63222" : "#262626",
+                        background: active ? "rgba(230,50,34,.14)" : "#080808",
+                      }}
                     >
-                      {ex.name} ×
+                      <span
+                        className="label-cap text-[10px]"
+                        style={{ color: active ? "#e63222" : "#8a8a8a" }}
+                      >
+                        {focus.label}
+                      </span>
                     </button>
                   );
                 })}
               </div>
-            </>
-          )}
 
-          <p className="label-cap mb-2">Add exercises</p>
-          <input
-            placeholder="SEARCH NAME OR MUSCLE"
-            value={editSearch}
-            onChange={(e) => setEditSearch(e.target.value)}
-            className="input-grit mb-2"
-          />
-          <div className="max-h-72 overflow-y-auto -mx-1 px-1">
-            <div className="grid grid-cols-1 gap-1.5">
-              {EXERCISES.filter((e) => {
-                const q = editSearch.trim().toLowerCase();
-                if (!q) return true;
-                return e.name.toLowerCase().includes(q) || e.muscleGroup.toLowerCase().includes(q);
-              }).map((e) => {
-                const sel = day?.exerciseIds.includes(e.id);
-                return (
-                  <button key={e.id}
-                    onClick={() => set((s) => {
-                      const sched = { ...(s.schedule || schedule) };
-                      const cur = sched[selectedDay]?.exerciseIds || [];
-                      const next = cur.includes(e.id) ? cur.filter((x) => x !== e.id) : [...cur, e.id];
-                      sched[selectedDay] = { ...(sched[selectedDay] || { label: day?.label || "REST" }), exerciseIds: next };
-                      return { ...s, schedule: sched };
-                    })}
-                    className="p-2.5 border text-left flex items-center justify-between gap-2"
-                    style={{ borderColor: sel ? "#e63222" : "#262626", background: "#0a0a0a" }}>
-                    <div className="min-w-0">
-                      <div className="text-xs font-bold uppercase truncate" style={{ color: sel ? "#e63222" : "#f5f5f0" }}>{e.name}</div>
-                      <div className="text-[9px] label-cap text-grit-dim mt-0.5">{e.muscleGroup} · {e.skill}</div>
-                    </div>
-                    <span className="text-[10px] label-cap" style={{ color: sel ? "#e63222" : "#8a8a8a" }}>{sel ? "ADDED" : "+ ADD"}</span>
-                  </button>
-                );
-              })}
+              <p className="label-cap text-[10px] mt-4 mb-2">2. Sets and reps</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label-cap text-[9px] block mb-1">Sets</label>
+                  <input
+                    value={easySets}
+                    onChange={(e) => handleEasySetsChange(e.target.value)}
+                    onBlur={handleEasySetsBlur}
+                    onFocus={(e) => e.currentTarget.select()}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    className="input-grit"
+                  />
+                </div>
+                <div>
+                  <label className="label-cap text-[9px] block mb-1">Reps</label>
+                  <input
+                    value={easyReps}
+                    onChange={(e) => handleEasyRepsChange(e.target.value)}
+                    onFocus={(e) => e.currentTarget.select()}
+                    placeholder="8-12"
+                    maxLength={16}
+                    className="input-grit"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-[1fr_auto] gap-2 mt-4">
+                <button
+                  onClick={() => applyEasyDay(false)}
+                  disabled={easyFocus.length === 0}
+                  className="btn-grit py-3 disabled:opacity-40 rounded-2xl"
+                >
+                  Build {DAY_SHORT[selectedDay]}
+                </button>
+                <button
+                  onClick={() => applyEasyDay(true)}
+                  className="btn-ghost py-3 px-4 rounded-2xl"
+                >
+                  Rest
+                </button>
+              </div>
+            </div>
+
+            <p className="label-cap mb-3">Advanced edit {DAY_SHORT[selectedDay]}</p>
+            <label className="label-cap block mb-1">Label</label>
+            <input
+              value={day?.label || ""}
+              onChange={(e) =>
+                set((s) => ({
+                  ...s,
+                  schedule: {
+                    ...(s.schedule || schedule),
+                    [selectedDay]: {
+                      ...(s.schedule?.[selectedDay] || day),
+                      label: e.target.value.toUpperCase(),
+                    },
+                  },
+                }))
+              }
+              className="input-grit mb-3"
+            />
+
+            {/* Selected exercises */}
+            {(day?.exerciseIds?.length || 0) > 0 && (
+              <>
+                <p className="label-cap mb-2">Selected ({day!.exerciseIds.length})</p>
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {day!.exerciseIds.map((id) => {
+                    const ex = getExercise(id);
+                    if (!ex) return null;
+                    return (
+                      <button
+                        key={id}
+                        onClick={() =>
+                          set((s) => {
+                            const sched = { ...(s.schedule || schedule) };
+                            const cur = sched[selectedDay]?.exerciseIds || [];
+                            sched[selectedDay] = {
+                              ...(sched[selectedDay] || { label: day?.label || "REST" }),
+                              exerciseIds: cur.filter((x) => x !== id),
+                            };
+                            return { ...s, schedule: sched };
+                          })
+                        }
+                        className="text-[10px] px-2.5 py-1.5 border border-accent-red text-accent-red uppercase font-bold tracking-wider flex items-center gap-1 rounded-full"
+                      >
+                        {ex.name} ×
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            <p className="label-cap mb-2">Add exercises</p>
+            <input
+              placeholder="SEARCH NAME OR MUSCLE"
+              value={editSearch}
+              onChange={(e) => setEditSearch(e.target.value)}
+              className="input-grit mb-2"
+            />
+            <div className="max-h-72 overflow-y-auto -mx-1 px-1">
+              <div className="grid grid-cols-1 gap-1.5">
+                {EXERCISES.filter((e) => {
+                  const q = editSearch.trim().toLowerCase();
+                  if (!q) return true;
+                  return (
+                    e.name.toLowerCase().includes(q) || e.muscleGroup.toLowerCase().includes(q)
+                  );
+                }).map((e) => {
+                  const sel = day?.exerciseIds.includes(e.id);
+                  return (
+                    <button
+                      key={e.id}
+                      onClick={() =>
+                        set((s) => {
+                          const sched = { ...(s.schedule || schedule) };
+                          const cur = sched[selectedDay]?.exerciseIds || [];
+                          const next = cur.includes(e.id)
+                            ? cur.filter((x) => x !== e.id)
+                            : [...cur, e.id];
+                          sched[selectedDay] = {
+                            ...(sched[selectedDay] || { label: day?.label || "REST" }),
+                            exerciseIds: next,
+                          };
+                          return { ...s, schedule: sched };
+                        })
+                      }
+                      className="p-3 border text-left flex items-center justify-between gap-2 rounded-2xl press"
+                      style={{ borderColor: sel ? "#e63222" : "#262626", background: "#0a0a0a" }}
+                    >
+                      <div className="min-w-0">
+                        <div
+                          className="text-xs font-bold uppercase truncate"
+                          style={{ color: sel ? "#e63222" : "#f5f5f0" }}
+                        >
+                          {e.name}
+                        </div>
+                        <div className="text-[9px] label-cap text-grit-dim mt-0.5">
+                          {e.muscleGroup} · {e.skill}
+                        </div>
+                      </div>
+                      <span
+                        className="text-[10px] label-cap"
+                        style={{ color: sel ? "#e63222" : "#8a8a8a" }}
+                      >
+                        {sel ? "ADDED" : "+ ADD"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {/* Exercises */}
-      <div className="px-5 flex flex-col gap-3">
+      <div className="deadset-section flex flex-col gap-3">
+        <div className="deadset-section-title">
+          <div>
+            <p className="label-cap text-accent-red text-[10px]">Workout plan</p>
+            <h2 className="display text-2xl font-black uppercase text-grit leading-none">
+              {selectedDay === todayKey() ? "Today" : DAY_FULL[selectedDay]}
+            </h2>
+          </div>
+          <button
+            onClick={() => setEditMode((v) => !v)}
+            className="label-cap text-[10px]"
+            style={{ color: editMode ? "#e63222" : "#8a8a8a" }}
+          >
+            {editMode ? "Done editing" : "Edit plan"}
+          </button>
+        </div>
         {activeProgram ? (
           <>
             {(programDay?.items.length || 0) === 0 && (
               <div className="bg-grit-card border border-grit p-8 text-center">
                 <p className="display text-2xl uppercase text-grit font-extrabold">Rest Day</p>
                 <p className="text-sm text-[#8a8a8a] mt-2 mb-4">Recover. Eat. Sleep.</p>
-                <Link to="/workout/live" className="btn-ghost inline-block">Train another day</Link>
+                <Link to="/workout/live" className="btn-ghost inline-block">
+                  Train another day
+                </Link>
               </div>
             )}
             {programDay?.items.map((it) => {
               const pr = bestSet(state.logs, it.id);
               return (
-                <div key={it.id} className="bg-grit-card border border-grit">
-                  <button className="w-full p-3 text-left"
-                    onClick={() => setVideoState({ query: it.youtube_query || it.name, title: it.name })}>
+                <div key={it.id} className="bg-grit-card border border-grit overflow-hidden press">
+                  <button
+                    className="w-full p-3 text-left"
+                    onClick={() =>
+                      setVideoState({ query: it.youtube_query || it.name, title: it.name })
+                    }
+                  >
                     <div className="flex items-center justify-between gap-2">
-                      <div className="display uppercase font-extrabold text-grit text-lg leading-tight">{it.name}</div>
+                      <div className="display uppercase font-extrabold text-grit text-lg leading-tight">
+                        {it.name}
+                      </div>
                       <Play size={18} className="text-accent-red flex-shrink-0" />
                     </div>
-                    <div className="text-xs text-[#8a8a8a] mt-1">{it.sets} × {it.reps}</div>
+                    <div className="text-xs text-[#8a8a8a] mt-1">
+                      {it.sets} × {it.reps}
+                    </div>
                     <div className="flex gap-2 mt-2 flex-wrap">
-                      <span className="text-[10px] px-2 py-0.5 border border-grit uppercase font-bold tracking-wider">{it.equipment}</span>
+                      <span className="text-[10px] px-2 py-0.5 border border-grit uppercase font-bold tracking-wider">
+                        {it.equipment}
+                      </span>
                       {it.primary_muscles.slice(0, 2).map((m) => (
-                        <span key={m} className="text-[10px] px-2 py-0.5 border border-grit uppercase font-bold tracking-wider text-grit-dim">{m}</span>
+                        <span
+                          key={m}
+                          className="text-[10px] px-2 py-0.5 border border-grit uppercase font-bold tracking-wider text-grit-dim"
+                        >
+                          {m}
+                        </span>
                       ))}
-                      {pr && <span className="text-[10px] px-2 py-0.5 bg-accent-red text-white uppercase font-bold tracking-wider">PR {pr}KG</span>}
+                      {pr && (
+                        <span className="text-[10px] px-2 py-0.5 bg-accent-red text-white uppercase font-bold tracking-wider">
+                          PR {pr}KG
+                        </span>
+                      )}
                     </div>
                   </button>
-                  <div className="border-t border-grit">
-                    <button onClick={() => setLogFor({ id: it.id, name: it.name })} className="w-full py-3 label-cap" style={{ color: "#e63222" }}>
-                      <Plus size={14} className="inline mr-1 -mt-0.5" /> Log Set
-                    </button>
-                  </div>
                 </div>
               );
             })}
             {(programDay?.items.length || 0) > 0 && (
-              <button onClick={completeWorkout} className="btn-grit mt-4 mb-2">
-                {state.completedDates.includes(isoDay()) ? "Workout Complete ✓" : "Complete Workout"}
+              <button onClick={completeWorkout} className="btn-grit mt-4 mb-2 rounded-2xl">
+                {state.completedDates.includes(isoDay())
+                  ? "Workout Complete ✓"
+                  : "Complete Workout"}
               </button>
             )}
           </>
@@ -400,35 +708,56 @@ function TrainPage() {
               if (!ex) return null;
               const pr = bestSet(state.logs, id);
               return (
-                <div key={id} className="bg-grit-card border border-grit">
-                  <button className="w-full grid grid-cols-[96px_1fr] gap-0 text-left"
-                    onClick={() => setVideoState({ videoId: ex.videoId, title: ex.name, clipStart: ex.clipStart, clipEnd: ex.clipEnd, cue: ex.instruction })}>
+                <div key={id} className="bg-grit-card border border-grit overflow-hidden press">
+                  <button
+                    className="w-full grid grid-cols-[96px_1fr] gap-0 text-left"
+                    onClick={() =>
+                      setVideoState({
+                        videoId: ex.videoId,
+                        title: ex.name,
+                        clipStart: ex.clipStart,
+                        clipEnd: ex.clipEnd,
+                        cue: ex.instruction,
+                      })
+                    }
+                  >
                     <div className="relative bg-black" style={{ aspectRatio: "1 / 1" }}>
-                      <img src={`https://img.youtube.com/vi/${ex.videoId}/mqdefault.jpg`} alt={ex.name} className="absolute inset-0 w-full h-full object-cover" />
+                      <img
+                        src={`https://img.youtube.com/vi/${ex.videoId}/mqdefault.jpg`}
+                        alt={ex.name}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
                       <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                         <Play size={26} className="text-white" />
                       </div>
                     </div>
                     <div className="p-3">
-                      <div className="display uppercase font-extrabold text-grit text-lg leading-tight">{ex.name}</div>
-                      <div className="text-xs text-[#8a8a8a] mt-1">{ex.sets} × {ex.reps}</div>
+                      <div className="display uppercase font-extrabold text-grit text-lg leading-tight">
+                        {ex.name}
+                      </div>
+                      <div className="text-xs text-[#8a8a8a] mt-1">
+                        {day?.sets ?? ex.sets} × {day?.reps ?? ex.reps}
+                      </div>
                       <div className="flex gap-2 mt-2">
-                        <span className="text-[10px] px-2 py-0.5 border border-grit uppercase font-bold tracking-wider">{ex.skill}</span>
-                        {pr && <span className="text-[10px] px-2 py-0.5 bg-accent-red text-white uppercase font-bold tracking-wider">PR {pr}KG</span>}
+                        <span className="text-[10px] px-2 py-0.5 border border-grit uppercase font-bold tracking-wider">
+                          {ex.skill}
+                        </span>
+                        {pr && (
+                          <span className="text-[10px] px-2 py-0.5 bg-accent-red text-white uppercase font-bold tracking-wider">
+                            PR {pr}KG
+                          </span>
+                        )}
                       </div>
                     </div>
                   </button>
-                  <div className="border-t border-grit">
-                    <button onClick={() => setLogFor({ id, name: ex.name })} className="w-full py-3 label-cap" style={{ color: "#e63222" }}>
-                      <Plus size={14} className="inline mr-1 -mt-0.5" /> Log Set
-                    </button>
-                  </div>
                 </div>
               );
             })}
             {(day?.exerciseIds?.length || 0) > 0 && (
-              <button onClick={completeWorkout} className="btn-grit mt-4 mb-2">
-                {state.completedDates.includes(isoDay()) ? "Workout Complete ✓" : "Complete Workout"}
+              <button onClick={completeWorkout} className="btn-grit mt-4 mb-2 rounded-2xl">
+                {state.completedDates.includes(isoDay())
+                  ? "Workout Complete ✓"
+                  : "Complete Workout"}
               </button>
             )}
           </>
@@ -447,8 +776,6 @@ function TrainPage() {
         />
       )}
 
-      {logFor && <LogSetModal exerciseId={logFor.id} exerciseName={logFor.name} onClose={() => setLogFor(null)} onLogged={(secs) => { setLogFor(null); setResting(secs); }} />}
-      {resting !== null && <RestTimer seconds={resting} onDone={() => setResting(null)} />}
       <QuickLogFAB />
     </div>
   );
@@ -458,42 +785,4 @@ function bestSet(logs: { exerciseId: string; weight: number }[], id: string) {
   const f = logs.filter((l) => l.exerciseId === id);
   if (f.length === 0) return null;
   return Math.max(...f.map((l) => l.weight));
-}
-
-function LogSetModal({ exerciseId, exerciseName, onClose, onLogged }: { exerciseId: string; exerciseName?: string; onClose: () => void; onLogged: (rest: number) => void }) {
-  const [, set] = useAppState();
-  const [weight, setWeight] = useState("");
-  const [reps, setReps] = useState("");
-  const ex = getExercise(exerciseId);
-  const displayName = exerciseName ?? ex?.name ?? "Exercise";
-  function save(rest: number) {
-    const w = Number(weight); const r = Number(reps);
-    if (!r) return;
-    set((s) => ({ ...s, logs: [...s.logs, { exerciseId, weight: w || 0, reps: r, date: new Date().toISOString() }] }));
-    onLogged(rest);
-  }
-  return (
-    <div className="fixed inset-0 z-[100] flex items-end" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
-      <div className="w-full bg-grit-card border-t border-accent-red p-5 max-w-md mx-auto" onClick={(e) => e.stopPropagation()}>
-        <p className="label-cap mb-1">Log Set</p>
-        <h3 className="display text-xl uppercase font-extrabold text-grit mb-4">{displayName}</h3>
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div>
-            <label className="label-cap block mb-1">Weight (kg)</label>
-            <input autoFocus inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)} className="input-grit" />
-          </div>
-          <div>
-            <label className="label-cap block mb-1">Reps</label>
-            <input inputMode="numeric" value={reps} onChange={(e) => setReps(e.target.value)} className="input-grit" />
-          </div>
-        </div>
-        <p className="label-cap mb-2">Rest</p>
-        <div className="grid grid-cols-3 gap-2">
-          {[60, 90, 120].map((s) => (
-            <button key={s} onClick={() => save(s)} className="btn-grit">{s}s</button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
 }

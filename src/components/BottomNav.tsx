@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Dumbbell, Apple, User, Users, Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getMyFollowStats } from "@/lib/social.functions";
 
 const STORAGE_KEY = "deadset_last_seen_followers";
@@ -18,11 +18,11 @@ const RIGHT_TABS = [
 export function BottomNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [hasFriendsBadge, setHasFriendsBadge] = useState(false);
-  const _getStats = getMyFollowStats;
+  const loadFollowStats = useCallback(() => getMyFollowStats(), []);
 
   useEffect(() => {
     let cancelled = false;
-    _getStats()
+    loadFollowStats()
       .then(({ followers }) => {
         if (cancelled) return;
         const lastSeen = Number(localStorage.getItem(STORAGE_KEY) ?? "0");
@@ -30,15 +30,15 @@ export function BottomNav() {
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, []);
+  }, [loadFollowStats]);
 
   useEffect(() => {
     if (!pathname.startsWith("/friends")) return;
     setHasFriendsBadge(false);
-    _getStats()
+    loadFollowStats()
       .then(({ followers }) => localStorage.setItem(STORAGE_KEY, String(followers)))
       .catch(() => {});
-  }, [pathname]);
+  }, [loadFollowStats, pathname]);
 
   const isRecordActive = pathname.startsWith("/workout/live");
 
@@ -46,12 +46,15 @@ export function BottomNav() {
     <nav
       className="fixed bottom-0 left-0 right-0 z-50"
       style={{
-        background: "#17181C",
-        borderTop: "1px solid #262626",
+        background: "linear-gradient(180deg, rgba(24,25,31,0.96), rgba(10,10,12,0.99))",
+        backdropFilter: "blur(22px)",
+        WebkitBackdropFilter: "blur(22px)",
+        borderTop: "1px solid rgba(255,255,255,0.08)",
+        boxShadow: "0 -22px 54px rgba(0,0,0,0.52), inset 0 1px 0 rgba(255,255,255,0.05)",
         paddingBottom: "env(safe-area-inset-bottom)",
       }}
     >
-      <ul className="flex items-center h-[60px]">
+      <ul className="flex items-center h-[70px]">
         {/* Left tabs */}
         {LEFT_TABS.map(({ to, label, Icon }) => {
           const active = pathname.startsWith(to);
@@ -59,7 +62,7 @@ export function BottomNav() {
             <li key={to} className="flex-1">
               <Link
                 to={to}
-                className="flex flex-col items-center justify-center gap-1 h-[60px] relative press"
+                className="flex flex-col items-center justify-center gap-1.5 h-[70px] relative press"
                 style={{ color: active ? "#E10600" : "#6B7280" }}
               >
                 <div className="relative">
@@ -92,13 +95,14 @@ export function BottomNav() {
             <div
               className="flex items-center justify-center"
               style={{
-                width: 52,
-                height: 52,
+                width: 56,
+                height: 56,
                 borderRadius: "50%",
                 background: isRecordActive
                   ? "#d93e00"
                   : "linear-gradient(135deg, #E10600 0%, #E10600 100%)",
-                boxShadow: "0 4px 18px rgba(225,6,0,0.5)",
+                boxShadow: "0 8px 28px rgba(225,6,0,0.34)",
+                transform: isRecordActive ? "translateY(-4px) scale(1.04)" : "translateY(-9px)",
                 transition: "box-shadow 0.2s ease, transform 0.15s ease",
               }}
             >
@@ -115,7 +119,7 @@ export function BottomNav() {
             <li key={to} className="flex-1">
               <Link
                 to={to}
-                className="flex flex-col items-center justify-center gap-1 h-[60px] relative press"
+                className="flex flex-col items-center justify-center gap-1.5 h-[70px] relative press"
                 style={{ color: active ? "#E10600" : "#6B7280" }}
               >
                 <div className="relative">

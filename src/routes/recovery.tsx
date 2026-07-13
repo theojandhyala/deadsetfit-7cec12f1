@@ -156,7 +156,7 @@ function RecoveryPage() {
 
   // Timer effect
   useEffect(() => {
-    if (!timerRunning || !timer || timer.seconds <= 0) return;
+    if (!timerRunning) return;
     const id = setInterval(() => {
       setTimer((t) => {
         if (!t || t.seconds <= 1) {
@@ -167,7 +167,7 @@ function RecoveryPage() {
       });
     }, 1000);
     return () => clearInterval(id);
-  }, [timerRunning, timer?.seconds]);
+  }, [timerRunning]);
 
   function toggleMuscle(m: Muscle) {
     setSelectedMuscles((prev) => {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Crown, X } from "lucide-react";
+import { BarChart3, Crown, Shield, Swords, X } from "lucide-react";
 import { usePro } from "@/hooks/usePro";
 
 const DISMISS_KEY = "deadset_pro_banner_dismissed_session";
@@ -29,15 +29,16 @@ export function ProBanner() {
   }
 
   return (
-    <div className="mx-4 mt-3 rounded-lg border border-accent-red/30 bg-gradient-to-r from-accent-red/15 to-accent-red/5 p-3 flex items-center gap-3">
+    <div className="mx-4 mt-3 rounded-lg border border-accent-red/40 bg-gradient-to-r from-accent-red/20 via-[#171717] to-accent-red/5 p-3">
+      <div className="flex items-center gap-3">
       <div className="shrink-0 grid place-items-center w-9 h-9 rounded-md bg-accent-red/20 border border-accent-red/40">
         <Crown size={16} className="text-accent-red" />
       </div>
       <div className="min-w-0 flex-1">
         <p className="font-display text-xs uppercase tracking-widest text-grit-text">
-          Unlock DEADSET Pro
+          Unlock the full arena
         </p>
-        <p className="text-[11px] text-grit mt-0.5">AI Coach, programs, analytics — $4.99/mo</p>
+        <p className="text-[11px] text-grit mt-0.5">Streak Armor, head-to-head challenges, full leagues and deep analytics.</p>
       </div>
       <Link
         to="/upgrade"
@@ -52,6 +53,19 @@ export function ProBanner() {
       >
         <X size={14} />
       </button>
+      </div>
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        {[
+          { label: "Streak armor", Icon: Shield },
+          { label: "H2H", Icon: Swords },
+          { label: "Analytics", Icon: BarChart3 },
+        ].map(({ label, Icon }) => (
+          <div key={label} className="flex items-center justify-center gap-1 rounded border border-accent-red/20 bg-black/25 px-2 py-1">
+            <Icon size={11} className="text-accent-red" />
+            <span className="label-cap text-[8px] text-grit">{label}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

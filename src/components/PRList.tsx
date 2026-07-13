@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Search, Trophy, ChevronDown } from "lucide-react";
+import type { PRGroup } from "@/lib/pr-groups";
 
 export type PRRecord = {
   exerciseId: string;
@@ -11,8 +12,6 @@ export type PRRecord = {
   group: PRGroup;
   history: { date: string; weight: number }[];
 };
-
-export type PRGroup = "PUSH" | "PULL" | "LEGS" | "CORE" | "OTHER";
 
 const GROUP_ORDER: PRGroup[] = ["PUSH", "PULL", "LEGS", "CORE", "OTHER"];
 
@@ -165,25 +164,4 @@ export function PRList({ prs }: { prs: PRRecord[] }) {
       )}
     </div>
   );
-}
-
-export function groupForMuscle(muscleGroup: string | undefined, exerciseId: string): PRGroup {
-  // ARMS split: triceps → PUSH, biceps → PULL
-  if (/curl/i.test(exerciseId)) return "PULL";
-  if (/skull|tricep|pushdown/i.test(exerciseId)) return "PUSH";
-  switch ((muscleGroup || "").toUpperCase()) {
-    case "CHEST":
-    case "SHOULDERS":
-      return "PUSH";
-    case "BACK":
-      return "PULL";
-    case "LEGS":
-      return "LEGS";
-    case "CORE":
-      return "CORE";
-    case "ARMS":
-      return "PUSH";
-    default:
-      return "OTHER";
-  }
 }

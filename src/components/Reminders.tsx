@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { X, Bell, Dumbbell, Scale, Apple, Camera } from "lucide-react";
+import { X, Bell, Dumbbell, Scale, Apple, Camera, Crown } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useAppState } from "@/lib/storage";
 import { isoDay } from "@/lib/calc";
+import { usePro } from "@/hooks/usePro";
 
 type Reminder = {
   id: string;
@@ -14,6 +15,7 @@ type Reminder = {
 };
 
 const DISMISS_KEY = "deadset_reminder_dismiss_v1";
+const POPUP_KEY = "deadset_daily_popup_seen_v1";
 
 function getDismissed(): Record<string, string> {
   if (typeof window === "undefined") return {};
@@ -35,8 +37,10 @@ function daysSince(iso?: string): number {
 
 export function Reminders() {
   const [state] = useAppState();
+  const { isPro, loading: proLoading } = usePro();
   const [dismissed, setDismissedState] = useState<Record<string, string>>({});
   const [open, setOpen] = useState<Reminder | null>(null);
+  const [autoOpened, setAutoOpened] = useState(false);
 
   useEffect(() => {
     setDismissedState(getDismissed());
@@ -60,14 +64,39 @@ export function Reminders() {
   // Weight log (3+ days)
   const lastWeight = state.weights[state.weights.length - 1]?.date;
   const wDays = daysSince(lastWeight);
-  if (wDays >= 3) {
+  if (wDays >= 1) {
     items.push({
       id: "weight-" + today,
       icon: <Scale size={18} />,
       title: wDays === Infinity ? "Log your starting weight" : `Weigh in (${wDays}d ago)`,
-      body: "Daily weigh-ins build the trend that actually tells the truth.",
+      body: "Quick daily weigh-in. It builds the trend that actually tells the truth.",
       to: "/progress",
       cta: "Log weight",
+    });
+  }
+
+  // Progress picture weekly
+  const lastCheckIn = state.checkIns[state.checkIns.length - 1]?.date;
+  if (daysSince(lastCheckIn) >= 7) {
+    items.push({
+      id: "checkin-" + today.slice(0, 7),
+      icon: <Camera size={18} />,
+      title: "Take a progress picture",
+      body: "One photo a week makes progress obvious. Same lighting, same angle, no guessing.",
+      to: "/progress",
+      cta: "Take photo",
+    });
+  }
+
+  // Pro: streak armor, head-to-head challenges and full leagues.
+  if (!proLoading && !isPro) {
+    items.push({
+      id: "pro-" + today.slice(0, 7),
+      icon: <Crown size={18} />,
+      title: "Protect the streak",
+      body: "Pro unlocks Streak Armor, head-to-head challenges, full weekly leagues and advanced analytics.",
+      to: "/upgrade",
+      cta: "Go Pro",
     });
   }
 
@@ -78,26 +107,33 @@ export function Reminders() {
       id: "food-" + today,
       icon: <Apple size={18} />,
       title: "Log your meals",
-      body: "Hitting protein is the difference between bulk and bloat.",
+      body: "Barcode, presets or quick manual log. Hitting protein is the difference between bulk and bloat.",
       to: "/diet",
       cta: "Log food",
     });
   }
 
-  // Photo check-in weekly
-  const lastCheckIn = state.checkIns[state.checkIns.length - 1]?.date;
-  if (daysSince(lastCheckIn) >= 7) {
-    items.push({
-      id: "checkin-" + today.slice(0, 7),
-      icon: <Camera size={18} />,
-      title: "Weekly check-in",
-      body: "Snap a progress photo. Mirror lies, side-by-sides don't.",
-      to: "/progress",
-      cta: "Take photo",
-    });
-  }
-
   const visible = items.filter((r) => dismissed[r.id] !== today);
+
+  useEffect(() => {
+    if (autoOpened || visible.length === 0) return;
+    try {
+      if (localStorage.getItem(POPUP_KEY) === today) return;
+    } catch {
+      // If storage is blocked, still show once during this render session.
+    }
+    const timer = window.setTimeout(() => {
+      setOpen(visible[0]);
+      setAutoOpened(true);
+      try {
+        localStorage.setItem(POPUP_KEY, today);
+      } catch {
+        // ignore
+      }
+    }, 1100);
+    return () => window.clearTimeout(timer);
+  }, [autoOpened, today, visible]);
+
   if (visible.length === 0) return null;
 
   function dismiss(id: string) {
@@ -171,7 +207,7 @@ export function Reminders() {
                 }}
                 className="btn-ghost flex-1"
               >
-                Snooze
+                Not now
               </button>
               <Link
                 to={open.to}

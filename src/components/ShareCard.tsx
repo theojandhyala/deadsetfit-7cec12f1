@@ -58,7 +58,7 @@ export function ShareCard({ session, onClose }: { session: WorkoutSession; onClo
 
     // Stats grid 2x2 — large for vertical
     const stats = [
-      { k: "PUMP", v: session.pumpScore != null ? String(session.pumpScore) : "—" },
+      { k: "EXERCISES", v: String(session.exercises.length) },
       { k: "PRs", v: String(session.prCount) },
       { k: "VOLUME KG", v: session.totalVolume.toLocaleString() },
       { k: "SETS", v: String(session.exercises.reduce((s, e) => s + e.sets.length, 0)) },
@@ -84,14 +84,6 @@ export function ShareCard({ session, onClose }: { session: WorkoutSession; onClo
       ctx.font = "900 150px Impact, 'Arial Black', sans-serif";
       ctx.fillText(s.v, x + 28, y + 220);
     });
-
-    // Pump note quote
-    if (session.pumpNote) {
-      ctx.fillStyle = "#f5f5f0";
-      ctx.font = "700 38px Arial, sans-serif";
-      const note = session.pumpNote.toUpperCase().slice(0, 50);
-      ctx.fillText(`"${note}"`, 70, 1450);
-    }
 
     // Date
     ctx.fillStyle = "#8a8a8a";

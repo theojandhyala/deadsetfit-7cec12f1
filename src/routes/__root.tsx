@@ -15,6 +15,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { StateSync } from "../components/StateSync";
 import { UsernameGate } from "../components/UsernameGate";
 import { Toaster } from "../components/ui/sonner";
+import { ProProvider } from "../hooks/usePro";
 
 function NotFoundComponent() {
   return (
@@ -48,11 +49,12 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
+        <h1 className="display text-3xl font-extrabold uppercase tracking-wide text-foreground">
           This page didn't load
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
+          DEADSET hit a loading error. Your profile and workouts are saved to your account, so try
+          again safely.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
@@ -63,6 +65,12 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Try again
+          </button>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+          >
+            Refresh
           </button>
           <a
             href="/"
@@ -157,7 +165,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Inter:wght@400;600;700;800&display=swap",
       },
-
     ],
   }),
   shellComponent: RootShell,
@@ -187,11 +194,13 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {!isAuthRoute && <StateSync />}
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
-      {!isAuthRoute && <UsernameGate />}
-      <Toaster />
+      <ProProvider>
+        {!isAuthRoute && <StateSync />}
+        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+        <Outlet />
+        {!isAuthRoute && <UsernameGate />}
+        <Toaster />
+      </ProProvider>
     </QueryClientProvider>
   );
 }

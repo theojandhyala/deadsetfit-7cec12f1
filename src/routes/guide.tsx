@@ -1,0 +1,198 @@
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import type { ReactNode } from "react";
+import {
+  Apple,
+  Brain,
+  Camera,
+  ChevronLeft,
+  Dumbbell,
+  Flame,
+  ScanFace,
+  Share2,
+  Sparkles,
+  Trophy,
+  Users,
+} from "lucide-react";
+
+export const Route = createFileRoute("/guide")({
+  head: () => ({ meta: [{ title: "DEADSET — Guide" }] }),
+  component: GuidePage,
+});
+
+function GuidePage() {
+  const navigate = useNavigate();
+  return (
+    <div className="min-h-screen bg-grit pb-10" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+      <header className="px-5 pt-5 pb-4 border-b border-grit flex items-center gap-3">
+        <button onClick={() => navigate({ to: "/train" })} className="p-1 -ml-1 text-grit-dim">
+          <ChevronLeft size={20} />
+        </button>
+        <div>
+          <p className="label-cap text-accent-red text-[10px]">START HERE</p>
+          <h1 className="display text-3xl font-extrabold uppercase text-grit leading-none">How DEADSET Works</h1>
+        </div>
+      </header>
+
+      <main className="px-5 pt-5 space-y-5">
+        <section className="border border-accent-red bg-grit-card p-5 relative overflow-hidden">
+          <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-accent-red/20 blur-2xl" />
+          <p className="label-cap text-accent-red text-[10px]">THE LOOP</p>
+          <h2 className="display text-2xl font-extrabold uppercase text-grit mt-1">
+            Train. Log. Rank up. Compete.
+          </h2>
+          <p className="text-sm text-grit-dim leading-relaxed mt-2">
+            DEADSET turns your training into a ranked game. Build a schedule, complete workouts,
+            hit PRs, track your body, earn grit, climb arenas, and challenge friends.
+          </p>
+          <div className="grid grid-cols-2 gap-2 mt-4">
+            <QuickLink to="/train" icon={<Dumbbell size={14} />} label="Start training" />
+            <QuickLink to="/friends" icon={<Users size={14} />} label="Find friends" />
+            <QuickLink to="/leaderboard" icon={<Trophy size={14} />} label="Leaderboards" />
+            <QuickLink to="/progress" icon={<ScanFace size={14} />} label="Track progress" />
+          </div>
+        </section>
+
+        <GuideSection
+          icon={<Dumbbell size={18} />}
+          title="1. Build your training week"
+          body="Open Train. Tap Build My Split or pick a program, then edit any day: choose the muscles, set sets and reps, add exercises. Start Today's Workout logs sets, volume and PRs."
+          bullets={[
+            "Use Edit to adjust days and exercises.",
+            "Finish workouts to keep your streak alive.",
+            "Your logged sets power rankings, PR boards and your public athlete card.",
+          ]}
+          to="/train"
+          cta="Open Train"
+        />
+
+        <GuideSection
+          icon={<Camera size={18} />}
+          title="2. Track the body, not just the lifts"
+          body="Go to Progress. Log bodyweight, measurements and a weekly check-in photo. Compare two photos side by side to see what actually changed."
+          bullets={[
+            "Use good lighting and a consistent pose.",
+            "Log weight often — the trend tells the truth, not one reading.",
+            "Strength curves and body-part volume show where the work is going.",
+          ]}
+          to="/progress"
+          cta="Open Progress"
+        />
+
+        <GuideSection
+          icon={<Flame size={18} />}
+          title="3. Climb ranked arenas"
+          body="Your grit score creates a Fortnite-style ranked ladder: Bronze, Silver, Gold, Platinum, Diamond, Elite, Champion, Unreal and DEADSET."
+          bullets={[
+            "Complete workouts, streaks, PRs, diet hits and check-ins to gain grit.",
+            "Ranked Arena cards show exactly what to do next.",
+            "Share your rank card to TikTok, Stories or group chats.",
+          ]}
+          to="/profile"
+          cta="View my rank"
+        />
+
+        <GuideSection
+          icon={<Users size={18} />}
+          title="4. Add friends and rivals"
+          body="Open Friends to search usernames, follow nearby athletes, invite mates, and post lifts to your feed."
+          bullets={[
+            "Set your city to find local lifters without sharing exact location.",
+            "Follow people to build your crew.",
+            "Post PRs so friends can react, comment and chase your numbers.",
+          ]}
+          to="/friends"
+          cta="Find friends"
+        />
+
+        <GuideSection
+          icon={<Trophy size={18} />}
+          title="5. Compete in arenas and PR boards"
+          body="Arenas are your weekly competition layer. Challenge friends, beat daily challenges, climb the ranked board, and compare PRs."
+          bullets={[
+            "Challenge friends from the Challenges page.",
+            "Leaderboards show Overall, Rank, Big 3, Bench, Squat and Deadlift.",
+            "Athlete cards let you scout rivals before you chase them.",
+          ]}
+          to="/challenges"
+          cta="Enter arenas"
+        />
+
+        <GuideSection
+          icon={<Apple size={18} />}
+          title="6. Diet and recovery keep the rank moving"
+          body="Diet logs, water, protein and recovery all feed the system. The more complete your week is, the better your rank becomes."
+          bullets={[
+            "Use barcode lookup, presets or quick manual food logging.",
+            "Hit protein and water quests for daily momentum.",
+            "Use Recovery when sore instead of breaking the streak.",
+          ]}
+          to="/diet"
+          cta="Open Diet"
+        />
+
+        <section className="bg-grit-card border border-grit p-5">
+          <p className="label-cap text-accent-red text-[10px] flex items-center gap-2">
+            <Brain size={12} /> IF SOMETHING FEELS OFF
+          </p>
+          <p className="text-sm text-grit-dim leading-relaxed mt-2">
+            Sign-in is intentionally a native page so typing stays reliable. If a page ever feels stale,
+            refresh once. If sync or leaderboards look wrong, check you are signed in.
+          </p>
+          <Link to="/auth" className="btn-ghost w-full mt-4 inline-flex justify-center">
+            Sign in again
+          </Link>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+function QuickLink({ to, icon, label }: { to: string; icon: ReactNode; label: string }) {
+  return (
+    <Link to={to as never} className="border border-grit bg-[#080808] px-3 py-2 flex items-center gap-2">
+      <span className="text-accent-red">{icon}</span>
+      <span className="label-cap text-[10px] text-grit">{label}</span>
+    </Link>
+  );
+}
+
+function GuideSection({
+  icon,
+  title,
+  body,
+  bullets,
+  to,
+  cta,
+}: {
+  icon: ReactNode;
+  title: string;
+  body: string;
+  bullets: string[];
+  to: string;
+  cta: string;
+}) {
+  return (
+    <section className="bg-grit-card border border-grit p-5">
+      <div className="flex items-start gap-3">
+        <div className="w-10 h-10 bg-accent-red/10 border border-accent-red flex items-center justify-center text-accent-red shrink-0">
+          {icon}
+        </div>
+        <div>
+          <h2 className="display text-xl font-extrabold uppercase text-grit leading-tight">{title}</h2>
+          <p className="text-sm text-grit-dim leading-relaxed mt-2">{body}</p>
+        </div>
+      </div>
+      <ul className="mt-4 space-y-2">
+        {bullets.map((b) => (
+          <li key={b} className="text-xs text-grit leading-snug flex gap-2">
+            <Sparkles size={12} className="text-accent-red shrink-0 mt-0.5" />
+            <span>{b}</span>
+          </li>
+        ))}
+      </ul>
+      <Link to={to as never} className="btn-grit w-full mt-4 inline-flex items-center justify-center gap-2">
+        <Share2 size={13} /> {cta}
+      </Link>
+    </section>
+  );
+}

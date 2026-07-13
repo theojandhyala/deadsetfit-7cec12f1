@@ -1,14 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
-import { Camera, Trophy, Loader2, Sparkles, Flame, X, Trash2 } from "lucide-react";
+import { Camera, Trophy, Flame, Trash2 } from "lucide-react";
 
 import { useAppState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
 import { isoDay, calculateStreak } from "@/lib/calc";
-import { analyzePhysique } from "@/lib/physique.functions";
-import type { PhysiqueScan } from "@/lib/types";
 import { QuickLogFAB } from "@/components/QuickLogFAB";
-import { PRList, groupForMuscle } from "@/components/PRList";
+import { PRList } from "@/components/PRList";
+import { groupForMuscle } from "@/lib/pr-groups";
 
 export const Route = createFileRoute("/_tabs/progress")({
   head: () => ({ meta: [{ title: "DEADSET — Progress" }] }),
@@ -18,17 +17,12 @@ export const Route = createFileRoute("/_tabs/progress")({
 function ProgressPage() {
   const [state, set] = useAppState();
   const photoRef = useRef<HTMLInputElement>(null);
-  const scanRef = useRef<HTMLInputElement>(null);
   const [compare, setCompare] = useState<string[]>([]);
   const [weight, setWeight] = useState("");
   const [chest, setChest] = useState("");
   const [waist, setWaist] = useState("");
   const [arms, setArms] = useState("");
   const [legs, setLegs] = useState("");
-  const [scanning, setScanning] = useState(false);
-  const [scanError, setScanError] = useState<string | null>(null);
-  const [viewScan, setViewScan] = useState<PhysiqueScan | null>(null);
-  const analyze = analyzePhysique;
 
   const streak = calculateStreak(state.completedDates);
   const totalSessions = state.sessions.filter((s) => s.endedAt).length;
@@ -45,40 +39,6 @@ function ProgressPage() {
       }));
     };
     r.readAsDataURL(file);
-  }
-
-  async function runScan(file: File) {
-    setScanError(null);
-    const dataUrl = await new Promise<string>((res, rej) => {
-      const r = new FileReader();
-      r.onload = () => res(r.result as string);
-      r.onerror = rej;
-      r.readAsDataURL(file);
-    });
-    // downscale to keep payload small
-    const small = await downscale(dataUrl, 768);
-    setScanning(true);
-    try {
-      const analysis = await analyze({
-        data: {
-          imageDataUrl: small,
-          goal: state.profile?.goal || "MAINTAIN",
-          weightKg: state.profile?.weightKg,
-        },
-      });
-      const scan: PhysiqueScan = {
-        id: crypto.randomUUID(),
-        date: new Date().toISOString(),
-        photoDataUrl: small,
-        analysis,
-      };
-      set((s) => ({ ...s, physiqueScans: [...s.physiqueScans, scan] }));
-      setViewScan(scan);
-    } catch (e) {
-      setScanError(e instanceof Error ? e.message : "Scan failed");
-    } finally {
-      setScanning(false);
-    }
   }
 
   function togglePhoto(id: string) {
@@ -110,11 +70,6 @@ function ProgressPage() {
     setWaist("");
     setArms("");
     setLegs("");
-  }
-  function deleteScan(id: string) {
-    if (!confirm("Delete this scan? This can't be undone.")) return;
-    set((s) => ({ ...s, physiqueScans: s.physiqueScans.filter((p) => p.id !== id) }));
-    setViewScan(null);
   }
   function deleteWeight(date: string) {
     set((s) => ({ ...s, weights: s.weights.filter((w) => w.date !== date) }));
@@ -261,14 +216,15 @@ function ProgressPage() {
       .slice(0, 3);
   }, [state.logs, state.sessions]);
 
-  const latestScan = state.physiqueScans?.length
-    ? state.physiqueScans[state.physiqueScans.length - 1]
-    : undefined;
-
   return (
-    <div style={{ paddingTop: "env(safe-area-inset-top)", background: "#0A0A0A", minHeight: "100vh" }} className="animate-fade-in">
+    <div
+      style={{ background: "#0A0A0A", minHeight: "100vh" }}
+      className="deadset-page animate-fade-in"
+    >
       <header className="px-5 pt-6 pb-4 animate-slide-down">
-        <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "#E10600" }}>DEADSET</p>
+        <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "#E10600" }}>
+          DEADSET
+        </p>
         <h1 className="display text-3xl font-extrabold uppercase text-white">Track The Work</h1>
       </header>
 
@@ -302,95 +258,17 @@ function ProgressPage() {
         </div>
       </section>
 
-      {/* Physique Scan */}
-      <section className="px-5 mb-6">
-        <p className="label-cap mb-2 flex items-center gap-2">
-          <Sparkles size={12} /> AI Physique Scan
-        </p>
-        <input
-          ref={scanRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) runScan(f);
-            e.target.value = "";
-          }}
-        />
-        {latestScan ? (
-          <button
-            onClick={() => setViewScan(latestScan)}
-            className="rounded-2xl p-4 w-full text-left flex gap-4"
-          >
-            <img
-              src={latestScan.photoDataUrl}
-              alt=""
-              className="w-20 h-28 object-cover rounded-2xl"
-            />
-            <div className="flex-1 min-w-0">
-              <p className="label-cap text-[10px] text-[#8A8A8A]">
-                LATEST {latestScan.date.slice(0, 10)}
-              </p>
-              <div className="flex gap-3 mt-1">
-                <ScoreChip label="BF" value={`${latestScan.analysis.bodyFatEstimate}%`} />
-                <ScoreChip label="MUS" value={`${latestScan.analysis.muscleScore}`} />
-                <ScoreChip label="SYM" value={`${latestScan.analysis.symmetryScore}`} />
-              </div>
-              <p className="text-xs uppercase font-bold text-white mt-2 line-clamp-2">
-                {latestScan.analysis.verdict}
-              </p>
-            </div>
-          </button>
-        ) : null}
-        <button
-          onClick={() => scanRef.current?.click()}
-          disabled={scanning}
-          className="btn-grit w-full mt-3"
-        >
-          {scanning ? (
-            <Loader2 className="animate-spin mr-2" size={16} />
-          ) : (
-            <Camera size={16} className="mr-2" />
-          )}
-          {scanning ? "Analyzing..." : latestScan ? "New Scan" : "Take Physique Scan"}
-        </button>
-        {scanError && <p className="text-sm text-[#E10600] mt-2">{scanError}</p>}
-        {state.physiqueScans.length > 1 && (
-          <div className="grid grid-cols-4 gap-1 mt-3">
-            {state.physiqueScans
-              .slice()
-              .reverse()
-              .slice(0, 8)
-              .map((p) => (
-                <div key={p.id} className="relative rounded-2xl group">
-                  <button onClick={() => setViewScan(p)} className="block w-full">
-                    <img src={p.photoDataUrl} alt="" className="w-full aspect-[3/4] object-cover" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteScan(p.id);
-                    }}
-                    aria-label="Delete scan"
-                    className="absolute top-1 right-1 bg-black/80 rounded-2xl text-[#E10600] p-1 hover:bg-[#E10600] hover:text-black"
-                  >
-                    <Trash2 size={11} />
-                  </button>
-                </div>
-              ))}
-          </div>
-        )}
-      </section>
-
       {/* Strength Curves */}
       {strengthCurves.length > 0 && (
         <section className="px-5 mb-6">
           <p className="label-cap mb-2">Strength Curves</p>
           <div className="flex flex-col gap-3">
             {strengthCurves.map((c) => (
-              <div key={c.name} className="rounded-2xl p-4" style={{ background: "#141414", border: "1.5px solid #262626" }}>
+              <div
+                key={c.name}
+                className="rounded-2xl p-4"
+                style={{ background: "#141414", border: "1.5px solid #262626" }}
+              >
                 <div className="flex items-center justify-between mb-2">
                   <p className="display text-sm uppercase font-extrabold text-white truncate">
                     {c.name}
@@ -435,7 +313,10 @@ function ProgressPage() {
       {/* Weight */}
       <section className="px-5 mb-6">
         <p className="label-cap mb-2">Weight Log</p>
-        <div className="rounded-2xl p-4" style={{ background: "#141414", border: "1.5px solid #262626" }}>
+        <div
+          className="rounded-2xl p-4"
+          style={{ background: "#141414", border: "1.5px solid #262626" }}
+        >
           <div className="flex gap-2 mb-3">
             <input
               inputMode="decimal"
@@ -621,13 +502,6 @@ function ProgressPage() {
         <PRList prs={prs} />
       </section>
 
-      {viewScan && (
-        <ScanModal
-          scan={viewScan}
-          onClose={() => setViewScan(null)}
-          onDelete={() => deleteScan(viewScan.id)}
-        />
-      )}
       <QuickLogFAB />
     </div>
   );
@@ -647,7 +521,10 @@ function Stat({
   icon?: React.ReactNode;
 }) {
   return (
-    <div className="p-3 rounded-2xl" style={{ background: "#141414", border: "1.5px solid #262626" }}>
+    <div
+      className="p-3 rounded-2xl"
+      style={{ background: "#141414", border: "1.5px solid #262626" }}
+    >
       <p className="text-[10px] font-bold uppercase tracking-widest text-[#8A8A8A] flex items-center gap-1">
         {icon}
         {label}
@@ -659,15 +536,6 @@ function Stat({
         {value}
       </p>
       {sub && <p className="text-[10px] text-[#8A8A8A] uppercase tracking-wider mt-1">{sub}</p>}
-    </div>
-  );
-}
-
-function ScoreChip({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl px-2 py-1">
-      <p className="text-[8px] uppercase tracking-wider text-[#8A8A8A]">{label}</p>
-      <p className="display text-sm font-extrabold text-white leading-none">{value}</p>
     </div>
   );
 }
@@ -875,54 +743,6 @@ function Input({ label, v, set }: { label: string; v: string; set: (s: string) =
   );
 }
 
-function ScanModal({
-  scan,
-  onClose,
-  onDelete,
-}: {
-  scan: PhysiqueScan;
-  onClose: () => void;
-  onDelete: () => void;
-}) {
-  const a = scan.analysis;
-  return (
-    <div className="fixed inset-0 z-[200] bg-black/90 overflow-auto" onClick={onClose}>
-      <div className="min-h-screen max-w-md mx-auto p-4" onClick={(e) => e.stopPropagation()}>
-        <div className="flex justify-between items-center mb-3">
-          <p className="label-cap">SCAN {scan.date.slice(0, 10)}</p>
-          <button onClick={onClose} className="text-white">
-            <X size={22} />
-          </button>
-        </div>
-        <img src={scan.photoDataUrl} alt="" className="w-full rounded-2xl mb-4" />
-        <div className="grid grid-cols-3 gap-2 mb-4">
-          <Stat label="BF%" value={`${a.bodyFatEstimate}`} accent />
-          <Stat label="MUSCLE" value={`${a.muscleScore}`} />
-          <Stat label="SYMMETRY" value={`${a.symmetryScore}`} />
-        </div>
-        <div className="bg-grit-card rounded-2xl p-4 mb-4">
-          <p className="label-cap text-[#E10600] text-[10px]">VERDICT</p>
-          <p className="display text-base uppercase font-extrabold text-white mt-1">{a.verdict}</p>
-        </div>
-        <div className="grid grid-cols-1 gap-3 mb-4">
-          <Block title="STRENGTHS" items={a.strengths} color="#7acc7a" />
-          <Block title="WEAKNESSES" items={a.weaknesses} color="#E10600" />
-          <Block title="FOCUS NEXT" items={a.focus} color="#f5f5f0" />
-        </div>
-        {a.leanMassNote && (
-          <p className="text-xs text-[#8A8A8A] uppercase tracking-wider mb-4">{a.leanMassNote}</p>
-        )}
-        <button
-          onClick={onDelete}
-          className="w-full rounded-2xl text-[#E10600] py-2 label-cap text-xs flex items-center justify-center gap-2 hover:bg-[#E10600] hover:text-black mb-6"
-        >
-          <Trash2 size={14} /> Delete Scan
-        </button>
-      </div>
-    </div>
-  );
-}
-
 function MeasurementsChart({
   entries,
 }: {
@@ -955,38 +775,4 @@ function MeasurementsChart({
       })}
     </svg>
   );
-}
-
-function Block({ title, items, color }: { title: string; items: string[]; color: string }) {
-  return (
-    <div className="rounded-2xl p-3">
-      <p className="label-cap text-[10px]" style={{ color }}>
-        {title}
-      </p>
-      <ul className="mt-2 flex flex-col gap-1">
-        {items.map((it, i) => (
-          <li key={i} className="text-xs uppercase font-bold tracking-wide text-grit">
-            — {it}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-async function downscale(dataUrl: string, maxDim: number): Promise<string> {
-  return new Promise((res) => {
-    const img = new Image();
-    img.onload = () => {
-      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-      const w = Math.round(img.width * scale);
-      const h = Math.round(img.height * scale);
-      const c = document.createElement("canvas");
-      c.width = w;
-      c.height = h;
-      c.getContext("2d")!.drawImage(img, 0, 0, w, h);
-      res(c.toDataURL("image/jpeg", 0.85));
-    };
-    img.src = dataUrl;
-  });
 }

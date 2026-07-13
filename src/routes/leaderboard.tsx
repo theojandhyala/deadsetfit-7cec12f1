@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import { ChevronLeft, Trophy, Medal } from "lucide-react";
+import { ChevronLeft, Trophy, Medal, Flame, Swords } from "lucide-react";
 import { getLeaderboard, type LeaderboardCategory, type LeaderboardRow } from "@/lib/leaderboard.functions";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -11,6 +11,7 @@ export const Route = createFileRoute("/leaderboard")({
 });
 
 const CATS: { key: LeaderboardCategory; label: string }[] = [
+  { key: "RANK", label: "RANK" },
   { key: "OVERALL", label: "OVERALL" },
   { key: "TOTAL", label: "TOTAL" },
   { key: "BENCH", label: "BENCH" },
@@ -21,7 +22,7 @@ const CATS: { key: LeaderboardCategory; label: string }[] = [
 function LeaderboardPage() {
   const navigate = useNavigate();
   const fetchBoard = getLeaderboard;
-  const [cat, setCat] = useState<LeaderboardCategory>("OVERALL");
+  const [cat, setCat] = useState<LeaderboardCategory>("RANK");
   const [rows, setRows] = useState<LeaderboardRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [meId, setMeId] = useState<string | null>(null);
@@ -49,6 +50,29 @@ function LeaderboardPage() {
         <Trophy size={16} className="text-accent-red" />
         <p className="display text-lg font-extrabold uppercase text-grit leading-none">Leaderboard</p>
       </header>
+
+      <section className="px-5 pt-5">
+        <div className="border border-accent-red bg-grit-card p-5 relative overflow-hidden">
+          <div className="absolute -right-14 -top-14 h-36 w-36 rounded-full bg-accent-red/20 blur-2xl" />
+          <p className="label-cap text-accent-red text-[10px] flex items-center gap-1.5">
+            <Swords size={12} /> ARENA BOARDS
+          </p>
+          <h1 className="display text-3xl font-extrabold uppercase text-grit leading-none mt-1">
+            Rank & PR ladders
+          </h1>
+          <p className="text-xs text-grit-dim mt-2 leading-relaxed">
+            Rank is your grit arena score. PR boards compare your Overall, Big 3, Bench, Squat and Deadlift numbers.
+          </p>
+          <div className="grid grid-cols-2 gap-2 mt-4">
+            <Link to="/challenges" className="btn-grit py-2 text-xs flex items-center justify-center gap-2">
+              <Flame size={13} /> Enter Arena
+            </Link>
+            <Link to="/friends" className="btn-ghost py-2 text-xs flex items-center justify-center gap-2">
+              Find Rivals
+            </Link>
+          </div>
+        </div>
+      </section>
 
       <div className="px-3 pt-3 pb-2 flex gap-1.5 overflow-x-auto no-scrollbar">
         {CATS.map((c) => (

@@ -22,6 +22,3 @@ export const listExercises = ({ data }: { data: { category?: string; equipment?:
 
 export const countExercises = () =>
   callRpc<{ count: number }>("countExercises");
-
-export const generateExerciseBatch = ({ data }: { data: { batchSize?: number; focus: string } }) =>
-  callRpc<{ added: number; attempted: number }>("generateExerciseBatch", data);

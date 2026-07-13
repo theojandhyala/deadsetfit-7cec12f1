@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { ArrowLeft, Loader2, UserPlus, UserCheck, Trophy, Flag, Ban } from "lucide-react";
 import { toast } from "sonner";
@@ -28,7 +28,7 @@ function AthletePage() {
   const [busy, setBusy] = useState(false);
   const [blocked, setBlocked] = useState(false);
 
-  useEffect(() => {
+  const loadAthlete = useCallback(() => {
     _get({ data: { userId: id } })
       .then(setCard)
       .catch((e) => {
@@ -38,7 +38,11 @@ function AthletePage() {
     _isBlocked({ data: { userId: id } })
       .then((r) => setBlocked(r.blocked))
       .catch(() => {});
-  }, [id]);
+  }, [_get, _isBlocked, id, navigate]);
+
+  useEffect(() => {
+    loadAthlete();
+  }, [loadAthlete]);
 
   async function follow() {
     if (!card || card.isMe) return;
@@ -122,7 +126,7 @@ function AthletePage() {
   const badgeC = badgeColor(badge);
 
   return (
-    <div style={{ paddingTop: "env(safe-area-inset-top)" }} className="pb-10">
+    <div className="pb-10">
       <header className="px-5 pt-4 pb-2 flex items-center gap-3">
         <button
           onClick={() => navigate({ to: "/friends" })}
@@ -142,6 +146,7 @@ function AthletePage() {
           badge={badge}
           badgeColor={badgeC}
           overall={overall}
+          gritPoints={card.grit_points ?? overall}
           prs={prs}
           weightKg={Number(stats.weightKg) || undefined}
           heightCm={Number(stats.heightCm) || undefined}

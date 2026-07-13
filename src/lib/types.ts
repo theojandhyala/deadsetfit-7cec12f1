@@ -55,6 +55,8 @@ export type DayKey = "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN";
 export interface DaySchedule {
   label: string;
   exerciseIds: string[];
+  sets?: number;
+  reps?: string;
 }
 
 export type Schedule = Record<DayKey, DaySchedule>;
@@ -109,21 +111,6 @@ export interface MeasurementEntry {
   legs: number;
 }
 
-export interface Meal {
-  name: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fats: number;
-}
-
-export interface MealPlan {
-  breakfast: Meal;
-  lunch: Meal;
-  dinner: Meal;
-  snack: Meal;
-}
-
 export interface FoodLogItem {
   date: string;
   name: string;
@@ -131,8 +118,7 @@ export interface FoodLogItem {
   protein: number;
   carbs: number;
   fats: number;
-  source?: "manual" | "photo" | "barcode" | "ai";
-  photoThumb?: string;
+  source?: "manual" | "barcode";
 }
 
 export interface WaterEntry {
@@ -169,24 +155,6 @@ export interface WorkoutSession {
   exercises: WorkoutSessionExercise[];
   totalVolume: number;
   prCount: number;
-  pumpScore?: number;
-  pumpNote?: string;
-}
-
-export interface PhysiqueScan {
-  id: string;
-  date: string;
-  photoDataUrl: string;
-  analysis: {
-    bodyFatEstimate: number;
-    muscleScore: number;
-    symmetryScore: number;
-    leanMassNote: string;
-    strengths: string[];
-    weaknesses: string[];
-    focus: string[];
-    verdict: string;
-  };
 }
 
 export interface ChallengeRecord {
@@ -203,13 +171,11 @@ export interface AppState {
   weights: WeightEntry[];
   measurements: MeasurementEntry[];
   foodLog: FoodLogItem[];
-  mealPlan: MealPlan | null;
   completedDates: string[];
   programs: Program[];
   activeProgramId: string | null;
   sessions: WorkoutSession[];
   activeSessionId: string | null;
-  physiqueScans: PhysiqueScan[];
   water: WaterEntry[];
   waterTargetMl: number;
   hydrationAlertsEnabled: boolean;

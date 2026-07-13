@@ -1,13 +1,9 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { chatJSON, chatText, chatVisionJSON } from "../src/lib/ai-gateway.server";
 import { createStripeClient, getStripeErrorMessage } from "../src/lib/stripe.server";
 import { supabaseAdmin } from "../src/integrations/supabase/client.server";
 import { gritLevel } from "../src/lib/calc";
 import type { Database } from "../src/integrations/supabase/types";
-
-const SUPABASE_URL = process.env.SUPABASE_URL!;
-const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY!;
 
 interface AuthCtx {
   supabase: SupabaseClient<Database>;
@@ -15,11 +11,25 @@ interface AuthCtx {
   email?: string;
 }
 
+function getSupabaseEnv() {
+  const url = process.env.SUPABASE_URL;
+  const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !publishableKey) {
+    const missing = [
+      ...(!url ? ["SUPABASE_URL"] : []),
+      ...(!publishableKey ? ["SUPABASE_PUBLISHABLE_KEY"] : []),
+    ].join(", ");
+    throw Object.assign(new Error(`Missing Supabase environment variable(s): ${missing}`), { status: 500 });
+  }
+  return { url, publishableKey };
+}
+
 async function requireAuth(req: any): Promise<AuthCtx> {
   const auth = (req.headers["authorization"] ?? "") as string;
   if (!auth.startsWith("Bearer ")) throw Object.assign(new Error("Unauthorized"), { status: 401 });
   const token = auth.slice(7);
-  const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  const { url, publishableKey } = getSupabaseEnv();
+  const supabase = createClient<Database>(url, publishableKey, {
     global: { headers: { Authorization: `Bearer ${token}` } },
     auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
   });
@@ -98,6 +108,95 @@ function safeReturnUrl(value: string): string {
   return url.toString();
 }
 
+type ProPriceConfig = {
+  currency: "usd" | "gbp";
+  unitAmount: number;
+  interval: "month" | "year";
+  nickname: string;
+};
+
+const PRO_PRICE_CONFIG: Record<string, ProPriceConfig> = {
+  pro_monthly: { currency: "usd", unitAmount: 499, interval: "month", nickname: "DEADSET Pro Monthly" },
+  pro_yearly: { currency: "usd", unitAmount: 3999, interval: "year", nickname: "DEADSET Pro Yearly" },
+  pro_monthly_gbp: { currency: "gbp", unitAmount: 499, interval: "month", nickname: "DEADSET Pro Monthly GBP" },
+  pro_yearly_gbp: { currency: "gbp", unitAmount: 3999, interval: "year", nickname: "DEADSET Pro Yearly GBP" },
+};
+
+function stripeProductMeta(product: unknown): { id?: string; name?: string; metadata?: Record<string, string> } {
+  if (!product || typeof product === "string") return { id: typeof product === "string" ? product : undefined };
+  const p = product as { id?: string; name?: string; metadata?: Record<string, string> };
+  return { id: p.id, name: p.name, metadata: p.metadata };
+}
+
+function isDeadsetProProduct(product: unknown): boolean {
+  const p = stripeProductMeta(product);
+  const name = (p.name ?? "").toLowerCase();
+  const app = (p.metadata?.app ?? "").toLowerCase();
+  const tier = (p.metadata?.tier ?? "").toLowerCase();
+  return app === "deadset" || tier === "pro" || name.includes("deadset");
+}
+
+async function resolveDeadsetProProduct(stripe: any): Promise<string> {
+  try {
+    const found = await stripe.products.search({
+      query: "metadata['app']:'deadset' AND metadata['tier']:'pro'",
+      limit: 1,
+    });
+    if (found.data?.[0]?.id) return found.data[0].id;
+  } catch {
+    // Some Stripe accounts/API versions may not have Search enabled; fall back to list.
+  }
+
+  const products = await stripe.products.list({ active: true, limit: 100 });
+  const existing = products.data.find((product: any) => isDeadsetProProduct(product))
+    ?? products.data.find((product: any) => /pro|premium|subscription/i.test(product.name ?? ""));
+  if (existing?.id) return existing.id;
+
+  const created = await stripe.products.create({
+    name: "DEADSET Pro",
+    description: "Unlimited AI coaching, physique scans, diet tools, programs and Pro features.",
+    metadata: { app: "deadset", tier: "pro" },
+  });
+  return created.id;
+}
+
+async function resolveOrCreateStripePrice(stripe: any, lookupKey: string): Promise<any> {
+  const prices = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 });
+  if (prices.data.length) return prices.data[0];
+
+  const config = PRO_PRICE_CONFIG[lookupKey];
+  if (!config) throw new Error("Price not found");
+
+  const existingPrices = await stripe.prices.list({
+    active: true,
+    limit: 100,
+    expand: ["data.product"],
+  });
+
+  const matchingPrices = existingPrices.data
+    .filter((price: any) => price.currency === config.currency)
+    .filter((price: any) => price.recurring?.interval === config.interval)
+    .filter((price: any) => isDeadsetProProduct(price.product));
+
+  const exactExisting = matchingPrices.find((price: any) => price.unit_amount === config.unitAmount)
+    ?? matchingPrices.find((price: any) => /deadset|pro|monthly|yearly|annual/i.test(`${price.nickname ?? ""} ${stripeProductMeta(price.product).name ?? ""}`));
+
+  if (exactExisting) {
+    return exactExisting;
+  }
+
+  const product = await resolveDeadsetProProduct(stripe);
+  return stripe.prices.create({
+    product,
+    currency: config.currency,
+    unit_amount: config.unitAmount,
+    nickname: config.nickname,
+    lookup_key: lookupKey,
+    recurring: { interval: config.interval },
+    metadata: { app: "deadset", lookup_key: lookupKey },
+  });
+}
+
 type SubscriptionStatus = {
   isPro: boolean;
   status: string | null;
@@ -114,6 +213,36 @@ const inactiveSubscription = (): SubscriptionStatus => ({
   cancelAtPeriodEnd: false,
 });
 
+function isProSubscriptionStatus(status: string | null | undefined, currentPeriodEnd: string | null): boolean {
+  const activeByStatus = ["active", "trialing", "past_due"].includes(status ?? "");
+  const activeCanceled = status === "canceled" && !!currentPeriodEnd && new Date(currentPeriodEnd) > new Date();
+  return activeByStatus || activeCanceled;
+}
+
+function subscriptionStatusFromStripeSubscription(subscription: any): SubscriptionStatus {
+  const item = subscription.items?.data?.[0];
+  const end = item?.current_period_end ?? subscription.current_period_end ?? null;
+  const currentPeriodEnd = end ? new Date(end * 1000).toISOString() : null;
+  const price = item?.price;
+  const status = subscription.status ?? null;
+  return {
+    isPro: isProSubscriptionStatus(status, currentPeriodEnd),
+    status,
+    priceId: price?.lookup_key ?? price?.id ?? null,
+    currentPeriodEnd,
+    cancelAtPeriodEnd: !!subscription.cancel_at_period_end,
+  };
+}
+
+async function syncProfileProUntil(userId: string, status: SubscriptionStatus) {
+  if (!status.isPro || !status.currentPeriodEnd) return;
+  const { error } = await supabaseAdmin
+    .from("profiles")
+    .update({ pro_until: status.currentPeriodEnd })
+    .eq("id", userId);
+  if (error) console.error("Failed to sync pro_until", error);
+}
+
 async function stripeSubscriptionStatus(stripe: any, options: { email?: string; userId: string }): Promise<SubscriptionStatus> {
   const customerId = await findCustomer(stripe, options);
   if (!customerId) return inactiveSubscription();
@@ -128,16 +257,8 @@ async function stripeSubscriptionStatus(stripe: any, options: { email?: string; 
   });
   const sub: any = active ?? rows[0];
   if (!sub) return inactiveSubscription();
-  const item = sub.items?.data?.[0];
-  const end = item?.current_period_end ?? sub.current_period_end ?? null;
-  const price = item?.price;
-  return {
-    isPro: !!active,
-    status: sub.status ?? null,
-    priceId: price?.lookup_key ?? price?.id ?? null,
-    currentPeriodEnd: end ? new Date(end * 1000).toISOString() : null,
-    cancelAtPeriodEnd: !!sub.cancel_at_period_end,
-  };
+  const status = subscriptionStatusFromStripeSubscription(sub);
+  return active ? { ...status, isPro: true } : status;
 }
 
 async function requirePro(req: any): Promise<AuthCtx> {
@@ -145,6 +266,7 @@ async function requirePro(req: any): Promise<AuthCtx> {
   const { data: profile } = await ctx.supabase.from("profiles").select("pro_until").eq("id", ctx.userId).maybeSingle();
   if (profile?.pro_until && new Date(profile.pro_until) > new Date()) return ctx;
   const status = await stripeSubscriptionStatus(createStripeClient("live"), ctx);
+  await syncProfileProUntil(ctx.userId, status);
   if (!status.isPro) throw Object.assign(new Error("DEADSET Pro required"), { status: 403 });
   return ctx;
 }
@@ -155,137 +277,47 @@ type Handler = (data: any, req: any) => Promise<unknown>;
 
 const handlers: Record<string, Handler> = {
 
-  // === AI: generateSchedule ===
-  async generateSchedule(data, req) {
-    await requireAuth(req);
-    const d = z.object({ goal: z.string(), experience: z.string(), daysPerWeek: z.number(), equipment: z.string() }).parse(data);
-    const sys = `You are a strength coach. Reply with strict JSON only.
-The JSON shape must be:
-{"days":{"MON":{"label":"PUSH — CHEST / SHOULDERS / TRICEPS","exerciseIds":["bench-press","ohp"]}, ...all 7 days...}}
-Use only these exerciseIds: bench-press, incline-db-press, cable-fly, dips, push-ups, deadlift, pull-ups, lat-pulldown, seated-row, face-pull, squat, rdl, leg-press, lunges, leg-curl, ohp, lateral-raise, front-raise, rear-delt-fly, barbell-curl, hammer-curl, skull-crushers, tricep-pushdown, plank, hanging-leg-raise, cable-crunch, ab-wheel.
-Labels must be uppercase, e.g. "PUSH — CHEST / SHOULDERS / TRICEPS", "PULL — BACK / BICEPS", "LEGS — QUADS / HAMS / GLUTES", "REST".
-Include exactly ${d.daysPerWeek} training days and the rest as REST with empty exerciseIds.`;
-    const user = `Goal: ${d.goal}. Experience: ${d.experience}. Days/week: ${d.daysPerWeek}. Equipment: ${d.equipment}. Build the split.`;
-    return chatJSON<{ days: Record<string, { label: string; exerciseIds: string[] }> }>({ system: sys, user });
-  },
-
-  // === AI: generateMeals ===
-  async generateMeals(data, req) {
-    await requireAuth(req);
-    const d = z.object({ goal: z.string(), calories: z.number(), protein: z.number(), carbs: z.number(), fats: z.number(), dislikes: z.string().optional() }).parse(data);
-    const sys = `You are a sports nutritionist. Reply with strict JSON only:
-{"breakfast":{"name":"...","calories":0,"protein":0,"carbs":0,"fats":0},"lunch":{...},"dinner":{...},"snack":{...}}
-Total of all 4 meals should approximate the daily targets.`;
-    const user = `Goal: ${d.goal}. Target ${d.calories} kcal, P${d.protein} C${d.carbs} F${d.fats}. Dislikes: ${d.dislikes || "none"}. Suggest practical, varied meals.`;
-    return chatJSON({ system: sys, user });
-  },
-
-  // === AI: swapMeal ===
-  async swapMeal(data, req) {
-    await requireAuth(req);
-    const d = z.object({ name: z.string(), calories: z.number(), protein: z.number(), carbs: z.number(), fats: z.number() }).parse(data);
-    const sys = `Reply with strict JSON only: {"name":"...","calories":0,"protein":0,"carbs":0,"fats":0}. Suggest one alternative meal with matching macros (±10%).`;
-    const user = `Current: ${d.name} (${d.calories} kcal, P${d.protein} C${d.carbs} F${d.fats}). Give one different but similar-macro alternative.`;
-    return chatJSON({ system: sys, user });
-  },
-
-  // === Session: scorePump ===
-  async scorePump(data, req) {
-    await requireAuth(req);
-    const d = z.object({
-      label: z.string(), totalVolume: z.number(), prCount: z.number(), sets: z.number(), durationMin: z.number(),
-      exercises: z.array(z.object({ name: z.string(), sets: z.number(), topWeight: z.number(), topReps: z.number() })).max(20),
-    }).parse(data);
-    const sys = `You are an elite hypertrophy coach. Reply with strict JSON only:
-{"score": 0-100, "note": "ONE punchy uppercase sentence under 70 chars"}
-Score reflects training stimulus (volume, intensity, PRs, density). Note is motivational, no fluff.`;
-    const user = `Workout: ${d.label}. Duration ${d.durationMin}min. ${d.sets} sets. ${d.totalVolume}kg total volume. ${d.prCount} PRs.
-Top sets: ${d.exercises.map(e => `${e.name} ${e.sets}x ${e.topWeight}kg×${e.topReps}`).join("; ")}.
-Rate the pump.`;
-    return chatJSON<{ score: number; note: string }>({ system: sys, user });
-  },
-
-  // === Coach: coachChat ===
-  async coachChat(data, req) {
-    await requirePro(req);
-    const MessageSchema = z.object({ role: z.enum(["user", "assistant"]), content: z.string().min(1).max(4000) });
-    const d = z.object({
-      messages: z.array(MessageSchema).min(1).max(40),
-      context: z.object({
-        goal: z.string().optional(), experience: z.string().optional(), weightKg: z.number().optional(),
-        heightCm: z.number().optional(), benchKg: z.number().optional(), squatKg: z.number().optional(),
-        deadliftKg: z.number().optional(), streak: z.number().optional(),
-      }).optional(),
-    }).parse(data);
-    const c = d.context ?? {};
-    const ctxLines = [
-      c.goal && `Goal: ${c.goal}`, c.experience && `Experience: ${c.experience}`,
-      c.weightKg && `Bodyweight: ${c.weightKg}kg`, c.heightCm && `Height: ${c.heightCm}cm`,
-      c.benchKg && `Bench 1RM: ${c.benchKg}kg`, c.squatKg && `Squat 1RM: ${c.squatKg}kg`,
-      c.deadliftKg && `Deadlift 1RM: ${c.deadliftKg}kg`,
-      typeof c.streak === "number" && `Current streak: ${c.streak} days`,
-    ].filter(Boolean).join("\n");
-    const system = `You are DEADSET Coach — a direct, no-fluff strength & conditioning coach inside the DEADSET fitness app.
-Tone: brief, practical, motivating, never preachy. Use lbs only if the user does, otherwise kg.
-Format: short answers (1-3 short paragraphs or a tight bulleted list). Never lecture. Never refuse safe training questions.
-Always assume the athlete is healthy unless told otherwise; recommend seeing a doctor only for sharp pain, numbness, or chest issues.
-Avoid emoji walls. No medical diagnosis. No supplements that aren't food/creatine/whey/caffeine.
-
-Athlete profile:
-${ctxLines || "(no profile context provided)"}
-`;
-    const reply = await chatText({ system, messages: d.messages });
-    return { reply };
-  },
-
-  // === Physique: analyzePhysique ===
-  async analyzePhysique(data, req) {
-    await requireAuth(req);
-    const d = z.object({
-      imageDataUrl: z.string().startsWith("data:image/").max(5_000_000, "Image is too large"),
-      goal: z.string().trim().min(1).max(200),
-      weightKg: z.number().min(25).max(500).optional(),
-    }).parse(data);
-    const sys = `You are an elite physique coach analyzing a progress photo. Reply with strict JSON only:
-{
-  "bodyFatEstimate": <number 5-40>,
-  "muscleScore": <0-100>,
-  "symmetryScore": <0-100>,
-  "leanMassNote": "ONE uppercase sentence under 70 chars",
-  "strengths": ["SHORT POINT","SHORT POINT","SHORT POINT"],
-  "weaknesses": ["SHORT POINT","SHORT POINT","SHORT POINT"],
-  "focus": ["MUSCLE GROUP","MUSCLE GROUP","MUSCLE GROUP"],
-  "verdict": "ONE bold uppercase motivating sentence under 90 chars"
-}
-Be honest but constructive. If the image is not a clear physique photo, return all zeros and verdict "RETAKE WITH BETTER LIGHTING AND POSE".`;
-    const user = `Goal: ${d.goal}. ${d.weightKg ? `Weight: ${d.weightKg}kg.` : ""} Analyze.`;
-    return chatVisionJSON({ system: sys, user, imageDataUrl: d.imageDataUrl });
-  },
 
   // === Payments: createCheckoutSession ===
   async createCheckoutSession(data, req) {
     const { userId, email } = await requireAuth(req);
     const d = z.object({
       priceId: z.string(), returnUrl: z.string().url(), environment: z.enum(["sandbox", "live"]),
+      uiMode: z.enum(["embedded_page", "hosted_page"]).optional(),
     }).parse(data);
     if (!/^[a-zA-Z0-9_-]+$/.test(d.priceId)) throw new Error("Invalid priceId");
     try {
       const stripe = createStripeClient(d.environment);
-      const prices = await stripe.prices.list({ lookup_keys: [d.priceId] });
-      if (!prices.data.length) throw new Error("Price not found");
-      const stripePrice = prices.data[0];
+      const stripePrice = await resolveOrCreateStripePrice(stripe, d.priceId);
       const isRecurring = stripePrice.type === "recurring";
       const customerId = await resolveOrCreateCustomer(stripe, { email, userId });
-      const session = await stripe.checkout.sessions.create({
+      const uiMode = d.uiMode ?? "embedded_page";
+      const returnUrl = safeReturnUrl(d.returnUrl);
+      const cancelUrl = new URL(returnUrl);
+      cancelUrl.pathname = "/upgrade";
+      cancelUrl.search = "";
+      cancelUrl.hash = "";
+      const checkoutBase = {
         line_items: [{ price: stripePrice.id, quantity: 1 }],
         mode: isRecurring ? "subscription" : "payment",
-        ui_mode: "embedded",
-        return_url: safeReturnUrl(d.returnUrl),
         customer: customerId,
+        allow_promotion_codes: true,
         metadata: { userId },
         ...(isRecurring && { subscription_data: { metadata: { userId } } }),
+      };
+      const session = await stripe.checkout.sessions.create({
+        ...checkoutBase,
+        ui_mode: uiMode,
+        ...(uiMode === "hosted_page"
+          ? {
+              success_url: returnUrl,
+              cancel_url: cancelUrl.toString(),
+            }
+          : {
+              return_url: returnUrl,
+            }),
       } as any);
-      return { clientSecret: session.client_secret ?? "" };
+      return { clientSecret: session.client_secret ?? "", url: session.url ?? undefined };
     } catch (error) {
       return { error: getStripeErrorMessage(error) };
     }
@@ -316,14 +348,49 @@ Be honest but constructive. If the image is not a clear physique photo, return a
     if (profile?.pro_until && new Date(profile.pro_until) > new Date()) {
       return { isPro: true, status: "referral", priceId: null, currentPeriodEnd: profile.pro_until, cancelAtPeriodEnd: false };
     }
-    return stripeSubscriptionStatus(createStripeClient(d.environment), ctx);
+    const status = await stripeSubscriptionStatus(createStripeClient(d.environment), ctx);
+    await syncProfileProUntil(ctx.userId, status);
+    return status;
+  },
+
+  async verifyCheckoutSession(data, req) {
+    const ctx = await requireAuth(req);
+    const d = z.object({
+      sessionId: z.string().min(8).max(200),
+      environment: z.enum(["sandbox", "live"]),
+    }).parse(data);
+    if (!/^cs_(test|live)_[A-Za-z0-9_]+$/.test(d.sessionId)) throw new Error("Invalid checkout session");
+
+    const stripe = createStripeClient(d.environment);
+    const session = await stripe.checkout.sessions.retrieve(d.sessionId, {
+      expand: ["subscription", "customer"],
+    });
+
+    const metadataUserId = session.metadata?.userId;
+    const customerMeta = typeof session.customer === "object" && session.customer && !("deleted" in session.customer)
+      ? session.customer.metadata
+      : null;
+    const customerUserId = customerMeta?.userId;
+    if (metadataUserId !== ctx.userId && customerUserId !== ctx.userId) {
+      throw Object.assign(new Error("Checkout session does not belong to this account"), { status: 403 });
+    }
+
+    let status = inactiveSubscription();
+    if (session.subscription && typeof session.subscription === "object") {
+      status = subscriptionStatusFromStripeSubscription(session.subscription);
+    }
+    if (!status.isPro) {
+      status = await stripeSubscriptionStatus(stripe, ctx);
+    }
+    await syncProfileProUntil(ctx.userId, status);
+    return { ...status, verified: true };
   },
 
   // === Leaderboard (strength PRs) ===
   async getLeaderboard(data, req) {
     const { supabase } = await requireAuth(req);
-    const d = z.object({ category: z.enum(["OVERALL", "BENCH", "SQUAT", "DEADLIFT", "TOTAL"]), limit: z.number().int().min(1).max(100).optional() }).parse(data);
-    const { data: rows, error } = await supabase.from("public_profiles").select("id, username, display_name, avatar_url, level, public_stats").limit(500);
+    const d = z.object({ category: z.enum(["RANK", "OVERALL", "BENCH", "SQUAT", "DEADLIFT", "TOTAL"]), limit: z.number().int().min(1).max(100).optional() }).parse(data);
+    const { data: rows, error } = await supabase.from("public_profiles").select("id, username, display_name, avatar_url, level, grit_points, public_stats").limit(500);
     if (error) throw error;
     type TopPR = { id?: string; value?: number; unit?: string };
     type PublicStats = { overall?: number; topPRs?: TopPR[] };
@@ -334,7 +401,8 @@ Be honest but constructive. If the image is not a clear physique photo, return a
       .map(r => {
         const stats = (r.public_stats ?? {}) as PublicStats;
         let value = 0, unit = "kg";
-        if (cat === "OVERALL") { value = Number(stats.overall ?? 0); unit = "OVR"; }
+        if (cat === "RANK") { value = Number(r.grit_points ?? 0); unit = "GRIT"; }
+        else if (cat === "OVERALL") { value = Number(stats.overall ?? 0); unit = "OVR"; }
         else if (cat === "TOTAL") value = getPRValue(stats, "bench-press") + getPRValue(stats, "squat") + getPRValue(stats, "deadlift");
         else if (cat === "BENCH") value = getPRValue(stats, "bench-press");
         else if (cat === "SQUAT") value = getPRValue(stats, "squat");
@@ -409,7 +477,8 @@ Be honest but constructive. If the image is not a clear physique photo, return a
     if (!profile) return fail;
     const { data: userRes, error: lookupErr } = await supabaseAdmin.auth.admin.getUserById(profile.id);
     if (lookupErr || !userRes?.user?.email) return fail;
-    const anon = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+    const { url, publishableKey } = getSupabaseEnv();
+    const anon = createClient(url, publishableKey, { auth: { persistSession: false, autoRefreshToken: false } });
     const { data: signIn, error } = await anon.auth.signInWithPassword({ email: userRes.user.email, password: d.password });
     if (error || !signIn.session) return fail;
     return { ok: true as const, access_token: signIn.session.access_token, refresh_token: signIn.session.refresh_token };
@@ -679,7 +748,7 @@ Be honest but constructive. If the image is not a clear physique photo, return a
     const d = z.object({
       category: z.string().optional(), equipment: z.string().optional(), muscle: z.string().optional(),
       difficulty: z.number().int().min(1).max(5).optional(), search: z.string().max(80).optional(),
-      limit: z.number().int().min(1).max(500).default(200),
+      limit: z.number().int().min(1).max(2000).default(300),
     }).parse(data);
     let q = supabase.from("exercises").select("*").order("name").limit(d.limit);
     if (d.category) q = q.eq("category", d.category);
@@ -699,73 +768,6 @@ Be honest but constructive. If the image is not a clear physique photo, return a
     return { count: count ?? 0 };
   },
 
-  async generateExerciseBatch(data, req) {
-    const { userId } = await requireAuth(req);
-    const d = z.object({ batchSize: z.number().int().min(5).max(30).default(20), focus: z.string().min(3).max(80) }).parse(data);
-    const { data: isAdmin, error: roleErr } = await supabaseAdmin.rpc("has_role", { _user_id: userId, _role: "admin" });
-    if (roleErr) throw new Error(roleErr.message);
-    if (!isAdmin) throw new Error("Forbidden: admin role required");
-    const ALLOWED_EQUIPMENT = ["BARBELL", "DUMBBELL", "CABLE", "MACHINE", "BODYWEIGHT", "BANDS", "KETTLEBELL"];
-    const ALLOWED_CATEGORIES = ["PUSH", "PULL", "LEGS", "CORE", "CARDIO"];
-    const ExSchema = z.object({
-      name: z.string().min(2).max(80), category: z.enum(["PUSH", "PULL", "LEGS", "CORE", "CARDIO"]),
-      primary_muscles: z.array(z.string()).min(1).max(4), secondary_muscles: z.array(z.string()).max(4).default([]),
-      equipment: z.enum(["BARBELL", "DUMBBELL", "CABLE", "MACHINE", "BODYWEIGHT", "BANDS", "KETTLEBELL"]),
-      difficulty: z.number().int().min(1).max(5), instructions: z.string().min(10).max(300),
-      pro_tip: z.string().min(5).max(220), youtube_query: z.string().min(3).max(80),
-      warmup_note: z.string().max(160).default(""), stretch_note: z.string().max(160).default(""), is_compound: z.boolean().default(false),
-    });
-    const sys = `You are an elite strength coach building a hypertrophy + strength exercise library.
-Reply with STRICT JSON only, shape:
-{"exercises":[{"name":"...","category":"PUSH|PULL|LEGS|CORE|CARDIO","primary_muscles":["..."],"secondary_muscles":["..."],"equipment":"BARBELL|DUMBBELL|CABLE|MACHINE|BODYWEIGHT|BANDS|KETTLEBELL","difficulty":1-5,"instructions":"1-2 cue sentences","pro_tip":"1 elite-athlete tip","youtube_query":"3-6 word search","warmup_note":"short cue","stretch_note":"short cue","is_compound":true|false}]}`;
-    const user = `Generate exactly ${d.batchSize} distinct exercises focused on: ${d.focus}. Avoid the obvious staples — go a level deeper.`;
-    const out = await chatJSON<{ exercises: unknown[] }>({ system: sys, user });
-    const parsed = z.object({ exercises: z.array(ExSchema).min(1) }).parse(out);
-    const rows = parsed.exercises.map(e => ({
-      slug: slugify(e.name), name: e.name,
-      category: ALLOWED_CATEGORIES.includes(e.category) ? e.category : "PUSH",
-      primary_muscles: e.primary_muscles, secondary_muscles: e.secondary_muscles,
-      equipment: ALLOWED_EQUIPMENT.includes(e.equipment) ? e.equipment : "BODYWEIGHT",
-      difficulty: e.difficulty, instructions: e.instructions, pro_tip: e.pro_tip,
-      youtube_query: e.youtube_query, warmup_note: e.warmup_note, stretch_note: e.stretch_note, is_compound: e.is_compound,
-    }));
-    const { data: inserted, error } = await supabaseAdmin.from("exercises").upsert(rows, { onConflict: "slug", ignoreDuplicates: true }).select("slug");
-    if (error) throw new Error(error.message);
-    return { added: inserted?.length ?? 0, attempted: rows.length };
-  },
-
-  // === Programs ===
-  async smartSuggest(data, req) {
-    await requireAuth(req);
-    const d = z.object({
-      goal: z.string(), experience: z.string(),
-      days: z.array(z.object({ label: z.string(), items: z.array(z.object({ name: z.string(), primary_muscles: z.array(z.string()) })) })),
-      candidates: z.array(z.object({ id: z.string(), name: z.string(), primary_muscles: z.array(z.string()) })).max(400),
-    }).parse(data);
-    const sys = `You are an elite strength coach reviewing a weekly training program.
-Reply STRICT JSON only:
-{"gaps":[{"day":"label","muscle":"muscle-slug","reason":"short reason","suggested_ids":["uuid","uuid"]}]}
-suggested_ids MUST be picked from the provided candidates list (by id). Max 4 gaps. Max 2 ids per gap.`;
-    const user = `Goal: ${d.goal}. Experience: ${d.experience}.
-Program:
-${d.days.map(day => `- ${day.label}: ${day.items.map(i => `${i.name} [${i.primary_muscles.join(",")}]`).join("; ") || "(empty)"}`).join("\n")}
-
-Candidate library (id — name — muscles):
-${d.candidates.slice(0, 200).map(c => `${c.id} — ${c.name} — ${c.primary_muscles.join(",")}`).join("\n")}
-
-Return gaps with suggested_ids drawn ONLY from the candidate ids above.`;
-    return chatJSON({ system: sys, user });
-  },
-
-  // === Diet ===
-  async analyzeFoodPhoto(data, req) {
-    await requireAuth(req);
-    const d = z.object({ imageDataUrl: z.string().min(20).max(5_000_000) }).parse(data);
-    const sys = `You are a nutritionist. Identify the meal in the photo and estimate macros for the visible portion. Reply with strict JSON only:
-{"name":"...","calories":0,"protein":0,"carbs":0,"fats":0,"confidence":"low|medium|high","notes":"..."}`;
-    return chatVisionJSON({ system: sys, user: "Identify this food and estimate nutrition for the visible portion.", imageDataUrl: d.imageDataUrl });
-  },
-
   async lookupBarcode(data, req) {
     await requireAuth(req);
     const d = z.object({ barcode: z.string().regex(/^[0-9]{6,14}$/) }).parse(data);
@@ -780,18 +782,6 @@ Return gaps with suggested_ids drawn ONLY from the candidate ids above.`;
       calories: Math.round(n["energy-kcal_100g"] ?? 0), protein: Math.round(n.proteins_100g ?? 0),
       carbs: Math.round(n.carbohydrates_100g ?? 0), fats: Math.round(n.fat_100g ?? 0), serving: p.serving_size ?? "100g",
     };
-  },
-
-  async weeklyNutritionReport(data, req) {
-    await requireAuth(req);
-    const d = z.object({
-      goal: z.string(), targetCalories: z.number(), targetProtein: z.number(),
-      days: z.array(z.object({ date: z.string(), calories: z.number(), protein: z.number(), carbs: z.number(), fats: z.number(), waterMl: z.number() })).min(1).max(14),
-    }).parse(data);
-    const sys = `You are an elite sports nutritionist reviewing a week of intake. Reply with strict JSON only:
-{"grade":"A+|A|B|C|D|F","adherence":0,"avgCalories":0,"avgProtein":0,"hydrationScore":0,"wins":["..."],"misses":["..."],"action":"one specific action for next week"}`;
-    const user = `Goal: ${d.goal}. Target ${d.targetCalories} kcal / ${d.targetProtein}g protein.\nLog:\n${d.days.map(day => `${day.date}: ${day.calories}kcal P${day.protein} C${day.carbs} F${day.fats} water:${day.waterMl}ml`).join("\n")}`;
-    return chatJSON({ system: sys, user });
   },
 
   // === Account ===

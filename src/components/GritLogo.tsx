@@ -1,4 +1,4 @@
-export function GritLogo({ className = "" }: { className?: string }) {
+export function GritLogo({ className = "" }: { className?: string; compact?: boolean }) {
   return (
     <span
       className={`display font-extrabold text-2xl tracking-wider ${className}`}

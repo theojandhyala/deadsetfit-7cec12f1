@@ -127,7 +127,7 @@ export function DailyQuests() {
                 className="flex items-center gap-3 px-3 py-2.5 hover:bg-[#141414] transition-colors"
               >
                 <div
-                  className="w-7 h-7 flex items-center justify-center border flex-shrink-0"
+                  className={`w-7 h-7 flex items-center justify-center border flex-shrink-0 ${q.done ? "grit-quest-done" : ""}`}
                   style={{
                     borderColor: q.done ? "#E10600" : "#2a2a2a",
                     background: q.done ? "#E10600" : "transparent",

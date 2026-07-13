@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
 import { useAppState } from "@/lib/storage";
 import { calculateGritScore, gritBadge, badgeColor } from "@/lib/calc";
-import { Bell, Settings } from "lucide-react";
+import { CircleHelp } from "lucide-react";
 
 const TIERS: { name: string; min: number }[] = [
   { name: "RAW", min: 0 },
@@ -29,12 +30,30 @@ function progressToNext(score: number) {
 
 export function TopBar() {
   const [state] = useAppState();
-  if (!state.profile) return null;
+  const lastScore = useRef<number | null>(null);
+  const [scorePop, setScorePop] = useState(false);
 
-  const score = calculateGritScore(state).total;
+  const score = state.profile ? calculateGritScore(state).total : 0;
   const badge = gritBadge(score);
   const color = badgeColor(badge);
   const { pct } = progressToNext(score);
+
+  useEffect(() => {
+    if (lastScore.current == null || score <= lastScore.current) {
+      lastScore.current = score;
+      return;
+    }
+    lastScore.current = score;
+    setScorePop(false);
+    const start = requestAnimationFrame(() => setScorePop(true));
+    const stop = setTimeout(() => setScorePop(false), 650);
+    return () => {
+      cancelAnimationFrame(start);
+      clearTimeout(stop);
+    };
+  }, [score]);
+
+  if (!state.profile) return null;
 
   const size = 36;
   const stroke = 2.5;
@@ -48,21 +67,22 @@ export function TopBar() {
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4"
+      className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-5"
       style={{
-        background: "rgba(17,18,21,0.95)",
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
-        borderBottom: "1px solid #262626",
-        paddingTop: "calc(env(safe-area-inset-top) + 8px)",
-        paddingBottom: "10px",
-        height: "calc(env(safe-area-inset-top) + 56px)",
+        background: "linear-gradient(180deg, rgba(16,17,21,0.98), rgba(10,10,10,0.90))",
+        backdropFilter: "blur(22px)",
+        WebkitBackdropFilter: "blur(22px)",
+        borderBottom: "1px solid rgba(255,255,255,0.075)",
+        boxShadow: "0 16px 42px rgba(0,0,0,0.40), inset 0 -1px 0 rgba(230,50,34,0.12)",
+        paddingTop: "calc(env(safe-area-inset-top) + 12px)",
+        paddingBottom: "14px",
+        height: "calc(env(safe-area-inset-top) + 72px)",
       }}
     >
       {/* Logo */}
       <div className="flex items-center gap-2">
         <span
-          className="display font-extrabold text-xl tracking-widest"
+          className="display font-extrabold text-lg tracking-widest"
           style={{ fontStyle: "italic", letterSpacing: "0.12em" }}
         >
           <span style={{ color: "#ffffff" }}>DEAD</span>
@@ -71,11 +91,19 @@ export function TopBar() {
       </div>
 
       {/* Right: score + avatar */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
+        <Link
+          to="/guide"
+          aria-label="How DEADSET works"
+          className="w-9 h-9 rounded-full flex items-center justify-center press"
+          style={{ background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.10)", color: "#8A8A8A" }}
+        >
+          <CircleHelp size={16} />
+        </Link>
         {/* XP pill */}
         <div
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-          style={{ background: "#141414", border: "1px solid #262626" }}
+          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full ${scorePop ? "grit-score-pop" : ""}`}
+          style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))", border: "1px solid rgba(255,255,255,0.10)", boxShadow: "0 8px 20px rgba(0,0,0,0.25)" }}
         >
           <span
             className="text-[10px] font-bold uppercase tracking-wider"

@@ -2,6 +2,9 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { supabase } from "@/integrations/supabase/client";
 import { getStripeEnvironment, isPaymentsConfigured } from "@/lib/stripe";
 import { getSubscriptionStatus } from "@/lib/payments.functions";
+import { withTimeout } from "@/lib/account-restore";
+
+const PRO_CACHE_KEY = "deadset_pro_status_v1";
 
 type ProState = {
   isPro: boolean;
@@ -13,31 +16,87 @@ type ProState = {
   refresh: () => Promise<void>;
 };
 
+type CachedProState = Omit<ProState, "loading" | "refresh"> & { checkedAt: number };
+
 const ProContext = createContext<ProState | null>(null);
 
+function readCachedPro(): CachedProState | null {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PRO_CACHE_KEY) || "null") as CachedProState | null;
+    if (!parsed || Date.now() - parsed.checkedAt > 10 * 60_000) return null;
+    if (parsed.currentPeriodEnd && new Date(parsed.currentPeriodEnd) <= new Date()) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedPro(status: Omit<ProState, "loading" | "refresh">) {
+  localStorage.setItem(PRO_CACHE_KEY, JSON.stringify({ ...status, checkedAt: Date.now() }));
+}
+
+function clearCachedPro() {
+  localStorage.removeItem(PRO_CACHE_KEY);
+}
+
+async function rejectOnTimeout<T>(promise: PromiseLike<T>, timeoutMs: number, message: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
 export function ProProvider({ children }: { children: ReactNode }) {
-  const [isPro, setIsPro] = useState(false);
+  const cached = typeof window !== "undefined" ? readCachedPro() : null;
+  const [isPro, setIsPro] = useState(cached?.isPro ?? false);
   const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState<string | null>(null);
-  const [priceId, setPriceId] = useState<string | null>(null);
-  const [currentPeriodEnd, setCurrentPeriodEnd] = useState<string | null>(null);
-  const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(false);
+  const [status, setStatus] = useState<string | null>(cached?.status ?? null);
+  const [priceId, setPriceId] = useState<string | null>(cached?.priceId ?? null);
+  const [currentPeriodEnd, setCurrentPeriodEnd] = useState<string | null>(cached?.currentPeriodEnd ?? null);
+  const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(cached?.cancelAtPeriodEnd ?? false);
 
   const refresh = useCallback(async () => {
+    setLoading(true);
     if (!isPaymentsConfigured()) {
       setLoading(false);
       return;
     }
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { setIsPro(false); setLoading(false); return; }
+      const { data: { session } } = await withTimeout(
+        supabase.auth.getSession(),
+        { data: { session: null }, error: null },
+        3500,
+      );
+      if (!session) {
+        setIsPro(false);
+        setStatus(null);
+        setPriceId(null);
+        setCurrentPeriodEnd(null);
+        setCancelAtPeriodEnd(false);
+        clearCachedPro();
+        setLoading(false);
+        return;
+      }
       const env = getStripeEnvironment();
-      const data = await getSubscriptionStatus({ data: { environment: env } });
+      const data = await rejectOnTimeout(
+        getSubscriptionStatus({ data: { environment: env } }),
+        6500,
+        "Subscription check timed out",
+      );
       setIsPro(data.isPro);
       setStatus(data.status);
       setPriceId(data.priceId);
       setCurrentPeriodEnd(data.currentPeriodEnd);
       setCancelAtPeriodEnd(data.cancelAtPeriodEnd);
+      writeCachedPro(data);
+      window.dispatchEvent(new CustomEvent("deadset:pro-status", { detail: data }));
     } catch (e) {
       console.warn("usePro refresh failed", e);
     } finally {
@@ -48,11 +107,36 @@ export function ProProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refresh();
     const { data } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN" || event === "SIGNED_OUT") refresh();
+      if (event === "SIGNED_OUT") {
+        // Supabase can emit SIGNED_OUT during transient token/storage failures.
+        // Keep the cached Pro state unless the app performs an explicit logout.
+        setLoading(false);
+        return;
+      }
+      if (event === "SIGNED_IN") refresh();
     });
+    const onExplicitLogout = () => {
+      setIsPro(false);
+      setStatus(null);
+      setPriceId(null);
+      setCurrentPeriodEnd(null);
+      setCancelAtPeriodEnd(false);
+      clearCachedPro();
+      setLoading(false);
+    };
+    const onFocus = () => refresh();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("deadset:explicit-logout", onExplicitLogout);
+    document.addEventListener("visibilitychange", onVisible);
 
     return () => {
       data.subscription.unsubscribe();
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("deadset:explicit-logout", onExplicitLogout);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [refresh]);
 
@@ -69,26 +153,3 @@ export function usePro(): ProState {
   return ctx;
 }
 
-// ---- Paywall sheet context (for "locked feature" bottom sheet) ----
-type PaywallCtx = {
-  open: (opts: { feature: string; description?: string }) => void;
-  close: () => void;
-  state: { open: boolean; feature: string; description?: string };
-};
-const PaywallContext = createContext<PaywallCtx | null>(null);
-
-export function PaywallProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<{ open: boolean; feature: string; description?: string }>({
-    open: false, feature: "",
-  });
-  const open = useCallback((opts: { feature: string; description?: string }) => {
-    setState({ open: true, feature: opts.feature, description: opts.description });
-  }, []);
-  const close = useCallback(() => setState((s) => ({ ...s, open: false })), []);
-  return <PaywallContext.Provider value={{ open, close, state }}>{children}</PaywallContext.Provider>;
-}
-export function usePaywall(): PaywallCtx {
-  const ctx = useContext(PaywallContext);
-  if (!ctx) throw new Error("usePaywall must be used within PaywallProvider");
-  return ctx;
-}

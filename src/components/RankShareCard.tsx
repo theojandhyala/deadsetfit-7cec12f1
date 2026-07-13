@@ -62,32 +62,28 @@ export function RankShareCard({
     ctx.fillStyle = radGlow;
     ctx.fillRect(0, 0, W, H);
 
-    // Top-left corner accent triangle
-    ctx.fillStyle = "#E10600";
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(320, 0);
-    ctx.lineTo(0, 260);
-    ctx.closePath();
-    ctx.fill();
-
     // ── DEADSET logo ─────────────────────────────────────────────
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "900 96px 'Impact', 'Arial Black', sans-serif";
-    ctx.textAlign = "left";
-    ctx.fillText("DEAD", 60, 110);
     ctx.fillStyle = "#E10600";
-    ctx.fillText("SET", 60 + ctx.measureText("DEAD").width, 110);
+    roundRect(ctx, 60, 62, 10, 86, 5);
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "900 italic 88px 'Arial Black', Impact, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("DEAD", 92, 126);
+    ctx.fillStyle = "#E10600";
+    ctx.fillText("SET", 92 + ctx.measureText("DEAD").width, 126);
 
-    ctx.fillStyle = "#555";
-    ctx.font = "700 24px Arial, sans-serif";
-    ctx.fillText("FORGE YOUR BODY", 60, 148);
+    ctx.fillStyle = "#8c8c94";
+    ctx.font = "800 22px Arial, sans-serif";
+    ctx.letterSpacing = "6px";
+    ctx.fillText("FORGE YOUR BODY", 96, 168);
+    ctx.letterSpacing = "0px";
 
     // Season label
     ctx.fillStyle = rank.color;
     ctx.font = "700 22px Arial, sans-serif";
     ctx.textAlign = "right";
-    ctx.fillText("SEASON 1 · 2025", W - 60, 100);
+    ctx.fillText("RANKED · SEASON 1", W - 60, 100);
     ctx.textAlign = "left";
 
     // ── Avatar circle ────────────────────────────────────────────
@@ -124,39 +120,31 @@ export function RankShareCard({
 
     // ── Rank emblem (below avatar) ───────────────────────────────
     const embX = W / 2, embY = 700;
-    const embR = 110;
-    const embGrad = ctx.createLinearGradient(embX - embR, embY - embR, embX + embR, embY + embR);
-    embGrad.addColorStop(0, rank.gradient[0]);
-    embGrad.addColorStop(1, rank.gradient[1]);
-    ctx.fillStyle = embGrad;
-    roundRect(ctx, embX - embR, embY - embR, embR * 2, embR * 2, 28);
-    ctx.fill();
-    ctx.strokeStyle = rank.color;
-    ctx.lineWidth = 4;
-    roundRect(ctx, embX - embR, embY - embR, embR * 2, embR * 2, 28);
-    ctx.stroke();
-
-    ctx.font = "80px serif";
-    ctx.textAlign = "center";
-    ctx.fillText(rank.icon, embX, embY + 30);
-    ctx.textAlign = "left";
+    const embR = 122;
+    drawModernRankPlate(ctx, embX, embY, embR, rank);
 
     // Division badge
     if (rank.division) {
-      ctx.fillStyle = rank.color;
-      ctx.beginPath();
-      ctx.arc(embX + embR - 14, embY + embR - 14, 30, 0, Math.PI * 2);
+      const badgeW = 84;
+      const badgeH = 42;
+      const bx = embX - badgeW / 2;
+      const by = embY + embR - 24;
+      const badgeGrad = ctx.createLinearGradient(bx, by, bx, by + badgeH);
+      badgeGrad.addColorStop(0, "#ffffff");
+      badgeGrad.addColorStop(1, rank.color);
+      ctx.fillStyle = badgeGrad;
+      roundRect(ctx, bx, by, badgeW, badgeH, 21);
       ctx.fill();
       ctx.fillStyle = "#000";
-      ctx.font = "900 28px Arial, sans-serif";
+      ctx.font = "900 26px Arial, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText(rank.division, embX + embR - 14, embY + embR - 3);
+      ctx.fillText(rank.division, embX, by + 29);
       ctx.textAlign = "left";
     }
 
     // ── Rank name & points ───────────────────────────────────────
     ctx.fillStyle = rank.color;
-    ctx.font = "900 80px 'Impact', 'Arial Black', sans-serif";
+    ctx.font = "900 76px 'Arial Black', Impact, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(rank.label, W / 2, embY + embR + 80);
 
@@ -180,7 +168,7 @@ export function RankShareCard({
 
     // ── Name ─────────────────────────────────────────────────────
     ctx.fillStyle = "#ffffff";
-    ctx.font = "900 72px 'Impact', 'Arial Black', sans-serif";
+    ctx.font = "900 70px 'Arial Black', Impact, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText((displayName || "ATHLETE").toUpperCase().slice(0, 20), W / 2, embY + embR + 260);
     if (username) {
@@ -368,5 +356,92 @@ function roundRect(
   ctx.quadraticCurveTo(x, y + h, x, y + h - r);
   ctx.lineTo(x, y + r);
   ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function drawModernRankPlate(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  r: number,
+  rank: ReturnType<typeof getRank>,
+) {
+  ctx.save();
+
+  const shell = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
+  shell.addColorStop(0, "#f8fafc");
+  shell.addColorStop(0.18, rank.color);
+  shell.addColorStop(0.62, rank.gradient[0]);
+  shell.addColorStop(1, "#030304");
+
+  ctx.fillStyle = shell;
+  polygon(ctx, [
+    [cx, cy - r],
+    [cx + r * 0.73, cy - r * 0.58],
+    [cx + r, cy],
+    [cx + r * 0.58, cy + r * 0.78],
+    [cx, cy + r],
+    [cx - r * 0.58, cy + r * 0.78],
+    [cx - r, cy],
+    [cx - r * 0.73, cy - r * 0.58],
+  ]);
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(255,255,255,.32)";
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  ctx.fillStyle = "#07080a";
+  polygon(ctx, [
+    [cx, cy - r * 0.78],
+    [cx + r * 0.58, cy - r * 0.43],
+    [cx + r * 0.72, cy],
+    [cx + r * 0.45, cy + r * 0.58],
+    [cx, cy + r * 0.72],
+    [cx - r * 0.45, cy + r * 0.58],
+    [cx - r * 0.72, cy],
+    [cx - r * 0.58, cy - r * 0.43],
+  ]);
+  ctx.fill();
+  ctx.strokeStyle = rank.color + "99";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  const core = ctx.createLinearGradient(cx, cy - r * 0.56, cx, cy + r * 0.56);
+  core.addColorStop(0, "#ffffff");
+  core.addColorStop(0.2, rank.color);
+  core.addColorStop(1, rank.gradient[0]);
+  ctx.fillStyle = core;
+  polygon(ctx, [
+    [cx, cy - r * 0.52],
+    [cx + r * 0.29, cy],
+    [cx, cy + r * 0.52],
+    [cx - r * 0.29, cy],
+  ]);
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(255,255,255,.45)";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.strokeStyle = rank.color + "aa";
+  ctx.lineWidth = 5;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(cx - r * 0.82, cy);
+  ctx.lineTo(cx - r * 0.58, cy);
+  ctx.moveTo(cx + r * 0.58, cy);
+  ctx.lineTo(cx + r * 0.82, cy);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function polygon(ctx: CanvasRenderingContext2D, points: Array<[number, number]>) {
+  ctx.beginPath();
+  points.forEach(([x, y], i) => {
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
   ctx.closePath();
 }
