@@ -128,7 +128,7 @@ function AthletePage() {
     const found = topPRs.find((p) => p.id === h.id);
     return { id: h.id, label: h.label, unit: h.unit, value: found?.value ?? 0 };
   });
-  const badge = gritBadge(overall * 10);
+  const badge = gritBadge(Number(card.grit_points ?? 0));
   const badgeC = badgeColor(badge);
 
   return (

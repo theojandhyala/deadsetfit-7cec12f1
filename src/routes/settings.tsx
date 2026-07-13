@@ -17,15 +17,9 @@ function SettingsPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [sessionLogs, setSessionLogs] = useState(() => readSessionLogs());
 
-  const units = state.units ?? "kg";
   const reminders = state.remindersEnabled ?? true;
   const hydration = state.hydrationAlertsEnabled ?? true;
   const waterTarget = state.waterTargetMl ?? 3000;
-
-  function setUnits(u: "kg" | "lb") {
-    set((s) => ({ ...s, units: u }));
-    toast.success(`Units: ${u.toUpperCase()}`);
-  }
 
   function exportData() {
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
@@ -82,31 +76,26 @@ function SettingsPage() {
         <p className="label-cap">Settings</p>
       </header>
 
-      {/* Units */}
+      {/* Units — kg only until lb conversion covers every surface honestly */}
       <section className="px-5 mb-6">
         <p className="label-cap mb-2 flex items-center gap-1.5">
           <Scale size={12} className="text-accent-red" /> Units
         </p>
-        <div className="bg-grit-card border border-grit grid grid-cols-2">
-          {(["kg", "lb"] as const).map((u) => (
-            <button
-              key={u}
-              onClick={() => setUnits(u)}
-              className={`py-3 label-cap text-sm transition-colors ${units === u ? "bg-accent-red text-white" : "text-grit-dim"}`}
-            >
-              {u.toUpperCase()}
-            </button>
-          ))}
+        <div className="bg-grit-card border border-grit px-4 py-3 flex items-center justify-between">
+          <span className="label-cap text-sm text-grit">Kilograms (kg)</span>
+          <span className="label-cap text-[9px] text-grit-dim border border-grit rounded px-1.5 py-0.5">
+            LB SOON
+          </span>
         </div>
         <p className="text-[10px] text-grit-dim mt-2">
-          Affects new entries you log. Existing data is preserved.
+          All weights are logged and displayed in kg. Pounds support is coming.
         </p>
       </section>
 
-      {/* Notifications */}
+      {/* In-App Nudges */}
       <section className="px-5 mb-6">
         <p className="label-cap mb-2 flex items-center gap-1.5">
-          <Bell size={12} className="text-accent-red" /> Notifications
+          <Bell size={12} className="text-accent-red" /> In-App Nudges
         </p>
         <div className="bg-grit-card border border-grit divide-y divide-[#262626]">
           <Toggle
@@ -120,6 +109,9 @@ function SettingsPage() {
             onChange={(v) => set((s) => ({ ...s, hydrationAlertsEnabled: v }))}
           />
         </div>
+        <p className="text-[10px] text-grit-dim mt-2">
+          Shown inside the app while you use it — not device push notifications.
+        </p>
       </section>
 
       {/* Hydration target */}

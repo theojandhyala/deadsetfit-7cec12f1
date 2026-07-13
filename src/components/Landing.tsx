@@ -599,7 +599,7 @@ function Pricing() {
           <p className="display mt-2 text-4xl font-black text-grit">
             £4.99<span className="label-cap ml-1 text-[10px] text-grit-dim">/ month</span>
           </p>
-          <p className="label-cap mt-1 text-[10px] text-grit-dim">or £39.99/yr — 2 months free</p>
+          <p className="label-cap mt-1 text-[10px] text-grit-dim">or £39.99/yr — save 33%</p>
           <ul className="mt-5 flex-1 space-y-2.5">
             {pro.map((f) => (
               <li key={f} className="flex items-start gap-2.5 text-xs text-grit">
@@ -628,7 +628,7 @@ function FAQ() {
     },
     {
       q: "What does Pro cost?",
-      a: "£4.99/month or £39.99/year (about two months free). Local currency is applied at checkout, and you can cancel any time.",
+      a: "£4.99/month or £39.99/year (save 33%). Local currency is applied at checkout, and you can cancel any time.",
     },
     {
       q: "Can I use DEADSET on multiple devices?",

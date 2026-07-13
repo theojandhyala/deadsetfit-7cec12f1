@@ -138,7 +138,12 @@ export function todayKey(): "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN
 }
 
 export function isoDay(date = new Date()) {
-  return date.toISOString().slice(0, 10);
+  // LOCAL calendar day — an evening session must never count as "tomorrow"
+  // just because the clock passed midnight UTC.
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 export function calculateStreak(completedDates: string[]) {

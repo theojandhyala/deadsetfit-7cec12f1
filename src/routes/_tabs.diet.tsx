@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Plus, ScanBarcode, Droplets, Bell, BellOff, Trash2, Target, Utensils, ShieldCheck, CalendarDays } from "lucide-react";
 
-import { useAppState } from "@/lib/storage";
+import { useAppState, getState } from "@/lib/storage";
+import { toast } from "sonner";
 import { calculateCalories, calculateMacros, isoDay } from "@/lib/calc";
 import { lookupBarcode } from "@/lib/diet.functions";
 import { usePro } from "@/hooks/usePro";
@@ -78,24 +79,39 @@ function DietPage() {
     return { avg, calHits, proteinHits, split, proteinPerKg, loggedDays: loggedDays.length };
   }, [state.foodLog, calories, macros.protein, profile?.weightKg]);
 
-  // Hydration alerts — gentle nudge every 90 min if behind pace during waking hours
+  // Hydration alerts — in-app nudge when behind pace during waking hours.
+  // Checks every 5 min but nudges at most every 90 min (localStorage stamp);
+  // deps stay minimal so re-renders don't reset the interval (state.water is
+  // a fresh array identity every render — reading via getState() avoids it).
+  const hydrationOn = state.hydrationAlertsEnabled;
   useEffect(() => {
-    if (!state.hydrationAlertsEnabled) return;
+    if (!hydrationOn) return;
+    const NUDGE_KEY = "deadset_hydration_nudge_at";
     const id = setInterval(() => {
       const now = new Date();
       const hour = now.getHours();
       if (hour < 8 || hour > 22) return;
+      const last = Number(localStorage.getItem(NUDGE_KEY) || 0);
+      if (Date.now() - last < 90 * 60 * 1000) return;
+      const fresh = getState();
       const elapsed = (hour - 8) / 14;
-      const target = state.waterTargetMl * elapsed;
-      const wt = state.water.filter(w => w.date === isoDay()).reduce((s, w) => s + w.ml, 0);
+      const target = (fresh.waterTargetMl ?? 3000) * elapsed;
+      const day = isoDay();
+      const wt = fresh.water.filter((w) => w.date === day).reduce((s, w) => s + w.ml, 0);
       if (wt < target - 300) {
-        // Soft notification via toast-like in-app banner — using alert avoided for UX; we just flash the ring
+        localStorage.setItem(NUDGE_KEY, String(Date.now()));
+        toast("Hydration check", {
+          description: `${Math.round((target - wt) / 100) * 100}ml behind pace — grab some water.`,
+        });
         const el = document.getElementById("water-ring");
-        if (el) { el.classList.add("animate-pulse"); setTimeout(() => el.classList.remove("animate-pulse"), 4000); }
+        if (el) {
+          el.classList.add("animate-pulse");
+          setTimeout(() => el.classList.remove("animate-pulse"), 4000);
+        }
       }
-    }, 90 * 60 * 1000);
+    }, 5 * 60 * 1000);
     return () => clearInterval(id);
-  }, [state.hydrationAlertsEnabled, state.waterTargetMl, state.water]);
+  }, [hydrationOn]);
 
   function addFood() {
     if (!name) return;
@@ -139,8 +155,12 @@ function DietPage() {
       set((s) => ({ ...s, foodLog: [...s.foodLog, item] }));
       setBarcodeVal(""); setBarcodeOpen(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Lookup failed");
+      const msg = e instanceof Error ? e.message : "Lookup failed";
+      setError(msg);
       setRetryAction(() => doBarcode);
+      // The banner lives at the top of the page; the barcode input is at the
+      // bottom — surface the failure where the user actually is.
+      toast.error(`Barcode lookup failed — ${msg}`);
     }
     finally { setBarcodeLoad(false); }
   }

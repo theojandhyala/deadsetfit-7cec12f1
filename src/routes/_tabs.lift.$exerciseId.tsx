@@ -33,16 +33,25 @@ const RANGES = [
 ] as const;
 
 function gatherLogs(state: AppState, exerciseId: string): SetLog[] {
-  const out: SetLog[] = state.logs.filter((l) => l.exerciseId === exerciseId).slice();
+  // Sessions are the source of truth per day. finishWorkout ALSO writes each
+  // exercise's best set into state.logs, so including both for the same day
+  // would double-count that top set in volume sums — legacy logs only fill
+  // days that have no session data.
+  const out: SetLog[] = [];
+  const sessionDays = new Set<string>();
   state.sessions.forEach((s) =>
     s.exercises
       .filter((e) => e.exerciseId === exerciseId)
       .forEach((e) =>
-        e.sets.forEach((set) =>
-          out.push({ exerciseId, weight: set.weight, reps: set.reps, date: s.date }),
-        ),
+        e.sets.forEach((set) => {
+          sessionDays.add(s.date.slice(0, 10));
+          out.push({ exerciseId, weight: set.weight, reps: set.reps, date: s.date });
+        }),
       ),
   );
+  state.logs
+    .filter((l) => l.exerciseId === exerciseId && !sessionDays.has(l.date.slice(0, 10)))
+    .forEach((l) => out.push(l));
   return out.sort((a, b) => a.date.localeCompare(b.date));
 }
 

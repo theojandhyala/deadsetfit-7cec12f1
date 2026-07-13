@@ -171,9 +171,22 @@ export function computeFifaStats(state: AppState): FifaStats {
     }
   }
 
-  const STR = avg(["bench-press", "squat", "deadlift"].map((id) => ratings[id]));
-  const PWR = STR;
-  const END = 0;
+  const bigThreeRatings = ["bench-press", "squat", "deadlift"].map((id) => ratings[id]);
+  const STR = avg(bigThreeRatings);
+  // PWR — your peak lift (best single rating) vs STR's average of all three.
+  const PWR = Math.max(0, ...bigThreeRatings);
+  // END — rep endurance from real logged sets: average reps per working set.
+  let repTotal = 0;
+  let setCount = 0;
+  for (const session of state.sessions || []) {
+    for (const ex of session.exercises) {
+      for (const s of ex.sets) {
+        repTotal += s.reps;
+        setCount += 1;
+      }
+    }
+  }
+  const END = setCount === 0 ? 0 : Math.max(0, Math.min(99, Math.round((repTotal / setCount) * 6)));
 
   // HYP — total session volume rating
   const volume = (state.sessions || []).reduce((sum, s) => sum + (s.totalVolume || 0), 0);
@@ -230,6 +243,12 @@ export interface PublicStats {
   experience?: string;
   weightKg?: number;
   heightCm?: number;
+  /** Blob-only profile preferences mirrored so fresh-device restores keep them */
+  prefs?: {
+    focusMuscles?: string[];
+    sessionMinutes?: number;
+    targetWeightKg?: number;
+  };
 }
 
 export function buildPublicStats(state: AppState): PublicStats {
@@ -247,6 +266,13 @@ export function buildPublicStats(state: AppState): PublicStats {
     experience: state.profile?.experience,
     weightKg: state.profile?.weightKg,
     heightCm: state.profile?.heightCm,
+    // Blob-only preferences mirrored to the account row so a fresh-device
+    // restore via the profile row can't erase them.
+    prefs: {
+      focusMuscles: state.profile?.focusMuscles,
+      sessionMinutes: state.profile?.sessionMinutes,
+      targetWeightKg: state.profile?.targetWeightKg,
+    },
   };
 }
 

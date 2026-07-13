@@ -62,7 +62,6 @@ Xcode opens. In Xcode:
 ## 5. Things to disclose in App Review
 
 - The app uses **email + Google sign-in** (Lovable Cloud / Supabase auth).
-- The app makes **AI calls** for the coach feature (Lovable AI Gateway).
 - The app accepts **payments via Stripe** for Pro on web. The native iOS upgrade page currently blocks Stripe checkout because Apple requires **In-App Purchase** for digital subscriptions. Before submitting a paid iOS build, either integrate StoreKit/RevenueCat or ship iOS as free-tier only.
 
 ## 6. Pre-submission QA checklist
@@ -70,9 +69,9 @@ Xcode opens. In Xcode:
 - Run `npm run appstore:check`.
 - Disable `server.url`, then run `APPSTORE_STRICT=1 node scripts/appstore-check.mjs`.
 - Fresh-install the iOS build on a real iPhone, create an account, complete onboarding, start and finish a workout, log food/water, open Profile, open Privacy/Terms, and verify the Pro page does not show Stripe checkout.
-- Test offline launch after first install. The shell should render the bundled app and show recoverable network states for auth, sync, AI, and billing features.
+- Test offline launch after first install. The shell should render the bundled app and show recoverable network states for auth, sync, and billing features.
 - Verify screenshots are from the current UI and do not show test payment banners, debug copy, or placeholder data.
-- Confirm App Privacy answers cover account identifiers, workout/health-adjacent data, photos uploaded for physique scans, purchase history, diagnostics, and AI processing.
+- Confirm App Privacy answers cover account identifiers, workout/health-adjacent data, progress check-in photos, purchase history, and diagnostics.
 
 ## 7. Updating after release
 

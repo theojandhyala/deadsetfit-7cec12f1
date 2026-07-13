@@ -416,6 +416,24 @@ function Feed({ userId }: { userId: string }) {
             <img src={p.image_url} alt="" className="w-full mb-3 border border-grit" />
           )}
           {p.content && <p className="text-sm text-grit mb-3 whitespace-pre-wrap">{p.content}</p>}
+          {p.metadata &&
+            typeof p.metadata === "object" &&
+            "h2h" in p.metadata &&
+            (p.metadata as { h2h?: boolean }).h2h && (
+              <Link
+                to="/challenges"
+                className="border border-accent-red bg-accent-red/10 p-3 mb-3 flex items-center gap-3 press"
+              >
+                <Swords className="text-accent-red shrink-0" size={20} />
+                <div className="min-w-0 flex-1">
+                  <p className="label-cap text-accent-red text-[10px]">HEAD-TO-HEAD CHALLENGE</p>
+                  <p className="text-xs text-grit-dim mt-0.5">
+                    Tap to open Challenges and post your best.
+                  </p>
+                </div>
+                <span className="label-cap text-[9px] text-accent-red shrink-0">ACCEPT</span>
+              </Link>
+            )}
           {p.kind === "pr" &&
             p.metadata &&
             typeof p.metadata === "object" &&

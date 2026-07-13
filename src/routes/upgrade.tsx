@@ -30,7 +30,7 @@ const PRO_FEATURES = [
     icon: Shield,
     color: "#FAFAFA",
     title: "Streak Armor",
-    desc: "Protect your streak on rest days. Use freeze tokens to keep your momentum when life happens.",
+    desc: "Three shields a month auto-protect your streak when life happens. Miss a day, keep the fire.",
   },
   {
     icon: Swords,
@@ -42,7 +42,7 @@ const PRO_FEATURES = [
     icon: Trophy,
     color: "#E10600",
     title: "Weekly Leagues — Full Access",
-    desc: "Compete in Iron → Bronze → Silver → Gold → Elite Diamond divisions. Promote, relegate, dominate.",
+    desc: "Compete across all nine divisions — Bronze to DEADSET. Promote, relegate, dominate.",
   },
   {
     icon: BarChart3,
@@ -60,7 +60,7 @@ const PRO_FEATURES = [
     icon: Star,
     color: "#FF6B35",
     title: "Featured Programs",
-    desc: "5/3/1, nSuns, PHUL, PHAT, Arnold Blueprint, and more. Expert-built splits unlocked instantly.",
+    desc: "5/3/1 BBB, StrongLifts 5×5, PHUL, Arnold Split and nSuns. Expert-built splits unlocked instantly.",
   },
   {
     icon: Zap,
@@ -278,15 +278,15 @@ function UpgradePage() {
             <div className="flex items-center justify-center gap-4 mt-4">
               <div className="flex items-center gap-1.5 animate-pop-in delay-50">
                 <Users size={13} style={{ color: "#E10600" }} />
-                <span className="text-xs font-bold text-white">2,400+ athletes</span>
+                <span className="text-xs font-bold text-white">15 Pro features</span>
               </div>
               <div className="flex items-center gap-1.5 animate-pop-in delay-150">
                 <Star size={13} style={{ color: "#FAFAFA" }} />
-                <span className="text-xs font-bold text-white">4.9 rating</span>
+                <span className="text-xs font-bold text-white">9 ranked leagues</span>
               </div>
               <div className="flex items-center gap-1.5 animate-pop-in delay-250">
                 <Flame size={13} style={{ color: "#E10600" }} />
-                <span className="text-xs font-bold text-white">Top 1% gains</span>
+                <span className="text-xs font-bold text-white">Cancel any time</span>
               </div>
             </div>
           </div>
@@ -449,38 +449,6 @@ function UpgradePage() {
             </>
           )}
 
-          {/* Testimonials */}
-          <div className="mt-8 flex flex-col gap-3">
-            {[
-              { name: "Jake M.", quote: "H2H challenges made me chase every session. Finally broke my bench plateau.", badge: "BEAST" },
-              { name: "Sarah K.", quote: "Streak Armor saved me during a work trip. Came back fired up.", badge: "GRINDER" },
-              { name: "Tom R.", quote: "Leagues make everything competitive. I train harder every single week.", badge: "ELITE" },
-            ].map((t) => (
-              <div key={t.name} className="deadset-3d-panel deadset-lift p-4" style={{ background: "#141414", border: "1.5px solid #262626" }}>
-                <div className="flex items-center gap-2 mb-2">
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-white font-extrabold display text-sm"
-                    style={{ background: "#E10600" }}
-                  >
-                    {t.name[0]}
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-white">{t.name}</p>
-                    <span
-                      className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full"
-                      style={{ background: "rgba(225,6,0,0.15)", color: "#E10600", border: "1px solid rgba(225,6,0,0.3)" }}
-                    >
-                      {t.badge}
-                    </span>
-                  </div>
-                  <div className="ml-auto flex">
-                    {[1,2,3,4,5].map(s => <Star key={s} size={10} fill="#FAFAFA" style={{ color: "#FAFAFA" }} />)}
-                  </div>
-                </div>
-                <p className="text-xs leading-relaxed" style={{ color: "#8A8A8A" }}>"{t.quote}"</p>
-              </div>
-            ))}
-          </div>
         </div>
       ) : iosNative ? (
         <div className="px-5 pb-12">

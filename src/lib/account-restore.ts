@@ -1,4 +1,4 @@
-import type { Equipment, Experience, Gender, Goal, Profile } from "./types";
+import type { Equipment, Experience, FocusMuscle, Gender, Goal, Profile } from "./types";
 
 type AccountProfile = {
   onboarded?: boolean | null;
@@ -12,6 +12,13 @@ type AccountProfile = {
   equipment?: string | null;
   username?: string | null;
   avatar_url?: string | null;
+  public_stats?: {
+    prefs?: {
+      focusMuscles?: string[];
+      sessionMinutes?: number;
+      targetWeightKg?: number;
+    };
+  } | null;
 };
 
 const goals = new Set<Goal>(["BULK", "CUT", "MAINTAIN", "ATHLETIC"]);
@@ -64,7 +71,30 @@ export function profileFromAccount(row: AccountProfile | null | undefined): Prof
     username: row.username ?? undefined,
     avatarDataUrl: row.avatar_url ?? undefined,
     startingWeightKg: Number(row.weight_kg ?? 75),
+    ...restorePrefs(row),
   };
+}
+
+const FOCUS_SET = new Set<FocusMuscle>(["CHEST", "BACK", "SHOULDERS", "ARMS", "LEGS", "CORE"]);
+const SESSION_SET = new Set([30, 45, 60, 90]);
+
+/** Blob-only preferences mirrored into public_stats — restore them so a
+ *  fresh-device account rebuild can't silently erase onboarding answers. */
+function restorePrefs(row: AccountProfile): Partial<Profile> {
+  const prefs = row.public_stats?.prefs;
+  if (!prefs) return {};
+  const out: Partial<Profile> = {};
+  const muscles = (prefs.focusMuscles ?? []).filter((m): m is FocusMuscle =>
+    FOCUS_SET.has(m as FocusMuscle),
+  );
+  if (muscles.length) out.focusMuscles = muscles;
+  if (prefs.sessionMinutes && SESSION_SET.has(prefs.sessionMinutes)) {
+    out.sessionMinutes = prefs.sessionMinutes as 30 | 45 | 60 | 90;
+  }
+  if (typeof prefs.targetWeightKg === "number" && prefs.targetWeightKg > 0) {
+    out.targetWeightKg = prefs.targetWeightKg;
+  }
+  return out;
 }
 
 export function profileQuestionsComplete(row: AccountProfile | null | undefined) {

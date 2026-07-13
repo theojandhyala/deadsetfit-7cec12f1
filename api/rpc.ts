@@ -48,11 +48,12 @@ async function optionalAuth(req: any): Promise<AuthCtx | null> {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function leagueOf(pts: number): "BRONZE" | "SILVER" | "GOLD" | "DIAMOND" | "ELITE" {
-  if (pts >= 10000) return "ELITE";
-  if (pts >= 5000) return "DIAMOND";
-  if (pts >= 2000) return "GOLD";
-  if (pts >= 500) return "SILVER";
+function leagueOf(pts: number) {
+  // Grit is capped at 1000 (calculateGritScore) — thresholds live in that domain.
+  if (pts >= 900) return "ELITE";
+  if (pts >= 700) return "DIAMOND";
+  if (pts >= 450) return "GOLD";
+  if (pts >= 200) return "SILVER";
   return "BRONZE";
 }
 

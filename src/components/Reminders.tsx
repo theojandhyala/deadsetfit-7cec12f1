@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { X, Bell, Dumbbell, Scale, Apple, Camera, Crown } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useAppState } from "@/lib/storage";
@@ -47,7 +47,9 @@ export function Reminders() {
   }, []);
 
   const today = isoDay();
-  const items: Reminder[] = [];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const items = useMemo(() => {
+    const items: Reminder[] = [];
 
   // Workout today
   if (!state.completedDates.includes(today)) {
@@ -113,7 +115,15 @@ export function Reminders() {
     });
   }
 
-  const visible = items.filter((r) => dismissed[r.id] !== today);
+    return items;
+  }, [state, isPro, proLoading, today]);
+
+  // Respect the Settings toggle — reminders off means no cards and no popup.
+  const enabled = state.remindersEnabled ?? true;
+  const visible = useMemo(
+    () => (enabled ? items.filter((r) => dismissed[r.id] !== today) : []),
+    [enabled, items, dismissed, today],
+  );
 
   useEffect(() => {
     if (autoOpened || visible.length === 0) return;

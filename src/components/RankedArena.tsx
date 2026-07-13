@@ -59,11 +59,12 @@ export function RankedArena({ state, compact = false }: RankedArenaProps) {
 
   const quests = useMemo(() => {
     const workoutDone = state.completedDates.includes(today);
-    const sessionThisWeek = (state.sessions || []).filter((s) => {
+    const finished = (state.sessions || []).filter((s) => s.endedAt);
+    const sessionThisWeek = finished.filter((s) => {
       const age = Date.now() - new Date(s.date).getTime();
       return age <= 7 * 86400000;
     }).length;
-    const prThisWeek = (state.sessions || []).reduce((sum, s) => {
+    const prThisWeek = finished.reduce((sum, s) => {
       const age = Date.now() - new Date(s.date).getTime();
       return age <= 7 * 86400000 ? sum + (s.prCount || 0) : sum;
     }, 0);
@@ -76,13 +77,13 @@ export function RankedArena({ state, compact = false }: RankedArenaProps) {
         to: "/train",
       },
       {
-        label: sessionThisWeek >= 3 ? "Weekly consistency locked" : "Hit 3 workouts this week",
+        label: sessionThisWeek >= 3 ? "Weekly consistency locked" : "Hit 3 workouts in 7 days",
         reward: "+90 GRIT",
         done: sessionThisWeek >= 3,
         to: "/train",
       },
       {
-        label: prThisWeek > 0 ? "PR pressure applied" : "Set one PR this week",
+        label: prThisWeek > 0 ? "PR pressure applied" : "Set one PR in 7 days",
         reward: "+25 GRIT",
         done: prThisWeek > 0,
         to: "/profile",
@@ -141,7 +142,7 @@ export function RankedArena({ state, compact = false }: RankedArenaProps) {
           <div className="relative grid grid-cols-3 gap-2 mt-3">
             <MiniStat label="STREAK" value={`${streak}d`} icon={<Zap size={12} />} />
             <MiniStat label="OVR" value={String(fifa.overall)} icon={<Sparkles size={12} />} />
-            <MiniStat label="SESSIONS" value={String(state.sessions.length)} icon={<Target size={12} />} />
+            <MiniStat label="SESSIONS" value={String(state.sessions.filter((s) => s.endedAt).length)} icon={<Target size={12} />} />
           </div>
 
           <div className="relative mt-4 border-t border-white/10 pt-3">
@@ -241,7 +242,7 @@ export function RankedArena({ state, compact = false }: RankedArenaProps) {
           avatarDataUrl={state.profile?.avatarDataUrl}
           streak={streak}
           prs={buildHeadlinePRs(state)}
-          sessions={state.sessions.length}
+          sessions={state.sessions.filter((s) => s.endedAt).length}
           overall={fifa.overall}
           onClose={() => setShareOpen(false)}
         />
