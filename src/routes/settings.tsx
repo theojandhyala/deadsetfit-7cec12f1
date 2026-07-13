@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { ChevronLeft, Download, Upload, Bell, Droplets, Scale, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
+import { askConfirm } from "@/lib/confirm";
 import { useAppState } from "@/lib/storage";
 import { clearSessionDiagnostics, readSessionLogs } from "@/lib/session-diagnostics";
 
@@ -39,11 +40,17 @@ function SettingsPage() {
 
   function importData(file: File) {
     const r = new FileReader();
-    r.onload = () => {
+    r.onload = async () => {
       try {
         const parsed = JSON.parse(String(r.result));
         if (!parsed || typeof parsed !== "object") throw new Error("Invalid file");
-        if (!confirm("This will REPLACE all local data with the imported file. Continue?")) return;
+        const ok = await askConfirm({
+          title: "Replace local data?",
+          message: "Everything on this device is overwritten with the imported file.",
+          confirmLabel: "Replace",
+          danger: true,
+        });
+        if (!ok) return;
         set(() => parsed);
         toast.success("Data imported");
       } catch (e) {

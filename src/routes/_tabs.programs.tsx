@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useAppState } from "@/lib/storage";
 import { usePro } from "@/hooks/usePro";
 import { openPaywall } from "@/lib/paywall-events";
+import { askConfirm } from "@/lib/confirm";
 import type { DayKey, Program, ProgramExerciseRef, SplitType } from "@/lib/types";
 import { Plus, Check, Trash2, Lock } from "lucide-react";
 
@@ -434,8 +435,9 @@ function ProgramsPage() {
   function activate(id: string) {
     set((s) => ({ ...s, activeProgramId: id }));
   }
-  function remove(id: string) {
-    if (!confirm("Delete this program?")) return;
+  async function remove(id: string) {
+    const ok = await askConfirm({ title: "Delete this program?", confirmLabel: "Delete", danger: true });
+    if (!ok) return;
     set((s) => ({
       ...s,
       programs: s.programs.filter((p) => p.id !== id),

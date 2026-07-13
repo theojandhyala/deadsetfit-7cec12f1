@@ -15,6 +15,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { StateSync } from "../components/StateSync";
 import { UsernameGate } from "../components/UsernameGate";
 import { PaywallSheet } from "../components/PaywallSheet";
+import { ConfirmSheet } from "../components/ConfirmSheet";
 import { Toaster } from "../components/ui/sonner";
 import { ProProvider } from "../hooks/usePro";
 
@@ -201,6 +202,7 @@ function RootComponent() {
         <Outlet />
         {!isAuthRoute && <UsernameGate />}
         {!isAuthRoute && <PaywallSheet />}
+        <ConfirmSheet />
         <Toaster />
       </ProProvider>
     </QueryClientProvider>

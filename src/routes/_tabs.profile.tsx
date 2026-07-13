@@ -14,6 +14,7 @@ import {
   Heart,
 } from "lucide-react";
 import { useAppState, flushRemoteState } from "@/lib/storage";
+import { askConfirm, withDeadline } from "@/lib/confirm";
 import {
   clearSessionBackup,
   restoreSupabaseSession,
@@ -263,40 +264,53 @@ function ProfilePage() {
   async function logout() {
     toast.loading("Saving your data…", { id: "logout" });
     try {
-      // Push any unsaved local state to the server BEFORE auth is dropped.
-      if (p) {
-        await persist({ data: { public_stats: buildPublicStats(state) } }).catch(() => {});
-      }
-      await flushRemoteState();
+      // Push any unsaved local state to the server BEFORE auth is dropped —
+      // but never let a slow network hold the sign-out hostage.
+      await withDeadline(
+        (async () => {
+          if (p) {
+            await persist({ data: { public_stats: buildPublicStats(state) } }).catch(() => {});
+          }
+          await flushRemoteState();
+        })(),
+        5000,
+      );
     } finally {
       toast.dismiss("logout");
     }
     window.dispatchEvent(new CustomEvent("deadset:explicit-logout"));
     clearSessionBackup();
-    await supabase.auth.signOut();
+    try {
+      await withDeadline(supabase.auth.signOut(), 4000);
+    } catch {
+      // Local session is already cleared by the explicit-logout event.
+    }
     toast.success("Signed out — your data is saved");
     navigate({ to: "/auth", replace: true });
   }
 
-  function reset() {
-    if (!confirm("Reset all your DEADSET data on this device? Your account stays signed in."))
-      return;
+  async function reset() {
+    const ok = await askConfirm({
+      title: "Reset this device?",
+      message: "All DEADSET data on this device is wiped. Your account stays signed in.",
+      confirmLabel: "Reset",
+      danger: true,
+    });
+    if (!ok) return;
     localStorage.removeItem("grit_app_state_v1");
     navigate({ to: "/onboarding", replace: true });
   }
 
   async function deleteAccount() {
-    const ok = confirm(
-      "PERMANENTLY DELETE your DEADSET account?\n\n" +
-        "This erases your profile, posts, comments, follows, PRs and training history. " +
-        "It cannot be undone.",
-    );
+    const ok = await askConfirm({
+      title: "Delete your account?",
+      message:
+        "This erases your profile, posts, comments, follows, PRs and training history. It cannot be undone.",
+      confirmLabel: "Delete forever",
+      danger: true,
+      typedWord: "DELETE",
+    });
     if (!ok) return;
-    const confirm2 = prompt('Type "DELETE" to confirm:');
-    if (confirm2 !== "DELETE") {
-      toast.error("Cancelled — confirmation did not match");
-      return;
-    }
     try {
       await deleteAcct();
       try {
@@ -306,7 +320,11 @@ function ProfilePage() {
       }
       window.dispatchEvent(new CustomEvent("deadset:explicit-logout"));
       clearSessionBackup();
-      await supabase.auth.signOut();
+      try {
+        await withDeadline(supabase.auth.signOut(), 4000);
+      } catch {
+        /* session already dropped */
+      }
       toast.success("Account deleted");
       navigate({ to: "/auth", replace: true });
     } catch (e) {

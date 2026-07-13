@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { ArrowLeft, Loader2, UserPlus, UserCheck, Trophy, Flag, Ban } from "lucide-react";
 import { toast } from "sonner";
+import { askConfirm, askText } from "@/lib/confirm";
 import { getAthleteCard, toggleFollow } from "@/lib/social.functions";
 import { blockUser, unblockUser, isBlocked, reportContent } from "@/lib/account.functions";
 import { FifaCard } from "@/components/FifaCard";
@@ -63,13 +64,15 @@ function AthletePage() {
     if (!card || card.isMe) return;
     const next = !blocked;
     const verb = next ? "Block" : "Unblock";
-    if (
-      next &&
-      !confirm(
-        `${verb} ${card.username || "this athlete"}? They won't appear in your feed or search.`,
-      )
-    )
-      return;
+    if (next) {
+      const ok = await askConfirm({
+        title: `${verb} ${card.username || "this athlete"}?`,
+        message: "They won't appear in your feed or search.",
+        confirmLabel: verb,
+        danger: true,
+      });
+      if (!ok) return;
+    }
     setBlocked(next);
     try {
       if (next) await _block({ data: { userId: id } });
@@ -86,9 +89,12 @@ function AthletePage() {
 
   async function report() {
     if (!card || card.isMe) return;
-    const reason = prompt(
-      "Report this athlete. Briefly describe the issue (harassment, spam, fake account, etc.):",
-    );
+    const reason = await askText({
+      title: "Report this athlete",
+      message: "Briefly describe the issue — harassment, spam, fake account, etc.",
+      placeholder: "What happened?",
+      confirmLabel: "Report",
+    });
     if (!reason || !reason.trim()) return;
     try {
       await _report({ data: { userId: id, reason: reason.trim().slice(0, 500) } });

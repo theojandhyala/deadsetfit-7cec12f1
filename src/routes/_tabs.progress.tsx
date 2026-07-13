@@ -10,6 +10,7 @@ import { PRList } from "@/components/PRList";
 import { groupForMuscle } from "@/lib/pr-groups";
 import { usePro } from "@/hooks/usePro";
 import { openPaywall } from "@/lib/paywall-events";
+import { askConfirm } from "@/lib/confirm";
 import { PR_CATALOG, getPRValue } from "@/lib/fifa-stats";
 import { strengthStandard, repMaxTable, TIER_COLORS } from "@/lib/strength-standards";
 
@@ -99,8 +100,9 @@ function ProgressPage() {
   function deleteMeasurement(date: string) {
     set((s) => ({ ...s, measurements: s.measurements.filter((m) => m.date !== date) }));
   }
-  function deleteCheckIn(date: string) {
-    if (!confirm("Delete this photo?")) return;
+  async function deleteCheckIn(date: string) {
+    const ok = await askConfirm({ title: "Delete this photo?", confirmLabel: "Delete", danger: true });
+    if (!ok) return;
     set((s) => ({ ...s, checkIns: s.checkIns.filter((c) => c.date !== date) }));
     setCompare((c) => c.filter((d) => d !== date));
   }

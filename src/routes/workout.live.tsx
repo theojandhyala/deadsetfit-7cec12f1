@@ -8,6 +8,7 @@ import { defaultSchedule, isoDay, todayKey, plateBreakdown, warmupRamp } from "@
 import { topSetHistory, suggestNextWeight, type TopSet, type Suggestion } from "@/lib/progression";
 import { usePro } from "@/hooks/usePro";
 import { openPaywall } from "@/lib/paywall-events";
+import { askConfirm } from "@/lib/confirm";
 import { emitGritEarned } from "@/lib/grit-events";
 import { VideoModal } from "@/components/VideoModal";
 import { ShareCard } from "@/components/ShareCard";
@@ -507,8 +508,14 @@ function LiveWorkoutPage() {
     emitGritEarned(50, "WORKOUT COMPLETE", "quest");
   }
 
-  function discardWorkout() {
-    if (!confirm("Discard this workout?")) return;
+  async function discardWorkout() {
+    const ok = await askConfirm({
+      title: "Discard this workout?",
+      message: "Logged sets from this session are thrown away.",
+      confirmLabel: "Discard",
+      danger: true,
+    });
+    if (!ok) return;
     set((st) => ({
       ...st,
       sessions: st.sessions.filter((s) => s.id !== session!.id),
@@ -672,8 +679,15 @@ function LiveWorkoutPage() {
           Next Exercise
         </button>
         <button
-          onClick={() => {
-            if (totals.sets === 0 && !confirm("No sets logged — finish anyway?")) return;
+          onClick={async () => {
+            if (totals.sets === 0) {
+              const ok = await askConfirm({
+                title: "No sets logged",
+                message: "Finish anyway? The session counts for your streak but logs no volume.",
+                confirmLabel: "Finish",
+              });
+              if (!ok) return;
+            }
             finishWorkout();
           }}
           className="btn-grit"
