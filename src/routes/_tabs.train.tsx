@@ -570,32 +570,87 @@ function TrainPage() {
               className="input-grit mb-3"
             />
 
-            {/* Selected exercises */}
+            {/* Selected exercises — per-exercise allocation */}
             {(day?.exerciseIds?.length || 0) > 0 && (
               <>
-                <p className="label-cap mb-2">Selected ({day!.exerciseIds.length})</p>
-                <div className="flex flex-wrap gap-1.5 mb-3">
+                <p className="label-cap mb-2">
+                  Selected ({day!.exerciseIds.length}) · sets × reps × kg
+                </p>
+                <div className="flex flex-col gap-2 mb-3">
                   {day!.exerciseIds.map((id) => {
                     const ex = getExercise(id);
                     if (!ex) return null;
+                    const cfg = day?.exerciseConfig?.[id] ?? {};
+                    const patchCfg = (patch: Partial<{ sets?: number; reps?: string; weightKg?: number }>) =>
+                      set((s) => {
+                        const sched = { ...(s.schedule || schedule) };
+                        const cur = sched[selectedDay] || { label: day?.label || "REST", exerciseIds: [] };
+                        sched[selectedDay] = {
+                          ...cur,
+                          exerciseConfig: {
+                            ...(cur.exerciseConfig ?? {}),
+                            [id]: { ...(cur.exerciseConfig?.[id] ?? {}), ...patch },
+                          },
+                        };
+                        return { ...s, schedule: sched };
+                      });
                     return (
-                      <button
-                        key={id}
-                        onClick={() =>
-                          set((s) => {
-                            const sched = { ...(s.schedule || schedule) };
-                            const cur = sched[selectedDay]?.exerciseIds || [];
-                            sched[selectedDay] = {
-                              ...(sched[selectedDay] || { label: day?.label || "REST" }),
-                              exerciseIds: cur.filter((x) => x !== id),
-                            };
-                            return { ...s, schedule: sched };
-                          })
-                        }
-                        className="text-[10px] px-2.5 py-1.5 border border-accent-red text-accent-red uppercase font-bold tracking-wider flex items-center gap-1 rounded-full"
-                      >
-                        {ex.name} ×
-                      </button>
+                      <div key={id} className="border border-grit rounded-xl px-3 py-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-bold text-grit uppercase tracking-wide truncate">
+                            {ex.name}
+                          </p>
+                          <button
+                            onClick={() =>
+                              set((s) => {
+                                const sched = { ...(s.schedule || schedule) };
+                                const cur = sched[selectedDay]?.exerciseIds || [];
+                                sched[selectedDay] = {
+                                  ...(sched[selectedDay] || { label: day?.label || "REST" }),
+                                  exerciseIds: cur.filter((x) => x !== id),
+                                };
+                                return { ...s, schedule: sched };
+                              })
+                            }
+                            className="text-accent-red text-sm press px-1"
+                            aria-label={`Remove ${ex.name}`}
+                          >
+                            ×
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 mt-1.5">
+                          <input
+                            inputMode="numeric"
+                            defaultValue={cfg.sets ?? ""}
+                            onBlur={(e) => {
+                              const n = parseInt(e.target.value, 10);
+                              patchCfg({ sets: Number.isFinite(n) && n > 0 ? Math.min(12, n) : undefined });
+                            }}
+                            placeholder={`${day?.sets ?? ex.sets} sets`}
+                            className="input-grit px-2 py-1.5 text-xs"
+                            aria-label={`${ex.name} sets`}
+                          />
+                          <input
+                            defaultValue={cfg.reps ?? ""}
+                            maxLength={12}
+                            onBlur={(e) => patchCfg({ reps: e.target.value.trim() || undefined })}
+                            placeholder={`${day?.reps ?? ex.reps}`}
+                            className="input-grit px-2 py-1.5 text-xs"
+                            aria-label={`${ex.name} reps`}
+                          />
+                          <input
+                            inputMode="decimal"
+                            defaultValue={cfg.weightKg ?? ""}
+                            onBlur={(e) => {
+                              const n = Number(e.target.value.replace(/[^0-9.]/g, ""));
+                              patchCfg({ weightKg: Number.isFinite(n) && n > 0 ? n : undefined });
+                            }}
+                            placeholder="kg"
+                            className="input-grit px-2 py-1.5 text-xs"
+                            aria-label={`${ex.name} working weight`}
+                          />
+                        </div>
+                      </div>
                     );
                   })}
                 </div>

@@ -1,10 +1,13 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-import { X, Check, Play, Trophy, Share2, Flame, Calculator } from "lucide-react";
+import { X, Check, Play, Trophy, Share2, Flame, Calculator, Lock, TrendingUp } from "lucide-react";
 import { useAppState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
 import { defaultSchedule, isoDay, todayKey, plateBreakdown, warmupRamp } from "@/lib/calc";
+import { topSetHistory, suggestNextWeight, type TopSet, type Suggestion } from "@/lib/progression";
+import { usePro } from "@/hooks/usePro";
+import { openPaywall } from "@/lib/paywall-events";
 import { emitGritEarned } from "@/lib/grit-events";
 import { VideoModal } from "@/components/VideoModal";
 import { ShareCard } from "@/components/ShareCard";
@@ -75,12 +78,14 @@ function buildSession(
     programId: null,
     exercises: d.exerciseIds.map<WorkoutSessionExercise>((eid) => {
       const ex = getExercise(eid);
+      const cfg = d.exerciseConfig?.[eid];
       return {
         exerciseId: eid,
         name: ex?.name ?? eid,
         primary_muscles: ex?.muscleGroup ? [ex.muscleGroup] : [],
-        targetSets: d.sets ?? ex?.sets ?? 3,
-        targetReps: d.reps ?? ex?.reps ?? "8-12",
+        targetSets: cfg?.sets ?? d.sets ?? ex?.sets ?? 3,
+        targetReps: cfg?.reps ?? d.reps ?? ex?.reps ?? "8-12",
+        plannedWeightKg: cfg?.weightKg,
         sets: [],
       };
     }),
@@ -353,14 +358,34 @@ function LiveWorkoutPage() {
     [session],
   );
 
-  // Prefill: previous set of this exercise in this session, else the last
-  // logged set from the most recent session containing it, else empty.
+  const { isPro, loading: proLoading } = usePro();
+
+  // Progression data for the active exercise (Pro surfaces).
+  const activeExercise = session?.exercises[activeIdx];
+  const evolution = useMemo(
+    () => (activeExercise ? topSetHistory(state, activeExercise.exerciseId) : []),
+    [state, activeExercise],
+  );
+  const suggestion = useMemo(
+    () =>
+      activeExercise
+        ? suggestNextWeight(state, activeExercise.exerciseId, activeExercise.targetReps)
+        : null,
+    [state, activeExercise],
+  );
+
+  // Prefill priority: allocated weight from the schedule → previous set this
+  // session → last session containing the exercise → empty.
   const prefill = useMemo(() => {
     const ex = session?.exercises[activeIdx];
     if (!session || !ex) return { weight: "", reps: "" };
     const last = ex.sets[ex.sets.length - 1];
     if (last) return { weight: String(last.weight), reps: String(last.reps) };
-    return prefillFromHistory(state, session.id, ex.exerciseId);
+    const repsGuess = String(ex.targetReps).match(/\d+/)?.[0] ?? "";
+    if (ex.plannedWeightKg != null) return { weight: String(ex.plannedWeightKg), reps: repsGuess };
+    const hist = prefillFromHistory(state, session.id, ex.exerciseId);
+    if (hist.weight) return hist;
+    return { weight: "", reps: repsGuess };
   }, [state, session, activeIdx]);
 
   if (!session) {
@@ -594,6 +619,10 @@ function LiveWorkoutPage() {
           exercise={current}
           initialWeight={prefill.weight}
           initialReps={prefill.reps}
+          history={evolution}
+          suggestion={suggestion}
+          isProUser={isPro}
+          proLoading={proLoading}
           onLog={logSet}
         />
       </div>
@@ -687,8 +716,8 @@ function Timer({ startedAt }: { startedAt: string }) {
   const ss = String(secs % 60).padStart(2, "0");
   return (
     <div className="text-right">
-      <p className="label-cap text-[10px] text-grit-dim">ELAPSED</p>
-      <p className="display text-sm font-extrabold text-grit tabular-nums">
+      <p className="label-cap text-[10px] text-accent-red">ELAPSED</p>
+      <p className="display text-2xl font-extrabold text-grit tabular-nums leading-none">
         {mm}:{ss}
       </p>
     </div>
@@ -699,11 +728,19 @@ function SetLogger({
   exercise,
   initialWeight,
   initialReps,
+  history,
+  suggestion,
+  isProUser,
+  proLoading,
   onLog,
 }: {
   exercise: WorkoutSessionExercise;
   initialWeight: string;
   initialReps: string;
+  history: TopSet[];
+  suggestion: Suggestion | null;
+  isProUser: boolean;
+  proLoading: boolean;
   onLog: (weight: number, reps: number) => void;
 }) {
   // DOM-owned inputs (defaultValue + shadow state): React never rewrites the
@@ -712,20 +749,102 @@ function SetLogger({
   const [weight, setWeight] = useState(initialWeight);
   const [reps, setReps] = useState(initialReps);
   const [platesOpen, setPlatesOpen] = useState(false);
+  const weightRef = useRef<HTMLInputElement>(null);
   const weightNum = Number(weight.replace(/[^0-9.]/g, "")) || 0;
   const repsNum = Math.floor(Number(reps.replace(/[^0-9]/g, "")) || 0);
   const plates = platesOpen && weightNum >= 20 ? plateBreakdown(weightNum) : null;
   const ramp = exercise.sets.length === 0 && weightNum >= 30 ? warmupRamp(weightNum) : [];
   const canLog = weight.trim() !== "" && repsNum > 0;
+  const progressionLocked = !proLoading && !isProUser;
+
+  const logged = exercise.sets.length;
+  const planned = exercise.targetSets;
+  const pendingCount = Math.max(0, planned - logged - 1);
+  const plannedHint =
+    exercise.plannedWeightKg != null ? `${exercise.plannedWeightKg}kg` : weight || "—";
+
+  function applySuggestion() {
+    if (progressionLocked) {
+      openPaywall("progression");
+      return;
+    }
+    if (!suggestion) return;
+    setWeight(String(suggestion.weightKg));
+    if (weightRef.current) weightRef.current.value = String(suggestion.weightKg);
+  }
 
   return (
     <div className="mt-5 bg-grit-card border border-grit rounded-2xl p-4">
       <div className="flex items-center justify-between">
-        <p className="label-cap text-accent-red text-[10px]">LOG YOUR SETS</p>
+        <p className="label-cap text-accent-red text-[10px]">YOUR PLAN — LIVE</p>
         <p className="label-cap text-[10px] text-grit-dim">
-          {exercise.sets.length}/{exercise.targetSets} · {exercise.targetReps} reps
+          {logged}/{planned} · {exercise.targetReps} reps
+          {exercise.plannedWeightKg != null && ` · ${exercise.plannedWeightKg}kg`}
         </p>
       </div>
+
+      {history.length >= 2 && (
+        <button
+          type="button"
+          onClick={() => progressionLocked && openPaywall("progression")}
+          className="mt-3 w-full text-left border border-grit rounded-xl px-3 py-2 press"
+        >
+          <div className="flex items-center justify-between">
+            <span className="label-cap text-[9px] text-grit-dim flex items-center gap-1.5">
+              <TrendingUp size={11} className="text-accent-red" /> EVOLUTION
+            </span>
+            {progressionLocked && <Lock size={11} className="text-accent-red" />}
+          </div>
+          <div
+            className={
+              "mt-1.5 flex items-baseline gap-1.5 flex-wrap" +
+              (progressionLocked ? " blur-[5px] select-none" : "")
+            }
+            aria-hidden={progressionLocked || undefined}
+          >
+            {history.map((h, i) => (
+              <span key={h.date + i} className="flex items-baseline gap-1.5">
+                <span
+                  className={
+                    "display font-extrabold leading-none " +
+                    (i === history.length - 1 ? "text-lg text-accent-red" : "text-sm text-grit")
+                  }
+                >
+                  {h.weight}
+                </span>
+                {i < history.length - 1 && <span className="text-grit-dim text-[10px]">→</span>}
+              </span>
+            ))}
+            <span className="label-cap text-[8px] text-grit-dim ml-1">KG TOP SET</span>
+          </div>
+        </button>
+      )}
+
+      {suggestion && (
+        <button
+          type="button"
+          onClick={applySuggestion}
+          className="mt-2 w-full flex items-center justify-between border border-accent-red/40 bg-accent-red/10 rounded-xl px-3 py-2 press text-left"
+        >
+          <span>
+            <span className="label-cap text-[9px] text-accent-red block">
+              {progressionLocked ? "SMART SUGGESTION" : suggestion.kind === "up" ? "MOVE UP" : "HOLD & EARN IT"}
+            </span>
+            <span
+              className={
+                "text-xs text-grit font-bold" + (progressionLocked ? " blur-[5px] select-none" : "")
+              }
+            >
+              {suggestion.weightKg}kg — {suggestion.reason}
+            </span>
+          </span>
+          {progressionLocked ? (
+            <Lock size={13} className="text-accent-red shrink-0 ml-2" />
+          ) : (
+            <span className="label-cap text-[9px] text-accent-red shrink-0 ml-2">APPLY</span>
+          )}
+        </button>
+      )}
 
       {ramp.length > 0 && (
         <div className="mt-3 flex items-center gap-1.5 flex-wrap">
@@ -741,14 +860,17 @@ function SetLogger({
         </div>
       )}
 
-      {exercise.sets.length > 0 && (
+      {logged > 0 && (
         <div className="mt-3 space-y-1.5">
           {exercise.sets.map((s, i) => (
             <div
               key={i}
               className="flex items-center justify-between border border-grit rounded-xl px-3 py-2"
+              style={{ borderColor: s.isPR ? "rgba(230,50,34,.5)" : undefined }}
             >
-              <span className="label-cap text-[10px] text-grit-dim">SET {i + 1}</span>
+              <span className="label-cap text-[10px] text-grit-dim flex items-center gap-1.5">
+                <Check size={11} className="text-accent-red" /> SET {i + 1}
+              </span>
               <span className="display text-lg font-extrabold text-grit leading-none">
                 {s.weight > 0 ? `${s.weight} kg × ${s.reps}` : `${s.reps} reps`}
                 {s.isPR && <Flame size={14} className="inline ml-2 text-accent-red" />}
@@ -758,46 +880,68 @@ function SetLogger({
         </div>
       )}
 
-      <div className="grid grid-cols-[1fr_1fr_auto] gap-2 mt-3">
-        <div className="relative">
+      <div className="mt-3">
+        <p className="label-cap text-[9px] text-grit-dim mb-1.5">
+          {logged >= planned ? `EXTRA SET ${logged + 1}` : `SET ${logged + 1} OF ${planned}`}
+        </p>
+        <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
+          <div className="relative">
+            <input
+              ref={weightRef}
+              inputMode="decimal"
+              defaultValue={initialWeight}
+              onChange={(e) => setWeight(e.target.value)}
+              placeholder="kg"
+              className="input-grit pr-9"
+              aria-label="Weight (kg)"
+            />
+            <button
+              onClick={() => setPlatesOpen((v) => !v)}
+              className={`absolute right-1.5 top-1/2 -translate-y-1/2 p-1 press ${
+                platesOpen ? "text-accent-red" : "text-grit-dim"
+              }`}
+              aria-label="Plate calculator"
+            >
+              <Calculator size={16} />
+            </button>
+          </div>
           <input
-            inputMode="decimal"
-            defaultValue={initialWeight}
-            onChange={(e) => setWeight(e.target.value)}
-            placeholder="kg"
-            className="input-grit pr-9"
-            aria-label="Weight (kg)"
+            inputMode="numeric"
+            defaultValue={initialReps}
+            onChange={(e) => setReps(e.target.value)}
+            placeholder="reps"
+            className="input-grit"
+            aria-label="Reps"
           />
           <button
-            onClick={() => setPlatesOpen((v) => !v)}
-            className={`absolute right-1.5 top-1/2 -translate-y-1/2 p-1 press ${
-              platesOpen ? "text-accent-red" : "text-grit-dim"
-            }`}
-            aria-label="Plate calculator"
+            onClick={() => {
+              if (!canLog) return;
+              onLog(weightNum, repsNum);
+            }}
+            disabled={!canLog}
+            className="btn-grit px-4 disabled:opacity-40"
           >
-            <Calculator size={16} />
+            <Check size={16} className="mr-1" />
+            Log
           </button>
         </div>
-        <input
-          inputMode="numeric"
-          defaultValue={initialReps}
-          onChange={(e) => setReps(e.target.value)}
-          placeholder="reps"
-          className="input-grit"
-          aria-label="Reps"
-        />
-        <button
-          onClick={() => {
-            if (!canLog) return;
-            onLog(weightNum, repsNum);
-          }}
-          disabled={!canLog}
-          className="btn-grit px-4 disabled:opacity-40"
-        >
-          <Check size={16} className="mr-1" />
-          Log
-        </button>
       </div>
+
+      {pendingCount > 0 && (
+        <div className="mt-2 space-y-1.5 opacity-45">
+          {Array.from({ length: pendingCount }, (_, i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between border border-grit rounded-xl px-3 py-2"
+            >
+              <span className="label-cap text-[10px] text-grit-dim">SET {logged + 2 + i}</span>
+              <span className="text-xs text-grit-dim">
+                planned {plannedHint} × {exercise.targetReps}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {platesOpen && (
         <div className="mt-3 border border-grit rounded-xl px-3 py-2.5">
@@ -830,7 +974,7 @@ function SetLogger({
       )}
 
       <p className="text-xs text-grit-dim mt-3 leading-relaxed">
-        Log every working set — PRs are detected automatically against your history.
+        Tick off your plan set by set — PRs are detected automatically against your history.
       </p>
     </div>
   );

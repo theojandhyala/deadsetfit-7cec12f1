@@ -4,6 +4,8 @@ export type Equipment = "FULL_GYM" | "HOME_GYM" | "BODYWEIGHT";
 export type Gender = "MALE" | "FEMALE" | "OTHER";
 export type Weakness = "STRENGTH" | "CONSISTENCY" | "DIET" | "RECOVERY";
 
+export type FocusMuscle = "CHEST" | "BACK" | "SHOULDERS" | "ARMS" | "LEGS" | "CORE";
+
 export interface Profile {
   goal: Goal;
   experience: Experience;
@@ -18,6 +20,12 @@ export interface Profile {
   username?: string;
   avatarDataUrl?: string;
   startingWeightKg?: number;
+  /** Up to two muscle groups the lifter wants to prioritise */
+  focusMuscles?: FocusMuscle[];
+  /** Preferred session length — shapes how many exercises per day */
+  sessionMinutes?: 30 | 45 | 60 | 90;
+  /** Bodyweight goal, used for journey framing */
+  targetWeightKg?: number;
 }
 
 export type MuscleGroup =
@@ -52,11 +60,19 @@ export interface Exercise {
 
 export type DayKey = "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN";
 
+export interface ExercisePlan {
+  sets?: number;
+  reps?: string;
+  weightKg?: number;
+}
+
 export interface DaySchedule {
   label: string;
   exerciseIds: string[];
   sets?: number;
   reps?: string;
+  /** Per-exercise allocation (sets / reps / working weight) overriding day defaults */
+  exerciseConfig?: Record<string, ExercisePlan>;
 }
 
 export type Schedule = Record<DayKey, DaySchedule>;
@@ -141,6 +157,8 @@ export interface WorkoutSessionExercise {
   primary_muscles: string[];
   targetSets: number;
   targetReps: string;
+  /** Working weight allocated in the schedule, if any */
+  plannedWeightKg?: number;
   sets: CompletedSet[];
 }
 

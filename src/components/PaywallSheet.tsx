@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Crown, X, Check, Shield, BarChart3, ClipboardList, Hammer, Trophy, Swords, Bell, HeartPulse, Apple, Camera, Medal } from "lucide-react";
+import { Crown, X, Check, Shield, BarChart3, ClipboardList, Hammer, Trophy, Swords, Bell, HeartPulse, Apple, Camera, Medal, TrendingUp } from "lucide-react";
 import { onPaywall, type PaywallFeature } from "@/lib/paywall-events";
 import { detectCountry, currencyForCountry, CURRENCY_META, type SupportedCurrency } from "@/lib/currency";
 
@@ -117,6 +117,16 @@ const FEATURE_PITCH: Record<
       "Bragging rights that show on your card",
     ],
     icon: Medal,
+  },
+  progression: {
+    title: "Progression Intelligence",
+    tagline: "Know the next weight before you touch the bar.",
+    bullets: [
+      "Weight evolution for every lift, session by session",
+      "Next-weight suggestions when you beat your plan",
+      "Double-progression logic — hit the reps, earn the plates",
+    ],
+    icon: TrendingUp,
   },
 };
 

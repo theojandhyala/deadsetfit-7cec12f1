@@ -85,6 +85,33 @@ export function defaultSchedule(p: Profile) {
   else if (d === 5) plan = [PUSH, PULL, LEGS, UPPER, LOWER, REST, REST];
   else plan = [PUSH, PULL, LEGS, SHO, ARMS, CORE, REST];
 
+  // Personalisation: bias the split toward the lifter's focus muscles by
+  // appending one extra exercise on the days that already hit that muscle.
+  const FOCUS_EXTRA: Record<string, { id: string; days: string[] }> = {
+    CHEST: { id: "cable-fly", days: ["PUSH", "UPPER", "FULL BODY", "CHEST"] },
+    BACK: { id: "seated-row", days: ["PULL", "UPPER", "FULL BODY"] },
+    SHOULDERS: { id: "lateral-raise", days: ["PUSH", "UPPER", "SHOULDERS", "FULL BODY"] },
+    ARMS: { id: "hammer-curl", days: ["PULL", "UPPER", "ARMS"] },
+    LEGS: { id: "leg-press", days: ["LEGS", "LOWER", "FULL BODY"] },
+    CORE: { id: "plank", days: ["LEGS", "LOWER", "CORE", "FULL BODY"] },
+  };
+  for (const focus of p.focusMuscles ?? []) {
+    const extra = FOCUS_EXTRA[focus];
+    if (!extra) continue;
+    for (const day of plan) {
+      if (extra.days.some((k) => day.label.includes(k)) && !day.ids.includes(extra.id)) {
+        day.ids = [...day.ids, extra.id];
+      }
+    }
+  }
+
+  // Session length shapes volume: cap exercises per training day.
+  const cap =
+    p.sessionMinutes === 30 ? 3 : p.sessionMinutes === 45 ? 4 : p.sessionMinutes === 90 ? 7 : 5;
+  for (const day of plan) {
+    if (day.ids.length > cap) day.ids = day.ids.slice(0, cap);
+  }
+
   const days: ("MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN")[] = [
     "MON",
     "TUE",

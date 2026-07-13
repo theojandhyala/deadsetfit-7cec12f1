@@ -5,12 +5,13 @@ import { toast } from "sonner";
 import { Check, Zap } from "lucide-react";
 import { GritLogo } from "@/components/GritLogo";
 import { getState, setLocalStateOwner, setState, waitForRemoteState } from "@/lib/storage";
-import { defaultSchedule } from "@/lib/calc";
+import { calculateCalories, calculateMacros, defaultSchedule } from "@/lib/calc";
+import { strengthStandard, TIER_COLORS } from "@/lib/strength-standards";
 import { getExercise } from "@/lib/exercises";
 import { getMyProfile, saveProfile } from "@/lib/profile.functions";
 import { saveUserState } from "@/lib/user-state.functions";
 import { profileFromAccount, profileQuestionsComplete, withTimeout } from "@/lib/account-restore";
-import type { Equipment, Experience, Gender, Goal, Profile, Weakness } from "@/lib/types";
+import type { Equipment, Experience, FocusMuscle, Gender, Goal, Profile, Weakness } from "@/lib/types";
 import { buildPublicStats } from "@/lib/fifa-stats";
 
 export const Route = createFileRoute("/onboarding")({
@@ -23,17 +24,21 @@ type Step =
   | "goal"
   | "days"
   | "equipment"
+  | "focus"
+  | "session"
   | "schedule"
   | "experience"
   | "age"
   | "weight"
   | "height"
   | "gender"
+  | "target"
   | "injuries"
   | "weakness"
   | "prs"
   | "username"
-  | "photo";
+  | "photo"
+  | "blueprint";
 
 type Mode = "GENERATE" | "BUILD";
 
@@ -41,7 +46,9 @@ function orderFor(mode: Mode | null): Step[] {
   const base: Step[] = ["mode"];
   if (!mode) return base;
   const schedule: Step[] =
-    mode === "GENERATE" ? ["goal", "days", "equipment", "schedule"] : ["goal", "days", "equipment"];
+    mode === "GENERATE"
+      ? ["goal", "days", "equipment", "focus", "session", "schedule"]
+      : ["goal", "days", "equipment", "focus", "session"];
   return [
     ...base,
     ...schedule,
@@ -50,11 +57,13 @@ function orderFor(mode: Mode | null): Step[] {
     "weight",
     "height",
     "gender",
+    "target",
     "injuries",
     "weakness",
     "prs",
     "username",
     "photo",
+    "blueprint",
   ];
 }
 
@@ -268,6 +277,32 @@ function Onboarding() {
         {step === "injuries" && (
           <Injuries onSubmit={(t) => next({ injuries: t })} onSkip={() => next({ injuries: "" })} />
         )}
+        {step === "focus" && (
+          <FocusStep
+            onSubmit={(muscles) => next({ focusMuscles: muscles })}
+            onSkip={() => next({ focusMuscles: [] })}
+          />
+        )}
+        {step === "session" && (
+          <Choice
+            title="How long are your sessions?"
+            options={[
+              { v: "30", l: "30 min — in and out" },
+              { v: "45", l: "45 min — focused" },
+              { v: "60", l: "60 min — standard" },
+              { v: "90", l: "90 min — the works" },
+            ]}
+            onPick={(v) => next({ sessionMinutes: Number(v) as 30 | 45 | 60 | 90 })}
+          />
+        )}
+        {step === "target" && (
+          <TargetStep
+            currentKg={draft.weightKg}
+            goal={draft.goal}
+            onSubmit={(n) => next({ targetWeightKg: n })}
+            onSkip={() => next({})}
+          />
+        )}
         {step === "weakness" && (
           <Choice
             title="Your biggest weakness?"
@@ -285,6 +320,7 @@ function Onboarding() {
         {step === "photo" && (
           <PhotoStep onSubmit={(url) => next({ avatarDataUrl: url })} onSkip={() => next({})} />
         )}
+        {step === "blueprint" && <BlueprintStep draft={draft} onEnter={() => next({})} />}
       </div>
     </div>
   );
@@ -654,6 +690,227 @@ function PRStep({ onContinue }: { onContinue: () => void }) {
         </button>
         <button onClick={onContinue} className="btn-ghost">
           Skip
+        </button>
+      </div>
+    </>
+  );
+}
+
+function FocusStep({
+  onSubmit,
+  onSkip,
+}: {
+  onSubmit: (muscles: FocusMuscle[]) => void;
+  onSkip: () => void;
+}) {
+  const [picked, setPicked] = useState<FocusMuscle[]>([]);
+  const OPTIONS: { v: FocusMuscle; l: string }[] = [
+    { v: "CHEST", l: "Chest" },
+    { v: "BACK", l: "Back" },
+    { v: "SHOULDERS", l: "Shoulders" },
+    { v: "ARMS", l: "Arms" },
+    { v: "LEGS", l: "Legs" },
+    { v: "CORE", l: "Core" },
+  ];
+  function toggle(m: FocusMuscle) {
+    setPicked((cur) =>
+      cur.includes(m) ? cur.filter((x) => x !== m) : cur.length < 2 ? [...cur, m] : [cur[1], m],
+    );
+  }
+  return (
+    <>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">
+        What do you want to grow?
+      </h1>
+      <p className="text-sm text-[#8a8a8a] mb-6">
+        Pick up to two priority muscles. Your split gets extra volume where you want it.
+      </p>
+      <div className="grid grid-cols-2 gap-2 mb-6">
+        {OPTIONS.map((o) => {
+          const active = picked.includes(o.v);
+          return (
+            <button
+              key={o.v}
+              onClick={() => toggle(o.v)}
+              className="border p-4 text-left press"
+              style={{
+                borderColor: active ? "#e63222" : "#262626",
+                background: active ? "rgba(230,50,34,0.1)" : "#141414",
+              }}
+            >
+              <p className="display text-lg font-extrabold uppercase text-grit">{o.l}</p>
+              <p className="label-cap text-[9px] mt-0.5" style={{ color: active ? "#e63222" : "#8a8a8a" }}>
+                {active ? "PRIORITY" : "TAP TO PICK"}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-auto flex flex-col gap-3">
+        <button
+          onClick={() => onSubmit(picked)}
+          disabled={picked.length === 0}
+          className="btn-grit disabled:opacity-40"
+        >
+          Continue
+        </button>
+        <button onClick={onSkip} className="btn-ghost">
+          No preference
+        </button>
+      </div>
+    </>
+  );
+}
+
+function TargetStep({
+  currentKg,
+  goal,
+  onSubmit,
+  onSkip,
+}: {
+  currentKg?: number;
+  goal?: Goal;
+  onSubmit: (n: number) => void;
+  onSkip: () => void;
+}) {
+  const [v, setV] = useState("");
+  const n = Number(v);
+  const valid = Number.isFinite(n) && n >= 30 && n <= 250;
+  const hint =
+    goal === "BULK"
+      ? "Where do you want the scale in 6 months?"
+      : goal === "CUT"
+        ? "What weight are you cutting to?"
+        : "A number to aim at keeps the log honest.";
+  return (
+    <>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">Target weight</h1>
+      <p className="text-sm text-[#8a8a8a] mb-6">
+        {hint}
+        {currentKg ? ` You're at ${currentKg}kg now.` : ""}
+      </p>
+      <div className="flex items-center gap-3 mb-6">
+        <input
+          value={v}
+          onChange={(e) => setV(e.target.value.replace(/[^0-9.]/g, ""))}
+          inputMode="decimal"
+          placeholder={currentKg ? String(currentKg) : "80"}
+          className="input-grit text-2xl display font-extrabold"
+        />
+        <span className="label-cap text-grit-dim">kg</span>
+      </div>
+      <div className="mt-auto flex flex-col gap-3">
+        <button onClick={() => valid && onSubmit(n)} disabled={!valid} className="btn-grit disabled:opacity-40">
+          Continue
+        </button>
+        <button onClick={onSkip} className="btn-ghost">
+          Skip
+        </button>
+      </div>
+    </>
+  );
+}
+
+function BlueprintStep({ draft, onEnter }: { draft: Partial<Profile>; onEnter: () => void }) {
+  const p = draft as Profile;
+  const calories = p.weightKg && p.heightCm && p.age ? calculateCalories(p) : 0;
+  const macros = calories ? calculateMacros(p, calories) : null;
+  const manualPRs = getState().manualPRs ?? {};
+  const lifts = (
+    [
+      { id: "bench-press", label: "Bench" },
+      { id: "squat", label: "Squat" },
+      { id: "deadlift", label: "Deadlift" },
+    ] as const
+  )
+    .map((l) => {
+      const pr = manualPRs[l.id];
+      const oneRm = pr?.value ?? 0;
+      const std =
+        oneRm && p.weightKg ? strengthStandard(oneRm, p.weightKg, l.id, p.gender) : null;
+      return { ...l, oneRm, std };
+    })
+    .filter((l) => l.std);
+  const program =
+    p.experience === "BEGINNER"
+      ? "StrongLifts 5x5"
+      : p.experience === "ADVANCED"
+        ? (p.daysPerWeek ?? 4) >= 6
+          ? "Arnold Split"
+          : "nSuns 5/3/1"
+        : p.goal === "BULK"
+          ? "PHUL"
+          : "5/3/1 BBB";
+  const focus = (p.focusMuscles ?? []).join(" + ");
+  const delta =
+    p.targetWeightKg && p.weightKg ? Math.round((p.targetWeightKg - p.weightKg) * 10) / 10 : null;
+
+  return (
+    <>
+      <p className="label-cap text-accent-red text-[10px] mb-1">BUILT FROM YOUR ANSWERS</p>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-5">Your blueprint</h1>
+      <div className="flex flex-col gap-2 mb-6">
+        <div className="bg-grit-card border border-grit p-4">
+          <p className="label-cap text-[9px] text-grit-dim">THE WEEK</p>
+          <p className="text-sm text-grit font-bold mt-1">
+            {p.daysPerWeek} days · {p.sessionMinutes ?? 60} min sessions
+            {focus && ` · extra ${focus.toLowerCase()}`}
+          </p>
+        </div>
+        {calories > 0 && macros && (
+          <div className="bg-grit-card border border-grit p-4">
+            <p className="label-cap text-[9px] text-grit-dim">THE FUEL</p>
+            <p className="text-sm text-grit font-bold mt-1">
+              {calories} kcal · {macros.protein}g protein a day
+              {delta !== null && delta !== 0 && (
+                <span className="text-grit-dim font-normal">
+                  {" "}
+                  — {Math.abs(delta)}kg to {delta > 0 ? "gain" : "drop"}
+                </span>
+              )}
+            </p>
+          </div>
+        )}
+        {lifts.length > 0 && (
+          <div className="bg-grit-card border border-grit p-4">
+            <p className="label-cap text-[9px] text-grit-dim mb-2">WHERE YOU STAND</p>
+            <div className="flex flex-col gap-1.5">
+              {lifts.map((l) => (
+                <div key={l.id} className="flex items-center justify-between">
+                  <span className="text-xs text-grit font-bold">
+                    {l.label} {l.oneRm}kg
+                  </span>
+                  <span
+                    className="label-cap text-[9px] rounded px-1.5 border"
+                    style={{
+                      color: TIER_COLORS[l.std!.tier],
+                      borderColor: `${TIER_COLORS[l.std!.tier]}66`,
+                    }}
+                  >
+                    {l.std!.tier}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className="bg-grit-card border border-accent-red/40 p-4">
+          <p className="label-cap text-[9px] text-accent-red">RECOMMENDED PROGRAM</p>
+          <p className="text-sm text-grit font-bold mt-1">
+            {program}
+            <span className="label-cap text-[8px] text-accent-red border border-accent-red/40 rounded px-1 ml-2">
+              PRO
+            </span>
+          </p>
+          <p className="text-[11px] text-grit-dim mt-1">
+            Matched to your experience, goal and week. Find it in Programs.
+          </p>
+        </div>
+      </div>
+      <div className="mt-auto">
+        <button onClick={onEnter} className="btn-grit w-full">
+          <Zap size={16} className="mr-2" />
+          Enter DEADSET
         </button>
       </div>
     </>
