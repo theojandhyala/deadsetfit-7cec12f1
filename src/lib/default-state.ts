@@ -19,4 +19,5 @@ export const DEFAULT_STATE: AppState = {
   manualPRs: {},
   units: "kg",
   remindersEnabled: true,
+  streakArmor: { shields: 0, lastRefillMonth: "", usedDates: [] },
 };

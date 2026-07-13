@@ -163,6 +163,15 @@ export interface ChallengeRecord {
   date: string;
 }
 
+export interface StreakArmor {
+  /** Shields remaining this month */
+  shields: number;
+  /** "YYYY-MM" of the last monthly refill */
+  lastRefillMonth: string;
+  /** ISO days that were saved by a shield */
+  usedDates: string[];
+}
+
 export interface AppState {
   profile: Profile | null;
   schedule: Schedule | null;
@@ -183,4 +192,5 @@ export interface AppState {
   manualPRs?: Record<string, { value: number; reps?: number; date: string }>;
   units?: "kg" | "lb";
   remindersEnabled?: boolean;
+  streakArmor?: StreakArmor;
 }

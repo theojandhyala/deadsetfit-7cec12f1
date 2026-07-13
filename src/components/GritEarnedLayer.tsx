@@ -57,7 +57,7 @@ function GritBurst({ event }: { event: GritAnimationEvent }) {
           <span className="display block text-2xl font-black leading-none text-grit">
             +{event.amount}
             <span className="ml-1 text-xs tracking-[0.18em] text-accent-red">
-              {accent ? "PR GRIT" : "GRIT"}
+              {accent ? "PR GRIT" : event.kind === "streak" ? "DAY STREAK" : "GRIT"}
             </span>
           </span>
         </span>

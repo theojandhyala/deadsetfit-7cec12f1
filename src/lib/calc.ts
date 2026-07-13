@@ -274,3 +274,54 @@ export function calculateGritScore(state: AppState): GritScoreBreakdown {
     total: Math.max(0, Math.min(1000, raw)),
   };
 }
+
+// === Plate math ===
+export const BAR_KG = 20;
+export const PLATE_SIZES_KG = [25, 20, 15, 10, 5, 2.5, 1.25];
+
+export interface PlateBreakdown {
+  /** Plates per side, heaviest first */
+  perSide: number[];
+  /** Weight that couldn't be loaded with standard plates */
+  remainderKg: number;
+  barKg: number;
+}
+
+export function plateBreakdown(totalKg: number, barKg = BAR_KG): PlateBreakdown | null {
+  if (!Number.isFinite(totalKg) || totalKg < barKg) return null;
+  let remaining = (totalKg - barKg) / 2;
+  const perSide: number[] = [];
+  for (const plate of PLATE_SIZES_KG) {
+    while (remaining >= plate - 1e-9) {
+      perSide.push(plate);
+      remaining -= plate;
+    }
+  }
+  return { perSide, remainderKg: Math.round(remaining * 2 * 100) / 100, barKg };
+}
+
+// === Warm-up ramp ===
+export interface WarmupSet {
+  weight: number;
+  reps: number;
+  pct: number;
+}
+
+/** Suggested warm-up sets leading into a working weight (kg). */
+export function warmupRamp(workingKg: number): WarmupSet[] {
+  if (!Number.isFinite(workingKg) || workingKg <= BAR_KG) return [];
+  const round = (n: number) => Math.max(BAR_KG, Math.round(n / 2.5) * 2.5);
+  const steps = [
+    { pct: 0.4, reps: 10 },
+    { pct: 0.6, reps: 6 },
+    { pct: 0.8, reps: 3 },
+  ];
+  const out: WarmupSet[] = [];
+  for (const s of steps) {
+    const weight = round(workingKg * s.pct);
+    if (weight >= workingKg) continue;
+    if (out.some((o) => o.weight === weight)) continue;
+    out.push({ weight, reps: s.reps, pct: s.pct });
+  }
+  return out;
+}

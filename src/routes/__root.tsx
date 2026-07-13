@@ -14,6 +14,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { StateSync } from "../components/StateSync";
 import { UsernameGate } from "../components/UsernameGate";
+import { PaywallSheet } from "../components/PaywallSheet";
 import { Toaster } from "../components/ui/sonner";
 import { ProProvider } from "../hooks/usePro";
 
@@ -199,6 +200,7 @@ function RootComponent() {
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
         {!isAuthRoute && <UsernameGate />}
+        {!isAuthRoute && <PaywallSheet />}
         <Toaster />
       </ProProvider>
     </QueryClientProvider>

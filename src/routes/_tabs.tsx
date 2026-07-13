@@ -16,8 +16,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { restoreSupabaseSession } from "@/integrations/supabase/client";
 import { getMyProfile } from "@/lib/profile.functions";
 import { profileFromAccount, profileQuestionsComplete, withTimeout } from "@/lib/account-restore";
-import { calculateGritScore, defaultSchedule, gritBadge } from "@/lib/calc";
+import { calculateGritScore, calculateStreak, defaultSchedule, gritBadge } from "@/lib/calc";
 import { emitGritEarned } from "@/lib/grit-events";
+import { runStreakArmor } from "@/lib/streak-armor";
+import { usePro } from "@/hooks/usePro";
 
 export const Route = createFileRoute("/_tabs")({
   component: TabsLayout,
@@ -26,7 +28,8 @@ export const Route = createFileRoute("/_tabs")({
 function TabsLayout() {
   const navigate = useNavigate();
   const getProfile = getMyProfile;
-  const [state] = useAppState();
+  const [state, set] = useAppState();
+  const { isPro, loading: proLoading } = usePro();
   // Start ready=true if local state already has a profile — render INSTANTLY
   // on hot refresh / navigation; remote sync continues in the background.
   const [ready, setReady] = useState(false);
@@ -139,6 +142,17 @@ function TabsLayout() {
       previousBadge && previousBadge !== badge ? "rank" : "grit",
     );
   }, [ready, state]);
+
+  // Streak Armor: monthly shield refill + auto-rescue of a missed day (Pro).
+  useEffect(() => {
+    if (!ready || proLoading || !isPro || !state.profile) return;
+    const result = runStreakArmor(getState(), isPro);
+    if (!result) return;
+    set(() => result.next);
+    if (result.consumedDate) {
+      emitGritEarned(calculateStreak(result.next.completedDates), "STREAK ARMOR USED", "streak");
+    }
+  }, [ready, proLoading, isPro, state.profile, set, state.completedDates]);
 
   if (!ready) {
     return (
