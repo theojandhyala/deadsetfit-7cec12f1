@@ -56,11 +56,11 @@ function DietPage() {
   }, [state.hydrationAlertsEnabled, state.waterTargetMl, state.water]);
 
   function addFood() {
-    const c = Number(cals); if (!name || !c) return;
+    if (!name) return;
     const item: FoodLogItem = {
       date: today,
       name,
-      calories: c,
+      calories: Number(cals) || 0,
       protein: Number(protein) || 0,
       carbs: Number(carbs) || 0,
       fats: Number(fats) || 0,
@@ -396,7 +396,7 @@ function DietPage() {
           {/* Quick input row */}
           <div className="grid grid-cols-2 gap-2 mb-2">
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Food" className="input-grit col-span-2" />
-            <input inputMode="numeric" value={cals} onChange={(e) => setCals(e.target.value.replace(/[^0-9]/g, ""))} placeholder="kcal" className="input-grit" />
+            <input inputMode="numeric" value={cals} onChange={(e) => setCals(e.target.value.replace(/[^0-9]/g, ""))} placeholder="kcal (optional)" className="input-grit" />
             <input inputMode="numeric" value={protein} onChange={(e) => setProtein(e.target.value.replace(/[^0-9]/g, ""))} placeholder="protein g" className="input-grit" />
             <input inputMode="numeric" value={carbs} onChange={(e) => setCarbs(e.target.value.replace(/[^0-9]/g, ""))} placeholder="carbs g" className="input-grit" />
             <input inputMode="numeric" value={fats} onChange={(e) => setFats(e.target.value.replace(/[^0-9]/g, ""))} placeholder="fats g" className="input-grit" />
