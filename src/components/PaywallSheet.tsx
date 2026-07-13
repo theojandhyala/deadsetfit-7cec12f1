@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Crown, X, Check, Shield, BarChart3, ClipboardList, Hammer, Trophy, Swords, Bell } from "lucide-react";
+import { Crown, X, Check, Shield, BarChart3, ClipboardList, Hammer, Trophy, Swords, Bell, HeartPulse, Apple, Camera, Medal } from "lucide-react";
 import { onPaywall, type PaywallFeature } from "@/lib/paywall-events";
 import { detectCountry, currencyForCountry, CURRENCY_META, type SupportedCurrency } from "@/lib/currency";
 
@@ -77,6 +77,46 @@ const FEATURE_PITCH: Record<
       "Quiet by default — loud when it matters",
     ],
     icon: Bell,
+  },
+  recovery: {
+    title: "Muscle Recovery Tracking",
+    tagline: "Know what's fresh before you load the bar.",
+    bullets: [
+      "Per-muscle recovery bars from your real training",
+      "Volume-aware recovery windows, not guesses",
+      "Train what's ready, spare what's fried",
+    ],
+    icon: HeartPulse,
+  },
+  nutrition: {
+    title: "Advanced Nutrition",
+    tagline: "See the week, not just the plate.",
+    bullets: [
+      "7-day calorie and macro averages",
+      "Protein per kg of bodyweight, tracked daily",
+      "Macro split and target-hit consistency",
+    ],
+    icon: Apple,
+  },
+  photos: {
+    title: "Photo Comparison",
+    tagline: "Proof you can see.",
+    bullets: [
+      "Side-by-side any two check-ins",
+      "Date and bodyweight delta on every compare",
+      "Your whole timeline, one swipe apart",
+    ],
+    icon: Camera,
+  },
+  challenges: {
+    title: "Elite Challenges",
+    tagline: "The tests most lifters never attempt.",
+    bullets: [
+      "Pro-exclusive ELITE tier with big XP",
+      "Exclusive badges for your trophy case",
+      "Bragging rights that show on your card",
+    ],
+    icon: Medal,
   },
 };
 

@@ -9,7 +9,18 @@ interface TrophyItem {
   desc: string;
   icon: string;
   unlocked: boolean;
+  /** Pro-exclusive badge — only earnable with a Pro feature */
+  pro?: boolean;
 }
+
+/** ELITE challenge targets (mirrors the Pro tier in the challenges catalog). */
+const ELITE_TARGETS: Record<string, number> = {
+  "elite-pushups-100": 100,
+  "elite-plank-10min": 600,
+  "elite-pullups-21": 21,
+  "elite-wallsit-5min": 300,
+  "elite-squats-500": 1800,
+};
 
 export function TrophyCase({ state }: { state: AppState }) {
   const trophies = useMemo<TrophyItem[]>(() => {
@@ -103,9 +114,44 @@ export function TrophyCase({ state }: { state: AppState }) {
       {
         id: "deadset-elite",
         label: "DEADSET ELITE",
-        desc: "10,000 Grit pts",
+        desc: "Hit 1,000 Grit — the cap",
         icon: "💎",
-        unlocked: grit >= 10000,
+        unlocked: grit >= 1000,
+      },
+      // === Pro-exclusive badges ===
+      {
+        id: "armored",
+        label: "ARMORED",
+        desc: "Streak saved by Streak Armor",
+        icon: "🛡️",
+        unlocked: (state.streakArmor?.usedDates.length ?? 0) >= 1,
+        pro: true,
+      },
+      {
+        id: "elite-challenger",
+        label: "ELITE CHALLENGER",
+        desc: "Beat an ELITE challenge",
+        icon: "🏅",
+        unlocked: (state.challengeRecords ?? []).some(
+          (r) => ELITE_TARGETS[r.challengeId] !== undefined && r.value >= ELITE_TARGETS[r.challengeId],
+        ),
+        pro: true,
+      },
+      {
+        id: "pr-machine",
+        label: "PR MACHINE",
+        desc: "25 PRs broken",
+        icon: "🚀",
+        unlocked: totalPRs >= 25,
+        pro: true,
+      },
+      {
+        id: "quarter-ton",
+        label: "QUARTER MILLION",
+        desc: "250,000kg lifted",
+        icon: "🗿",
+        unlocked: totalVolume >= 250000,
+        pro: true,
       },
     ];
   }, [state]);
@@ -126,12 +172,17 @@ export function TrophyCase({ state }: { state: AppState }) {
         {trophies.map((t) => (
           <div
             key={t.id}
-            className="bg-grit-card border p-2.5 flex flex-col items-center text-center"
+            className="bg-grit-card border p-2.5 flex flex-col items-center text-center relative"
             style={{
-              borderColor: t.unlocked ? "#3a1410" : "#262626",
+              borderColor: t.unlocked ? "#3a1410" : t.pro ? "#2a1a3a" : "#262626",
               opacity: t.unlocked ? 1 : 0.45,
             }}
           >
+            {t.pro && (
+              <span className="absolute top-1 right-1 label-cap text-[7px] text-accent-red border border-accent-red/40 rounded px-1">
+                PRO
+              </span>
+            )}
             <span
               className="text-2xl mb-1"
               style={{ filter: t.unlocked ? "none" : "grayscale(1)" }}

@@ -5,6 +5,9 @@ import { Loader2, Plus, ScanBarcode, Droplets, Bell, BellOff, Trash2, Target, Ut
 import { useAppState } from "@/lib/storage";
 import { calculateCalories, calculateMacros, isoDay } from "@/lib/calc";
 import { lookupBarcode } from "@/lib/diet.functions";
+import { usePro } from "@/hooks/usePro";
+import { openPaywall } from "@/lib/paywall-events";
+import { Lock } from "lucide-react";
 import type { FoodLogItem } from "@/lib/types";
 
 export const Route = createFileRoute("/_tabs/diet")({
@@ -35,6 +38,45 @@ function DietPage() {
   const eaten = state.foodLog.filter((f) => f.date === today);
   const totals = eaten.reduce((a, f) => ({ c: a.c + f.calories, p: a.p + f.protein, ca: a.ca + f.carbs, fa: a.fa + f.fats }), { c:0, p:0, ca:0, fa:0 });
   const waterToday = state.water.filter(w => w.date === today).reduce((s, w) => s + w.ml, 0);
+
+  const { isPro, loading: proLoading } = usePro();
+  const nutritionLocked = !proLoading && !isPro;
+
+  // Advanced nutrition: last-7-day aggregates from the food log (Pro).
+  const week = useMemo(() => {
+    const days = [...Array(7)].map((_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      return isoDay(d);
+    });
+    const perDay = days.map((day) => {
+      const items = state.foodLog.filter((f) => f.date === day);
+      return items.reduce(
+        (a, f) => ({ c: a.c + f.calories, p: a.p + f.protein, ca: a.ca + f.carbs, fa: a.fa + f.fats, logged: true }),
+        { c: 0, p: 0, ca: 0, fa: 0, logged: items.length > 0 },
+      );
+    });
+    const loggedDays = perDay.filter((d) => d.logged);
+    const n = Math.max(1, loggedDays.length);
+    const avg = {
+      c: Math.round(loggedDays.reduce((s, d) => s + d.c, 0) / n),
+      p: Math.round(loggedDays.reduce((s, d) => s + d.p, 0) / n),
+      ca: Math.round(loggedDays.reduce((s, d) => s + d.ca, 0) / n),
+      fa: Math.round(loggedDays.reduce((s, d) => s + d.fa, 0) / n),
+    };
+    const calHits = perDay.filter((d) => d.logged && d.c >= calories * 0.9 && d.c <= calories * 1.12).length;
+    const proteinHits = perDay.filter((d) => d.logged && d.p >= macros.protein * 0.9).length;
+    const macroKcal = avg.p * 4 + avg.ca * 4 + avg.fa * 9;
+    const split = macroKcal > 0
+      ? {
+          p: Math.round(((avg.p * 4) / macroKcal) * 100),
+          ca: Math.round(((avg.ca * 4) / macroKcal) * 100),
+          fa: Math.round(((avg.fa * 9) / macroKcal) * 100),
+        }
+      : null;
+    const proteinPerKg = profile?.weightKg ? Math.round((avg.p / profile.weightKg) * 100) / 100 : null;
+    return { avg, calHits, proteinHits, split, proteinPerKg, loggedDays: loggedDays.length };
+  }, [state.foodLog, calories, macros.protein, profile?.weightKg]);
 
   // Hydration alerts — gentle nudge every 90 min if behind pace during waking hours
   useEffect(() => {
@@ -191,6 +233,97 @@ function DietPage() {
           target={calories}
           goal={profile?.goal}
         />
+      </section>
+
+      {/* Advanced Nutrition (Pro) */}
+      <section className="deadset-section">
+        <div className="bg-grit-card border border-grit rounded-2xl p-4 relative">
+          <div className="flex items-center justify-between mb-3">
+            <p className="label-cap text-[10px] text-accent-red">ADVANCED NUTRITION · 7 DAYS</p>
+            <span className="label-cap text-[9px] text-accent-red border border-accent-red/40 rounded px-1.5">
+              PRO
+            </span>
+          </div>
+          <div
+            className={
+              nutritionLocked ? "pointer-events-none select-none blur-[6px] opacity-60" : undefined
+            }
+            aria-hidden={nutritionLocked || undefined}
+          >
+            {week.loggedDays === 0 ? (
+              <p className="text-xs text-grit-dim">
+                Log food for a few days and your weekly averages appear here.
+              </p>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="border border-grit rounded-xl p-3">
+                    <p className="label-cap text-[9px] text-grit-dim">AVG CALORIES</p>
+                    <p className="display text-xl font-extrabold text-grit">
+                      {week.avg.c}
+                      <span className="text-[10px] text-grit-dim ml-1">/ {calories}</span>
+                    </p>
+                  </div>
+                  <div className="border border-grit rounded-xl p-3">
+                    <p className="label-cap text-[9px] text-grit-dim">AVG PROTEIN</p>
+                    <p className="display text-xl font-extrabold text-grit">
+                      {week.avg.p}g
+                      {week.proteinPerKg !== null && (
+                        <span className="text-[10px] text-grit-dim ml-1">
+                          {week.proteinPerKg}g/kg
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <div className="border border-grit rounded-xl p-3">
+                    <p className="label-cap text-[9px] text-grit-dim">CALORIE TARGET HIT</p>
+                    <p className="display text-xl font-extrabold text-grit">{week.calHits}/7</p>
+                  </div>
+                  <div className="border border-grit rounded-xl p-3">
+                    <p className="label-cap text-[9px] text-grit-dim">PROTEIN TARGET HIT</p>
+                    <p className="display text-xl font-extrabold text-grit">{week.proteinHits}/7</p>
+                  </div>
+                </div>
+                {week.split && (
+                  <div className="mt-3">
+                    <p className="label-cap text-[9px] text-grit-dim mb-1.5">MACRO SPLIT</p>
+                    <div className="flex h-2 rounded-full overflow-hidden">
+                      <div style={{ width: `${week.split.p}%`, background: "#e63222" }} />
+                      <div style={{ width: `${week.split.ca}%`, background: "#f5f5f0" }} />
+                      <div style={{ width: `${week.split.fa}%`, background: "#8a8a8a" }} />
+                    </div>
+                    <div className="flex justify-between mt-1.5 text-[9px] label-cap text-grit-dim">
+                      <span>
+                        <span className="text-accent-red">●</span> Protein {week.split.p}%
+                      </span>
+                      <span>
+                        <span className="text-grit">●</span> Carbs {week.split.ca}%
+                      </span>
+                      <span>● Fats {week.split.fa}%</span>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          {nutritionLocked && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center">
+              <div className="bg-grit-card border p-4 max-w-[260px] text-center">
+                <Lock size={16} className="text-accent-red mx-auto mb-2" />
+                <p className="label-cap text-[10px] mb-1">ADVANCED NUTRITION</p>
+                <p className="text-xs text-grit-dim mb-3">
+                  Weekly averages, macro split and protein per kg.
+                </p>
+                <button
+                  onClick={() => openPaywall("nutrition")}
+                  className="btn-grit px-4 py-2 text-xs"
+                >
+                  UNLOCK WITH PRO
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </section>
 
       <section className="deadset-section">

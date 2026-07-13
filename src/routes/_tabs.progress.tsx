@@ -10,6 +10,8 @@ import { PRList } from "@/components/PRList";
 import { groupForMuscle } from "@/lib/pr-groups";
 import { usePro } from "@/hooks/usePro";
 import { openPaywall } from "@/lib/paywall-events";
+import { PR_CATALOG, getPRValue } from "@/lib/fifa-stats";
+import { strengthStandard, repMaxTable, TIER_COLORS } from "@/lib/strength-standards";
 
 export const Route = createFileRoute("/_tabs/progress")({
   head: () => ({ meta: [{ title: "DEADSET — Progress" }] }),
@@ -46,9 +48,25 @@ function ProgressPage() {
   }
 
   function togglePhoto(id: string) {
+    if (analyticsLocked) {
+      openPaywall("photos");
+      return;
+    }
     setCompare((c) =>
       c.includes(id) ? c.filter((x) => x !== id) : c.length < 2 ? [...c, id] : [c[1], id],
     );
+  }
+
+  /** Bodyweight entry nearest to an ISO date (for photo comparisons). */
+  function weightNear(date: string): number | null {
+    if (state.weights.length === 0) return null;
+    const target = new Date(date).getTime();
+    let best: { diff: number; weight: number } | null = null;
+    for (const w of state.weights) {
+      const diff = Math.abs(new Date(w.date).getTime() - target);
+      if (!best || diff < best.diff) best = { diff, weight: w.weight };
+    }
+    return best ? best.weight : null;
   }
   function logWeight() {
     const w = Number(weight);
@@ -260,6 +278,20 @@ function ProgressPage() {
     }));
   }, [state.logs, state.sessions]);
 
+  // Big-three strength standards + rep-max estimates (Pro analytics).
+  const bigThree = useMemo(() => {
+    const bw = state.profile?.weightKg ?? 0;
+    return PR_CATALOG.map((def) => {
+      const oneRm = getPRValue(state, def);
+      return {
+        id: def.id,
+        label: def.label,
+        oneRm,
+        standard: bw > 0 ? strengthStandard(oneRm, bw, def.id as "bench-press" | "squat" | "deadlift", state.profile?.gender) : null,
+      };
+    });
+  }, [state]);
+
   return (
     <div
       style={{ background: "#0A0A0A", minHeight: "100vh" }}
@@ -350,6 +382,65 @@ function ProgressPage() {
                 })()}
               </div>
             </div>
+
+            {/* Strength Standards + Rep Maxes */}
+            {bigThree.some((b) => b.oneRm > 0) && (
+              <div className="mb-6">
+                <p className="label-cap mb-2">Strength Standards</p>
+                <div className="flex flex-col gap-3">
+                  {bigThree
+                    .filter((b) => b.oneRm > 0 && b.standard)
+                    .map((b) => (
+                      <div
+                        key={b.id}
+                        className="rounded-2xl p-4"
+                        style={{ background: "#141414", border: "1.5px solid #262626" }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <p className="display text-sm uppercase font-extrabold text-white truncate">
+                            {b.label}
+                          </p>
+                          <span
+                            className="label-cap text-[9px] rounded px-1.5 border"
+                            style={{
+                              color: TIER_COLORS[b.standard!.tier],
+                              borderColor: `${TIER_COLORS[b.standard!.tier]}66`,
+                            }}
+                          >
+                            {b.standard!.tier}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-grit-dim mt-1">
+                          e1RM {b.oneRm}kg · {b.standard!.ratio}× bodyweight
+                          {b.standard!.nextTier && b.standard!.nextAtKg && (
+                            <span>
+                              {" "}
+                              · {b.standard!.nextAtKg}kg for {b.standard!.nextTier}
+                            </span>
+                          )}
+                        </p>
+                        <div className="h-1.5 bg-[#0a0a0a] rounded-full mt-2 overflow-hidden">
+                          <div
+                            className="h-full rounded-full"
+                            style={{
+                              width: `${Math.round(b.standard!.progress * 100)}%`,
+                              background: TIER_COLORS[b.standard!.tier],
+                            }}
+                          />
+                        </div>
+                        <div className="grid grid-cols-5 gap-1.5 mt-3">
+                          {repMaxTable(b.oneRm).map((rm) => (
+                            <div key={rm.reps} className="text-center border border-grit rounded-lg py-1.5">
+                              <p className="label-cap text-[8px] text-grit-dim">{rm.reps}RM</p>
+                              <p className="display text-xs font-extrabold text-grit">{rm.weightKg}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
 
             {/* Strength Curves */}
             {strengthCurves.length > 0 && (
@@ -550,24 +641,56 @@ function ProgressPage() {
           <Camera size={16} className="mr-2" /> Weekly Check-in
         </button>
         {compare.length === 2 && (
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            {compare.map((d) => {
-              const p = state.checkIns.find((c) => c.date === d);
-              return (
-                <div key={d} className="rounded-2xl">
-                  <img src={p?.photoDataUrl} alt="" className="w-full aspect-[3/4] object-cover" />
-                  <div className="text-[10px] p-1 label-cap text-center">
-                    {p?.date.slice(0, 10)}
-                  </div>
-                </div>
+          <div className="mt-4">
+            <div className="grid grid-cols-2 gap-2">
+              {[...compare]
+                .sort((a, b) => a.localeCompare(b))
+                .map((d) => {
+                  const p = state.checkIns.find((c) => c.date === d);
+                  const w = weightNear(d);
+                  return (
+                    <div key={d} className="rounded-2xl">
+                      <img src={p?.photoDataUrl} alt="" className="w-full aspect-[3/4] object-cover" />
+                      <div className="text-[10px] p-1 label-cap text-center">
+                        {p?.date.slice(0, 10)}
+                        {w !== null && <span className="text-grit-dim"> · {w}kg</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+            {(() => {
+              const [a, b] = [...compare].sort((x, y) => x.localeCompare(y));
+              const days = Math.abs(
+                Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86_400_000),
               );
-            })}
+              const wa = weightNear(a);
+              const wb = weightNear(b);
+              const delta = wa !== null && wb !== null ? Math.round((wb - wa) * 10) / 10 : null;
+              return (
+                <p className="label-cap text-[10px] text-center mt-2 text-grit-dim">
+                  {days >= 14 ? `${Math.round(days / 7)} weeks apart` : `${days} days apart`}
+                  {delta !== null && delta !== 0 && (
+                    <span style={{ color: delta > 0 ? "#e63222" : "#22c55e" }}>
+                      {" "}
+                      · {delta > 0 ? "+" : ""}
+                      {delta}kg
+                    </span>
+                  )}
+                </p>
+              );
+            })()}
           </div>
         )}
         {state.checkIns.length > 0 && (
           <>
-            <p className="label-cap mt-3 mb-2 text-[10px]">
+            <p className="label-cap mt-3 mb-2 text-[10px] flex items-center gap-1.5">
               Tap to compare · long-press × to delete
+              {analyticsLocked && (
+                <span className="label-cap text-[8px] text-accent-red border border-accent-red/40 rounded px-1">
+                  PRO
+                </span>
+              )}
             </p>
             <div className="grid grid-cols-3 gap-1">
               {state.checkIns

@@ -2,7 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useAppState } from "@/lib/storage";
 import { isoDay, todayKey } from "@/lib/calc";
-import { Heart, Flame, Timer, RotateCcw, Play, Pause, ChevronRight, Activity } from "lucide-react";
+import { muscleRecovery, recoveryLabel } from "@/lib/recovery";
+import { usePro } from "@/hooks/usePro";
+import { openPaywall } from "@/lib/paywall-events";
+import { Heart, Flame, Timer, RotateCcw, Play, Pause, ChevronRight, Activity, Lock } from "lucide-react";
 
 export const Route = createFileRoute("/recovery")({
   head: () => ({ meta: [{ title: "DEADSET — Recovery" }] }),
@@ -74,6 +77,9 @@ const FOAM_ROLL = [
 
 function RecoveryPage() {
   const [state] = useAppState();
+  const { isPro, loading: proLoading } = usePro();
+  const recoveryLocked = !proLoading && !isPro;
+  const muscles = useMemo(() => muscleRecovery(state), [state]);
   const [tab, setTab] = useState<"WARMUP" | "STRETCH" | "FOAM">("WARMUP");
   const [selectedMuscles, setSelectedMuscles] = useState<Set<Muscle>>(() => new Set());
   const [timer, setTimer] = useState<{ seconds: number; label: string } | null>(null);
@@ -244,6 +250,74 @@ function RecoveryPage() {
                   : "High fatigue. Prioritize sleep, nutrition, and active recovery."}
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* Per-muscle recovery (Pro) */}
+      <section className="px-5 mb-6">
+        <div className="flex items-center justify-between mb-2">
+          <p className="label-cap">Muscle Recovery</p>
+          <span className="label-cap text-[9px] text-accent-red border border-accent-red/40 rounded px-1.5">
+            PRO
+          </span>
+        </div>
+        <div className="relative bg-grit-card border border-grit p-4">
+          <div
+            className={
+              recoveryLocked ? "pointer-events-none select-none blur-[6px] opacity-60" : undefined
+            }
+            aria-hidden={recoveryLocked || undefined}
+          >
+            <div className="space-y-2.5">
+              {muscles.map((m) => {
+                const meta = recoveryLabel(m.pct);
+                const daysAgo = m.lastTrained
+                  ? Math.floor((Date.now() - new Date(m.lastTrained).getTime()) / 86_400_000)
+                  : null;
+                return (
+                  <div key={m.muscle}>
+                    <div className="flex items-baseline justify-between">
+                      <span className="label-cap text-[10px] text-grit">{m.muscle}</span>
+                      <span className="label-cap text-[9px]" style={{ color: meta.color }}>
+                        {meta.label}
+                        {daysAgo !== null && (
+                          <span className="text-grit-dim ml-1.5">
+                            · {daysAgo === 0 ? "today" : `${daysAgo}d ago`}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-[#1a1a1a] rounded-full mt-1 overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{ width: `${m.pct}%`, background: meta.color }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-grit-dim mt-3 leading-relaxed">
+              Windows scale with the volume you actually logged — more sets, longer recovery.
+            </p>
+          </div>
+          {recoveryLocked && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center">
+              <div className="bg-grit-card border p-4 max-w-[260px] text-center">
+                <Lock size={16} className="text-accent-red mx-auto mb-2" />
+                <p className="label-cap text-[10px] mb-1">MUSCLE RECOVERY</p>
+                <p className="text-xs text-grit-dim mb-3">
+                  Per-muscle readiness from your real sessions.
+                </p>
+                <button
+                  onClick={() => openPaywall("recovery")}
+                  className="btn-grit px-4 py-2 text-xs"
+                >
+                  UNLOCK WITH PRO
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

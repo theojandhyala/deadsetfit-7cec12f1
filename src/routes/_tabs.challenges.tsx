@@ -38,7 +38,7 @@ type Challenge = {
   type: "time" | "reps";
   target: number;
   xp: number;
-  tier: "EASY" | "BEAST" | "GOD";
+  tier: "EASY" | "BEAST" | "GOD" | "ELITE";
 };
 
 const CHALLENGES: Challenge[] = [
@@ -222,10 +222,56 @@ const CHALLENGES: Challenge[] = [
     xp: 500,
     tier: "GOD",
   },
+  // === ELITE — Pro-exclusive tests ===
+  {
+    id: "elite-pushups-100",
+    name: "100 Push-Ups Unbroken",
+    tagline: "One set. No knees. No mercy.",
+    type: "reps",
+    target: 100,
+    xp: 300,
+    tier: "ELITE",
+  },
+  {
+    id: "elite-plank-10min",
+    name: "10-Minute Plank",
+    tagline: "The mind quits before the core.",
+    type: "time",
+    target: 600,
+    xp: 500,
+    tier: "ELITE",
+  },
+  {
+    id: "elite-pullups-21",
+    name: "21 Strict Pull-Ups",
+    tagline: "Dead hang to chin-over. Every rep.",
+    type: "reps",
+    target: 21,
+    xp: 400,
+    tier: "ELITE",
+  },
+  {
+    id: "elite-wallsit-5min",
+    name: "5-Minute Wall Sit",
+    tagline: "Quads of concrete or bust.",
+    type: "time",
+    target: 300,
+    xp: 350,
+    tier: "ELITE",
+  },
+  {
+    id: "elite-squats-500",
+    name: "500 Squats For Time",
+    tagline: "The leg day final boss.",
+    type: "time",
+    target: 1800,
+    xp: 450,
+    tier: "ELITE",
+  },
 ];
 
-const TIER_COLOR = { EASY: "#60a5fa", BEAST: "#fbbf24", GOD: "#E10600" };
-const TIER_LABEL = { EASY: "Entry", BEAST: "Beast", GOD: "God Tier" };
+const TIER_COLOR = { EASY: "#60a5fa", BEAST: "#fbbf24", GOD: "#E10600", ELITE: "#a855f7" };
+const TIER_LABEL = { EASY: "Entry", BEAST: "Beast", GOD: "God Tier", ELITE: "Elite · Pro" };
 
 function bestRecord(records: ChallengeRecord[] | undefined, id: string) {
   const list = (records || []).filter((r) => r.challengeId === id);
@@ -256,9 +302,11 @@ type Tab = "GRIND" | "H2H" | "WARS";
 
 function ChallengesPage() {
   const [state] = useAppState();
+  const { isPro, loading: proLoading } = usePro();
+  const eliteLocked = !proLoading && !isPro;
   const [active, setActive] = useState<Challenge | null>(null);
   const [tab, setTab] = useState<Tab>("GRIND");
-  const [filter, setFilter] = useState<"ALL" | "EASY" | "BEAST" | "GOD" | "BEATEN">("ALL");
+  const [filter, setFilter] = useState<"ALL" | "EASY" | "BEAST" | "GOD" | "ELITE" | "BEATEN">("ALL");
 
   const filtered = CHALLENGES.filter((c) => {
     if (filter === "ALL") return true;
@@ -394,14 +442,16 @@ function GrindTab({
 }: {
   filtered: Challenge[];
   filter: string;
-  setFilter: (f: "ALL" | "EASY" | "BEAST" | "GOD" | "BEATEN") => void;
+  setFilter: (f: "ALL" | "EASY" | "BEAST" | "GOD" | "ELITE" | "BEATEN") => void;
   state: ReturnType<typeof useAppState>[0];
   setActive: (c: Challenge) => void;
 }) {
+  const { isPro, loading: proLoading } = usePro();
+  const eliteLocked = !proLoading && !isPro;
   return (
     <>
       <div className="px-5 mb-3 flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
-        {(["ALL", "EASY", "BEAST", "GOD", "BEATEN"] as const).map((f) => (
+        {(["ALL", "EASY", "BEAST", "GOD", "ELITE", "BEATEN"] as const).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -437,7 +487,13 @@ function GrindTab({
           return (
             <button
               key={c.id}
-              onClick={() => setActive(c)}
+              onClick={() => {
+                if (c.tier === "ELITE" && eliteLocked) {
+                  openPaywall("challenges");
+                  return;
+                }
+                setActive(c);
+              }}
               className="text-left rounded-2xl p-4 press relative overflow-hidden"
               style={{
                 background: "#141414",

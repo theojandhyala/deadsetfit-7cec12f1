@@ -5,7 +5,11 @@ export type PaywallFeature =
   | "custom-programs"
   | "leagues"
   | "h2h"
-  | "reminders";
+  | "reminders"
+  | "recovery"
+  | "nutrition"
+  | "photos"
+  | "challenges";
 
 export type PaywallEvent = {
   id: string;
