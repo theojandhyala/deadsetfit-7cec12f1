@@ -117,8 +117,11 @@ export function isoDay(date = new Date()) {
 export function calculateStreak(completedDates: string[]) {
   if (completedDates.length === 0) return 0;
   const set = new Set(completedDates);
-  let streak = 0;
   const d = new Date();
+  // A streak survives until the current day is over — if today isn't logged
+  // yet, count back from yesterday instead of zeroing out every morning.
+  if (!set.has(isoDay(d))) d.setDate(d.getDate() - 1);
+  let streak = 0;
   while (set.has(isoDay(d))) {
     streak++;
     d.setDate(d.getDate() - 1);

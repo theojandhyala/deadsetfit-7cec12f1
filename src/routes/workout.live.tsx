@@ -414,6 +414,7 @@ function LiveWorkoutPage() {
   const totalEx = session.exercises.length;
   const progress = Math.min(100, Math.round((totals.sets / Math.max(1, plannedSets)) * 100));
 
+
   function logSet(weight: number, reps: number) {
     const ex = session!.exercises[activeIdx];
     if (!ex) return;
@@ -705,13 +706,17 @@ function SetLogger({
   initialReps: string;
   onLog: (weight: number, reps: number) => void;
 }) {
+  // DOM-owned inputs (defaultValue + shadow state): React never rewrites the
+  // field after mount — the same pattern the auth screen settled on after the
+  // mobile typing freezes.
   const [weight, setWeight] = useState(initialWeight);
   const [reps, setReps] = useState(initialReps);
   const [platesOpen, setPlatesOpen] = useState(false);
-  const weightNum = Number(weight) || 0;
+  const weightNum = Number(weight.replace(/[^0-9.]/g, "")) || 0;
+  const repsNum = Math.floor(Number(reps.replace(/[^0-9]/g, "")) || 0);
   const plates = platesOpen && weightNum >= 20 ? plateBreakdown(weightNum) : null;
   const ramp = exercise.sets.length === 0 && weightNum >= 30 ? warmupRamp(weightNum) : [];
-  const canLog = weight.trim() !== "" && Number(reps) > 0;
+  const canLog = weight.trim() !== "" && repsNum > 0;
 
   return (
     <div className="mt-5 bg-grit-card border border-grit rounded-2xl p-4">
@@ -757,8 +762,8 @@ function SetLogger({
         <div className="relative">
           <input
             inputMode="decimal"
-            value={weight}
-            onChange={(e) => setWeight(e.target.value.replace(/[^0-9.]/g, ""))}
+            defaultValue={initialWeight}
+            onChange={(e) => setWeight(e.target.value)}
             placeholder="kg"
             className="input-grit pr-9"
             aria-label="Weight (kg)"
@@ -775,8 +780,8 @@ function SetLogger({
         </div>
         <input
           inputMode="numeric"
-          value={reps}
-          onChange={(e) => setReps(e.target.value.replace(/[^0-9]/g, ""))}
+          defaultValue={initialReps}
+          onChange={(e) => setReps(e.target.value)}
           placeholder="reps"
           className="input-grit"
           aria-label="Reps"
@@ -784,7 +789,7 @@ function SetLogger({
         <button
           onClick={() => {
             if (!canLog) return;
-            onLog(weightNum, Number(reps));
+            onLog(weightNum, repsNum);
           }}
           disabled={!canLog}
           className="btn-grit px-4 disabled:opacity-40"
