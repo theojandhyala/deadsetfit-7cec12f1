@@ -4,6 +4,9 @@ import { router } from "./router";
 import { restoreSupabaseSession } from "./integrations/supabase/client";
 import "./styles.css";
 
+// Signals the index.html boot watchdog that the entry module executed.
+(window as unknown as Record<string, unknown>).__DEADSET_BOOT_OK = true;
+
 const root = document.getElementById("root")!;
 
 function renderBootFailure(error: unknown) {
