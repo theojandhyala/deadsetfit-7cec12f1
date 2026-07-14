@@ -1,5 +1,9 @@
+import { Capacitor } from "@capacitor/core";
+
 import { getState } from "./storage";
 import type { WorkoutSession } from "./types";
+
+export type DeliveryResult = "delivered" | "cancelled";
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -11,28 +15,35 @@ function csvEscape(value: string | number): string {
 }
 
 /**
- * Deliver a generated file to the user. On platforms where anchor downloads
- * don't work (iOS Capacitor webview), the Web Share API with file support is
- * available — prefer the share sheet there. Everywhere else, fall back to a
- * Blob object-URL + temporary anchor click.
+ * Deliver a generated file to the user. Anchor downloads silently no-op inside
+ * the iOS Capacitor webview, so the share sheet is the only handover there.
+ * Desktop browsers also pass canShare({files}) — they must NOT get the share
+ * sheet (Safari would offer AirDrop/Mail with no way to save to disk), so the
+ * share path is gated to the native shell.
  */
-async function deliverFile(filename: string, content: string, mimeType: string): Promise<void> {
+async function deliverFile(
+  filename: string,
+  content: string,
+  mimeType: string,
+): Promise<DeliveryResult> {
   const blob = new Blob([content], { type: mimeType });
-  const file = new File([blob], filename, { type: mimeType });
 
-  if (
-    typeof navigator !== "undefined" &&
-    typeof navigator.share === "function" &&
-    typeof navigator.canShare === "function" &&
-    navigator.canShare({ files: [file] })
-  ) {
-    try {
-      await navigator.share({ files: [file] });
-      return;
-    } catch (e) {
-      // User dismissed the share sheet — not an error, and nothing to download.
-      if (e instanceof DOMException && e.name === "AbortError") return;
-      // Anything else (e.g. share failed mid-flight): fall through to anchor.
+  if (Capacitor.isNativePlatform()) {
+    const file = new File([blob], filename, { type: mimeType });
+    if (
+      typeof navigator !== "undefined" &&
+      typeof navigator.share === "function" &&
+      typeof navigator.canShare === "function" &&
+      navigator.canShare({ files: [file] })
+    ) {
+      try {
+        await navigator.share({ files: [file] });
+        return "delivered";
+      } catch (e) {
+        // User dismissed the share sheet — nothing was delivered.
+        if (e instanceof DOMException && e.name === "AbortError") return "cancelled";
+        // Anything else (e.g. share failed mid-flight): fall through to anchor.
+      }
     }
   }
 
@@ -42,12 +53,13 @@ async function deliverFile(filename: string, content: string, mimeType: string):
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+  return "delivered";
 }
 
 /** Download a full JSON backup of everything stored on this device. */
-export async function exportJsonBackup(): Promise<void> {
+export async function exportJsonBackup(): Promise<DeliveryResult> {
   const json = JSON.stringify(getState(), null, 2);
-  await deliverFile(`deadset-backup-${todayIso()}.json`, json, "application/json");
+  return deliverFile(`deadset-backup-${todayIso()}.json`, json, "application/json");
 }
 
 /**
@@ -82,12 +94,12 @@ export function buildWorkoutCsv(sessions: WorkoutSession[]): string {
 }
 
 /**
- * Download workout history as CSV. Returns false when there are no finished
- * sessions to export (so the caller can tell the user), true otherwise.
+ * Download workout history as CSV. Returns "empty" when there are no finished
+ * sessions to export, otherwise reports whether the file was delivered or the
+ * user cancelled the (native) share sheet.
  */
-export async function exportWorkoutCsv(): Promise<boolean> {
+export async function exportWorkoutCsv(): Promise<DeliveryResult | "empty"> {
   const sessions = getState().sessions.filter((s) => s.endedAt);
-  if (sessions.length === 0) return false;
-  await deliverFile(`deadset-workouts-${todayIso()}.csv`, buildWorkoutCsv(sessions), "text/csv");
-  return true;
+  if (sessions.length === 0) return "empty";
+  return deliverFile(`deadset-workouts-${todayIso()}.csv`, buildWorkoutCsv(sessions), "text/csv");
 }

@@ -166,7 +166,7 @@ export function PaywallSheet() {
     <div className="fixed inset-0 z-[100] flex items-end justify-center" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={close} />
       <div
-        className="relative w-full max-w-md bg-grit-card border rounded-t-3xl p-6 animate-slide-up"
+        className="relative w-full max-w-md bg-grit-card border rounded-t-3xl rounded-b-none p-6 animate-slide-up"
         style={{ paddingBottom: "calc(2.25rem + env(safe-area-inset-bottom))" }}
       >
         <button onClick={close} className="absolute top-4 right-4 text-grit-dim press" aria-label="Close">

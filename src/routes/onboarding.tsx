@@ -116,18 +116,20 @@ function Onboarding() {
     const merged = { ...draft, ...patch };
     setDraft(merged);
     if (idx === ORDER.length - 1) {
-      // Guard against a double-tap on the final CTA firing two saves.
+      // Guard against a double-tap on the final CTA firing two saves. The
+      // userId check must come first — locking savingRef before it would
+      // permanently swallow every retry once the session-loading toast shows.
       if (savingRef.current) return;
+      if (!userId) {
+        toast.error("Your session is still loading. Try again.");
+        return;
+      }
       savingRef.current = true;
       const p = {
         ...merged,
         startingWeightKg: merged.startingWeightKg ?? merged.weightKg,
       } as Profile;
       const sched = mode === "BUILD" ? emptySchedule() : defaultSchedule(p);
-      if (!userId) {
-        toast.error("Your session is still loading. Try again.");
-        return;
-      }
       const publicStats = buildPublicStats({ ...getState(), profile: p, schedule: sched });
       save({
         data: {
@@ -158,7 +160,7 @@ function Onboarding() {
         .catch((e: Error) => {
           savingRef.current = false;
           const msg = e.message || "Couldn't save profile";
-          if (/username|duplicate|unique|taken/i.test(msg)) {
+          if (/username/i.test(msg)) {
             toast.error("That @username is taken — pick another.");
             setIdx(Math.max(ORDER.indexOf("username"), 0));
           } else {
@@ -232,7 +234,7 @@ function Onboarding() {
             onPick={(v) => next({ experience: v as Experience })}
           />
         )}
-        {step === "about" && <AboutYouStep onSubmit={(patch) => next(patch)} />}
+        {step === "about" && <AboutYouStep initial={draft} onSubmit={(patch) => next(patch)} />}
         {step === "days" && (
           <Choice
             title="Days per week you can train"
@@ -258,10 +260,15 @@ function Onboarding() {
         )}
         {step === "schedule" && <SchedulePreview draft={draft} onContinue={() => next({})} />}
         {step === "injuries" && (
-          <Injuries onSubmit={(t) => next({ injuries: t })} onSkip={() => next({ injuries: "" })} />
+          <Injuries
+            initial={draft.injuries}
+            onSubmit={(t) => next({ injuries: t })}
+            onSkip={() => next({ injuries: "" })}
+          />
         )}
         {step === "focus" && (
           <FocusStep
+            initial={draft.focusMuscles}
             onSubmit={(muscles) => next({ focusMuscles: muscles })}
             onSkip={() => next({ focusMuscles: [] })}
           />
@@ -282,8 +289,9 @@ function Onboarding() {
           <TargetStep
             currentKg={draft.weightKg}
             goal={draft.goal}
+            initial={draft.targetWeightKg}
             onSubmit={(n) => next({ targetWeightKg: n })}
-            onSkip={() => next({})}
+            onSkip={() => next({ targetWeightKg: undefined })}
           />
         )}
         {step === "weakness" && (
@@ -340,11 +348,17 @@ function Choice({
   );
 }
 
-function AboutYouStep({ onSubmit }: { onSubmit: (patch: Partial<Profile>) => void }) {
-  const [age, setAge] = useState("");
-  const [weight, setWeight] = useState("");
-  const [height, setHeight] = useState("");
-  const [gender, setGender] = useState<Gender | null>(null);
+function AboutYouStep({
+  initial,
+  onSubmit,
+}: {
+  initial?: Partial<Profile>;
+  onSubmit: (patch: Partial<Profile>) => void;
+}) {
+  const [age, setAge] = useState(initial?.age != null ? String(initial.age) : "");
+  const [weight, setWeight] = useState(initial?.weightKg != null ? String(initial.weightKg) : "");
+  const [height, setHeight] = useState(initial?.heightCm != null ? String(initial.heightCm) : "");
+  const [gender, setGender] = useState<Gender | null>(initial?.gender ?? null);
   const a = Number(age);
   const w = Number(weight);
   const h = Number(height);
@@ -421,8 +435,16 @@ function AboutYouStep({ onSubmit }: { onSubmit: (patch: Partial<Profile>) => voi
   );
 }
 
-function Injuries({ onSubmit, onSkip }: { onSubmit: (s: string) => void; onSkip: () => void }) {
-  const [v, setV] = useState("");
+function Injuries({
+  initial,
+  onSubmit,
+  onSkip,
+}: {
+  initial?: string;
+  onSubmit: (s: string) => void;
+  onSkip: () => void;
+}) {
+  const [v, setV] = useState(initial ?? "");
   return (
     <>
       <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">
@@ -741,13 +763,15 @@ function PRStep({ onContinue }: { onContinue: () => void }) {
 }
 
 function FocusStep({
+  initial,
   onSubmit,
   onSkip,
 }: {
+  initial?: FocusMuscle[];
   onSubmit: (muscles: FocusMuscle[]) => void;
   onSkip: () => void;
 }) {
-  const [picked, setPicked] = useState<FocusMuscle[]>([]);
+  const [picked, setPicked] = useState<FocusMuscle[]>(initial ?? []);
   const OPTIONS: { v: FocusMuscle; l: string }[] = [
     { v: "CHEST", l: "Chest" },
     { v: "BACK", l: "Back" },
@@ -809,15 +833,17 @@ function FocusStep({
 function TargetStep({
   currentKg,
   goal,
+  initial,
   onSubmit,
   onSkip,
 }: {
   currentKg?: number;
   goal?: Goal;
+  initial?: number;
   onSubmit: (n: number) => void;
   onSkip: () => void;
 }) {
-  const [v, setV] = useState("");
+  const [v, setV] = useState(initial != null ? String(initial) : "");
   const n = Number(v);
   const valid = Number.isFinite(n) && n >= 30 && n <= 250;
   const hint =

@@ -46,7 +46,7 @@ export function VideoModal({ videoId, query, title, clipStart, clipEnd, cue, onC
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl bg-grit-card border border-grit"
+        className="w-full max-w-2xl bg-grit-card border border-grit overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-grit">

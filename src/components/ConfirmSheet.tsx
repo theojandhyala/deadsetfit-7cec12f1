@@ -57,7 +57,7 @@ export function ConfirmSheet() {
         onClick={() => finish(request.kind === "text" ? null : false)}
       />
       <div
-        className="relative w-full max-w-md bg-grit-card border rounded-t-3xl p-6 animate-slide-up"
+        className="relative w-full max-w-md bg-grit-card border rounded-t-3xl rounded-b-none p-6 animate-slide-up"
         style={{ paddingBottom: "calc(2rem + env(safe-area-inset-bottom))" }}
       >
         {request.danger && (

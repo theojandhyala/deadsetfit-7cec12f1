@@ -180,8 +180,9 @@ async function resolveOrCreateStripePrice(stripe: any, lookupKey: string): Promi
     .filter((price: any) => price.recurring?.interval === config.interval)
     .filter((price: any) => isDeadsetProProduct(price.product));
 
-  const exactExisting = matchingPrices.find((price: any) => price.unit_amount === config.unitAmount)
-    ?? matchingPrices.find((price: any) => /deadset|pro|monthly|yearly|annual/i.test(`${price.nickname ?? ""} ${stripeProductMeta(price.product).name ?? ""}`));
+  // Only an exact unit_amount match may be reused — a fuzzy name match could
+  // silently bill a legacy amount that differs from the advertised price.
+  const exactExisting = matchingPrices.find((price: any) => price.unit_amount === config.unitAmount);
 
   if (exactExisting) {
     return exactExisting;
@@ -290,6 +291,17 @@ const handlers: Record<string, Handler> = {
     if (!/^[a-zA-Z0-9_-]+$/.test(d.priceId)) throw new Error("Invalid priceId");
     try {
       const stripe = createStripeClient(d.environment);
+      // Server-side double-purchase guard: the client's Pro check races its
+      // own status load, so an already-subscribed user could otherwise start
+      // a second subscription on the same customer.
+      const existing = await stripeSubscriptionStatus(stripe, { email, userId });
+      if (existing.isPro) {
+        await syncProfileProUntil(userId, existing);
+        return {
+          error:
+            "You already have an active DEADSET Pro subscription. Manage or renew it from Settings → Manage Billing.",
+        };
+      }
       const stripePrice = await resolveOrCreateStripePrice(stripe, d.priceId);
       const isRecurring = stripePrice.type === "recurring";
       const customerId = await resolveOrCreateCustomer(stripe, { email, userId });

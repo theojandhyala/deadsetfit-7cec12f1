@@ -49,8 +49,9 @@ function SettingsPage() {
 
   async function handleExportJson() {
     try {
-      await exportJsonBackup();
-      toast.success("Backup exported");
+      const result = await exportJsonBackup();
+      if (result === "delivered") toast.success("Backup exported");
+      // "cancelled" = user dismissed the native share sheet — stay quiet.
     } catch {
       toast.error("Couldn't export backup");
     }
@@ -58,9 +59,9 @@ function SettingsPage() {
 
   async function handleExportCsv() {
     try {
-      const exported = await exportWorkoutCsv();
-      if (exported) toast.success("Workout history exported");
-      else toast("No finished workouts to export yet");
+      const result = await exportWorkoutCsv();
+      if (result === "delivered") toast.success("Workout history exported");
+      else if (result === "empty") toast("No finished workouts to export yet");
     } catch {
       toast.error("Couldn't export workout history");
     }
