@@ -1019,7 +1019,7 @@ function Friends() {
       );
       const j = await r.json();
       const city = j.city || j.locality || j.principalSubdivision || "";
-      const country = j.countryName || "";
+      const country = normalizeCountry(j.countryName) || j.countryName || "";
       if (!city || !country) throw new Error("Couldn't resolve city");
       setCityInput(city);
       setCountryInput(country);
