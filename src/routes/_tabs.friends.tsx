@@ -1041,10 +1041,13 @@ function Friends() {
     }
     setLocBusy(true);
     try {
+      const city = cityInput.trim();
+      const country = normalizeCountry(countryInput) || countryInput.trim();
+      setCountryInput(country);
       await _setLoc({
-        data: { city: cityInput.trim(), country: countryInput.trim(), region: null },
+        data: { city, country, region: null },
       });
-      setMyLoc({ city: cityInput.trim(), country: countryInput.trim() });
+      setMyLoc({ city, country });
       toast.success("Saved");
       setNearby(await _nearby());
     } catch (e) {
