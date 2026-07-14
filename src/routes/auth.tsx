@@ -8,11 +8,12 @@ export const Route = createFileRoute("/auth")({
 
 function AuthRedirect() {
   useEffect(() => {
-    // Only redirect from exactly /auth. If the host served the SPA for /auth/
-    // itself (no static auth page), redirecting again would reload the same
-    // URL forever — show the manual button instead.
-    if (window.location.pathname !== "/auth") return;
-    window.location.replace("/auth/");
+    // Target the explicit file, not the /auth/ directory: the Capacitor iOS
+    // bundled webview doesn't process _redirects and won't serve a directory
+    // index, so "/auth/" falls back to the SPA and loops. "/auth/index.html"
+    // is a real file served directly on both Capacitor and Cloudflare.
+    if (window.location.pathname.includes("index.html")) return;
+    window.location.replace("/auth/index.html");
   }, []);
 
   return (
@@ -22,7 +23,7 @@ function AuthRedirect() {
           DEAD<span className="text-accent-red">SET</span>
         </h1>
         <p className="label-cap text-grit-dim mt-4">Opening sign in…</p>
-        <a href="/auth/" className="btn-grit inline-block mt-6 px-6 py-3">
+        <a href="/auth/index.html" className="btn-grit inline-block mt-6 px-6 py-3">
           Open Sign In
         </a>
       </div>
