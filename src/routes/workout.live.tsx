@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-import { X, Check, Play, Trophy, Share2, Flame, Calculator, Lock, TrendingUp, Ghost } from "lucide-react";
+import { X, Check, Play, Trophy, Share2, Flame, Lock, TrendingUp, Ghost, Pencil } from "lucide-react";
 import { useAppState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
 import { defaultSchedule, isoDay, todayKey, plateBreakdown, warmupRamp } from "@/lib/calc";
@@ -315,30 +315,12 @@ function LiveWorkoutPage() {
   const session = state.sessions.find((s) => s.id === state.activeSessionId);
 
   const [activeIdx, setActiveIdx] = useState(0);
+  const swipeRef = useRef<{ x: number; y: number } | null>(null);
   const [videoQuery, setVideoQuery] = useState<string | null>(null);
   const [videoTitle, setVideoTitle] = useState("");
   const [finished, setFinished] = useState(false);
+  const [finishedSessionId, setFinishedSessionId] = useState<string | null>(null);
   const [share, setShare] = useState(false);
-  const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
-  const [restTotalMs, setRestTotalMs] = useState(90_000);
-  const [restNow, setRestNow] = useState(() => Date.now());
-
-  useEffect(() => {
-    if (restEndsAt === null) return;
-    setRestNow(Date.now());
-    const t = setInterval(() => setRestNow(Date.now()), 250);
-    return () => clearInterval(t);
-  }, [restEndsAt]);
-
-  const restLeft =
-    restEndsAt === null ? null : Math.max(0, Math.ceil((restEndsAt - restNow) / 1000));
-
-  // Auto-dismiss the rest banner shortly after hitting zero (with a pulse).
-  useEffect(() => {
-    if (restLeft !== 0) return;
-    const t = setTimeout(() => setRestEndsAt(null), 900);
-    return () => clearTimeout(t);
-  }, [restLeft]);
 
   const totals = useMemo(() => {
     if (!session) return { vol: 0, sets: 0, prs: 0 };
@@ -383,19 +365,32 @@ function LiveWorkoutPage() {
     [state, activeExercise, session],
   );
 
-  // Prefill priority: allocated weight from the schedule → previous set this
-  // session → last session containing the exercise → empty.
-  const prefill = useMemo(() => {
+  // Pre-logged defaults: allocated weight from the schedule → last session
+  // containing the exercise → smart suggestion → bodyweight (0).
+  const defaults = useMemo(() => {
     const ex = session?.exercises[activeIdx];
-    if (!session || !ex) return { weight: "", reps: "" };
-    const last = ex.sets[ex.sets.length - 1];
-    if (last) return { weight: String(last.weight), reps: String(last.reps) };
-    const repsGuess = String(ex.targetReps).match(/\d+/)?.[0] ?? "";
-    if (ex.plannedWeightKg != null) return { weight: String(ex.plannedWeightKg), reps: repsGuess };
+    if (!session || !ex) return { weight: 0, reps: 8 };
+    const repsGuess = Number(String(ex.targetReps).match(/\d+/)?.[0] ?? 8);
+    if (ex.plannedWeightKg != null) return { weight: ex.plannedWeightKg, reps: repsGuess };
     const hist = prefillFromHistory(state, session.id, ex.exerciseId);
-    if (hist.weight) return hist;
-    return { weight: "", reps: repsGuess };
+    if (hist.weight) return { weight: Number(hist.weight) || 0, reps: Number(hist.reps) || repsGuess };
+    return { weight: 0, reps: repsGuess };
   }, [state, session, activeIdx]);
+
+  if (finished && finishedSessionId) {
+    const finalSession = state.sessions.find((s) => s.id === finishedSessionId);
+    if (finalSession) {
+      return (
+        <FinishedScreen
+          session={finalSession}
+          onClose={() => nav({ to: "/train" })}
+          onShare={() => setShare(true)}
+          share={share}
+          onCloseShare={() => setShare(false)}
+        />
+      );
+    }
+  }
 
   if (!session) {
     const active = state.programs.find((p) => p.id === state.activeProgramId);
@@ -469,8 +464,24 @@ function LiveWorkoutPage() {
       ),
     }));
     if (isPR) emitGritEarned(25, `NEW PR — ${ex.name.toUpperCase()}`, "pr");
-    setRestTotalMs(90_000);
-    setRestEndsAt(Date.now() + 90_000);
+  }
+
+  function undoLastSet() {
+    const ex = session!.exercises[activeIdx];
+    if (!ex || ex.sets.length === 0) return;
+    set((st) => ({
+      ...st,
+      sessions: st.sessions.map((s) =>
+        s.id === session!.id
+          ? {
+              ...s,
+              exercises: s.exercises.map((e, i) =>
+                i === activeIdx ? { ...e, sets: e.sets.slice(0, -1) } : e,
+              ),
+            }
+          : s,
+      ),
+    }));
   }
 
   function finishWorkout() {
@@ -512,7 +523,7 @@ function LiveWorkoutPage() {
           : [...st.completedDates, day],
       };
     });
-    setRestEndsAt(null);
+    setFinishedSessionId(session!.id);
     setFinished(true);
     emitGritEarned(50, "WORKOUT COMPLETE", "quest");
   }
@@ -533,18 +544,6 @@ function LiveWorkoutPage() {
     nav({ to: "/train" });
   }
 
-  if (finished) {
-    const finalSession = state.sessions.find((s) => s.id === session.id) ?? session;
-    return (
-      <FinishedScreen
-        session={finalSession}
-        onClose={() => nav({ to: "/train" })}
-        onShare={() => setShare(true)}
-        share={share}
-        onCloseShare={() => setShare(false)}
-      />
-    );
-  }
 
   return (
     <div
@@ -561,7 +560,12 @@ function LiveWorkoutPage() {
             {session.label}
           </p>
         </div>
-        <Timer startedAt={session.startedAt} />
+        <div className="text-right">
+          <p className="label-cap text-[10px] text-grit-dim">DONE</p>
+          <p className="display text-2xl font-extrabold text-grit tabular-nums leading-none">
+            {totals.sets}/{plannedSets}
+          </p>
+        </div>
       </div>
 
       <div className="h-1 bg-[#1a1a1a]">
@@ -596,7 +600,23 @@ function LiveWorkoutPage() {
         })}
       </div>
 
-      <div className="flex-1 px-5 py-4 overflow-auto">
+      <div
+        className="flex-1 px-5 py-4 overflow-auto"
+        onTouchStart={(e) => {
+          swipeRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }}
+        onTouchEnd={(e) => {
+          const start = swipeRef.current;
+          swipeRef.current = null;
+          if (!start) return;
+          const dx = e.changedTouches[0].clientX - start.x;
+          const dy = e.changedTouches[0].clientY - start.y;
+          if (Math.abs(dx) < 64 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
+          setActiveIdx((i) =>
+            dx < 0 ? Math.min(totalEx - 1, i + 1) : Math.max(0, i - 1),
+          );
+        }}
+      >
         <div className="flex items-start justify-between gap-3 mb-2">
           <div>
             <p className="label-cap text-grit-dim text-[10px]">
@@ -633,76 +653,18 @@ function LiveWorkoutPage() {
         <SetLogger
           key={`${session.id}:${activeIdx}`}
           exercise={current}
-          initialWeight={prefill.weight}
-          initialReps={prefill.reps}
+          defaultWeight={defaults.weight}
+          defaultReps={defaults.reps}
           history={evolution}
           suggestion={suggestion}
           ghost={ghost}
           isProUser={isPro}
           proLoading={proLoading}
           onLog={logSet}
+          onUndo={undoLastSet}
         />
       </div>
 
-      {restLeft !== null && (
-        <div
-          className="border-t border-grit bg-grit-card px-4 py-3 flex items-center justify-between gap-3 animate-slide-up"
-          style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="relative h-14 w-14 shrink-0">
-              <svg viewBox="0 0 48 48" className="h-full w-full -rotate-90">
-                <circle cx="24" cy="24" r="20" fill="none" stroke="#262626" strokeWidth="4" />
-                <circle
-                  cx="24"
-                  cy="24"
-                  r="20"
-                  fill="none"
-                  stroke={restLeft === 0 ? "#22c55e" : "#e63222"}
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                  strokeDasharray={2 * Math.PI * 20}
-                  strokeDashoffset={
-                    2 * Math.PI * 20 * (1 - Math.min(1, (restLeft * 1000) / restTotalMs))
-                  }
-                  style={{ transition: "stroke-dashoffset 0.25s linear" }}
-                />
-              </svg>
-              <span className="absolute inset-0 flex items-center justify-center">
-                <Flame size={16} className={restLeft === 0 ? "text-[#22c55e]" : "text-accent-red"} />
-              </span>
-            </div>
-            <div className="min-w-0">
-              <p className="label-cap text-[10px] text-accent-red">REST</p>
-              <p
-                className={`font-mono text-3xl font-extrabold tabular-nums leading-none mt-0.5 ${
-                  restLeft === 0 ? "animate-pulse text-[#22c55e]" : "text-grit"
-                }`}
-              >
-                {String(Math.floor(restLeft / 60)).padStart(2, "0")}:
-                {String(restLeft % 60).padStart(2, "0")}
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-shrink-0 gap-2">
-            <button
-              onClick={() => {
-                setRestTotalMs((t) => t + 30_000);
-                setRestEndsAt((t) => (t === null ? null : t + 30_000));
-              }}
-              className="btn-ghost press px-3 py-2 text-xs"
-            >
-              +30s
-            </button>
-            <button
-              onClick={() => setRestEndsAt(null)}
-              className="btn-ghost press px-3 py-2 text-xs"
-            >
-              Skip
-            </button>
-          </div>
-        </div>
-      )}
 
       <div
         className="border-t border-grit p-4 grid grid-cols-2 gap-3"
@@ -756,65 +718,47 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
   );
 }
 
-function Timer({ startedAt }: { startedAt: string }) {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
-  const secs = Math.max(0, Math.floor((now - new Date(startedAt).getTime()) / 1000));
-  const mm = String(Math.floor(secs / 60)).padStart(2, "0");
-  const ss = String(secs % 60).padStart(2, "0");
-  return (
-    <div className="text-right">
-      <p className="label-cap text-[10px] text-accent-red">ELAPSED</p>
-      <p className="display text-2xl font-extrabold text-grit tabular-nums leading-none">
-        {mm}:{ss}
-      </p>
-    </div>
-  );
-}
 
 function SetLogger({
   exercise,
-  initialWeight,
-  initialReps,
+  defaultWeight,
+  defaultReps,
   history,
   suggestion,
   ghost,
   isProUser,
   proLoading,
   onLog,
+  onUndo,
 }: {
   exercise: WorkoutSessionExercise;
-  initialWeight: string;
-  initialReps: string;
+  defaultWeight: number;
+  defaultReps: number;
   history: TopSet[];
   suggestion: Suggestion | null;
   ghost: GhostSet[];
   isProUser: boolean;
   proLoading: boolean;
   onLog: (weight: number, reps: number) => void;
+  onUndo: () => void;
 }) {
-  // DOM-owned inputs (defaultValue + shadow state): React never rewrites the
-  // field after mount — the same pattern the auth screen settled on after the
-  // mobile typing freezes.
-  const [weight, setWeight] = useState(initialWeight);
-  const [reps, setReps] = useState(initialReps);
-  const [platesOpen, setPlatesOpen] = useState(false);
-  const weightRef = useRef<HTMLInputElement>(null);
-  const weightNum = Number(weight.replace(/[^0-9.]/g, "")) || 0;
-  const repsNum = Math.floor(Number(reps.replace(/[^0-9]/g, "")) || 0);
-  const plates = platesOpen && weightNum >= 20 ? plateBreakdown(weightNum) : null;
-  const ramp = exercise.sets.length === 0 && weightNum >= 30 ? warmupRamp(weightNum) : [];
-  const canLog = weight.trim() !== "" && repsNum > 0;
-  const progressionLocked = !proLoading && !isProUser;
+  // Pre-logged flow: every set arrives filled from the plan. In the gym you
+  // just tick the row — no typing, no timers. Tap the pencil to adjust a
+  // pending set if the day deviates from the plan.
+  const [override, setOverride] = useState<{ weight: number; reps: number } | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [extraSets, setExtraSets] = useState(0);
+  const editWeightRef = useRef<HTMLInputElement>(null);
+  const editRepsRef = useRef<HTMLInputElement>(null);
 
+  const planned = exercise.targetSets + extraSets;
   const logged = exercise.sets.length;
-  const planned = exercise.targetSets;
-  const pendingCount = Math.max(0, planned - logged - 1);
-  const plannedHint =
-    exercise.plannedWeightKg != null ? `${exercise.plannedWeightKg}kg` : weight || "—";
+  const nextWeight = override?.weight ?? defaultWeight;
+  const nextReps = override?.reps ?? defaultReps;
+  const progressionLocked = !proLoading && !isProUser;
+  const bodyweight = nextWeight <= 0;
+  const plates = !bodyweight && nextWeight >= 20 ? plateBreakdown(nextWeight) : null;
+  const ramp = logged === 0 && nextWeight >= 30 ? warmupRamp(nextWeight) : [];
 
   function applySuggestion() {
     if (progressionLocked) {
@@ -822,17 +766,27 @@ function SetLogger({
       return;
     }
     if (!suggestion) return;
-    setWeight(String(suggestion.weightKg));
-    if (weightRef.current) weightRef.current.value = String(suggestion.weightKg);
+    setOverride({ weight: suggestion.weightKg, reps: nextReps });
   }
+
+  function saveEdit() {
+    const w = Number((editWeightRef.current?.value ?? "").replace(/[^0-9.]/g, ""));
+    const r = Math.floor(Number((editRepsRef.current?.value ?? "").replace(/[^0-9]/g, "")));
+    setOverride({
+      weight: Number.isFinite(w) && w >= 0 ? w : nextWeight,
+      reps: Number.isFinite(r) && r > 0 ? r : nextReps,
+    });
+    setEditing(false);
+  }
+
+  const fmt = (w: number, r: number) => (w > 0 ? `${w} kg × ${r}` : `${r} reps`);
 
   return (
     <div className="mt-5 bg-grit-card border border-grit rounded-2xl p-4">
       <div className="flex items-center justify-between">
-        <p className="label-cap text-accent-red text-[10px]">YOUR PLAN — LIVE</p>
+        <p className="label-cap text-accent-red text-[10px]">YOUR PLAN</p>
         <p className="label-cap text-[10px] text-grit-dim">
           {logged}/{planned} · {exercise.targetReps} reps
-          {exercise.plannedWeightKg != null && ` · ${exercise.plannedWeightKg}kg`}
         </p>
       </div>
 
@@ -870,32 +824,6 @@ function SetLogger({
             ))}
             <span className="label-cap text-[8px] text-grit-dim ml-1">KG TOP SET</span>
           </div>
-        </button>
-      )}
-
-      {suggestion && (
-        <button
-          type="button"
-          onClick={applySuggestion}
-          className="mt-2 w-full flex items-center justify-between border border-accent-red/40 bg-accent-red/10 rounded-xl px-3 py-2 press text-left"
-        >
-          <span>
-            <span className="label-cap text-[9px] text-accent-red block">
-              {progressionLocked ? "SMART SUGGESTION" : suggestion.kind === "up" ? "MOVE UP" : "HOLD & EARN IT"}
-            </span>
-            <span
-              className={
-                "text-xs text-grit font-bold" + (progressionLocked ? " blur-[5px] select-none" : "")
-              }
-            >
-              {suggestion.weightKg}kg — {suggestion.reason}
-            </span>
-          </span>
-          {progressionLocked ? (
-            <Lock size={13} className="text-accent-red shrink-0 ml-2" />
-          ) : (
-            <span className="label-cap text-[9px] text-accent-red shrink-0 ml-2">APPLY</span>
-          )}
         </button>
       )}
 
@@ -947,6 +875,32 @@ function SetLogger({
         </button>
       )}
 
+      {suggestion && (
+        <button
+          type="button"
+          onClick={applySuggestion}
+          className="mt-2 w-full flex items-center justify-between border border-accent-red/40 bg-accent-red/10 rounded-xl px-3 py-2 press text-left"
+        >
+          <span>
+            <span className="label-cap text-[9px] text-accent-red block">
+              {progressionLocked ? "SMART SUGGESTION" : suggestion.kind === "up" ? "MOVE UP" : "HOLD & EARN IT"}
+            </span>
+            <span
+              className={
+                "text-xs text-grit font-bold" + (progressionLocked ? " blur-[5px] select-none" : "")
+              }
+            >
+              {suggestion.weightKg}kg — {suggestion.reason}
+            </span>
+          </span>
+          {progressionLocked ? (
+            <Lock size={13} className="text-accent-red shrink-0 ml-2" />
+          ) : (
+            <span className="label-cap text-[9px] text-accent-red shrink-0 ml-2">APPLY</span>
+          )}
+        </button>
+      )}
+
       {ramp.length > 0 && (
         <div className="mt-3 flex items-center gap-1.5 flex-wrap">
           <span className="label-cap text-[9px] text-grit-dim">WARM-UP</span>
@@ -961,121 +915,123 @@ function SetLogger({
         </div>
       )}
 
-      {logged > 0 && (
-        <div className="mt-3 space-y-1.5">
-          {exercise.sets.map((s, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-between border border-grit rounded-xl px-3 py-2"
-              style={{ borderColor: s.isPR ? "rgba(230,50,34,.5)" : undefined }}
-            >
-              <span className="label-cap text-[10px] text-grit-dim flex items-center gap-1.5">
-                <Check size={11} className="text-accent-red" /> SET {i + 1}
-              </span>
-              <span className="display text-lg font-extrabold text-grit leading-none">
-                {s.weight > 0 ? `${s.weight} kg × ${s.reps}` : `${s.reps} reps`}
-                {s.isPR && <Flame size={14} className="inline ml-2 text-accent-red" />}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="mt-3">
-        <p className="label-cap text-[9px] text-grit-dim mb-1.5">
-          {logged >= planned ? `EXTRA SET ${logged + 1}` : `SET ${logged + 1} OF ${planned}`}
-        </p>
-        <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
-          <div className="relative">
-            <input
-              ref={weightRef}
-              inputMode="decimal"
-              defaultValue={initialWeight}
-              onChange={(e) => setWeight(e.target.value)}
-              placeholder="kg"
-              className="input-grit pr-9"
-              aria-label="Weight (kg)"
-            />
+      <div className="mt-3 space-y-1.5">
+        {Array.from({ length: planned }, (_, i) => {
+          const done = i < logged;
+          const isNext = i === logged;
+          const doneSet = done ? exercise.sets[i] : null;
+          return (
             <button
-              onClick={() => setPlatesOpen((v) => !v)}
-              className={`absolute right-1.5 top-1/2 -translate-y-1/2 p-1 press ${
-                platesOpen ? "text-accent-red" : "text-grit-dim"
-              }`}
-              aria-label="Plate calculator"
+              key={i}
+              type="button"
+              disabled={!done && !isNext}
+              onClick={() => {
+                if (done) {
+                  // Only the most recent tick can be taken back.
+                  if (i === logged - 1) onUndo();
+                  return;
+                }
+                if (isNext) onLog(nextWeight, nextReps);
+              }}
+              className="w-full flex items-center justify-between border rounded-xl px-3 py-3 press text-left disabled:opacity-40"
+              style={{
+                borderColor: done
+                  ? doneSet?.isPR
+                    ? "rgba(230,50,34,.6)"
+                    : "rgba(34,197,94,.4)"
+                  : isNext
+                    ? "#3a3a3a"
+                    : "#262626",
+                background: done ? "rgba(34,197,94,.05)" : undefined,
+              }}
             >
-              <Calculator size={16} />
+              <span className="flex items-center gap-2.5">
+                <span
+                  className="flex h-6 w-6 items-center justify-center rounded-full border"
+                  style={{
+                    borderColor: done ? "#22c55e" : "#3a3a3a",
+                    background: done ? "#22c55e" : "transparent",
+                  }}
+                >
+                  {done && <Check size={14} className="text-black" strokeWidth={3} />}
+                </span>
+                <span className="label-cap text-[10px] text-grit-dim">SET {i + 1}</span>
+              </span>
+              <span className="display text-lg font-extrabold text-grit leading-none flex items-center">
+                {done ? fmt(doneSet!.weight, doneSet!.reps) : fmt(nextWeight, nextReps)}
+                {doneSet?.isPR && <Flame size={14} className="ml-2 text-accent-red" />}
+                {isNext && !editing && (
+                  <Pencil
+                    size={13}
+                    className="ml-2.5 text-grit-dim"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditing(true);
+                    }}
+                  />
+                )}
+              </span>
             </button>
-          </div>
-          <input
-            inputMode="numeric"
-            defaultValue={initialReps}
-            onChange={(e) => setReps(e.target.value)}
-            placeholder="reps"
-            className="input-grit"
-            aria-label="Reps"
-          />
-          <button
-            onClick={() => {
-              if (!canLog) return;
-              onLog(weightNum, repsNum);
-            }}
-            disabled={!canLog}
-            className="btn-grit px-4 disabled:opacity-40"
-          >
-            <Check size={16} className="mr-1" />
-            Log
-          </button>
-        </div>
+          );
+        })}
       </div>
 
-      {pendingCount > 0 && (
-        <div className="mt-2 space-y-1.5 opacity-45">
-          {Array.from({ length: pendingCount }, (_, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-between border border-grit rounded-xl px-3 py-2"
-            >
-              <span className="label-cap text-[10px] text-grit-dim">SET {logged + 2 + i}</span>
-              <span className="text-xs text-grit-dim">
-                planned {plannedHint} × {exercise.targetReps}
-              </span>
-            </div>
-          ))}
+      {editing && (
+        <div className="mt-2 border border-accent-red/40 rounded-xl p-3">
+          <p className="label-cap text-[9px] text-accent-red mb-2">ADJUST NEXT SET</p>
+          <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
+            <input
+              ref={editWeightRef}
+              inputMode="decimal"
+              defaultValue={nextWeight > 0 ? String(nextWeight) : ""}
+              placeholder="kg"
+              className="input-grit"
+              aria-label="Weight (kg)"
+            />
+            <input
+              ref={editRepsRef}
+              inputMode="numeric"
+              defaultValue={String(nextReps)}
+              placeholder="reps"
+              className="input-grit"
+              aria-label="Reps"
+            />
+            <button onClick={saveEdit} className="btn-grit px-4">
+              <Check size={16} />
+            </button>
+          </div>
         </div>
       )}
 
-      {platesOpen && (
-        <div className="mt-3 border border-grit rounded-xl px-3 py-2.5">
-          {plates ? (
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="label-cap text-[9px] text-grit-dim">PER SIDE</span>
-              {plates.perSide.length === 0 ? (
-                <span className="text-[11px] text-grit-dim">bar only</span>
-              ) : (
-                plates.perSide.map((p, i) => (
-                  <span
-                    key={i}
-                    className="display text-xs font-extrabold text-grit border border-accent-red/40 rounded-full px-2 py-0.5"
-                  >
-                    {p}
-                  </span>
-                ))
-              )}
-              <span className="label-cap text-[9px] text-grit-dim ml-auto">BAR {plates.barKg}KG</span>
-              {plates.remainderKg > 0 && (
-                <span className="text-[10px] text-grit-dim w-full">
-                  +{plates.remainderKg}kg unloadable with standard plates
-                </span>
-              )}
-            </div>
+      <button
+        type="button"
+        onClick={() => setExtraSets((n) => n + 1)}
+        className="mt-2 w-full border border-dashed border-grit rounded-xl py-2.5 label-cap text-[10px] text-grit-dim press"
+      >
+        + Extra set
+      </button>
+
+      {plates && logged < planned && (
+        <div className="mt-3 flex items-center gap-1.5 flex-wrap border border-grit rounded-xl px-3 py-2">
+          <span className="label-cap text-[9px] text-grit-dim">PER SIDE</span>
+          {plates.perSide.length === 0 ? (
+            <span className="text-[11px] text-grit-dim">bar only</span>
           ) : (
-            <p className="text-[11px] text-grit-dim">Enter a weight of 20kg+ to see the plate math.</p>
+            plates.perSide.map((pl, i) => (
+              <span
+                key={i}
+                className="display text-xs font-extrabold text-grit border border-accent-red/40 rounded-full px-2 py-0.5"
+              >
+                {pl}
+              </span>
+            ))
           )}
+          <span className="label-cap text-[9px] text-grit-dim ml-auto">BAR {plates.barKg}KG</span>
         </div>
       )}
 
       <p className="text-xs text-grit-dim mt-3 leading-relaxed">
-        Tick off your plan set by set — PRs are detected automatically against your history.
+        Tap a set to tick it off — swipe for the next exercise. PRs are detected automatically.
       </p>
     </div>
   );
