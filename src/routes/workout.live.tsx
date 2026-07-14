@@ -306,6 +306,10 @@ function LiveWorkoutPage() {
   useEffect(() => {
     set((st) => {
       if (st.activeSessionId) return st;
+      // Already trained today? Land on the day picker instead of silently
+      // spinning up a duplicate session.
+      const today = isoDay();
+      if (st.sessions.some((s) => s.endedAt && s.date === today)) return st;
       const s = buildSession(st, todayKey());
       if (!s) return st;
       return { ...st, sessions: [...st.sessions, s], activeSessionId: s.id };
@@ -316,6 +320,7 @@ function LiveWorkoutPage() {
 
   const [activeIdx, setActiveIdx] = useState(0);
   const swipeRef = useRef<{ x: number; y: number } | null>(null);
+  const prAwardedRef = useRef<Set<string>>(new Set());
   const [videoQuery, setVideoQuery] = useState<string | null>(null);
   const [videoTitle, setVideoTitle] = useState("");
   const [finished, setFinished] = useState(false);
@@ -337,8 +342,11 @@ function LiveWorkoutPage() {
     return { vol, sets, prs };
   }, [session]);
 
+  // Planned counts never lag behind reality: an exercise's plan is at least
+  // as long as what's already logged (extra sets stay visible after remounts).
   const plannedSets = useMemo(
-    () => session?.exercises.reduce((sum, e) => sum + e.targetSets, 0) ?? 0,
+    () =>
+      session?.exercises.reduce((sum, e) => sum + Math.max(e.targetSets, e.sets.length), 0) ?? 0,
     [session],
   );
 
@@ -463,7 +471,14 @@ function LiveWorkoutPage() {
           : s,
       ),
     }));
-    if (isPR) emitGritEarned(25, `NEW PR — ${ex.name.toUpperCase()}`, "pr");
+    if (isPR) {
+      // Undo + re-tick must not farm the award twice.
+      const key = `${ex.exerciseId}:${weight}:${reps}`;
+      if (!prAwardedRef.current.has(key)) {
+        prAwardedRef.current.add(key);
+        emitGritEarned(25, `NEW PR — ${ex.name.toUpperCase()}`, "pr");
+      }
+    }
   }
 
   function undoLastSet() {
@@ -751,8 +766,8 @@ function SetLogger({
   const editWeightRef = useRef<HTMLInputElement>(null);
   const editRepsRef = useRef<HTMLInputElement>(null);
 
-  const planned = exercise.targetSets + extraSets;
   const logged = exercise.sets.length;
+  const planned = Math.max(exercise.targetSets + extraSets, logged);
   const nextWeight = override?.weight ?? defaultWeight;
   const nextReps = override?.reps ?? defaultReps;
   const progressionLocked = !proLoading && !isProUser;
@@ -1013,7 +1028,7 @@ function SetLogger({
 
       {plates && logged < planned && (
         <div className="mt-3 flex items-center gap-1.5 flex-wrap border border-grit rounded-xl px-3 py-2">
-          <span className="label-cap text-[9px] text-grit-dim">PER SIDE</span>
+          <span className="label-cap text-[9px] text-grit-dim">BARBELL · PER SIDE</span>
           {plates.perSide.length === 0 ? (
             <span className="text-[11px] text-grit-dim">bar only</span>
           ) : (
@@ -1027,6 +1042,11 @@ function SetLogger({
             ))
           )}
           <span className="label-cap text-[9px] text-grit-dim ml-auto">BAR {plates.barKg}KG</span>
+          {plates.remainderKg > 0 && (
+            <span className="text-[10px] text-accent-red w-full">
+              {plates.remainderKg}kg short of {nextWeight}kg — needs microplates
+            </span>
+          )}
         </div>
       )}
 

@@ -174,19 +174,21 @@ export function computeFifaStats(state: AppState): FifaStats {
   const bigThreeRatings = ["bench-press", "squat", "deadlift"].map((id) => ratings[id]);
   const STR = avg(bigThreeRatings);
   // PWR — your peak lift (best single rating) vs STR's average of all three.
-  const PWR = Math.max(0, ...bigThreeRatings);
+  const PWR = Math.max(0, ...bigThreeRatings.filter((n) => Number.isFinite(n)));
   // END — rep endurance from real logged sets: average reps per working set.
   let repTotal = 0;
   let setCount = 0;
   for (const session of state.sessions || []) {
     for (const ex of session.exercises) {
       for (const s of ex.sets) {
-        repTotal += s.reps;
+        // Cap a single set's contribution so one mis-logged 60-"rep" hold
+        // can't peg the whole stat.
+        repTotal += Math.min(s.reps, 20);
         setCount += 1;
       }
     }
   }
-  const END = setCount === 0 ? 0 : Math.max(0, Math.min(99, Math.round((repTotal / setCount) * 6)));
+  const END = setCount === 0 ? 0 : Math.max(0, Math.min(99, Math.round((repTotal / setCount) * 5)));
 
   // HYP — total session volume rating
   const volume = (state.sessions || []).reduce((sum, s) => sum + (s.totalVolume || 0), 0);

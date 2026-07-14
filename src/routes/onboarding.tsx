@@ -73,6 +73,7 @@ function Onboarding() {
   const [mode, setMode] = useState<Mode | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Partial<Profile>>({});
+  const savingRef = useRef(false);
   const save = saveProfile;
   const saveFullState = saveUserState;
   const getProfile = getMyProfile;
@@ -82,6 +83,7 @@ function Onboarding() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      try {
       const { supabase } = await import("@/integrations/supabase/client");
       const {
         data: { session },
@@ -107,6 +109,9 @@ function Onboarding() {
         }));
         navigate({ to: "/train", replace: true });
       }
+      } catch {
+        // Auth hiccup: stay on onboarding — the final save re-checks the session.
+      }
     })();
     return () => {
       cancelled = true;
@@ -117,6 +122,9 @@ function Onboarding() {
     const merged = { ...draft, ...patch };
     setDraft(merged);
     if (idx === ORDER.length - 1) {
+      // Guard against a double-tap on the final CTA firing two saves.
+      if (savingRef.current) return;
+      savingRef.current = true;
       const p = {
         ...merged,
         startingWeightKg: merged.startingWeightKg ?? merged.weightKg,
@@ -154,6 +162,7 @@ function Onboarding() {
           navigate({ to: "/train", replace: true });
         })
         .catch((e: Error) => {
+          savingRef.current = false;
           toast.error(e.message || "Couldn't save profile");
         });
     } else {
@@ -452,9 +461,22 @@ function PhotoStep({ onSubmit, onSkip }: { onSubmit: (url: string) => void; onSk
   const [preview, setPreview] = useState<string | null>(null);
   const ref = useRef<HTMLInputElement>(null);
   function pick(file: File) {
-    const reader = new FileReader();
-    reader.onload = () => setPreview(String(reader.result));
-    reader.readAsDataURL(file);
+    // Downscale to a bounded JPEG — raw camera photos overflow the server's
+    // 2MB payload cap and would block finishing onboarding.
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const max = 512;
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
+      setPreview(canvas.toDataURL("image/jpeg", 0.82));
+      URL.revokeObjectURL(url);
+    };
+    img.onerror = () => URL.revokeObjectURL(url);
+    img.src = url;
   }
   return (
     <>
@@ -500,15 +522,18 @@ function SchedulePreview({
   draft: Partial<Profile>;
   onContinue: () => void;
 }) {
-  // Build a schedule from the 3 basics; rest of profile is irrelevant to defaultSchedule.
+  // Preview must match what actually gets saved — defaultSchedule also uses
+  // focus muscles and session length.
   const stub = useMemo(
     () =>
       ({
         goal: draft.goal ?? "MAINTAIN",
         daysPerWeek: draft.daysPerWeek ?? 4,
         equipment: draft.equipment ?? "FULL_GYM",
+        focusMuscles: draft.focusMuscles,
+        sessionMinutes: draft.sessionMinutes,
       }) as Profile,
-    [draft.goal, draft.daysPerWeek, draft.equipment],
+    [draft.goal, draft.daysPerWeek, draft.equipment, draft.focusMuscles, draft.sessionMinutes],
   );
   const schedule = useMemo(() => defaultSchedule(stub), [stub]);
 

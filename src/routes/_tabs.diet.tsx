@@ -255,7 +255,8 @@ function DietPage() {
         />
       </section>
 
-      {/* Advanced Nutrition (Pro) */}
+      {/* Advanced Nutrition (Pro) — needs real targets to grade against */}
+      {calories > 0 && macros.protein > 0 && (
       <section className="deadset-section">
         <div className="bg-grit-card border border-grit rounded-2xl p-4 relative">
           <div className="flex items-center justify-between mb-3">
@@ -345,6 +346,7 @@ function DietPage() {
           )}
         </div>
       </section>
+      )}
 
       <section className="deadset-section">
         <div className="bg-grit-card border border-grit rounded-2xl p-4">
@@ -857,7 +859,7 @@ function lastNDays(n: number): string[] {
   const out: string[] = [];
   for (let i = n - 1; i >= 0; i--) {
     const d = new Date(); d.setDate(d.getDate() - i);
-    out.push(d.toISOString().slice(0, 10));
+    out.push(isoDay(d));
   }
   return out;
 }

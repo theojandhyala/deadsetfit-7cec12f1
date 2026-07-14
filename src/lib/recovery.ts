@@ -55,7 +55,7 @@ export function muscleRecovery(state: AppState, now = Date.now()): MuscleRecover
     for (const ex of session.exercises) {
       const logged = ex.sets.length;
       if (logged === 0) continue;
-      for (const raw of ex.primary_muscles) {
+      for (const raw of ex.primary_muscles ?? []) {
         const group = toMuscleGroup(raw);
         if (!group) continue;
         perMuscle.set(group, (perMuscle.get(group) ?? 0) + logged);

@@ -72,9 +72,11 @@ export function StateSync() {
 
     withTimeout(supabase.auth.getSession(), { data: { session: null }, error: null }).then(
       ({ data: { session } }) => {
-        if (session?.user?.id) {
-          activeUserId = session.user.id;
-          pull(session.user.id);
+        const uid = session?.user?.id;
+        // onAuthStateChange also fires on mount — don't pull the same uid twice.
+        if (uid && uid !== activeUserId) {
+          activeUserId = uid;
+          pull(uid);
         }
       },
     );

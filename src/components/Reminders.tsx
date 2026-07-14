@@ -47,7 +47,7 @@ export function Reminders() {
   }, []);
 
   const today = isoDay();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   const items = useMemo(() => {
     const items: Reminder[] = [];
 

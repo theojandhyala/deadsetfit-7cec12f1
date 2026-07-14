@@ -10,12 +10,16 @@ import { onConfirmRequest, type ConfirmDetail } from "@/lib/confirm";
 export function ConfirmSheet() {
   const [active, setActive] = useState<ConfirmDetail | null>(null);
   const [typed, setTyped] = useState("");
+  // Remount the uncontrolled inputs whenever a new request arrives so a
+  // replaced dialog never shows the previous request's typed text.
+  const [reqSeq, setReqSeq] = useState(0);
   const textRef = useRef<HTMLInputElement>(null);
 
   useEffect(
     () =>
       onConfirmRequest((detail) => {
         setTyped("");
+        setReqSeq((n) => n + 1);
         setActive((current) => {
           // A second request while one is open cancels the first.
           current?.resolve(current.request.kind === "text" ? null : false);
@@ -75,6 +79,7 @@ export function ConfirmSheet() {
               Type {request.typedWord} to confirm
             </p>
             <input
+              key={reqSeq}
               defaultValue=""
               onChange={(e) => setTyped(e.target.value)}
               autoCapitalize="characters"
@@ -86,6 +91,7 @@ export function ConfirmSheet() {
         )}
         {request.kind === "text" && (
           <input
+            key={reqSeq}
             ref={textRef}
             defaultValue=""
             placeholder={request.placeholder}

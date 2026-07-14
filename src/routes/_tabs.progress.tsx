@@ -800,7 +800,7 @@ function ConsistencyHeatmap({ completedDates }: { completedDates: string[] }) {
     for (let d = 0; d < 7; d++) {
       const dt = new Date(start);
       dt.setDate(start.getDate() + w * 7 + d);
-      const iso = dt.toISOString().slice(0, 10);
+      const iso = isoDay(dt);
       col.push({ date: iso, count: countMap.get(iso) ?? 0 });
     }
     weeks.push(col);
@@ -892,7 +892,7 @@ function StreakCalendar({ completedDates }: { completedDates: string[] }) {
     for (let d = 0; d < 7; d++) {
       const dt = new Date(start);
       dt.setDate(start.getDate() + w * 7 + d);
-      const iso = dt.toISOString().slice(0, 10);
+      const iso = isoDay(dt);
       col.push({ date: iso, done: set.has(iso), isToday: iso === isoDay() });
     }
     cells.push(col);

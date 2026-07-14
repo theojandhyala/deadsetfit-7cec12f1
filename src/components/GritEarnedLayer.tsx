@@ -17,6 +17,9 @@ export function GritEarnedLayer() {
 
   useEffect(() => {
     const off = onGritEarned((event) => {
+      // PR and rank moments get the full-screen CelebrationLayer — showing
+      // the small burst underneath it would double-fire the same event.
+      if (event.kind === "pr" || event.kind === "rank") return;
       setEvents((current) => [...current.slice(-2), event]);
       const timer = setTimeout(() => {
         setEvents((current) => current.filter((item) => item.id !== event.id));

@@ -136,6 +136,9 @@ function TabsLayout() {
     if (previous == null) return;
     const gain = score - previous;
     if (gain <= 0) return;
+    // A jump this size is a remote hydrate landing, not something the user
+    // just did — re-baseline silently instead of celebrating phantom grit.
+    if (gain > 100) return;
     emitGritEarned(
       gain,
       previousBadge && previousBadge !== badge ? "RANK UP" : "GRIT EARNED",

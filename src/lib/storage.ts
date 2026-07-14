@@ -10,7 +10,6 @@ const listeners = new Set<() => void>();
 const syncListeners = new Set<() => void>();
 
 let remoteSyncEnabled = false;
-let suppressNextPush = false;
 let pushTimer: ReturnType<typeof setTimeout> | null = null;
 let pushSaver: ((json: string) => Promise<void>) | null = null;
 let syncUserId: string | null = null;
@@ -36,10 +35,6 @@ function write(state: AppState) {
   localStorage.setItem(KEY, JSON.stringify(state));
   listeners.forEach((l) => l());
   if (remoteSyncEnabled && pushSaver) {
-    if (suppressNextPush) {
-      suppressNextPush = false;
-      return;
-    }
     if (pushTimer) clearTimeout(pushTimer);
     const saver = pushSaver;
     const json = JSON.stringify(state);
@@ -104,13 +99,22 @@ export function setState(updater: (s: AppState) => AppState) {
   write(next);
 }
 
-/** Replace local state from a remote payload without pushing it back. */
+/** Replace local state from a remote payload without pushing it back.
+ *  (Writes localStorage directly — never touches the push pipeline.) */
 export function hydrateFromRemote(remote: Partial<AppState>, userId?: string) {
-  suppressNextPush = true;
   const current = read();
   const merged = { ...DEFAULT_STATE, ...current, ...remote } as AppState;
   if (!remote.profile && current.profile) merged.profile = current.profile;
   if (!remote.schedule && current.schedule) merged.schedule = current.schedule;
+  // Invariant: every armor-rescued day must exist in completedDates. A remote
+  // blob that field-replaces one without the other would waste the shield and
+  // trigger a double-spend on the next armor run.
+  const rescued = merged.streakArmor?.usedDates ?? [];
+  if (rescued.length) {
+    const days = new Set(merged.completedDates);
+    for (const d of rescued) days.add(d);
+    merged.completedDates = [...days];
+  }
   if (typeof window !== "undefined") {
     localStorage.setItem(KEY, JSON.stringify(merged));
     if (userId) localStorage.setItem(OWNER_KEY, userId);
