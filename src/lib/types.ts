@@ -181,6 +181,16 @@ export interface ChallengeRecord {
   date: string;
 }
 
+export interface HealthSync {
+  /** Master switch — user connected Apple Health */
+  enabled: boolean;
+  /** Pull watch/Health workouts in as training days */
+  importWorkouts: boolean;
+  /** Push finished DEADSET sessions to Health (rings/watch) */
+  exportWorkouts: boolean;
+  lastImportIso?: string;
+}
+
 export interface StreakArmor {
   /** Shields remaining this month */
   shields: number;
@@ -211,4 +221,5 @@ export interface AppState {
   units?: "kg" | "lb";
   remindersEnabled?: boolean;
   streakArmor?: StreakArmor;
+  healthSync?: HealthSync;
 }

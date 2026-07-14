@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { calculateCalories, calculateMacros, isoDay } from "@/lib/calc";
 import { lookupBarcode } from "@/lib/diet.functions";
 import { usePro } from "@/hooks/usePro";
+import { todayActiveBurn, healthSupported } from "@/lib/health";
 import { openPaywall } from "@/lib/paywall-events";
 import { Lock } from "lucide-react";
 import type { FoodLogItem } from "@/lib/types";
@@ -42,6 +43,19 @@ function DietPage() {
 
   const { isPro, loading: proLoading } = usePro();
   const nutritionLocked = !proLoading && !isPro;
+
+  // Apple Watch active burn (native iOS + Health connected only)
+  const [activeBurn, setActiveBurn] = useState<number | null>(null);
+  useEffect(() => {
+    if (!healthSupported() || !state.healthSync?.enabled) return;
+    let alive = true;
+    todayActiveBurn().then((kcal) => {
+      if (alive && kcal !== null) setActiveBurn(kcal);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [state.healthSync?.enabled]);
 
   // Advanced nutrition: last-7-day aggregates from the food log (Pro).
   const week = useMemo(() => {
@@ -228,6 +242,11 @@ function DietPage() {
                 <p className="text-sm text-[#8a8a8a] mt-2">
                   left today · {totals.c} eaten from {calories}
                 </p>
+                {activeBurn !== null && (
+                  <p className="label-cap text-[10px] text-accent-red mt-1.5">
+                    🔥 {activeBurn} kcal active burn — Apple Watch
+                  </p>
+                )}
               </div>
               <div className="deadset-glass-strip rounded-2xl px-3 py-2 text-right shrink-0">
                 <p className="label-cap text-[8px]">Score</p>

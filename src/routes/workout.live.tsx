@@ -2,13 +2,14 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { X, Check, Play, Trophy, Share2, Flame, Lock, TrendingUp, Ghost, Pencil } from "lucide-react";
-import { useAppState } from "@/lib/storage";
+import { useAppState, getState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
 import { defaultSchedule, isoDay, todayKey, plateBreakdown, warmupRamp } from "@/lib/calc";
 import { topSetHistory, suggestNextWeight, ghostSets, beatsGhost, type TopSet, type Suggestion, type GhostSet } from "@/lib/progression";
 import { usePro } from "@/hooks/usePro";
 import { openPaywall } from "@/lib/paywall-events";
 import { askConfirm } from "@/lib/confirm";
+import { exportSessionToHealth } from "@/lib/health";
 import { emitGritEarned } from "@/lib/grit-events";
 import { VideoModal } from "@/components/VideoModal";
 import { ShareCard } from "@/components/ShareCard";
@@ -541,6 +542,11 @@ function LiveWorkoutPage() {
     setFinishedSessionId(session!.id);
     setFinished(true);
     emitGritEarned(50, "WORKOUT COMPLETE", "quest");
+    // Apple Health export (native iOS, user-enabled): rings + watch credit.
+    if (getState().healthSync?.enabled && getState().healthSync?.exportWorkouts) {
+      const finished = getState().sessions.find((s) => s.id === session!.id);
+      if (finished) void exportSessionToHealth(finished);
+    }
   }
 
   async function discardWorkout() {

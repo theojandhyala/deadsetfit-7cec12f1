@@ -20,4 +20,5 @@ export const DEFAULT_STATE: AppState = {
   units: "kg",
   remindersEnabled: true,
   streakArmor: { shields: 0, lastRefillMonth: "", usedDates: [] },
+  healthSync: { enabled: false, importWorkouts: true, exportWorkouts: true },
 };

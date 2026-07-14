@@ -19,6 +19,7 @@ import { profileFromAccount, profileQuestionsComplete, withTimeout } from "@/lib
 import { calculateGritScore, calculateStreak, defaultSchedule, gritBadge } from "@/lib/calc";
 import { emitGritEarned } from "@/lib/grit-events";
 import { runStreakArmor } from "@/lib/streak-armor";
+import { importHealthWorkouts, healthSupported } from "@/lib/health";
 import { usePro } from "@/hooks/usePro";
 
 export const Route = createFileRoute("/_tabs")({
@@ -156,6 +157,17 @@ function TabsLayout() {
       emitGritEarned(calculateStreak(result.next.completedDates), "STREAK ARMOR USED", "streak");
     }
   }, [ready, proLoading, isPro, state.profile, set, state.completedDates]);
+
+  // Apple Watch / Health import — native iOS only, once per app open.
+  const healthImportedRef = useRef(false);
+  useEffect(() => {
+    if (!ready || !state.profile || healthImportedRef.current || !healthSupported()) return;
+    if (!state.healthSync?.enabled || !state.healthSync.importWorkouts) return;
+    healthImportedRef.current = true;
+    importHealthWorkouts(getState()).then((next) => {
+      if (next) set(() => next);
+    });
+  }, [ready, state.profile, state.healthSync?.enabled, state.healthSync?.importWorkouts, set]);
 
   if (!ready) {
     return (

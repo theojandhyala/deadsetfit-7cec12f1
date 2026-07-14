@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { askConfirm } from "@/lib/confirm";
 import { useAppState } from "@/lib/storage";
 import { clearSessionDiagnostics, readSessionLogs } from "@/lib/session-diagnostics";
+import { connectHealth, healthSupported } from "@/lib/health";
+import { Watch } from "lucide-react";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "DEADSET — Settings" }] }),
@@ -18,6 +20,20 @@ function SettingsPage() {
   const [sessionLogs, setSessionLogs] = useState(() => readSessionLogs());
 
   const reminders = state.remindersEnabled ?? true;
+  const health = state.healthSync ?? { enabled: false, importWorkouts: true, exportWorkouts: true };
+
+  async function pairHealth() {
+    const granted = await connectHealth();
+    if (granted) {
+      set((s) => ({
+        ...s,
+        healthSync: { importWorkouts: true, exportWorkouts: true, ...s.healthSync, enabled: true },
+      }));
+      toast.success("Apple Health connected — watch workouts will sync in");
+    } else {
+      toast.error("Health access not granted. Check Settings → Health → Data Access.");
+    }
+  }
   const hydration = state.hydrationAlertsEnabled ?? true;
   const waterTarget = state.waterTargetMl ?? 3000;
 
@@ -91,6 +107,50 @@ function SettingsPage() {
           All weights are logged and displayed in kg. Pounds support is coming.
         </p>
       </section>
+
+      {/* Apple Watch & Health — native iOS only */}
+      {healthSupported() && (
+        <section className="px-5 mb-6">
+          <p className="label-cap mb-2 flex items-center gap-1.5">
+            <Watch size={12} className="text-accent-red" /> Apple Watch & Health
+          </p>
+          {!health.enabled ? (
+            <div className="bg-grit-card border border-grit p-4">
+              <p className="text-sm text-grit font-bold">Pair with Apple Health</p>
+              <p className="text-[11px] text-grit-dim mt-1 leading-relaxed">
+                Workouts recorded on your Apple Watch count toward your streak and grit, and
+                finished DEADSET sessions close your rings.
+              </p>
+              <button onClick={pairHealth} className="btn-grit w-full mt-3 py-2.5 text-xs">
+                Connect Apple Health
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="bg-grit-card border border-grit divide-y divide-[#262626]">
+                <Toggle
+                  label="Import watch workouts"
+                  on={health.importWorkouts}
+                  onChange={(v) =>
+                    set((s) => ({ ...s, healthSync: { ...health, ...s.healthSync, importWorkouts: v } }))
+                  }
+                />
+                <Toggle
+                  label="Send sessions to rings"
+                  on={health.exportWorkouts}
+                  onChange={(v) =>
+                    set((s) => ({ ...s, healthSync: { ...health, ...s.healthSync, exportWorkouts: v } }))
+                  }
+                />
+              </div>
+              <p className="text-[10px] text-grit-dim mt-2">
+                Connected. Watch workouts appear as training days; DEADSET sessions appear in
+                Apple Fitness.
+              </p>
+            </>
+          )}
+        </section>
+      )}
 
       {/* In-App Nudges */}
       <section className="px-5 mb-6">
