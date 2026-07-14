@@ -897,6 +897,26 @@
   }
 
 
+
+  /* === Mobile feel: kill iOS tap delay/highlight, stabilise viewport === */
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  button,
+  a,
+  input,
+  select,
+  [role="button"],
+  .press {
+    touch-action: manipulation;
+  }
+  /* 100vh jumps when the iOS toolbar collapses — dvh tracks the real viewport. */
+  @supports (height: 100dvh) {
+    .min-h-screen {
+      min-height: 100dvh;
+    }
+  }
+
   /* === Alive pass: PR celebration, rank ceremony, count-up glow === */
   @keyframes deadset-takeover-in {
     0% { opacity: 0; transform: scale(0.82); }

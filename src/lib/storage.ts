@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import type { AppState } from "./types";
 import { DEFAULT_STATE } from "./default-state";
 
@@ -19,8 +19,19 @@ function notifySync() {
   syncListeners.forEach((l) => l());
 }
 
-function read(): AppState {
-  if (typeof window === "undefined") return DEFAULT_STATE;
+// Snapshot cache: the state object is parsed at most once per mutation and
+// keeps a stable identity between mutations, so React subscribers only
+// re-render on real changes and never re-parse multi-hundred-KB JSON
+// (check-in photos live in this blob) on every render.
+let stateVersion = 0;
+let cachedVersion = -1;
+let cachedState: AppState = DEFAULT_STATE;
+
+function bumpVersion() {
+  stateVersion++;
+}
+
+function parseFromStorage(): AppState {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULT_STATE;
@@ -30,9 +41,22 @@ function read(): AppState {
   }
 }
 
+function read(): AppState {
+  if (typeof window === "undefined") return DEFAULT_STATE;
+  if (cachedVersion !== stateVersion) {
+    cachedState = parseFromStorage();
+    cachedVersion = stateVersion;
+  }
+  return cachedState;
+}
+
 function write(state: AppState) {
   if (typeof window === "undefined") return;
   localStorage.setItem(KEY, JSON.stringify(state));
+  // We already hold the parsed object — seed the cache directly.
+  bumpVersion();
+  cachedState = state;
+  cachedVersion = stateVersion;
   listeners.forEach((l) => l());
   if (remoteSyncEnabled && pushSaver) {
     if (pushTimer) clearTimeout(pushTimer);
@@ -119,6 +143,9 @@ export function hydrateFromRemote(remote: Partial<AppState>, userId?: string) {
     localStorage.setItem(KEY, JSON.stringify(merged));
     if (userId) localStorage.setItem(OWNER_KEY, userId);
   }
+  bumpVersion();
+  cachedState = merged;
+  cachedVersion = stateVersion;
   listeners.forEach((l) => l());
 }
 
@@ -127,6 +154,7 @@ export function clearLocalState() {
     localStorage.removeItem(KEY);
     localStorage.removeItem(OWNER_KEY);
   }
+  bumpVersion();
   listeners.forEach((l) => l());
 }
 
@@ -213,7 +241,10 @@ export function disableRemoteSync() {
 
 function subscribe(l: () => void) {
   listeners.add(l);
-  const onStorage = () => l();
+  const onStorage = () => {
+    bumpVersion();
+    l();
+  };
   window.addEventListener("storage", onStorage);
   return () => {
     listeners.delete(l);
@@ -222,13 +253,6 @@ function subscribe(l: () => void) {
 }
 
 export function useAppState(): [AppState, (u: (s: AppState) => AppState) => void] {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  const state = useSyncExternalStore(
-    subscribe,
-    () => JSON.stringify(read()),
-    () => JSON.stringify(DEFAULT_STATE),
-  );
-  const parsed: AppState = mounted ? JSON.parse(state) : DEFAULT_STATE;
-  return [parsed, setState];
+  const state = useSyncExternalStore(subscribe, read, () => DEFAULT_STATE);
+  return [state, setState];
 }

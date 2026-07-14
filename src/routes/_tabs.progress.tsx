@@ -37,15 +37,27 @@ function ProgressPage() {
   const totalPRs = state.sessions.reduce((a, s) => a + (s.prCount || 0), 0);
 
   function addPhoto(file: File) {
-    const r = new FileReader();
-    r.onload = () => {
-      const url = r.result as string;
+    // Downscale to a bounded JPEG — raw camera photos are multi-MB base64
+    // strings that live inside the state blob: they blow the 2MB sync cap
+    // and make every state parse/stringify visibly janky on phones.
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const max = 900;
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+      URL.revokeObjectURL(url);
       set((s) => ({
         ...s,
-        checkIns: [...s.checkIns, { date: new Date().toISOString(), photoDataUrl: url }],
+        checkIns: [...s.checkIns, { date: new Date().toISOString(), photoDataUrl: dataUrl }],
       }));
     };
-    r.readAsDataURL(file);
+    img.onerror = () => URL.revokeObjectURL(url);
+    img.src = url;
   }
 
   function togglePhoto(id: string) {
