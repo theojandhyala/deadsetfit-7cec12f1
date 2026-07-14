@@ -10,6 +10,12 @@
 	<string>DEADSET reads your Apple Watch workouts and active energy so training done on your watch counts toward your streak, grit and calorie balance.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>DEADSET saves your finished gym sessions to Apple Health so they close your rings and appear on your Apple Watch.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>DEADSET uses the camera so you can take progress check-in photos and set a profile picture.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>DEADSET lets you choose progress photos and a profile picture from your photo library.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>DEADSET can save shareable rank and progress cards to your photo library.</string>
 	<key>CFBundleDisplayName</key>
         <string>DEADSET</string>
 	<key>CFBundleExecutable</key>

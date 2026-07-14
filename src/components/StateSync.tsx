@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -12,9 +13,14 @@ import {
   beginRemoteStateLoad,
   finishRemoteStateLoad,
   clearRemoteStateStatus,
+  setSyncIssueHandler,
 } from "@/lib/storage";
 import { loadUserState, saveUserState } from "@/lib/user-state.functions";
 import { withTimeout } from "@/lib/account-restore";
+
+// Distinct from a genuinely empty account: withTimeout resolves to this when
+// the load is too slow, so we don't misread a timeout as "first sign-in".
+const LOAD_TIMEOUT = { __loadTimeout: true } as const;
 
 /**
  * Mounts once at the root. On sign-in, pulls the user's saved app state from
@@ -28,6 +34,7 @@ export function StateSync() {
   useEffect(() => {
     let cancelled = false;
     let activeUserId: string | null = null;
+    setSyncIssueHandler((msg) => toast.error(msg, { id: "sync-issue" }));
 
     function prepareLocalState(userId: string) {
       // Local training data must never cross account boundaries. This also
@@ -42,20 +49,31 @@ export function StateSync() {
       prepareLocalState(userId);
       beginRemoteStateLoad(userId);
       try {
-        const res = await withTimeout(load(), null);
+        const res = await Promise.race([
+          load(),
+          new Promise<typeof LOAD_TIMEOUT>((resolve) =>
+            setTimeout(() => resolve(LOAD_TIMEOUT), 4000),
+          ),
+        ]);
         if (cancelled) return;
-        if (res?.data) {
+        if ("__loadTimeout" in res) {
+          // Slow/flaky network — do NOT treat as an empty account (that would
+          // push stale local over newer remote we simply couldn't fetch).
+          // Enable sync so the user's own later edits still save; skip auto-push.
+        } else if (res.data) {
+          // A foreign/unowned local blob must not merge into this account's
+          // remote — clear it first so hydrate is clean.
+          if (getLocalStateOwner() !== userId) clearLocalState();
           try {
             hydrateFromRemote(JSON.parse(res.data), userId);
           } catch {
             /* ignore */
           }
         } else {
-          // First sign-in on this account: push whatever's local so it isn't lost.
+          // Genuinely empty account: back up local ONLY if it already belongs
+          // to this user — never push unowned (possibly another user's) state.
           const local = getState();
-          const owner = getLocalStateOwner();
-          if (local.profile && (!owner || owner === userId)) {
-            setLocalStateOwner(userId);
+          if (local.profile && getLocalStateOwner() === userId) {
             await save({ data: { data: JSON.stringify(local) } }).catch(() => {});
           }
           setLocalStateOwner(userId);
@@ -103,6 +121,7 @@ export function StateSync() {
       cancelled = true;
       sub.subscription.unsubscribe();
       disableRemoteSync();
+      setSyncIssueHandler(null);
     };
   }, [load, save]);
 

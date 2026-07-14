@@ -14,6 +14,8 @@ import { toast } from "sonner";
 import { askConfirm } from "@/lib/confirm";
 import { exportJsonBackup, exportWorkoutCsv } from "@/lib/export";
 import { useAppState } from "@/lib/storage";
+import { DEFAULT_STATE } from "@/lib/default-state";
+import type { AppState } from "@/lib/types";
 import { clearSessionDiagnostics, readSessionLogs } from "@/lib/session-diagnostics";
 import { connectHealth, healthSupported } from "@/lib/health";
 import { Watch } from "lucide-react";
@@ -72,15 +74,20 @@ function SettingsPage() {
     r.onload = async () => {
       try {
         const parsed = JSON.parse(String(r.result));
-        if (!parsed || typeof parsed !== "object") throw new Error("Invalid file");
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+          throw new Error("That doesn't look like a DEADSET backup file");
+        }
         const ok = await askConfirm({
-          title: "Replace local data?",
-          message: "Everything on this device is overwritten with the imported file.",
+          title: "Replace all your data?",
+          message:
+            "This overwrites everything on this device AND your cloud backup with the imported file. This can't be undone.",
           confirmLabel: "Replace",
           danger: true,
         });
         if (!ok) return;
-        set(() => parsed);
+        // Merge over DEFAULT_STATE so an older/partial backup can't leave
+        // required fields undefined and crash downstream reducers.
+        set(() => ({ ...DEFAULT_STATE, ...(parsed as Partial<AppState>) }) as AppState);
         toast.success("Data imported");
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Couldn't import file");

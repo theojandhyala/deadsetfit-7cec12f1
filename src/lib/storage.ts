@@ -6,8 +6,26 @@ const KEY = "grit_app_state_v1";
 const OWNER_KEY = "grit_app_state_owner_v1";
 const PENDING_SYNC_KEY = "grit_app_state_pending_sync_v1";
 
+// Matches the server's user_state payload cap (api/rpc.ts). Above this the push
+// is rejected, so we skip it rather than fail silently every 1.2s.
+const MAX_SYNC_BYTES = 2_000_000;
+
 const listeners = new Set<() => void>();
 const syncListeners = new Set<() => void>();
+
+// Optional UI hook so the (framework-agnostic) store can surface a real toast
+// on quota / oversize problems instead of failing silently.
+let onSyncIssue: ((message: string) => void) | null = null;
+let lastSyncIssue = "";
+export function setSyncIssueHandler(fn: ((message: string) => void) | null) {
+  onSyncIssue = fn;
+}
+function reportSyncIssue(message: string) {
+  if (message === lastSyncIssue) return; // don't spam the same toast every write
+  lastSyncIssue = message;
+  onSyncIssue?.(message);
+  console.warn(message);
+}
 
 let remoteSyncEnabled = false;
 let pushTimer: ReturnType<typeof setTimeout> | null = null;
@@ -52,7 +70,17 @@ function read(): AppState {
 
 function write(state: AppState) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(KEY, JSON.stringify(state));
+  const serialized = JSON.stringify(state);
+  try {
+    localStorage.setItem(KEY, serialized);
+  } catch (e) {
+    // Quota exceeded — don't let it throw out of a React event handler and
+    // lose the in-progress interaction; the in-memory cache still updates.
+    reportSyncIssue(
+      "This device's storage is full — remove some progress photos to keep saving.",
+    );
+    console.warn("localStorage write failed", e);
+  }
   // We already hold the parsed object — seed the cache directly.
   bumpVersion();
   cachedState = state;
@@ -61,10 +89,22 @@ function write(state: AppState) {
   if (remoteSyncEnabled && pushSaver) {
     if (pushTimer) clearTimeout(pushTimer);
     const saver = pushSaver;
-    const json = JSON.stringify(state);
+    const json = serialized;
+    if (json.length > MAX_SYNC_BYTES) {
+      // Server rejects oversized blobs. Skip the push (and don't stash a second
+      // oversized copy under PENDING_SYNC_KEY, which would amplify the quota
+      // problem) — data stays safe on-device; cloud backup pauses until trimmed.
+      reportSyncIssue(
+        "Your data is too large to back up to the cloud — remove some progress photos to re-enable sync.",
+      );
+      return;
+    }
     pushTimer = setTimeout(() => {
       saver(json)
-        .then(() => clearPendingRemoteState(json))
+        .then(() => {
+          clearPendingRemoteState(json);
+          lastSyncIssue = "";
+        })
         .catch((e) => {
           markPendingRemoteState(json);
           console.warn("state sync failed", e);
@@ -140,8 +180,12 @@ export function hydrateFromRemote(remote: Partial<AppState>, userId?: string) {
     merged.completedDates = [...days];
   }
   if (typeof window !== "undefined") {
-    localStorage.setItem(KEY, JSON.stringify(merged));
-    if (userId) localStorage.setItem(OWNER_KEY, userId);
+    try {
+      localStorage.setItem(KEY, JSON.stringify(merged));
+      if (userId) localStorage.setItem(OWNER_KEY, userId);
+    } catch (e) {
+      console.warn("hydrate write failed", e);
+    }
   }
   bumpVersion();
   cachedState = merged;
@@ -197,14 +241,35 @@ export function waitForRemoteState(userId: string, timeoutMs = 4000) {
   });
 }
 
+let unloadFlushRegistered = false;
+function registerUnloadFlush() {
+  if (unloadFlushRegistered || typeof window === "undefined") return;
+  unloadFlushRegistered = true;
+  // iOS kills backgrounded WKWebviews aggressively; flush the debounced write
+  // when the app is hidden/closed so the last ~1.2s of changes aren't lost.
+  const flush = () => {
+    void flushRemoteState();
+  };
+  window.addEventListener("pagehide", flush);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") flush();
+  });
+}
+
 export function enableRemoteSync(saver: (json: string) => Promise<void>) {
   remoteSyncEnabled = true;
   pushSaver = saver;
+  registerUnloadFlush();
   const pending = readPendingRemoteState();
   if (pending) {
-    saver(pending)
-      .then(() => clearPendingRemoteState(pending))
-      .catch((e) => console.warn("pending state sync failed", e));
+    if (pending.length > MAX_SYNC_BYTES) {
+      // A previously-stashed oversized blob would fail forever — drop it.
+      clearPendingRemoteState(pending);
+    } else {
+      saver(pending)
+        .then(() => clearPendingRemoteState(pending))
+        .catch((e) => console.warn("pending state sync failed", e));
+    }
   }
 }
 

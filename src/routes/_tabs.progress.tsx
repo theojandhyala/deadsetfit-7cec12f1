@@ -486,7 +486,7 @@ function ProgressPage() {
                 <p className="label-cap mb-2">Body Part Volume (30d)</p>
                 <div className="rounded-2xl p-4 flex flex-col gap-2">
                   {(() => {
-                    const max = Math.max(...bodyParts.map((b) => b[1]));
+                    const max = Math.max(...bodyParts.map((b) => b[1]), 1);
                     return bodyParts.map(([name, vol]) => (
                       <div key={name}>
                         <div className="flex justify-between text-xs uppercase font-bold tracking-wider mb-1">

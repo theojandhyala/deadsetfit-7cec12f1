@@ -1,6 +1,6 @@
 # DEADSET — App Store Submission Guide
 
-This app is a TanStack Start web app. To ship it on the App Store you wrap it with **Capacitor** (a thin native shell) and submit through Xcode.
+This app is a client-only Vite + TanStack Router web app. To ship it on the App Store you wrap it with **Capacitor** (a thin native shell) and submit through Xcode.
 
 ## 1. Local setup (one time)
 
@@ -13,7 +13,7 @@ npx cap add android
 npx cap sync
 ```
 
-`capacitor.config.ts` is already in the repo. By default it loads the live site at `https://deadsetfit.org` — perfect for iterating without resubmitting.
+`capacitor.config.ts` is already in the repo. It currently ships the **bundled** web build (the `server` block is commented out) — the App-Store-ready configuration. To iterate against the live site during development, temporarily uncomment `server.url = "https://deadsetfit.org"`, then re-comment it before submitting.
 
 ## 2. App Store-ready build
 

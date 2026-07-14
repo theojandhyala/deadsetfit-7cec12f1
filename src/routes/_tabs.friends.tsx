@@ -22,9 +22,14 @@ import {
   Dumbbell,
   BookOpen,
   Flame,
+  MoreVertical,
+  Flag,
+  Ban,
 } from "lucide-react";
 import { restoreSupabaseSession, supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/account-restore";
+import { blockUser, reportContent } from "@/lib/account.functions";
+import { askConfirm, askText } from "@/lib/confirm";
 import {
   getFeed,
   createPost,
@@ -195,6 +200,7 @@ function Feed({ userId }: { userId: string }) {
   const [posting, setPosting] = useState(false);
   const [openComments, setOpenComments] = useState<string | null>(null);
   const [pickerFor, setPickerFor] = useState<string | null>(null);
+  const [menuFor, setMenuFor] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -247,6 +253,43 @@ function Feed({ userId }: { userId: string }) {
       toast.error(e instanceof Error ? e.message : "Failed");
     } finally {
       setPosting(false);
+    }
+  }
+
+  async function reportPost(p: FeedPost) {
+    setMenuFor(null);
+    const reason = await askText({
+      title: "Report this post",
+      message: "Briefly describe the issue — harassment, spam, hateful or explicit content, etc.",
+      placeholder: "What's wrong with it?",
+      confirmLabel: "Report",
+    });
+    if (!reason || !reason.trim()) return;
+    try {
+      await reportContent({
+        data: { userId: p.user_id, postId: p.id, reason: reason.trim().slice(0, 500) },
+      });
+      toast.success("Report submitted — we review within 24 hours");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't send report");
+    }
+  }
+
+  async function blockAuthor(p: FeedPost) {
+    setMenuFor(null);
+    const ok = await askConfirm({
+      title: `Block ${p.author.username ? "@" + p.author.username : "this athlete"}?`,
+      message: "You won't see their posts, comments or profile, and they won't see yours.",
+      confirmLabel: "Block",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await blockUser({ data: { userId: p.user_id } });
+      toast.success("Blocked");
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't block");
     }
   }
 
@@ -394,22 +437,55 @@ function Feed({ userId }: { userId: string }) {
       {posts.map((p) => (
         <article key={p.id} className="bg-grit-card border border-grit p-4 mb-3">
           <header className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-[#1a1a1a] border border-grit flex items-center justify-center display font-extrabold text-grit">
-              {(p.author.display_name || "A")[0]}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-grit text-sm truncate">
-                {p.author.display_name || "Athlete"}
-              </p>
-              <p className="text-[10px] text-[#8a8a8a] label-cap">
-                {p.author.username ? `@${p.author.username} · ` : ""}
-                {p.author.level} · {timeAgo(p.created_at)}
-              </p>
-            </div>
+            <Link
+              to="/athlete/$id"
+              params={{ id: p.user_id }}
+              className="flex items-center gap-3 flex-1 min-w-0 press"
+            >
+              <div className="w-10 h-10 bg-[#1a1a1a] border border-grit flex items-center justify-center display font-extrabold text-grit shrink-0">
+                {(p.author.display_name || "A")[0]}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-grit text-sm truncate">
+                  {p.author.display_name || "Athlete"}
+                </p>
+                <p className="text-[10px] text-[#8a8a8a] label-cap">
+                  {p.author.username ? `@${p.author.username} · ` : ""}
+                  {p.author.level} · {timeAgo(p.created_at)}
+                </p>
+              </div>
+            </Link>
             {p.kind !== "text" && (
-              <span className="label-cap text-[9px] px-2 py-0.5 border border-accent-red text-accent-red">
+              <span className="label-cap text-[9px] px-2 py-0.5 border border-accent-red text-accent-red shrink-0">
                 {p.kind}
               </span>
+            )}
+            {p.user_id !== userId && (
+              <div className="relative shrink-0">
+                <button
+                  onClick={() => setMenuFor(menuFor === p.id ? null : p.id)}
+                  className="p-1.5 -mr-1 text-grit-dim press"
+                  aria-label="Post options"
+                >
+                  <MoreVertical size={16} />
+                </button>
+                {menuFor === p.id && (
+                  <div className="absolute right-0 top-8 z-20 w-40 bg-grit-card border border-grit rounded-xl overflow-hidden shadow-xl">
+                    <button
+                      onClick={() => reportPost(p)}
+                      className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-grit hover:bg-white/[0.04] text-left"
+                    >
+                      <Flag size={14} className="text-accent-red" /> Report post
+                    </button>
+                    <button
+                      onClick={() => blockAuthor(p)}
+                      className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-grit hover:bg-white/[0.04] text-left border-t border-grit"
+                    >
+                      <Ban size={14} className="text-accent-red" /> Block user
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </header>
           {p.image_url && (
@@ -946,6 +1022,10 @@ function Friends() {
   const [locBusy, setLocBusy] = useState(false);
   const [cityInput, setCityInput] = useState("");
   const [countryInput, setCountryInput] = useState("");
+  // These DOM-owned fields are also set programmatically (initial load, GPS,
+  // normalize-on-save), so their .value must be synced imperatively — a
+  // defaultValue alone only applies at mount.
+  const cityRef = useRef<HTMLInputElement>(null);
   const countryRef = useRef<HTMLInputElement>(null);
 
   const loadFriendsHome = useCallback(() => {
@@ -959,8 +1039,12 @@ function Friends() {
       .then((l) => {
         const c = normalizeCountry(l.country);
         setMyLoc({ city: l.city, country: c || l.country });
-        setCityInput(l.city ?? "");
-        setCountryInput(c || (l.country ?? ""));
+        const city = l.city ?? "";
+        const country = c || (l.country ?? "");
+        setCityInput(city);
+        setCountryInput(country);
+        if (cityRef.current) cityRef.current.value = city;
+        if (countryRef.current) countryRef.current.value = country;
       })
       .catch(() => {});
     _nearby()
@@ -1041,6 +1125,8 @@ function Friends() {
       if (!city || !country) throw new Error("Couldn't resolve city");
       setCityInput(city);
       setCountryInput(country);
+      if (cityRef.current) cityRef.current.value = city;
+      if (countryRef.current) countryRef.current.value = country;
       await _setLoc({ data: { city, country, region: j.principalSubdivision || null } });
       toast.success(`Set to ${city}, ${country}`);
       setMyLoc({ city, country });
@@ -1145,6 +1231,7 @@ function Friends() {
         )}
         <div className="grid grid-cols-1 sm:grid-cols-[1fr_9rem] gap-2 mb-2">
           <input
+            ref={cityRef}
             defaultValue={cityInput}
             onChange={(e) => setCityInput(e.target.value)}
             placeholder="City"

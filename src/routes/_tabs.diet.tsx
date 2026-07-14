@@ -41,7 +41,7 @@ function DietPage() {
 
   const today = isoDay();
   const eaten = state.foodLog.filter((f) => f.date === today);
-  const totals = eaten.reduce((a, f) => ({ c: a.c + f.calories, p: a.p + f.protein, ca: a.ca + f.carbs, fa: a.fa + f.fats }), { c:0, p:0, ca:0, fa:0 });
+  const totals = eaten.reduce((a, f) => ({ c: a.c + (f.calories ?? 0), p: a.p + (f.protein ?? 0), ca: a.ca + (f.carbs ?? 0), fa: a.fa + (f.fats ?? 0) }), { c:0, p:0, ca:0, fa:0 });
   const waterToday = state.water.filter(w => w.date === today).reduce((s, w) => s + w.ml, 0);
 
   const { isPro, loading: proLoading } = usePro();
@@ -70,7 +70,7 @@ function DietPage() {
     const perDay = days.map((day) => {
       const items = state.foodLog.filter((f) => f.date === day);
       return items.reduce(
-        (a, f) => ({ c: a.c + f.calories, p: a.p + f.protein, ca: a.ca + f.carbs, fa: a.fa + f.fats, logged: true }),
+        (a, f) => ({ c: a.c + (f.calories ?? 0), p: a.p + (f.protein ?? 0), ca: a.ca + (f.carbs ?? 0), fa: a.fa + (f.fats ?? 0), logged: true }),
         { c: 0, p: 0, ca: 0, fa: 0, logged: items.length > 0 },
       );
     });
@@ -616,10 +616,10 @@ function DietPage() {
           {/* Quick input row */}
           <div className="grid grid-cols-2 gap-2 mb-2">
             <input ref={nameRef} defaultValue="" placeholder="Food" className="input-grit col-span-2" autoCapitalize="words" />
-            <input ref={calsRef} inputMode="numeric" defaultValue="" placeholder="kcal (optional)" className="input-grit" />
-            <input ref={proteinRef} inputMode="numeric" defaultValue="" placeholder="protein g" className="input-grit" />
-            <input ref={carbsRef} inputMode="numeric" defaultValue="" placeholder="carbs g" className="input-grit" />
-            <input ref={fatsRef} inputMode="numeric" defaultValue="" placeholder="fats g" className="input-grit" />
+            <input ref={calsRef} inputMode="numeric" defaultValue="" onChange={(e) => { e.target.value = e.target.value.replace(/[^0-9]/g, ""); }} placeholder="kcal (optional)" className="input-grit" />
+            <input ref={proteinRef} inputMode="numeric" defaultValue="" onChange={(e) => { e.target.value = e.target.value.replace(/[^0-9]/g, ""); }} placeholder="protein g" className="input-grit" />
+            <input ref={carbsRef} inputMode="numeric" defaultValue="" onChange={(e) => { e.target.value = e.target.value.replace(/[^0-9]/g, ""); }} placeholder="carbs g" className="input-grit" />
+            <input ref={fatsRef} inputMode="numeric" defaultValue="" onChange={(e) => { e.target.value = e.target.value.replace(/[^0-9]/g, ""); }} placeholder="fats g" className="input-grit" />
           </div>
           <button onClick={addFood} className="btn-grit w-full mb-3 gap-2"><Plus size={16} /> Add food</button>
 
@@ -790,7 +790,7 @@ function buildCalorieGoalGrid(
   const today = isoDay();
   const days = dates.map((date) => {
     const items = foodLog.filter((item) => item.date === date);
-    const calories = items.reduce((sum, item) => sum + item.calories, 0);
+    const calories = items.reduce((sum, item) => sum + (item.calories ?? 0), 0);
     const hit = caloriesHitGoal(calories, targetCalories, goal);
     const label = new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { weekday: "short" }).slice(0, 1);
     return {

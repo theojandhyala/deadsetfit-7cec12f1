@@ -362,12 +362,10 @@ function UpgradePage() {
           {iosNative ? (
             <div className="deadset-3d-panel mb-6 p-5 text-center" style={{ background: "#141414", border: "1.5px solid #262626" }}>
               <Crown size={24} className="mx-auto mb-3" style={{ color: "#E10600" }} />
-              <p className="display text-xl font-extrabold uppercase text-white">Pro purchase coming to iPhone</p>
+              <p className="display text-xl font-extrabold uppercase text-white">Pro is coming to iPhone</p>
               <p className="mt-2 text-sm leading-relaxed" style={{ color: "#8A8A8A" }}>
-                App Store rules require iPhone subscriptions to use Apple in-app purchase. Stripe checkout is available on the web version only.
-              </p>
-              <p className="mt-4 text-[10px] uppercase tracking-widest" style={{ color: "#6B7280" }}>
-                Choose next: RevenueCat / StoreKit, or iOS free-tier only.
+                DEADSET Pro isn’t available on iPhone yet. Keep training free — every core
+                feature stays unlocked.
               </p>
             </div>
           ) : (

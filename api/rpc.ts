@@ -274,6 +274,20 @@ async function requirePro(req: any): Promise<AuthCtx> {
   return ctx;
 }
 
+// Bidirectional block set: users this user blocked OR who blocked this user.
+// Their content must be hidden everywhere (App Store Guideline 1.2).
+async function blockedUserIds(supabase: any, userId: string): Promise<Set<string>> {
+  const { data: blocks } = await supabase
+    .from("user_blocks")
+    .select("blocker_id, blocked_id")
+    .or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`);
+  const hidden = new Set<string>();
+  (blocks ?? []).forEach((b: any) =>
+    hidden.add(b.blocker_id === userId ? b.blocked_id : b.blocker_id),
+  );
+  return hidden;
+}
+
 // ─── Handlers ────────────────────────────────────────────────────────────────
 
 type Handler = (data: any, req: any) => Promise<unknown>;
@@ -402,10 +416,12 @@ const handlers: Record<string, Handler> = {
 
   // === Leaderboard (strength PRs) ===
   async getLeaderboard(data, req) {
-    const { supabase } = await requireAuth(req);
+    const { supabase, userId } = await requireAuth(req);
     const d = z.object({ category: z.enum(["RANK", "OVERALL", "BENCH", "SQUAT", "DEADLIFT", "TOTAL"]), limit: z.number().int().min(1).max(100).optional() }).parse(data);
-    const { data: rows, error } = await supabase.from("public_profiles").select("id, username, display_name, avatar_url, level, grit_points, public_stats").limit(500);
+    const hidden = await blockedUserIds(supabase, userId);
+    const { data: allRows, error } = await supabase.from("public_profiles").select("id, username, display_name, avatar_url, level, grit_points, public_stats").limit(500);
     if (error) throw error;
+    const rows = (allRows ?? []).filter((r: any) => !r.id || !hidden.has(r.id as string));
     type TopPR = { id?: string; value?: number; unit?: string };
     type PublicStats = { overall?: number; topPRs?: TopPR[] };
     const getPRValue = (stats: PublicStats, id: string) => Number((stats.topPRs ?? []).find(p => p?.id === id)?.value ?? 0);
@@ -577,31 +593,39 @@ const handlers: Record<string, Handler> = {
   },
 
   async getComments(data, req) {
-    const { supabase } = await requireAuth(req);
+    const { supabase, userId } = await requireAuth(req);
     const d = z.object({ postId: z.string().uuid() }).parse(data);
-    const { data: rows, error } = await supabase.from("post_comments")
+    const hidden = await blockedUserIds(supabase, userId);
+    const { data: allRows, error } = await supabase.from("post_comments")
       .select("id, user_id, content, created_at").eq("post_id", d.postId)
       .order("created_at", { ascending: true }).limit(100);
     if (error) throw new Error(error.message);
-    const ids = Array.from(new Set((rows ?? []).map(r => r.user_id)));
+    const rows = (allRows ?? []).filter((r: any) => !hidden.has(r.user_id));
+    const ids = Array.from(new Set(rows.map((r: any) => r.user_id)));
     const { data: authors } = await supabase.from("public_profiles").select("id, display_name, username")
       .in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
-    const am = new Map((authors ?? []).map(a => [a.id, a]));
-    return (rows ?? []).map(r => ({ ...r, author: am.get(r.user_id) }));
+    const am = new Map((authors ?? []).map((a: any) => [a.id, a]));
+    return rows.map((r: any) => ({ ...r, author: am.get(r.user_id) }));
   },
 
   // === Social: grit leaderboard ===
   async getSocialLeaderboard(_data, req) {
     const { supabase, userId } = await requireAuth(req);
+    const hidden = await blockedUserIds(supabase, userId);
     const { data, error } = await supabase.from("public_profiles")
       .select("id, display_name, username, avatar_url, grit_points")
       .order("grit_points", { ascending: false }).limit(100);
     if (error) throw new Error(error.message);
-    const me = (data ?? []).find(p => p.id === userId);
+    const all = data ?? [];
+    // Rank against the true field, then drop blocked users from the visible list
+    // so their content is hidden without renumbering everyone else.
+    const me = all.find(p => p.id === userId);
     const myPts = me?.grit_points ?? 0;
     return {
-      top: (data ?? []).map((p, i) => ({ ...p, rank: i + 1, league: leagueOf(p.grit_points ?? 0), level: gritLevel(p.grit_points ?? 0) })),
-      me: me ? { ...me, rank: (data ?? []).findIndex(p => p.id === userId) + 1, league: leagueOf(myPts), level: gritLevel(myPts) } : null,
+      top: all
+        .map((p, i) => ({ ...p, rank: i + 1, league: leagueOf(p.grit_points ?? 0), level: gritLevel(p.grit_points ?? 0) }))
+        .filter(p => !hidden.has(p.id as string)),
+      me: me ? { ...me, rank: all.findIndex(p => p.id === userId) + 1, league: leagueOf(myPts), level: gritLevel(myPts) } : null,
     };
   },
 
@@ -639,11 +663,12 @@ const handlers: Record<string, Handler> = {
 
   async getSuggestedAthletes(_data, req) {
     const { supabase, userId } = await requireAuth(req);
+    const hidden = await blockedUserIds(supabase, userId);
     const { data: follows } = await supabase.from("follows").select("following_id").eq("follower_id", userId);
     const followingSet = new Set((follows ?? []).map(f => f.following_id));
     const { data: rows } = await supabase.from("public_profiles").select("id, username, display_name, avatar_url, grit_points")
       .neq("id", userId).order("grit_points", { ascending: false }).limit(30);
-    return (rows ?? []).filter((r): r is typeof r & { id: string } => !!r.id && !followingSet.has(r.id)).slice(0, 10).map(r => ({
+    return (rows ?? []).filter((r): r is typeof r & { id: string } => !!r.id && !followingSet.has(r.id) && !hidden.has(r.id)).slice(0, 10).map(r => ({
       id: r.id, username: r.username, display_name: r.display_name, avatar_url: r.avatar_url,
       level: gritLevel(r.grit_points ?? 0), grit_points: r.grit_points ?? 0, following: false,
     }));

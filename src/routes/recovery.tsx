@@ -149,11 +149,14 @@ function RecoveryPage() {
     const lastVol = lastSession?.totalVolume || 0;
 
     // Score formula: start at 70, +5 per rest day (max 15), -10 per consecutive day over 3, +5 if last session volume > 5000
+    // Only penalize detraining for someone who actually has training history —
+    // a brand-new user should not be told they're fatigued and need a deload.
+    const hasHistory = state.sessions.length > 0 || state.completedDates.length > 0;
     let s = 70;
     s += Math.min(restDays, 3) * 5;
     if (consec > 3) s -= (consec - 3) * 10;
     if (lastVol > 5000) s += 5;
-    if (trainingDays === 0) s = Math.min(s, 60); // detraining penalty
+    if (trainingDays === 0 && hasHistory) s = Math.min(s, 60); // detraining penalty
     return Math.max(0, Math.min(100, s));
   }, [state.completedDates, state.sessions]);
 

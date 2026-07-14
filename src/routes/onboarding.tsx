@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Check, ChevronLeft, Zap } from "lucide-react";
 import { GritLogo } from "@/components/GritLogo";
 import { getState, setLocalStateOwner, setState, waitForRemoteState } from "@/lib/storage";
-import { calculateCalories, calculateMacros, defaultSchedule } from "@/lib/calc";
+import { calculateCalories, calculateMacros, defaultSchedule, isoDay } from "@/lib/calc";
 import { strengthStandard, TIER_COLORS } from "@/lib/strength-standards";
 import { getExercise } from "@/lib/exercises";
 import { getMyProfile, saveProfile } from "@/lib/profile.functions";
@@ -721,7 +721,7 @@ function PRStep({ onContinue }: { onContinue: () => void }) {
   const [vals, setVals] = useState<Record<string, string>>({});
 
   function commit() {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = isoDay();
     const manualPRs: Record<string, { value: number; reps?: number; date: string }> = {};
     for (const pr of ONBOARDING_PRS) {
       const n = Number(vals[pr.id]);

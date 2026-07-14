@@ -456,23 +456,29 @@ function LiveWorkoutPage() {
   function logSet(weight: number, reps: number) {
     const ex = session!.exercises[activeIdx];
     if (!ex) return;
-    const { bestWeight, bestBwReps } = bestsFor(state, ex.exerciseId);
-    const isPR = weight > 0 ? weight > bestWeight : reps > bestBwReps;
-    const newSet: CompletedSet = isPR ? { weight, reps, isPR: true } : { weight, reps };
-    set((st) => ({
-      ...st,
-      sessions: st.sessions.map((s) =>
-        s.id === session!.id
-          ? {
-              ...s,
-              exercises: s.exercises.map((e, i) =>
-                i === activeIdx ? { ...e, sets: [...e.sets, newSet] } : e,
-              ),
-            }
-          : s,
-      ),
-    }));
-    if (isPR) {
+    // Compute the PR flag INSIDE the updater against fresh state, so a rapid
+    // double-tap (which reads the same render-closure state twice) can't award
+    // and count the same PR twice.
+    let awardedPR = false;
+    set((st) => {
+      const { bestWeight, bestBwReps } = bestsFor(st, ex.exerciseId);
+      awardedPR = weight > 0 ? weight > bestWeight : reps > bestBwReps;
+      const newSet: CompletedSet = awardedPR ? { weight, reps, isPR: true } : { weight, reps };
+      return {
+        ...st,
+        sessions: st.sessions.map((s) =>
+          s.id === session!.id
+            ? {
+                ...s,
+                exercises: s.exercises.map((e, i) =>
+                  i === activeIdx ? { ...e, sets: [...e.sets, newSet] } : e,
+                ),
+              }
+            : s,
+        ),
+      };
+    });
+    if (awardedPR) {
       // Undo + re-tick must not farm the award twice.
       const key = `${ex.exerciseId}:${weight}:${reps}`;
       if (!prAwardedRef.current.has(key)) {
@@ -524,7 +530,10 @@ function LiveWorkoutPage() {
         });
         if (best) {
           const b: CompletedSet = best;
-          newLogs.push({ exerciseId: e.exerciseId, weight: b.weight, reps: b.reps, date: endedAt });
+          // Local day (matches session.date) — a UTC timestamp here would land
+          // on the next calendar day for evening lifters west of UTC and show
+          // as phantom volume the day after.
+          newLogs.push({ exerciseId: e.exerciseId, weight: b.weight, reps: b.reps, date: day });
         }
       });
       return {

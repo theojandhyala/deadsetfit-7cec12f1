@@ -18,6 +18,7 @@ const activeCapacitorConfig = capacitorConfig
   .filter((line) => !line.trimStart().startsWith("//"))
   .join("\n");
 const upgradePage = existsSync("src/routes/upgrade.tsx") ? read("src/routes/upgrade.tsx") : "";
+const infoPlist = existsSync("ios/App/App/Info.plist") ? read("ios/App/App/Info.plist") : "";
 const platformUtil = existsSync("src/lib/platform.ts") ? read("src/lib/platform.ts") : "";
 const rpcClient = existsSync("src/lib/rpc-client.ts") ? read("src/lib/rpc-client.ts") : "";
 
@@ -72,8 +73,18 @@ check(
 );
 check(
   "Stripe blocked on native iOS",
-  upgradePage.includes("iosNative") && upgradePage.includes("App Store rules require"),
+  upgradePage.includes("iosNative ?") && upgradePage.includes("Checkout disabled on iPhone"),
   "Upgrade page blocks Stripe checkout inside native iOS.",
+);
+check(
+  "camera usage string",
+  infoPlist.includes("NSCameraUsageDescription"),
+  "Info.plist declares NSCameraUsageDescription (required — camera is used for check-in photos).",
+);
+check(
+  "photo library usage string",
+  infoPlist.includes("NSPhotoLibraryUsageDescription"),
+  "Info.plist declares NSPhotoLibraryUsageDescription (photo picker for avatars/check-ins).",
 );
 check(
   "AI RPC production origin",

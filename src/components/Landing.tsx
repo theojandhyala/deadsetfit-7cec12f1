@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { isNativeIos } from "@/lib/platform";
 import {
   ArrowRight,
   Brain,
@@ -540,6 +541,7 @@ function Reviews() {
 }
 
 function Pricing() {
+  const nativeIos = isNativeIos();
   const free = [
     "Live set logging + auto PR detection",
     "Split builder + 1 custom program",
@@ -597,10 +599,19 @@ function Pricing() {
             MOST SERIOUS
           </span>
           <p className="label-cap text-sm text-accent-red">DEADSET PRO</p>
-          <p className="display mt-2 text-4xl font-black text-grit">
-            £4.99<span className="label-cap ml-1 text-[10px] text-grit-dim">/ month</span>
-          </p>
-          <p className="label-cap mt-1 text-[10px] text-grit-dim">or £39.99/yr — save 33%</p>
+          {nativeIos ? (
+            <p className="display mt-2 text-4xl font-black text-grit">
+              Coming soon
+              <span className="label-cap ml-1 block text-[10px] text-grit-dim">to iPhone</span>
+            </p>
+          ) : (
+            <>
+              <p className="display mt-2 text-4xl font-black text-grit">
+                £4.99<span className="label-cap ml-1 text-[10px] text-grit-dim">/ month</span>
+              </p>
+              <p className="label-cap mt-1 text-[10px] text-grit-dim">or £39.99/yr — save 33%</p>
+            </>
+          )}
           <ul className="mt-5 flex-1 space-y-2.5">
             {pro.map((f) => (
               <li key={f} className="flex items-start gap-2.5 text-xs text-grit">
@@ -610,13 +621,15 @@ function Pricing() {
             ))}
           </ul>
           <Link to="/auth" className="btn-grit mt-6 w-full py-3 text-center text-sm">
-            Go Pro
+            {nativeIos ? "Start training" : "Go Pro"}
           </Link>
         </div>
       </div>
-      <p className="mt-6 text-center text-[10px] text-grit-dim">
-        Prices shown in GBP — local currency applied at checkout.
-      </p>
+      {!nativeIos && (
+        <p className="mt-6 text-center text-[10px] text-grit-dim">
+          Prices shown in GBP — local currency applied at checkout.
+        </p>
+      )}
     </Section>
   );
 }

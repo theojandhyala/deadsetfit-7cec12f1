@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Crown, X, Check, Shield, BarChart3, ClipboardList, Hammer, Trophy, Swords, Bell, HeartPulse, Apple, Camera, Medal, TrendingUp, FileBarChart } from "lucide-react";
 import { onPaywall, type PaywallFeature } from "@/lib/paywall-events";
 import { detectCountry, currencyForCountry, CURRENCY_META, type SupportedCurrency } from "@/lib/currency";
+import { isNativeIos } from "@/lib/platform";
 
 const FEATURE_PITCH: Record<
   PaywallFeature,
@@ -197,24 +198,38 @@ export function PaywallSheet() {
           ))}
         </ul>
 
-        <div className="mt-6 flex items-baseline gap-2">
-          <span className="display text-3xl text-grit">{money.monthly}</span>
-          <span className="label-cap text-[10px]">/ month</span>
-          <span className="ml-auto label-cap text-[10px]">or {money.yearly}/yr</span>
-        </div>
+        {isNativeIos() ? (
+          // App Store Guideline 3.1.1: no price, no external-purchase CTA on iOS.
+          <>
+            <p className="mt-6 text-sm text-grit-dim leading-relaxed">
+              This is a DEADSET Pro feature. Pro isn’t available on iPhone yet.
+            </p>
+            <button onClick={close} className="btn-grit w-full mt-4 py-3.5">
+              Got it
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="mt-6 flex items-baseline gap-2">
+              <span className="display text-3xl text-grit">{money.monthly}</span>
+              <span className="label-cap text-[10px]">/ month</span>
+              <span className="ml-auto label-cap text-[10px]">or {money.yearly}/yr</span>
+            </div>
 
-        <button
-          onClick={() => {
-            close();
-            navigate({ to: "/upgrade" });
-          }}
-          className="btn-grit w-full mt-4 py-3.5"
-        >
-          Go Pro
-        </button>
-        <button onClick={close} className="w-full mt-2 py-2 label-cap text-[10px] text-grit-dim press">
-          Not now
-        </button>
+            <button
+              onClick={() => {
+                close();
+                navigate({ to: "/upgrade" });
+              }}
+              className="btn-grit w-full mt-4 py-3.5"
+            >
+              Go Pro
+            </button>
+            <button onClick={close} className="w-full mt-2 py-2 label-cap text-[10px] text-grit-dim press">
+              Not now
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

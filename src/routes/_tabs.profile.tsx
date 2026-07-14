@@ -21,11 +21,12 @@ import {
   supabase,
 } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/account-restore";
-import { calculateStreak, calculateGritScore, gritBadge, badgeColor } from "@/lib/calc";
+import { calculateStreak, calculateGritScore, gritBadge, badgeColor, isoDay } from "@/lib/calc";
 import { emitGritEarned } from "@/lib/grit-events";
 import { saveProfile } from "@/lib/profile.functions";
 import { deleteMyAccount } from "@/lib/account.functions";
 import { usePro } from "@/hooks/usePro";
+import { isNativeIos } from "@/lib/platform";
 import { FifaCard } from "@/components/FifaCard";
 import { QuickLogFAB } from "@/components/QuickLogFAB";
 import { StatsGrid } from "@/components/StatsGrid";
@@ -70,6 +71,7 @@ function ProfilePage() {
     cancelAtPeriodEnd,
     refresh: refreshPro,
   } = usePro();
+  const nativeIos = isNativeIos();
   const manualPRKey = state.manualPRs ? JSON.stringify(state.manualPRs) : "";
 
   useEffect(() => {
@@ -254,7 +256,7 @@ function ProfilePage() {
           [def.id]: {
             value,
             reps: def.kind === "1RM" ? reps || 1 : undefined,
-            date: new Date().toISOString().slice(0, 10),
+            date: isoDay(),
           },
         },
       }));
@@ -426,6 +428,7 @@ function ProfilePage() {
 
       {editingPR && (
         <PREditSheet
+          key={editingPR.id}
           def={editingPR}
           pr={state.manualPRs?.[editingPR.id]}
           onSave={(v, r) => savePR(editingPR, v, r)}
@@ -534,14 +537,26 @@ function ProfilePage() {
               : "Streak Armor, H2H challenges, full leagues, advanced analytics, featured programs."}
           </p>
           {isPro ? (
-            <div className="grid grid-cols-2 gap-2">
-              <Link to="/upgrade" className="btn-ghost w-full inline-flex justify-center">
-                Manage Pro
-              </Link>
+            nativeIos ? (
+              // App Store 3.1.1: no billing-management link on iOS.
               <button onClick={() => void refreshPro()} className="btn-grit w-full">
-                Refresh
+                Refresh status
               </button>
-            </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                <Link to="/upgrade" className="btn-ghost w-full inline-flex justify-center">
+                  Manage Pro
+                </Link>
+                <button onClick={() => void refreshPro()} className="btn-grit w-full">
+                  Refresh
+                </button>
+              </div>
+            )
+          ) : nativeIos ? (
+            // App Store 3.1.1: no purchase CTA on iOS.
+            <p className="text-xs text-grit-dim">
+              Pro isn’t available on iPhone yet — every core feature stays unlocked.
+            </p>
           ) : (
             <Link to="/upgrade" className="btn-grit w-full inline-flex justify-center">
               Upgrade — Go Pro

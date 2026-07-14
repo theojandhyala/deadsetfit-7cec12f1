@@ -252,7 +252,9 @@ export function calculateGritScore(state: AppState): GritScoreBreakdown {
   const streak = calculateStreak(state.completedDates);
   const weekAgo = new Date();
   weekAgo.setDate(weekAgo.getDate() - 7);
-  const weekAgoISO = weekAgo.toISOString().slice(0, 10);
+  // Local-day boundary — session/food dates are local isoDay strings, so a
+  // UTC-sliced boundary would make the 7-day window off by one.
+  const weekAgoISO = isoDay(weekAgo);
 
   // PRs this week (from session.prCount)
   const prs = (state.sessions || [])

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Play, ListPlus, Flame, Trophy, Heart, Pencil, Shield, Lock } from "lucide-react";
 
 import { VideoModal } from "@/components/VideoModal";
@@ -112,6 +112,10 @@ function TrainPage() {
   const [easyFocus, setEasyFocus] = useState<SimpleFocusKey[]>(["UPPER"]);
   const [easySets, setEasySets] = useState("3");
   const [easyReps, setEasyReps] = useState("8-12");
+  // These DOM-owned inputs are also set programmatically when the day changes,
+  // so their .value is synced imperatively (defaultValue only applies at mount).
+  const easySetsRef = useRef<HTMLInputElement>(null);
+  const easyRepsRef = useRef<HTMLInputElement>(null);
 
   const activeProgram: Program | undefined = state.programs.find(
     (p) => p.id === state.activeProgramId,
@@ -141,8 +145,12 @@ function TrainPage() {
   useEffect(() => {
     if (!editMode) return;
     const current = schedule[selectedDay];
-    setEasySets(String(current?.sets ?? 3));
-    setEasyReps(current?.reps ?? "8-12");
+    const sets = String(current?.sets ?? 3);
+    const reps = current?.reps ?? "8-12";
+    setEasySets(sets);
+    setEasyReps(reps);
+    if (easySetsRef.current) easySetsRef.current.value = sets;
+    if (easyRepsRef.current) easyRepsRef.current.value = reps;
     // Only resync when changing day/opening edit mode; syncing on every schedule write
     // would fight the mobile keyboard while the user is mid-edit.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -228,11 +236,6 @@ function TrainPage() {
     updateDayTrainingDose({ sets: Math.max(1, Math.min(12, Number(raw))) });
   }
 
-  function handleEasySetsBlur() {
-    const clamped = Math.max(1, Math.min(12, Number(easySets) || day?.sets || 3));
-    setEasySets(String(clamped));
-    updateDayTrainingDose({ sets: clamped });
-  }
 
   function handleEasyRepsChange(rawValue: string) {
     const next = rawValue.slice(0, 16);
@@ -516,6 +519,7 @@ function TrainPage() {
                 <div>
                   <label className="label-cap text-[9px] block mb-1">Sets</label>
                   <input
+                    ref={easySetsRef}
                     defaultValue={easySets}
                     onChange={(e) => {
                       const raw = e.target.value.replace(/[^\d]/g, "").slice(0, 2);
@@ -537,6 +541,7 @@ function TrainPage() {
                 <div>
                   <label className="label-cap text-[9px] block mb-1">Reps</label>
                   <input
+                    ref={easyRepsRef}
                     defaultValue={easyReps}
                     onChange={(e) => handleEasyRepsChange(e.target.value)}
                     onFocus={(e) => e.currentTarget.select()}

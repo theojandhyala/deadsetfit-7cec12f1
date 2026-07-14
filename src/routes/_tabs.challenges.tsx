@@ -890,11 +890,11 @@ function WarsTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
   const lastWeek = getWeekBounds(-1);
 
   const thisWeekSessions = (state.sessions ?? []).filter((s) => {
-    const dt = new Date(s.date);
+    const dt = new Date(`${s.date}T12:00:00`);
     return dt >= thisWeek.start && dt <= thisWeek.end;
   });
   const lastWeekSessions = (state.sessions ?? []).filter((s) => {
-    const dt = new Date(s.date);
+    const dt = new Date(`${s.date}T12:00:00`);
     return dt >= lastWeek.start && dt <= lastWeek.end;
   });
 
@@ -916,7 +916,7 @@ function WarsTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
   const weeks = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const weekSessionMap = new Map<string, number>();
   thisWeekSessions.forEach((s) => {
-    const d = new Date(s.date);
+    const d = new Date(`${s.date}T12:00:00`);
     const key = weeks[d.getDay() === 0 ? 6 : d.getDay() - 1];
     weekSessionMap.set(key, (weekSessionMap.get(key) ?? 0) + 1);
   });
