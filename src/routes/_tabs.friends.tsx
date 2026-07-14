@@ -939,9 +939,10 @@ function Friends() {
       .catch(() => {});
     _getLoc()
       .then((l) => {
-        setMyLoc({ city: l.city, country: l.country });
+        const c = normalizeCountry(l.country);
+        setMyLoc({ city: l.city, country: c || l.country });
         setCityInput(l.city ?? "");
-        setCountryInput(l.country ?? "");
+        setCountryInput(c || (l.country ?? ""));
       })
       .catch(() => {});
     _nearby()
