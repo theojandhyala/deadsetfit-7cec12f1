@@ -43,6 +43,9 @@
 }
 
 :root {
+  /* Bumping this value forces a new hashed CSS filename — the escape hatch
+     when a CDN edge has cached a poisoned response under the old asset URL. */
+  --deadset-css-v: 2;
   --radius: 14px;
   --background: oklch(0.12 0 0);
   --foreground: oklch(0.96 0.005 90);
