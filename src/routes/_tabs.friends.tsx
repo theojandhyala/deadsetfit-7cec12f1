@@ -880,6 +880,36 @@ function Invite() {
 type SearchHit = Awaited<ReturnType<typeof searchAthletes>>[number];
 type Suggested = Awaited<ReturnType<typeof getSuggestedAthletes>>[number];
 
+const COUNTRY_ALIASES: Record<string, string> = {
+  "united kingdom of great britain and northern ireland": "United Kingdom",
+  "russian federation": "Russia",
+  "korea, republic of": "South Korea",
+  "korea (the republic of)": "South Korea",
+  "korea, democratic people's republic of": "North Korea",
+  "iran, islamic republic of": "Iran",
+  "syrian arab republic": "Syria",
+  "viet nam": "Vietnam",
+  "czechia": "Czech Republic",
+  "türkiye": "Turkey",
+  "tanzania, united republic of": "Tanzania",
+  "bolivia (plurinational state of)": "Bolivia",
+  "venezuela (bolivarian republic of)": "Venezuela",
+  "moldova, republic of": "Moldova",
+  "lao people's democratic republic": "Laos",
+  "united states of america": "United States",
+};
+
+function normalizeCountry(raw: string | null | undefined): string {
+  if (!raw) return "";
+  // Strip trailing " (the)" and similar UN formal suffixes
+  let s = raw.replace(/\s*\(the\)\s*$/i, "").trim();
+  const key = s.toLowerCase();
+  if (COUNTRY_ALIASES[key]) return COUNTRY_ALIASES[key];
+  // Drop trailing parenthetical qualifier e.g. "Micronesia (Federated States of)"
+  s = s.replace(/\s*\([^)]*\)\s*$/, "").trim();
+  return s;
+}
+
 function Friends() {
   const _search = searchAthletes;
   const _suggest = getSuggestedAthletes;
