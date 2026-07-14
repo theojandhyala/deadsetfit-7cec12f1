@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { toast } from "sonner";
-import { Check, Zap } from "lucide-react";
+import { Check, ChevronLeft, Zap } from "lucide-react";
 import { GritLogo } from "@/components/GritLogo";
 import { getState, setLocalStateOwner, setState, waitForRemoteState } from "@/lib/storage";
 import { calculateCalories, calculateMacros, defaultSchedule } from "@/lib/calc";
@@ -28,10 +28,7 @@ type Step =
   | "session"
   | "schedule"
   | "experience"
-  | "age"
-  | "weight"
-  | "height"
-  | "gender"
+  | "about"
   | "target"
   | "injuries"
   | "weakness"
@@ -53,10 +50,7 @@ function orderFor(mode: Mode | null): Step[] {
     ...base,
     ...schedule,
     "experience",
-    "age",
-    "weight",
-    "height",
-    "gender",
+    "about",
     "target",
     "injuries",
     "weakness",
@@ -163,7 +157,13 @@ function Onboarding() {
         })
         .catch((e: Error) => {
           savingRef.current = false;
-          toast.error(e.message || "Couldn't save profile");
+          const msg = e.message || "Couldn't save profile";
+          if (/username|duplicate|unique|taken/i.test(msg)) {
+            toast.error("That @username is taken — pick another.");
+            setIdx(Math.max(ORDER.indexOf("username"), 0));
+          } else {
+            toast.error(msg);
+          }
         });
     } else {
       setIdx(idx + 1);
@@ -176,20 +176,31 @@ function Onboarding() {
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
       <div className="px-6 pt-10 pb-6 flex items-center justify-between">
-        <GritLogo className="text-3xl" />
+        <div className="flex items-center gap-3">
+          {idx > 0 && (
+            <button
+              onClick={() => setIdx(idx - 1)}
+              aria-label="Back"
+              className="w-9 h-9 -ml-2 flex items-center justify-center rounded-full border border-grit bg-grit-card text-grit-dim press"
+            >
+              <ChevronLeft size={18} />
+            </button>
+          )}
+          <GritLogo className="text-3xl" />
+        </div>
         <span className="label-cap">
           {idx + 1} / {ORDER.length}
         </span>
       </div>
       <div className="px-6">
-        <div className="h-1 bg-grit-card">
+        <div className="h-1.5 bg-grit-card rounded-full overflow-hidden">
           <div
-            className="h-1 bg-accent-red transition-all"
+            className="h-full bg-accent-red rounded-full transition-all"
             style={{ width: `${((idx + 1) / ORDER.length) * 100}%` }}
           />
         </div>
       </div>
-      <div className="flex-1 px-6 pt-10 pb-10 flex flex-col">
+      <div key={step} className="flex-1 px-6 pt-10 pb-10 flex flex-col animate-slide-up">
         {step === "mode" && (
           <ModeStep
             onPick={(m: Mode) => {
@@ -221,44 +232,7 @@ function Onboarding() {
             onPick={(v) => next({ experience: v as Experience })}
           />
         )}
-        {step === "age" && (
-          <Numeric
-            title="Your age"
-            suffix="yrs"
-            min={13}
-            max={90}
-            onSubmit={(n) => next({ age: n })}
-          />
-        )}
-        {step === "weight" && (
-          <Numeric
-            title="Your weight"
-            suffix="kg"
-            min={30}
-            max={250}
-            onSubmit={(n) => next({ weightKg: n })}
-          />
-        )}
-        {step === "height" && (
-          <Numeric
-            title="Your height"
-            suffix="cm"
-            min={120}
-            max={230}
-            onSubmit={(n) => next({ heightCm: n })}
-          />
-        )}
-        {step === "gender" && (
-          <Choice
-            title="Gender"
-            options={[
-              { v: "MALE", l: "Male" },
-              { v: "FEMALE", l: "Female" },
-              { v: "OTHER", l: "Other" },
-            ]}
-            onPick={(v) => next({ gender: v as Gender })}
-          />
-        )}
+        {step === "about" && <AboutYouStep onSubmit={(patch) => next(patch)} />}
         {step === "days" && (
           <Choice
             title="Days per week you can train"
@@ -325,7 +299,9 @@ function Onboarding() {
           />
         )}
         {step === "prs" && <PRStep onContinue={() => next({})} />}
-        {step === "username" && <UsernameStep onSubmit={(u) => next({ username: u })} />}
+        {step === "username" && (
+          <UsernameStep initial={draft.username} onSubmit={(u) => next({ username: u })} />
+        )}
         {step === "photo" && (
           <PhotoStep onSubmit={(url) => next({ avatarDataUrl: url })} onSkip={() => next({})} />
         )}
@@ -364,38 +340,81 @@ function Choice({
   );
 }
 
-function Numeric({
-  title,
-  suffix,
-  min,
-  max,
-  onSubmit,
-}: {
-  title: string;
-  suffix: string;
-  min: number;
-  max: number;
-  onSubmit: (n: number) => void;
-}) {
-  const [v, setV] = useState("");
-  const n = Number(v);
-  const valid = v !== "" && n >= min && n <= max;
+function AboutYouStep({ onSubmit }: { onSubmit: (patch: Partial<Profile>) => void }) {
+  const [age, setAge] = useState("");
+  const [weight, setWeight] = useState("");
+  const [height, setHeight] = useState("");
+  const [gender, setGender] = useState<Gender | null>(null);
+  const a = Number(age);
+  const w = Number(weight);
+  const h = Number(height);
+  const ageOk = age !== "" && a >= 13 && a <= 90;
+  const weightOk = weight !== "" && w >= 30 && w <= 250;
+  const heightOk = height !== "" && h >= 120 && h <= 230;
+  const valid = ageOk && weightOk && heightOk && gender !== null;
+
+  const fields = [
+    { label: "AGE", suffix: "yrs", value: age, set: setAge, ok: ageOk, placeholder: "24", digitsOnly: true },
+    { label: "WEIGHT", suffix: "kg", value: weight, set: setWeight, ok: weightOk, placeholder: "80", digitsOnly: false },
+    { label: "HEIGHT", suffix: "cm", value: height, set: setHeight, ok: heightOk, placeholder: "180", digitsOnly: false },
+  ];
+
   return (
     <>
-      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-8">{title}</h1>
-      <div className="flex items-end gap-3 mb-8">
-        <input
-          autoFocus
-          inputMode="numeric"
-          type="number"
-          value={v}
-          onChange={(e) => setV(e.target.value)}
-          className="bg-transparent border-b-2 border-grit focus:border-accent-red outline-none text-6xl font-display font-extrabold text-grit w-40 pb-2"
-          placeholder="0"
-        />
-        <span className="label-cap text-lg pb-3">{suffix}</span>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">About you</h1>
+      <p className="text-sm text-[#8a8a8a] mb-8">
+        Sets your calories, macros and strength standards. Never shown publicly.
+      </p>
+      <div className="grid grid-cols-3 gap-2 mb-6">
+        {fields.map((f, i) => (
+          <div key={f.label} className="bg-grit-card border border-grit rounded-2xl p-3">
+            <p className="label-cap text-[9px] text-grit-dim mb-1">{f.label}</p>
+            <div className="flex items-baseline gap-1">
+              <input
+                autoFocus={i === 0}
+                value={f.value}
+                onChange={(e) =>
+                  f.set(e.target.value.replace(f.digitsOnly ? /[^0-9]/g : /[^0-9.]/g, ""))
+                }
+                inputMode="decimal"
+                placeholder={f.placeholder}
+                className="bg-transparent outline-none w-full min-w-0 text-2xl font-display font-extrabold text-grit"
+                style={{ color: f.value && !f.ok ? "#e63222" : undefined }}
+              />
+              <span className="label-cap text-[9px] text-grit-dim">{f.suffix}</span>
+            </div>
+          </div>
+        ))}
       </div>
-      <button disabled={!valid} onClick={() => onSubmit(n)} className="btn-grit mt-auto">
+      <p className="label-cap text-[10px] text-grit-dim mb-2">GENDER</p>
+      <div className="grid grid-cols-3 gap-2 mb-6">
+        {(["MALE", "FEMALE", "OTHER"] as Gender[]).map((g) => {
+          const active = gender === g;
+          return (
+            <button
+              key={g}
+              onClick={() => setGender(g)}
+              className="border rounded-2xl p-3 press"
+              style={{
+                borderColor: active ? "#e63222" : "#262626",
+                background: active ? "rgba(230,50,34,0.1)" : "#141414",
+              }}
+            >
+              <span
+                className="display text-sm uppercase font-extrabold"
+                style={{ color: active ? "#f5f5f0" : "#8a8a8a" }}
+              >
+                {g === "MALE" ? "Male" : g === "FEMALE" ? "Female" : "Other"}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <button
+        disabled={!valid}
+        onClick={() => gender && onSubmit({ age: a, weightKg: w, heightCm: h, gender })}
+        className="btn-grit mt-auto disabled:opacity-40"
+      >
         Continue
       </button>
     </>
@@ -429,8 +448,8 @@ function Injuries({ onSubmit, onSkip }: { onSubmit: (s: string) => void; onSkip:
   );
 }
 
-function UsernameStep({ onSubmit }: { onSubmit: (u: string) => void }) {
-  const [v, setV] = useState("");
+function UsernameStep({ initial, onSubmit }: { initial?: string; onSubmit: (u: string) => void }) {
+  const [v, setV] = useState(initial ?? "");
   const clean = v
     .toLowerCase()
     .replace(/[^a-z0-9_]/g, "")
@@ -503,7 +522,7 @@ function PhotoStep({ onSubmit, onSkip }: { onSubmit: (url: string) => void; onSk
       </div>
       <div className="mt-auto flex flex-col gap-3">
         <button onClick={() => (preview ? onSubmit(preview) : onSkip())} className="btn-grit">
-          Finish Setup
+          Continue
         </button>
         {preview && (
           <button onClick={onSkip} className="btn-ghost">
@@ -558,7 +577,7 @@ function SchedulePreview({
           return (
             <div
               key={d}
-              className="bg-grit-card border border-grit p-3 flex items-start gap-3"
+              className="bg-grit-card border border-grit rounded-xl p-3 flex items-start gap-3"
               style={{ borderColor: isRest ? "#262626" : "#3a1410" }}
             >
               <span className="label-cap text-[10px] w-10 pt-0.5 text-grit-dim">{d}</span>
@@ -606,7 +625,7 @@ function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
       <div className="flex flex-col gap-3">
         <button
           onClick={() => onPick("GENERATE")}
-          className="bg-grit-card border-2 border-accent-red p-6 text-left hover:bg-[#1a0a08] transition-colors"
+          className="bg-grit-card border-2 border-accent-red rounded-3xl p-6 text-left hover:bg-[#1a0a08] transition-colors"
         >
           <div className="flex items-center gap-2 mb-1">
             <Zap size={14} className="text-accent-red" />
@@ -619,7 +638,7 @@ function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
         </button>
         <button
           onClick={() => onPick("BUILD")}
-          className="bg-grit-card border border-grit p-6 text-left hover:border-accent-red transition-colors"
+          className="bg-grit-card border border-grit rounded-3xl p-6 text-left hover:border-accent-red transition-colors"
         >
           <span className="display text-2xl uppercase tracking-wide font-extrabold text-grit block">
             Build Your Own
@@ -688,7 +707,7 @@ function PRStep({ onContinue }: { onContinue: () => void }) {
       </p>
       <div className="flex flex-col gap-2 mb-6">
         {ONBOARDING_PRS.map((pr) => (
-          <div key={pr.id} className="bg-grit-card border border-grit px-3 py-2.5">
+          <div key={pr.id} className="bg-grit-card border border-grit rounded-xl px-3 py-2.5">
             <div className="flex items-center gap-3">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-grit truncate">{pr.label}</p>
@@ -757,7 +776,7 @@ function FocusStep({
             <button
               key={o.v}
               onClick={() => toggle(o.v)}
-              className="border p-4 text-left press"
+              className="border rounded-2xl p-4 text-left press"
               style={{
                 borderColor: active ? "#e63222" : "#262626",
                 background: active ? "rgba(230,50,34,0.1)" : "#141414",

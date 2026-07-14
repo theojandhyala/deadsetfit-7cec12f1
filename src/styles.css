@@ -228,6 +228,32 @@
   }
   .input-grit:focus {
     border-color: #e63222;
+    box-shadow: 0 0 0 1px rgba(230, 50, 34, 0.45);
+  }
+
+  /* Default rounding for the core grit primitives. :where() keeps specificity
+     at zero so any explicit rounded-* utility still wins. */
+  :where(.btn-grit, .btn-ghost) {
+    border-radius: 16px;
+  }
+  :where(.input-grit) {
+    border-radius: 14px;
+  }
+  :where(.xp-bar) {
+    border-radius: 999px;
+  }
+  :where(.bg-grit-card.border, .neon-card, .deadset-3d-panel) {
+    border-radius: 1.35rem;
+  }
+
+  .btn-ghost {
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      transform 0.05s ease;
+  }
+  .btn-ghost:active {
+    transform: translateY(1px) scale(0.99);
   }
 
   .deadset-page {
@@ -367,7 +393,7 @@
   }
 
   .deadset-card-soft,
-  .deadset-page .bg-grit-card.border {
+  .bg-grit-card.border {
     transition:
       transform 180ms ease,
       border-color 180ms ease,
@@ -399,6 +425,12 @@
   .deadset-card-soft:active,
   .deadset-page .bg-grit-card.border:active {
     transform: translateY(1px) scale(0.998);
+  }
+
+  /* Squared-off underline inputs (onboarding numerics) keep their look but
+     gain a soft focus glow for feedback. */
+  :where(input[class*="border-b-2"]):focus {
+    box-shadow: 0 10px 18px -12px rgba(230, 50, 34, 0.55);
   }
 
   .deadset-glass-strip {

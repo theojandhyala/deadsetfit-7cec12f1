@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "preview", "--", "--port", "4199", "--strictPort"],
       "port": 4199
+    },
+    {
+      "name": "preview-alt",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "preview", "--", "--port", "4517", "--strictPort"],
+      "port": 4517
     }
   ]
 }

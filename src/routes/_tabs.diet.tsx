@@ -208,6 +208,23 @@ function DietPage() {
     () => buildCalorieGoalGrid(state.foodLog, calories, profile?.goal),
     [state.foodLog, calories, profile?.goal],
   );
+  const recentFoods = useMemo(() => buildRecentFoods(state.foodLog), [state.foodLog]);
+
+  function addRecentFood(item: FoodLogItem) {
+    // Users can log by name alone — coerce missing macros to 0 so the
+    // totals reducers never see undefined.
+    set((s) => ({
+      ...s,
+      foodLog: [...s.foodLog, {
+        ...item,
+        date: today,
+        calories: item.calories ?? 0,
+        protein: item.protein ?? 0,
+        carbs: item.carbs ?? 0,
+        fats: item.fats ?? 0,
+      }],
+    }));
+  }
 
   // BMI + per-meal breakdown
   const bmi = profile ? profile.weightKg / Math.pow(profile.heightCm / 100, 2) : 0;
@@ -460,6 +477,27 @@ function DietPage() {
           </div>
         )}
       </div>
+
+      {/* Recent foods — one-tap re-log from history */}
+      {recentFoods.length > 0 && (
+        <div className="deadset-section">
+          <p className="label-cap text-[10px] text-[#8a8a8a] mb-2">Recent</p>
+          <div className="no-scrollbar overflow-x-auto flex gap-2">
+            {recentFoods.map((f) => (
+              <button
+                key={f.key}
+                onClick={() => addRecentFood(f.item)}
+                className="press rounded-full border border-grit bg-grit-card px-3 py-2 flex items-center gap-1.5 whitespace-nowrap shrink-0"
+              >
+                <span className="text-xs font-bold text-grit">{f.item.name}</span>
+                {(f.item.calories ?? 0) > 0 && (
+                  <span className="text-[10px] text-grit-dim">{f.item.calories} kcal</span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* BMI + per-meal breakdown */}
       {profile && (
@@ -767,6 +805,35 @@ function buildCalorieGoalGrid(
     streak,
     hitCount: days.filter((day) => day.hit).length,
   };
+}
+
+/** Unique-by-name foods from the log, ranked by a blend of frequency and
+ *  recency (recency boost decays over ~2 weeks), top 8. Each entry carries
+ *  the most recent log item of that name so re-logging copies its macros. */
+function buildRecentFoods(foodLog: FoodLogItem[]): Array<{ key: string; item: FoodLogItem }> {
+  const groups = new Map<string, { item: FoodLogItem; count: number; lastDate: string }>();
+  for (const f of foodLog) {
+    const key = f.name?.trim().toLowerCase();
+    if (!key) continue;
+    const g = groups.get(key);
+    if (!g) {
+      groups.set(key, { item: f, count: 1, lastDate: f.date });
+    } else {
+      g.count += 1;
+      // >= so the later array entry wins on same-day ties (log is append-only).
+      if (f.date >= g.lastDate) { g.item = f; g.lastDate = f.date; }
+    }
+  }
+  const todayMs = new Date(`${isoDay()}T12:00:00`).getTime();
+  return [...groups.entries()]
+    .map(([key, g]) => {
+      const lastMs = new Date(`${g.lastDate}T12:00:00`).getTime();
+      const daysAgo = Math.max(0, Math.round((todayMs - lastMs) / 86400000));
+      return { key, item: g.item, score: g.count + 7 / (1 + daysAgo) };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 8)
+    .map(({ key, item }) => ({ key, item }));
 }
 
 function caloriesHitGoal(calories: number, targetCalories: number, goal?: string) {

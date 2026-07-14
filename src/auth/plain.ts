@@ -19,13 +19,24 @@ const signupTab = document.getElementById("signup-tab") as HTMLButtonElement;
 const forgotButton = document.getElementById("forgot") as HTMLButtonElement;
 const message = document.getElementById("message") as HTMLDivElement;
 const togglePassword = document.getElementById("toggle-password") as HTMLButtonElement | null;
+const passwordHint = document.getElementById("password-hint") as HTMLParagraphElement | null;
+const freeNote = document.getElementById("free-note") as HTMLParagraphElement | null;
 const closeButton = document.getElementById("close") as HTMLButtonElement;
 
 let mode: "signin" | "signup" = "signin";
 
-function setMessage(text: string, error = false) {
+function setMessage(text: string, tone: "neutral" | "error" | "success" = "neutral") {
   message.textContent = text;
-  message.classList.toggle("error", error);
+  message.classList.toggle("error", tone === "error");
+  message.classList.toggle("success", tone === "success");
+}
+
+function updatePasswordHint() {
+  if (!passwordHint) return;
+  passwordHint.hidden = mode !== "signup";
+  const ok = passwordInput.value.length >= 6;
+  passwordHint.classList.toggle("ok", ok);
+  passwordHint.textContent = ok ? "✓ At least 6 characters" : "At least 6 characters";
 }
 
 function setBusy(busy: boolean) {
@@ -136,8 +147,27 @@ function destinationFor(session: Session, signingUp = false) {
 }
 
 function errorMessage(error: unknown, fallback: string) {
-  if (error instanceof Error && error.message.trim()) return error.message;
-  return fallback;
+  const raw = error instanceof Error && error.message.trim() ? error.message : fallback;
+  const lower = raw.toLowerCase();
+  if (lower.includes("invalid login credentials")) {
+    return "Wrong email or password. Try again, or tap “Forgot password?”";
+  }
+  if (lower.includes("already registered")) {
+    return "That email already has an account — sign in instead.";
+  }
+  if (lower.includes("email not confirmed")) {
+    return "Confirm your email first — check your inbox for the link we sent.";
+  }
+  if (lower.includes("at least 6 characters") || lower.includes("password should be")) {
+    return "Password needs at least 6 characters.";
+  }
+  if (lower.includes("you can only request this after") || lower.includes("rate limit")) {
+    return "Too many attempts. Wait a minute and try again.";
+  }
+  if (lower.includes("failed to fetch") || lower.includes("network")) {
+    return "Can’t reach the server. Check your connection and try again.";
+  }
+  return raw;
 }
 
 const supabase =
@@ -179,6 +209,8 @@ function switchMode(next: "signin" | "signup") {
   passwordInput.autocomplete = signingUp ? "new-password" : "current-password";
   forgotButton.style.visibility = signingUp ? "hidden" : "visible";
   submitButton.textContent = signingUp ? "Create Account" : "Sign In";
+  if (freeNote) freeNote.hidden = !signingUp;
+  updatePasswordHint();
   setMessage("");
 }
 
@@ -188,9 +220,12 @@ signupTab.addEventListener("click", () => switchMode("signup"));
 togglePassword?.addEventListener("click", () => {
   const showing = passwordInput.type === "text";
   passwordInput.type = showing ? "password" : "text";
+  togglePassword.classList.toggle("showing", !showing);
   togglePassword.setAttribute("aria-label", showing ? "Show password" : "Hide password");
   passwordInput.focus();
 });
+
+passwordInput.addEventListener("input", updatePasswordHint);
 
 closeButton.addEventListener("click", () => {
   window.location.assign("/");
@@ -199,12 +234,12 @@ closeButton.addEventListener("click", () => {
 forgotButton.addEventListener("click", async () => {
   const email = emailInput.value.trim().toLowerCase();
   if (!email) {
-    setMessage("Enter your email first.", true);
+    setMessage("Enter your email first.", "error");
     emailInput.focus();
     return;
   }
   if (!supabase) {
-    setMessage("Authentication is not configured.", true);
+    setMessage("Authentication is not configured.", "error");
     return;
   }
 
@@ -215,9 +250,9 @@ forgotButton.addEventListener("click", async () => {
       redirectTo: redirectUrl(),
     });
     if (error) throw error;
-    setMessage("Password reset email sent.");
+    setMessage("Password reset email sent. Check your inbox.", "success");
   } catch (error) {
-    setMessage(errorMessage(error, "Could not send reset email"), true);
+    setMessage(errorMessage(error, "Could not send reset email"), "error");
   } finally {
     setBusy(false);
   }
@@ -229,7 +264,7 @@ form.addEventListener("submit", async (event) => {
   const password = passwordInput.value;
   if (!email || !password) return;
   if (!supabase) {
-    setMessage("Authentication is not configured.", true);
+    setMessage("Authentication is not configured.", "error");
     return;
   }
 
@@ -248,8 +283,15 @@ form.addEventListener("submit", async (event) => {
         window.location.replace(destinationFor(data.session, true));
         return;
       }
+      // With email confirmation on, Supabase "succeeds" for an existing email
+      // but returns a user with no identities — surface that honestly.
+      if ((data.user?.identities?.length ?? 0) === 0) {
+        switchMode("signin");
+        setMessage("That email already has an account — sign in instead.", "error");
+        return;
+      }
       switchMode("signin");
-      setMessage("Check your email to confirm your account, then sign in.");
+      setMessage("Almost there — confirm your email via the link we sent, then sign in.", "success");
       return;
     }
 
@@ -259,7 +301,7 @@ form.addEventListener("submit", async (event) => {
     saveSessionBackup(data.session);
     window.location.replace(destinationFor(data.session));
   } catch (error) {
-    setMessage(errorMessage(error, "Authentication failed"), true);
+    setMessage(errorMessage(error, "Authentication failed"), "error");
   } finally {
     setBusy(false);
   }

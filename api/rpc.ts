@@ -155,7 +155,8 @@ async function resolveDeadsetProProduct(stripe: any): Promise<string> {
 
   const created = await stripe.products.create({
     name: "DEADSET Pro",
-    description: "Unlimited AI coaching, physique scans, diet tools, programs and Pro features.",
+    description:
+      "Streak Armor, head-to-head challenges, leagues, advanced analytics and featured programs.",
     metadata: { app: "deadset", tier: "pro" },
   });
   return created.id;

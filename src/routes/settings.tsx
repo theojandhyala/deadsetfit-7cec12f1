@@ -1,8 +1,18 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
-import { ChevronLeft, Download, Upload, Bell, Droplets, Scale, ClipboardList } from "lucide-react";
+import {
+  ChevronLeft,
+  Download,
+  Upload,
+  Bell,
+  Droplets,
+  Scale,
+  ClipboardList,
+  FileSpreadsheet,
+} from "lucide-react";
 import { toast } from "sonner";
 import { askConfirm } from "@/lib/confirm";
+import { exportJsonBackup, exportWorkoutCsv } from "@/lib/export";
 import { useAppState } from "@/lib/storage";
 import { clearSessionDiagnostics, readSessionLogs } from "@/lib/session-diagnostics";
 import { connectHealth, healthSupported } from "@/lib/health";
@@ -37,15 +47,23 @@ function SettingsPage() {
   const hydration = state.hydrationAlertsEnabled ?? true;
   const waterTarget = state.waterTargetMl ?? 3000;
 
-  function exportData() {
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `deadset-export-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Data exported");
+  async function handleExportJson() {
+    try {
+      await exportJsonBackup();
+      toast.success("Backup exported");
+    } catch {
+      toast.error("Couldn't export backup");
+    }
+  }
+
+  async function handleExportCsv() {
+    try {
+      const exported = await exportWorkoutCsv();
+      if (exported) toast.success("Workout history exported");
+      else toast("No finished workouts to export yet");
+    } catch {
+      toast.error("Couldn't export workout history");
+    }
   }
 
   function importData(file: File) {
@@ -198,32 +216,49 @@ function SettingsPage() {
 
       {/* Data */}
       <section className="px-5 mb-6">
-        <p className="label-cap mb-2">Your Data</p>
-        <div className="flex flex-col gap-2">
-          <button
-            onClick={exportData}
-            className="btn-grit w-full inline-flex items-center justify-center"
-          >
-            <Download size={14} className="mr-2" /> Export All Data (JSON)
-          </button>
-          <button
-            onClick={() => fileRef.current?.click()}
-            className="btn-ghost w-full inline-flex items-center justify-center"
-          >
-            <Upload size={14} className="mr-2" /> Import From File
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/json"
-            className="hidden"
-            onChange={(e) => e.target.files?.[0] && importData(e.target.files[0])}
-          />
-        </div>
-        <p className="text-[10px] text-grit-dim mt-2">
-          Export a full backup of your local training data. Import will overwrite current device
-          state.
+        <p className="label-cap mb-2 flex items-center gap-1.5">
+          <Download size={12} className="text-accent-red" /> Your Data
         </p>
+        <div className="bg-grit-card border border-grit p-4 flex flex-col gap-4">
+          <div>
+            <button
+              onClick={handleExportJson}
+              className="btn-ghost w-full inline-flex items-center justify-center"
+            >
+              <Download size={14} className="mr-2" /> Download Backup (JSON)
+            </button>
+            <p className="text-[10px] text-grit-dim mt-1.5">
+              Full backup of everything on this device.
+            </p>
+          </div>
+          <div>
+            <button
+              onClick={handleExportCsv}
+              className="btn-ghost w-full inline-flex items-center justify-center"
+            >
+              <FileSpreadsheet size={14} className="mr-2" /> Workout History (CSV)
+            </button>
+            <p className="text-[10px] text-grit-dim mt-1.5">Spreadsheet of every logged set.</p>
+          </div>
+          <div>
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="btn-ghost w-full inline-flex items-center justify-center"
+            >
+              <Upload size={14} className="mr-2" /> Import From File
+            </button>
+            <p className="text-[10px] text-grit-dim mt-1.5">
+              Restores a backup — overwrites current device state.
+            </p>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="application/json"
+              className="hidden"
+              onChange={(e) => e.target.files?.[0] && importData(e.target.files[0])}
+            />
+          </div>
+        </div>
       </section>
 
       <section className="px-5 mb-6">

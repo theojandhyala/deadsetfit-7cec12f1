@@ -17,6 +17,7 @@ import {
 import { useAppState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
 import { estimate1RM } from "@/lib/calc";
+import { OneRmCalculator } from "@/components/OneRmCalculator";
 import type { SetLog, AppState } from "@/lib/types";
 
 export const Route = createFileRoute("/_tabs/lift/$exerciseId")({
@@ -90,6 +91,18 @@ function LiftDetailPage() {
     }
     return Array.from(m.values()).sort((a, b) => a.date.localeCompare(b.date));
   }, [logs]);
+
+  // Best set of the most recent day with data — prefill for the 1RM calculator.
+  const recentBest = useMemo(() => {
+    if (!all.length) return null;
+    const lastDay = all[all.length - 1].date.slice(0, 10);
+    let best: SetLog | null = null;
+    for (const l of all) {
+      if (l.date.slice(0, 10) !== lastDay) continue;
+      if (!best || estimate1RM(l.weight, l.reps) > estimate1RM(best.weight, best.reps)) best = l;
+    }
+    return best;
+  }, [all]);
 
   const allTimePR = useMemo(() => all.reduce((m, l) => Math.max(m, l.weight), 0), [all]);
   const e1rmPR = useMemo(
@@ -201,6 +214,12 @@ function LiftDetailPage() {
         exerciseId={exerciseId}
         e1rm={e1rmPR}
         bodyweightKg={state.profile?.weightKg ?? 80}
+      />
+
+      <OneRmCalculator
+        key={exerciseId}
+        initialWeight={recentBest?.weight}
+        initialReps={recentBest?.reps}
       />
 
       <div className="h-12" />
