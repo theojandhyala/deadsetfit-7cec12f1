@@ -53,7 +53,7 @@ export function ConfirmSheet() {
   return (
     <div className="fixed inset-0 z-[110] flex items-end justify-center" role="alertdialog" aria-modal="true">
       <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/80"
         onClick={() => finish(request.kind === "text" ? null : false)}
       />
       <div

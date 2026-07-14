@@ -177,16 +177,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootShell({ children }: { children: ReactNode }) {
+  // Client-only app: index.html owns <html>/<head>/<body>. Rendering another
+  // document shell inside #root creates nested <html> elements — invalid DOM
+  // that sends React's event dispatch into an infinite loop (frozen app,
+  // black screen while scrolling). HeadContent tags are hoisted to the real
+  // <head> by React 19.
   return (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        {children}
-        <Scripts />
-      </body>
-    </html>
+    <>
+      <HeadContent />
+      {children}
+      <Scripts />
+    </>
   );
 }
 

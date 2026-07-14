@@ -79,7 +79,7 @@ export function RankEmblem({
           }}
         />
         <div
-          className="absolute flex items-center justify-center rounded-full bg-black/70 backdrop-blur-sm"
+          className="absolute flex items-center justify-center rounded-full bg-black/70"
           style={{
             width: dim - coreInset * 2,
             height: dim - coreInset * 2,

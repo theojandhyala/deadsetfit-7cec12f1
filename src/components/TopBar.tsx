@@ -69,9 +69,10 @@ export function TopBar() {
     <header
       className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-5"
       style={{
-        background: "linear-gradient(180deg, rgba(16,17,21,0.98), rgba(10,10,10,0.90))",
-        backdropFilter: "blur(22px)",
-        WebkitBackdropFilter: "blur(22px)",
+        // No backdrop-filter: fixed bars with backdrop blur intermittently
+        // composite as solid BLACK while scrolling in WKWebView/iOS Safari.
+        // A near-opaque gradient reads the same without the blur.
+        background: "linear-gradient(180deg, rgba(16,17,21,0.99), rgba(10,10,10,0.97))",
         borderBottom: "1px solid rgba(255,255,255,0.075)",
         boxShadow: "0 16px 42px rgba(0,0,0,0.40), inset 0 -1px 0 rgba(230,50,34,0.12)",
         paddingTop: "calc(env(safe-area-inset-top) + 12px)",

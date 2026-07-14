@@ -60,6 +60,7 @@ function ProfilePage() {
   const [username, setUsername] = useState(p?.username || "");
   const [savingProfile, setSavingProfile] = useState(false);
   const [session, setSession] = useState<{ userId: string } | null | "loading">("loading");
+  const [editingPR, setEditingPR] = useState<PRDef | null>(null);
   const {
     isPro,
     status: proStatus,
@@ -257,7 +258,7 @@ function ProfilePage() {
       }));
     }
     void flushRemoteState();
-    toast.success("PR saved");
+    toast.success(value > 0 ? "PR saved" : "PR removed");
     if (value > 0) emitGritEarned(25, "PR SAVED", "pr");
   }
 
@@ -411,15 +412,24 @@ function ProfilePage() {
           <p className="label-cap flex items-center gap-1.5">
             <Trophy size={12} className="text-accent-red" /> Personal Records
           </p>
-          <span className="text-[10px] text-grit-dim">Type your best</span>
+          <span className="text-[10px] text-grit-dim">Tap a lift to edit</span>
         </div>
         <div className="bg-grit-card border border-grit divide-y divide-[#262626]">
           {PR_CATALOG.map((def) => {
             const pr = state.manualPRs?.[def.id];
-            return <PRRow key={def.id} def={def} pr={pr} onSave={(v, r) => savePR(def, v, r)} />;
+            return <PRRow key={def.id} def={def} pr={pr} onEdit={() => setEditingPR(def)} />;
           })}
         </div>
       </section>
+
+      {editingPR && (
+        <PREditSheet
+          def={editingPR}
+          pr={state.manualPRs?.[editingPR.id]}
+          onSave={(v, r) => savePR(editingPR, v, r)}
+          onClose={() => setEditingPR(null)}
+        />
+      )}
 
       {/* === Athlete Stats === */}
       <section className="px-5 mb-6">
@@ -577,49 +587,166 @@ function ProfilePage() {
   );
 }
 
+function prUnit(def: PRDef) {
+  return def.kind === "1RM" ? "kg" : def.kind === "REPS" ? "reps" : "sec";
+}
+
 function PRRow({
   def,
   pr,
+  onEdit,
+}: {
+  def: PRDef;
+  pr?: { value: number; reps?: number };
+  onEdit: () => void;
+}) {
+  const unit = prUnit(def);
+  return (
+    <button
+      type="button"
+      onClick={onEdit}
+      className="w-full flex items-center justify-between px-4 py-3 gap-3 text-left hover:bg-white/[0.03] transition-colors"
+    >
+      <p className="text-sm font-bold text-grit truncate">{def.label}</p>
+      <div className="flex items-center gap-2 shrink-0">
+        {pr ? (
+          <span className="display text-lg font-extrabold text-grit leading-none">
+            {pr.value}
+            <span className="label-cap text-[10px] text-grit-dim ml-1">{unit}</span>
+            {def.kind === "1RM" && (pr.reps ?? 1) > 1 && (
+              <span className="text-[10px] font-bold text-grit-dim ml-1">×{pr.reps}</span>
+            )}
+          </span>
+        ) : (
+          <span className="label-cap text-[10px] text-grit-dim">Add PR</span>
+        )}
+        <Pencil size={12} className="text-grit-dim" />
+      </div>
+    </button>
+  );
+}
+
+/** Bottom-sheet popup for entering / updating a PR. */
+function PREditSheet({
+  def,
+  pr,
   onSave,
+  onClose,
 }: {
   def: PRDef;
   pr?: { value: number; reps?: number };
   onSave: (value: number, reps?: number) => void;
+  onClose: () => void;
 }) {
-  const [val, setVal] = useState(String(pr?.value ?? ""));
-  useEffect(() => {
-    setVal(String(pr?.value ?? ""));
-  }, [pr?.value]);
+  const [val, setVal] = useState(pr ? String(pr.value) : "");
+  const [reps, setReps] = useState(pr?.reps ? String(pr.reps) : "1");
+  const unit = prUnit(def);
+  const n = Number(val);
+  const valid = Number.isFinite(n) && n > 0;
+  const isImprovement = valid && (!pr || n > pr.value);
 
-  const unit = def.kind === "1RM" ? "kg" : def.kind === "REPS" ? "reps" : "sec";
+  function save() {
+    if (!valid) return;
+    const r = def.kind === "1RM" ? Math.max(1, Math.round(Number(reps)) || 1) : undefined;
+    onSave(n, r);
+    onClose();
+  }
 
-  function commit() {
-    const n = Number(val);
-    const current = pr?.value ?? 0;
-    if (val.trim() === "" && pr) {
-      onSave(0);
-      return;
-    }
-    if (!Number.isFinite(n) || n === current) return;
-    onSave(n, def.kind === "1RM" ? (pr?.reps ?? 1) : undefined);
+  async function remove() {
+    const ok = await askConfirm({
+      title: `Remove ${def.label} PR?`,
+      message: "This clears your saved best for this lift.",
+      confirmLabel: "Remove",
+      danger: true,
+    });
+    if (!ok) return;
+    onSave(0);
+    onClose();
   }
 
   return (
-    <div className="flex items-center justify-between px-4 py-2.5 gap-3">
-      <p className="text-sm font-bold text-grit truncate">{def.label}</p>
-      <div className="flex items-center gap-1.5 shrink-0">
-        <input
-          value={val}
-          onChange={(e) => setVal(e.target.value)}
-          onBlur={commit}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-          }}
-          inputMode="decimal"
-          placeholder="—"
-          className="input-grit w-20 text-right py-1.5"
-        />
-        <span className="label-cap text-[10px] text-grit-dim w-8">{unit}</span>
+    <div className="fixed inset-0 z-[100] flex items-end justify-center" role="dialog" aria-modal="true">
+      <div className="absolute inset-0 bg-black/80" onClick={onClose} />
+      <div
+        className="relative w-full max-w-md bg-grit-card border rounded-t-3xl rounded-b-none p-6 animate-slide-up"
+        style={{ paddingBottom: "calc(2rem + env(safe-area-inset-bottom))" }}
+      >
+        <div className="flex items-center gap-2 mb-1">
+          <Trophy size={14} className="text-accent-red" />
+          <span className="label-cap text-[10px] text-accent-red">
+            {pr ? "Update PR" : "New PR"}
+          </span>
+        </div>
+        <h2 className="display text-2xl font-extrabold uppercase text-grit leading-tight">
+          {def.label}
+        </h2>
+        <p className="text-xs text-grit-dim mt-1">
+          {pr
+            ? `Current best: ${pr.value} ${unit}${def.kind === "1RM" && (pr.reps ?? 1) > 1 ? ` × ${pr.reps}` : ""}`
+            : "No record yet — set your first one."}
+        </p>
+
+        <div className="mt-5 flex items-end gap-3">
+          <div className="flex-1">
+            <p className="label-cap text-[10px] mb-1.5">{def.kind === "1RM" ? "Weight" : "Best"}</p>
+            <div className="relative">
+              <input
+                autoFocus
+                value={val}
+                onChange={(e) => setVal(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") save();
+                }}
+                inputMode="decimal"
+                placeholder="0"
+                className="input-grit text-right pr-12 text-lg font-extrabold"
+                aria-label={`${def.label} value`}
+              />
+              <span className="label-cap text-[10px] text-grit-dim absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                {unit}
+              </span>
+            </div>
+          </div>
+          {def.kind === "1RM" && (
+            <div className="w-24">
+              <p className="label-cap text-[10px] mb-1.5">Reps</p>
+              <input
+                value={reps}
+                onChange={(e) => setReps(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") save();
+                }}
+                inputMode="numeric"
+                placeholder="1"
+                className="input-grit text-right text-lg font-extrabold"
+                aria-label="Reps"
+              />
+            </div>
+          )}
+        </div>
+
+        {valid && !isImprovement && pr && n < pr.value && (
+          <p className="text-[11px] text-grit-dim mt-2">
+            Heads up — that's below your current best of {pr.value} {unit}.
+          </p>
+        )}
+
+        <div className="grid grid-cols-2 gap-3 mt-6">
+          <button onClick={onClose} className="btn-ghost py-3">
+            Cancel
+          </button>
+          <button onClick={save} disabled={!valid} className="btn-grit py-3 disabled:opacity-40">
+            Save PR
+          </button>
+        </div>
+        {pr && (
+          <button
+            onClick={remove}
+            className="w-full mt-3 py-2.5 label-cap text-[11px] text-accent-red hover:bg-accent-red/10 rounded-xl transition-colors"
+          >
+            Remove this PR
+          </button>
+        )}
       </div>
     </div>
   );

@@ -1154,7 +1154,8 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
     <div
       className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center"
       onClick={onClose}
-      style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}
+      // No backdrop-filter: composites as solid black while scrolling in WKWebView/iOS Safari.
+      style={{ background: "rgba(0,0,0,0.9)" }}
     >
       <div
         className="w-full max-w-md relative rounded-t-3xl sm:rounded-3xl"

@@ -38,7 +38,8 @@ export function CelebrationLayer() {
       aria-label="Dismiss celebration"
       onClick={() => setEvent(null)}
       className="fixed inset-0 z-[105] flex items-center justify-center cursor-default"
-      style={{ background: "rgba(5,5,5,0.82)", backdropFilter: "blur(6px)" }}
+      // No backdrop-filter: composites as solid black while scrolling in WKWebView/iOS Safari.
+      style={{ background: "rgba(5,5,5,0.92)" }}
     >
       <span
         className="celebrate-flash pointer-events-none absolute inset-0"

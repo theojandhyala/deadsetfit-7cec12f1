@@ -68,7 +68,7 @@ export function UsernameGate() {
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm px-6">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 px-6">
       <div className="w-full max-w-sm rounded-2xl border-2 border-accent-red bg-grit-card p-6 shadow-2xl">
         <h2 className="display text-2xl font-extrabold uppercase text-grit mb-1">
           Pick a username

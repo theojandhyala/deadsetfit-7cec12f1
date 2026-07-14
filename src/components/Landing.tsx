@@ -46,8 +46,9 @@ function Nav() {
     <header
       className="sticky top-0 z-50"
       style={{
-        background: "rgba(7,7,7,0.84)",
-        backdropFilter: "blur(18px)",
+        // No backdrop-filter: sticky bars with backdrop blur flash black while
+        // scrolling in WKWebView/iOS Safari.
+        background: "rgba(7,7,7,0.96)",
         borderBottom: "1px solid rgba(255,255,255,0.08)",
       }}
     >
@@ -167,7 +168,7 @@ function Hero() {
         </div>
         <div className="relative mx-auto w-full max-w-[430px] animate-float-in lg:mr-0">
           <div className="absolute -inset-8 rounded-[42px] bg-accent-red/10 blur-3xl" aria-hidden="true" />
-          <div className="relative overflow-hidden border border-white/10 bg-black/55 p-4 shadow-2xl backdrop-blur-xl">
+          <div className="relative overflow-hidden border border-white/10 bg-black/80 p-4 shadow-2xl">
             <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-3">
               <Logo />
               <span className="label-cap text-[9px] text-accent-red">Live build</span>
@@ -407,7 +408,7 @@ function Benefits() {
       <div className="grid items-center gap-10 lg:grid-cols-2">
         <div className="relative mx-auto w-full max-w-[400px]">
           <div className="absolute -inset-8 rounded-[42px] bg-accent-red/10 blur-3xl" aria-hidden="true" />
-          <div className="relative overflow-hidden border border-white/10 bg-black/55 p-4 shadow-2xl backdrop-blur-xl">
+          <div className="relative overflow-hidden border border-white/10 bg-black/80 p-4 shadow-2xl">
             <div className="mb-3 flex items-center justify-between border-b border-white/10 pb-3">
               <div>
                 <p className="label-cap text-[9px] text-accent-red">LIVE · PUSH DAY</p>

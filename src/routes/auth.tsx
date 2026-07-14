@@ -8,6 +8,10 @@ export const Route = createFileRoute("/auth")({
 
 function AuthRedirect() {
   useEffect(() => {
+    // Only redirect from exactly /auth. If the host served the SPA for /auth/
+    // itself (no static auth page), redirecting again would reload the same
+    // URL forever — show the manual button instead.
+    if (window.location.pathname !== "/auth") return;
     window.location.replace("/auth/");
   }, []);
 

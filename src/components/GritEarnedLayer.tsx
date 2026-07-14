@@ -48,7 +48,7 @@ function GritBurst({ event }: { event: GritAnimationEvent }) {
   const Icon = ICONS[event.kind] ?? Zap;
   const accent = event.kind === "pr" || event.kind === "rank";
   return (
-    <div className="grit-earned-burst relative overflow-hidden rounded-full border border-accent-red/70 bg-[#111217]/95 px-4 py-3 shadow-2xl backdrop-blur-xl">
+    <div className="grit-earned-burst relative overflow-hidden rounded-full border border-accent-red/70 bg-[#111217] px-4 py-3 shadow-2xl">
       <div className="absolute inset-0 grit-earned-sheen" />
       <div className="absolute -left-8 top-1/2 h-16 w-16 -translate-y-1/2 rounded-full bg-accent-red/25 blur-2xl" />
       <div className="relative flex items-center gap-3">

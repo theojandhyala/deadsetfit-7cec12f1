@@ -46,9 +46,9 @@ export function BottomNav() {
     <nav
       className="fixed bottom-0 left-0 right-0 z-50"
       style={{
-        background: "linear-gradient(180deg, rgba(24,25,31,0.96), rgba(10,10,12,0.99))",
-        backdropFilter: "blur(22px)",
-        WebkitBackdropFilter: "blur(22px)",
+        // No backdrop-filter: fixed bars with backdrop blur intermittently
+        // composite as solid BLACK while scrolling in WKWebView/iOS Safari.
+        background: "linear-gradient(180deg, rgba(24,25,31,0.99), rgba(10,10,12,1))",
         borderTop: "1px solid rgba(255,255,255,0.08)",
         boxShadow: "0 -22px 54px rgba(0,0,0,0.52), inset 0 1px 0 rgba(255,255,255,0.05)",
         paddingBottom: "env(safe-area-inset-bottom)",
