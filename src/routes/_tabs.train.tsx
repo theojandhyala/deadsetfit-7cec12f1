@@ -15,6 +15,8 @@ import { EXERCISES, getExercise } from "@/lib/exercises";
 import { calculateGritScore, calculateStreak, defaultSchedule, isoDay, todayKey } from "@/lib/calc";
 import { ProBanner } from "@/components/ProBanner";
 import { usePro } from "@/hooks/usePro";
+import { useCountUp } from "@/hooks/useCountUp";
+import { WeeklyReportCard } from "@/components/WeeklyReportCard";
 import { openPaywall } from "@/lib/paywall-events";
 import type { DayKey, Schedule, Program, Exercise } from "@/lib/types";
 
@@ -120,6 +122,7 @@ function TrainPage() {
   const programDay = activeProgram?.days[selectedDay];
   const score = calculateGritScore(state);
   const streak = calculateStreak(state.completedDates);
+  const gritDisplay = useCountUp(score.total);
 
   const { isPro, loading: proLoading } = usePro();
   const armorLocked = !proLoading && !isPro;
@@ -296,7 +299,7 @@ function TrainPage() {
                 <Link to="/profile" className="deadset-glass-strip rounded-2xl px-3 py-2 text-right">
                   <p className="label-cap text-[8px]">GRIT</p>
                   <p className="display text-2xl font-black text-grit leading-none">
-                    {score.total}
+                    {gritDisplay}
                   </p>
                   <p className="text-[10px] text-grit-dim mt-1">{streak}d streak</p>
                 </Link>
@@ -415,6 +418,7 @@ function TrainPage() {
         </div>
       </header>
       <TodayReadiness state={state} schedule={schedule} />
+      <WeeklyReportCard />
       <ProBanner />
       <Reminders />
 

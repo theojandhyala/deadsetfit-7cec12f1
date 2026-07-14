@@ -16,6 +16,7 @@ import { StateSync } from "../components/StateSync";
 import { UsernameGate } from "../components/UsernameGate";
 import { PaywallSheet } from "../components/PaywallSheet";
 import { ConfirmSheet } from "../components/ConfirmSheet";
+import { CelebrationLayer } from "../components/CelebrationLayer";
 import { Toaster } from "../components/ui/sonner";
 import { ProProvider } from "../hooks/usePro";
 
@@ -202,6 +203,7 @@ function RootComponent() {
         <Outlet />
         {!isAuthRoute && <UsernameGate />}
         {!isAuthRoute && <PaywallSheet />}
+        {!isAuthRoute && <CelebrationLayer />}
         <ConfirmSheet />
         <Toaster />
       </ProProvider>

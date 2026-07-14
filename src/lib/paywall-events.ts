@@ -10,7 +10,8 @@ export type PaywallFeature =
   | "nutrition"
   | "photos"
   | "challenges"
-  | "progression";
+  | "progression"
+  | "report";
 
 export type PaywallEvent = {
   id: string;

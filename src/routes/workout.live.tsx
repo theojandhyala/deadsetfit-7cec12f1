@@ -1,11 +1,11 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-import { X, Check, Play, Trophy, Share2, Flame, Calculator, Lock, TrendingUp } from "lucide-react";
+import { X, Check, Play, Trophy, Share2, Flame, Calculator, Lock, TrendingUp, Ghost } from "lucide-react";
 import { useAppState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
 import { defaultSchedule, isoDay, todayKey, plateBreakdown, warmupRamp } from "@/lib/calc";
-import { topSetHistory, suggestNextWeight, type TopSet, type Suggestion } from "@/lib/progression";
+import { topSetHistory, suggestNextWeight, ghostSets, beatsGhost, type TopSet, type Suggestion, type GhostSet } from "@/lib/progression";
 import { usePro } from "@/hooks/usePro";
 import { openPaywall } from "@/lib/paywall-events";
 import { askConfirm } from "@/lib/confirm";
@@ -320,6 +320,7 @@ function LiveWorkoutPage() {
   const [finished, setFinished] = useState(false);
   const [share, setShare] = useState(false);
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
+  const [restTotalMs, setRestTotalMs] = useState(90_000);
   const [restNow, setRestNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -373,6 +374,13 @@ function LiveWorkoutPage() {
         ? suggestNextWeight(state, activeExercise.exerciseId, activeExercise.targetReps)
         : null,
     [state, activeExercise],
+  );
+  const ghost = useMemo(
+    () =>
+      activeExercise && session
+        ? ghostSets(state, activeExercise.exerciseId, session.id)
+        : [],
+    [state, activeExercise, session],
   );
 
   // Prefill priority: allocated weight from the schedule → previous set this
@@ -461,6 +469,7 @@ function LiveWorkoutPage() {
       ),
     }));
     if (isPR) emitGritEarned(25, `NEW PR — ${ex.name.toUpperCase()}`, "pr");
+    setRestTotalMs(90_000);
     setRestEndsAt(Date.now() + 90_000);
   }
 
@@ -628,6 +637,7 @@ function LiveWorkoutPage() {
           initialReps={prefill.reps}
           history={evolution}
           suggestion={suggestion}
+          ghost={ghost}
           isProUser={isPro}
           proLoading={proLoading}
           onLog={logSet}
@@ -639,20 +649,47 @@ function LiveWorkoutPage() {
           className="border-t border-grit bg-grit-card px-4 py-3 flex items-center justify-between gap-3 animate-slide-up"
           style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
         >
-          <div className="min-w-0">
-            <p className="label-cap text-[10px] text-accent-red">REST</p>
-            <p
-              className={`font-mono text-3xl font-extrabold tabular-nums leading-none mt-0.5 ${
-                restLeft === 0 ? "animate-pulse text-accent-red" : "text-grit"
-              }`}
-            >
-              {String(Math.floor(restLeft / 60)).padStart(2, "0")}:
-              {String(restLeft % 60).padStart(2, "0")}
-            </p>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="relative h-14 w-14 shrink-0">
+              <svg viewBox="0 0 48 48" className="h-full w-full -rotate-90">
+                <circle cx="24" cy="24" r="20" fill="none" stroke="#262626" strokeWidth="4" />
+                <circle
+                  cx="24"
+                  cy="24"
+                  r="20"
+                  fill="none"
+                  stroke={restLeft === 0 ? "#22c55e" : "#e63222"}
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                  strokeDasharray={2 * Math.PI * 20}
+                  strokeDashoffset={
+                    2 * Math.PI * 20 * (1 - Math.min(1, (restLeft * 1000) / restTotalMs))
+                  }
+                  style={{ transition: "stroke-dashoffset 0.25s linear" }}
+                />
+              </svg>
+              <span className="absolute inset-0 flex items-center justify-center">
+                <Flame size={16} className={restLeft === 0 ? "text-[#22c55e]" : "text-accent-red"} />
+              </span>
+            </div>
+            <div className="min-w-0">
+              <p className="label-cap text-[10px] text-accent-red">REST</p>
+              <p
+                className={`font-mono text-3xl font-extrabold tabular-nums leading-none mt-0.5 ${
+                  restLeft === 0 ? "animate-pulse text-[#22c55e]" : "text-grit"
+                }`}
+              >
+                {String(Math.floor(restLeft / 60)).padStart(2, "0")}:
+                {String(restLeft % 60).padStart(2, "0")}
+              </p>
+            </div>
           </div>
           <div className="flex flex-shrink-0 gap-2">
             <button
-              onClick={() => setRestEndsAt((t) => (t === null ? null : t + 30_000))}
+              onClick={() => {
+                setRestTotalMs((t) => t + 30_000);
+                setRestEndsAt((t) => (t === null ? null : t + 30_000));
+              }}
               className="btn-ghost press px-3 py-2 text-xs"
             >
               +30s
@@ -744,6 +781,7 @@ function SetLogger({
   initialReps,
   history,
   suggestion,
+  ghost,
   isProUser,
   proLoading,
   onLog,
@@ -753,6 +791,7 @@ function SetLogger({
   initialReps: string;
   history: TopSet[];
   suggestion: Suggestion | null;
+  ghost: GhostSet[];
   isProUser: boolean;
   proLoading: boolean;
   onLog: (weight: number, reps: number) => void;
@@ -857,6 +896,54 @@ function SetLogger({
           ) : (
             <span className="label-cap text-[9px] text-accent-red shrink-0 ml-2">APPLY</span>
           )}
+        </button>
+      )}
+
+      {ghost.length > 0 && (
+        <button
+          type="button"
+          onClick={() => progressionLocked && openPaywall("progression")}
+          className="mt-2 w-full text-left border border-grit rounded-xl px-3 py-2 press"
+        >
+          <div className="flex items-center justify-between">
+            <span className="label-cap text-[9px] text-grit-dim flex items-center gap-1.5">
+              <Ghost size={11} className="ghost-live text-accent-red" /> GHOST — LAST SESSION
+            </span>
+            {progressionLocked ? (
+              <Lock size={11} className="text-accent-red" />
+            ) : (
+              <span className="label-cap text-[8px] text-grit-dim">BEAT IT</span>
+            )}
+          </div>
+          <div
+            className={
+              "mt-1.5 flex items-center gap-1.5 flex-wrap" +
+              (progressionLocked ? " blur-[5px] select-none" : "")
+            }
+            aria-hidden={progressionLocked || undefined}
+          >
+            {ghost.map((g, i) => {
+              const mine = exercise.sets[i];
+              const beaten = mine ? beatsGhost(mine, g) : false;
+              return (
+                <span
+                  key={i}
+                  className="display text-xs font-extrabold rounded-full border px-2 py-0.5"
+                  style={{
+                    color: mine ? (beaten ? "#22c55e" : "#e63222") : "#8a8a8a",
+                    borderColor: mine
+                      ? beaten
+                        ? "rgba(34,197,94,0.5)"
+                        : "rgba(230,50,34,0.5)"
+                      : "#262626",
+                    textDecoration: beaten ? "line-through" : undefined,
+                  }}
+                >
+                  {g.weight > 0 ? `${g.weight}×${g.reps}` : `${g.reps} reps`}
+                </span>
+              );
+            })}
+          </div>
         </button>
       )}
 

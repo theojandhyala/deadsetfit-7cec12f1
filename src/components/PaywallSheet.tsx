@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Crown, X, Check, Shield, BarChart3, ClipboardList, Hammer, Trophy, Swords, Bell, HeartPulse, Apple, Camera, Medal, TrendingUp } from "lucide-react";
+import { Crown, X, Check, Shield, BarChart3, ClipboardList, Hammer, Trophy, Swords, Bell, HeartPulse, Apple, Camera, Medal, TrendingUp, FileBarChart } from "lucide-react";
 import { onPaywall, type PaywallFeature } from "@/lib/paywall-events";
 import { detectCountry, currencyForCountry, CURRENCY_META, type SupportedCurrency } from "@/lib/currency";
 
@@ -122,11 +122,21 @@ const FEATURE_PITCH: Record<
     title: "Progression Intelligence",
     tagline: "Know the next weight before you touch the bar.",
     bullets: [
+      "Ghost Mode — race your last session set-by-set",
       "Weight evolution for every lift, session by session",
       "Next-weight suggestions when you beat your plan",
-      "Double-progression logic — hit the reps, earn the plates",
     ],
     icon: TrendingUp,
+  },
+  report: {
+    title: "Weekly Report Card",
+    tagline: "Your week, graded like it matters.",
+    bullets: [
+      "A–F grade from consistency, sets and PRs",
+      "Volume and session deltas vs the week before",
+      "Lands every Monday — no work required",
+    ],
+    icon: FileBarChart,
   },
 };
 

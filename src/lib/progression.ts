@@ -84,3 +84,31 @@ export function suggestNextWeight(
   }
   return null;
 }
+
+export interface GhostSet {
+  weight: number;
+  reps: number;
+}
+
+/**
+ * Ghost Mode: the full set list from the most recent finished session that
+ * contained this exercise — the "ghost" the lifter races set-by-set.
+ */
+export function ghostSets(state: AppState, exerciseId: string, currentSessionId: string): GhostSet[] {
+  const sessions = [...state.sessions]
+    .filter((s) => s.endedAt && s.id !== currentSessionId)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  for (const session of sessions) {
+    const ex = session.exercises.find((e) => e.exerciseId === exerciseId);
+    if (ex && ex.sets.length > 0) {
+      return ex.sets.map((s) => ({ weight: s.weight, reps: s.reps }));
+    }
+  }
+  return [];
+}
+
+/** Did the lifter beat the ghost set? Weight first, reps as tiebreak. */
+export function beatsGhost(set: GhostSet, ghost: GhostSet): boolean {
+  if (set.weight !== ghost.weight) return set.weight > ghost.weight;
+  return set.reps >= ghost.reps;
+}

@@ -48,7 +48,7 @@ const PRO_FEATURES = [
     icon: BarChart3,
     color: "#2196F3",
     title: "Progression Intelligence",
-    desc: "Weight evolution per lift and next-weight suggestions the moment you beat your plan. Double progression, automated.",
+    desc: "Ghost Mode races your last session set-by-set, weight evolution per lift, and next-weight suggestions the moment you beat your plan.",
   },
   {
     icon: BarChart3,
@@ -77,7 +77,8 @@ const COMPARE_ROWS: { label: string; free: boolean | string; pro: boolean | stri
   { label: "Challenges (basic)", free: true, pro: true },
   { label: "Custom split builder", free: "1 program", pro: "Unlimited" },
   { label: "Streak Armor", free: false, pro: true },
-  { label: "Progression intelligence", free: false, pro: true },
+  { label: "Progression intelligence + Ghost Mode", free: false, pro: true },
+  { label: "Weekly report card", free: false, pro: true },
   { label: "Advanced analytics", free: false, pro: true },
   { label: "Strength standards & rep maxes", free: false, pro: true },
   { label: "Muscle recovery tracking", free: false, pro: true },
