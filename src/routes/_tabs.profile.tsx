@@ -389,7 +389,7 @@ function ProfilePage() {
             <p className="label-cap">Current Streak</p>
             <p className="display text-2xl font-extrabold text-grit leading-none">
               {streak}
-              <span className="text-sm ml-2 text-grit-dim">days</span>
+              <span className="text-sm ml-2 text-grit-dim">{streak === 1 ? "day" : "days"}</span>
             </p>
           </div>
           <div className="ml-auto text-right">
