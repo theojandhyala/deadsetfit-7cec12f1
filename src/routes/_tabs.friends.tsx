@@ -880,6 +880,36 @@ function Invite() {
 type SearchHit = Awaited<ReturnType<typeof searchAthletes>>[number];
 type Suggested = Awaited<ReturnType<typeof getSuggestedAthletes>>[number];
 
+const COUNTRY_ALIASES: Record<string, string> = {
+  "united kingdom of great britain and northern ireland": "United Kingdom",
+  "russian federation": "Russia",
+  "korea, republic of": "South Korea",
+  "korea (the republic of)": "South Korea",
+  "korea, democratic people's republic of": "North Korea",
+  "iran, islamic republic of": "Iran",
+  "syrian arab republic": "Syria",
+  "viet nam": "Vietnam",
+  "czechia": "Czech Republic",
+  "türkiye": "Turkey",
+  "tanzania, united republic of": "Tanzania",
+  "bolivia (plurinational state of)": "Bolivia",
+  "venezuela (bolivarian republic of)": "Venezuela",
+  "moldova, republic of": "Moldova",
+  "lao people's democratic republic": "Laos",
+  "united states of america": "United States",
+};
+
+function normalizeCountry(raw: string | null | undefined): string {
+  if (!raw) return "";
+  // Strip trailing " (the)" and similar UN formal suffixes
+  let s = raw.replace(/\s*\(the\)\s*$/i, "").trim();
+  const key = s.toLowerCase();
+  if (COUNTRY_ALIASES[key]) return COUNTRY_ALIASES[key];
+  // Drop trailing parenthetical qualifier e.g. "Micronesia (Federated States of)"
+  s = s.replace(/\s*\([^)]*\)\s*$/, "").trim();
+  return s;
+}
+
 function Friends() {
   const _search = searchAthletes;
   const _suggest = getSuggestedAthletes;
@@ -909,9 +939,10 @@ function Friends() {
       .catch(() => {});
     _getLoc()
       .then((l) => {
-        setMyLoc({ city: l.city, country: l.country });
+        const c = normalizeCountry(l.country);
+        setMyLoc({ city: l.city, country: c || l.country });
         setCityInput(l.city ?? "");
-        setCountryInput(l.country ?? "");
+        setCountryInput(c || (l.country ?? ""));
       })
       .catch(() => {});
     _nearby()
@@ -988,7 +1019,7 @@ function Friends() {
       );
       const j = await r.json();
       const city = j.city || j.locality || j.principalSubdivision || "";
-      const country = j.countryName || "";
+      const country = normalizeCountry(j.countryName) || j.countryName || "";
       if (!city || !country) throw new Error("Couldn't resolve city");
       setCityInput(city);
       setCountryInput(country);
@@ -1010,10 +1041,13 @@ function Friends() {
     }
     setLocBusy(true);
     try {
+      const city = cityInput.trim();
+      const country = normalizeCountry(countryInput) || countryInput.trim();
+      setCountryInput(country);
       await _setLoc({
-        data: { city: cityInput.trim(), country: countryInput.trim(), region: null },
+        data: { city, country, region: null },
       });
-      setMyLoc({ city: cityInput.trim(), country: countryInput.trim() });
+      setMyLoc({ city, country });
       toast.success("Saved");
       setNearby(await _nearby());
     } catch (e) {
