@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import {
@@ -330,21 +330,21 @@ function Feed({ userId }: { userId: string }) {
           {postKind === "pr" && (
             <div className="grid grid-cols-3 gap-2 mb-2">
               <input
-                value={prLift}
+                defaultValue={prLift}
                 onChange={(e) => setPrLift(e.target.value)}
                 placeholder="Bench"
                 maxLength={20}
                 className="input-grit text-xs col-span-3"
               />
               <input
-                value={prWeight}
+                defaultValue={prWeight}
                 onChange={(e) => setPrWeight(e.target.value)}
                 inputMode="decimal"
                 placeholder="kg"
                 className="input-grit text-xs col-span-2"
               />
               <input
-                value={prReps}
+                defaultValue={prReps}
                 onChange={(e) => setPrReps(e.target.value)}
                 inputMode="numeric"
                 placeholder="reps"
@@ -353,7 +353,7 @@ function Feed({ userId }: { userId: string }) {
             </div>
           )}
           <textarea
-            value={text}
+            defaultValue={text}
             onChange={(e) => setText(e.target.value)}
             rows={3}
             maxLength={500}
@@ -508,6 +508,7 @@ function CommentsPanel({ postId, onPosted }: { postId: string; onPosted: () => v
   const _add = addComment;
   const [items, setItems] = useState<Awaited<ReturnType<typeof getComments>> | null>(null);
   const [text, setText] = useState("");
+  const textRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -527,6 +528,7 @@ function CommentsPanel({ postId, onPosted }: { postId: string; onPosted: () => v
     try {
       await _add({ data: { postId, content: text.trim() } });
       setText("");
+      if (textRef.current) textRef.current.value = "";
       await load();
       onPosted();
     } catch (e) {
@@ -552,7 +554,8 @@ function CommentsPanel({ postId, onPosted }: { postId: string; onPosted: () => v
       )}
       <div className="flex gap-2 mt-2">
         <input
-          value={text}
+          ref={textRef}
+          defaultValue=""
           onChange={(e) => setText(e.target.value)}
           placeholder="Reply…"
           maxLength={500}
@@ -739,6 +742,7 @@ function Invite() {
   const _profile = updateMyProfile;
   const [info, setInfo] = useState<Awaited<ReturnType<typeof getMyReferralInfo>> | null>(null);
   const [code, setCode] = useState("");
+  const codeRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [username, setUsername] = useState("");
@@ -763,6 +767,7 @@ function Invite() {
       await _redeem({ data: { code: code.trim() } });
       toast.success("Both got 30 days Pro!");
       setCode("");
+      if (codeRef.current) codeRef.current.value = "";
       setInfo(await _info());
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
@@ -818,10 +823,17 @@ function Invite() {
         </p>
         <div className="flex gap-2">
           <input
-            value={username}
-            onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ""))}
+            defaultValue={username}
+            onChange={(e) => {
+              const c = e.target.value.replace(/[^a-zA-Z0-9_]/g, "");
+              e.target.value = c;
+              setUsername(c);
+            }}
             placeholder="yourname"
             maxLength={24}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             className="input-grit flex-1"
           />
           <button onClick={saveUsername} disabled={busy || !username} className="btn-grit px-3">
@@ -857,8 +869,13 @@ function Invite() {
         <p className="label-cap mb-2">Got a code from a mate?</p>
         <div className="flex gap-2">
           <input
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            ref={codeRef}
+            defaultValue={code}
+            onChange={(e) => {
+              const c = e.target.value.toUpperCase();
+              e.target.value = c;
+              setCode(c);
+            }}
             placeholder="CODE"
             maxLength={16}
             className="input-grit flex-1 tracking-wider"
@@ -929,6 +946,7 @@ function Friends() {
   const [locBusy, setLocBusy] = useState(false);
   const [cityInput, setCityInput] = useState("");
   const [countryInput, setCountryInput] = useState("");
+  const countryRef = useRef<HTMLInputElement>(null);
 
   const loadFriendsHome = useCallback(() => {
     _suggest()
@@ -1044,6 +1062,7 @@ function Friends() {
       const city = cityInput.trim();
       const country = normalizeCountry(countryInput) || countryInput.trim();
       setCountryInput(country);
+      if (countryRef.current) countryRef.current.value = country;
       await _setLoc({
         data: { city, country, region: null },
       });
@@ -1126,14 +1145,15 @@ function Friends() {
         )}
         <div className="grid grid-cols-1 sm:grid-cols-[1fr_9rem] gap-2 mb-2">
           <input
-            value={cityInput}
+            defaultValue={cityInput}
             onChange={(e) => setCityInput(e.target.value)}
             placeholder="City"
             className="input-grit min-w-0"
             maxLength={80}
           />
           <input
-            value={countryInput}
+            ref={countryRef}
+            defaultValue={countryInput}
             onChange={(e) => setCountryInput(e.target.value)}
             placeholder="Country"
             className="input-grit min-w-0"
@@ -1183,7 +1203,7 @@ function Friends() {
       <div className="bg-grit-card border border-grit p-3 mb-4 flex items-center gap-2">
         <Search size={16} className="text-[#8a8a8a]" />
         <input
-          value={q}
+          defaultValue={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search by name or @username"
           className="input-grit flex-1 border-0 bg-transparent"

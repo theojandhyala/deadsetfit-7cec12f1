@@ -516,9 +516,18 @@ function TrainPage() {
                 <div>
                   <label className="label-cap text-[9px] block mb-1">Sets</label>
                   <input
-                    value={easySets}
-                    onChange={(e) => handleEasySetsChange(e.target.value)}
-                    onBlur={handleEasySetsBlur}
+                    defaultValue={easySets}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/[^\d]/g, "").slice(0, 2);
+                      e.target.value = raw;
+                      handleEasySetsChange(raw);
+                    }}
+                    onBlur={(e) => {
+                      const clamped = Math.max(1, Math.min(12, Number(e.target.value) || day?.sets || 3));
+                      e.target.value = String(clamped);
+                      setEasySets(String(clamped));
+                      updateDayTrainingDose({ sets: clamped });
+                    }}
                     onFocus={(e) => e.currentTarget.select()}
                     inputMode="numeric"
                     pattern="[0-9]*"
@@ -528,7 +537,7 @@ function TrainPage() {
                 <div>
                   <label className="label-cap text-[9px] block mb-1">Reps</label>
                   <input
-                    value={easyReps}
+                    defaultValue={easyReps}
                     onChange={(e) => handleEasyRepsChange(e.target.value)}
                     onFocus={(e) => e.currentTarget.select()}
                     placeholder="8-12"
@@ -558,19 +567,22 @@ function TrainPage() {
             <p className="label-cap mb-3">Advanced edit {DAY_SHORT[selectedDay]}</p>
             <label className="label-cap block mb-1">Label</label>
             <input
-              value={day?.label || ""}
-              onChange={(e) =>
+              key={selectedDay}
+              defaultValue={day?.label || ""}
+              onChange={(e) => {
+                e.target.value = e.target.value.toUpperCase();
+                const label = e.target.value;
                 set((s) => ({
                   ...s,
                   schedule: {
                     ...(s.schedule || schedule),
                     [selectedDay]: {
                       ...(s.schedule?.[selectedDay] || day),
-                      label: e.target.value.toUpperCase(),
+                      label,
                     },
                   },
-                }))
-              }
+                }));
+              }}
               className="input-grit mb-3"
             />
 
@@ -664,7 +676,7 @@ function TrainPage() {
             <p className="label-cap mb-2">Add exercises</p>
             <input
               placeholder="SEARCH NAME OR MUSCLE"
-              value={editSearch}
+              defaultValue={editSearch}
               onChange={(e) => setEditSearch(e.target.value)}
               className="input-grit mb-2"
             />

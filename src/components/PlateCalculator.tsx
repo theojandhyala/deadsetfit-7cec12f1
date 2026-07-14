@@ -63,7 +63,7 @@ export function PlateCalculator({
           <div>
             <label className="label-cap block mb-1">Target Weight (kg)</label>
             <input
-              value={weight}
+              defaultValue={weight}
               onChange={(e) => setWeight(e.target.value)}
               inputMode="decimal"
               className="input-grit w-full text-center display text-2xl font-extrabold"

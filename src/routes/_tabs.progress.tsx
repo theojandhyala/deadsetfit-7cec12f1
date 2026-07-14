@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type RefObject } from "react";
 import { Camera, Trophy, Flame, Trash2, Lock } from "lucide-react";
 
 import { useAppState } from "@/lib/storage";
@@ -25,11 +25,13 @@ function ProgressPage() {
   const analyticsLocked = !loading && !isPro;
   const photoRef = useRef<HTMLInputElement>(null);
   const [compare, setCompare] = useState<string[]>([]);
-  const [weight, setWeight] = useState("");
-  const [chest, setChest] = useState("");
-  const [waist, setWaist] = useState("");
-  const [arms, setArms] = useState("");
-  const [legs, setLegs] = useState("");
+  // Log inputs are DOM-owned (defaultValue + ref, read on submit) — controlled
+  // value/onChange freezes typing in the iOS WKWebView.
+  const weightRef = useRef<HTMLInputElement>(null);
+  const chestRef = useRef<HTMLInputElement>(null);
+  const waistRef = useRef<HTMLInputElement>(null);
+  const armsRef = useRef<HTMLInputElement>(null);
+  const legsRef = useRef<HTMLInputElement>(null);
 
   const streak = calculateStreak(state.completedDates);
   const totalSessions = state.sessions.filter((s) => s.endedAt).length;
@@ -82,29 +84,25 @@ function ProgressPage() {
     return best ? best.weight : null;
   }
   function logWeight() {
-    const w = Number(weight);
+    const w = Number(weightRef.current?.value);
     if (!w) return;
     set((s) => ({ ...s, weights: [...s.weights, { date: isoDay(), weight: w }] }));
-    setWeight("");
+    if (weightRef.current) weightRef.current.value = "";
   }
   function logMeasurements() {
+    const chest = +(chestRef.current?.value ?? "") || 0;
+    const waist = +(waistRef.current?.value ?? "") || 0;
+    const arms = +(armsRef.current?.value ?? "") || 0;
+    const legs = +(legsRef.current?.value ?? "") || 0;
+    // Don't record an all-empty measurement row — it would pollute the chart.
+    if (!chest && !waist && !arms && !legs) return;
     set((s) => ({
       ...s,
-      measurements: [
-        ...s.measurements,
-        {
-          date: isoDay(),
-          chest: +chest || 0,
-          waist: +waist || 0,
-          arms: +arms || 0,
-          legs: +legs || 0,
-        },
-      ],
+      measurements: [...s.measurements, { date: isoDay(), chest, waist, arms, legs }],
     }));
-    setChest("");
-    setWaist("");
-    setArms("");
-    setLegs("");
+    for (const r of [chestRef, waistRef, armsRef, legsRef]) {
+      if (r.current) r.current.value = "";
+    }
   }
   function deleteWeight(date: string) {
     set((s) => ({ ...s, weights: s.weights.filter((w) => w.date !== date) }));
@@ -539,9 +537,9 @@ function ProgressPage() {
         >
           <div className="flex gap-2 mb-3">
             <input
+              ref={weightRef}
               inputMode="decimal"
-              value={weight}
-              onChange={(e) => setWeight(e.target.value)}
+              defaultValue=""
               placeholder="Today's kg"
               className="input-grit"
             />
@@ -580,10 +578,10 @@ function ProgressPage() {
       <section className="px-5 mb-6">
         <p className="label-cap mb-2">Measurements (cm)</p>
         <div className="rounded-2xl p-4 grid grid-cols-2 gap-3">
-          <Input label="Chest" v={chest} set={setChest} />
-          <Input label="Waist" v={waist} set={setWaist} />
-          <Input label="Arms" v={arms} set={setArms} />
-          <Input label="Legs" v={legs} set={setLegs} />
+          <Input label="Chest" inputRef={chestRef} />
+          <Input label="Waist" inputRef={waistRef} />
+          <Input label="Arms" inputRef={armsRef} />
+          <Input label="Legs" inputRef={legsRef} />
           <button onClick={logMeasurements} className="btn-grit col-span-2">
             Save
           </button>
@@ -981,16 +979,17 @@ function WeightChart({ entries }: { entries: { date: string; weight: number }[] 
   );
 }
 
-function Input({ label, v, set }: { label: string; v: string; set: (s: string) => void }) {
+function Input({
+  label,
+  inputRef,
+}: {
+  label: string;
+  inputRef: RefObject<HTMLInputElement | null>;
+}) {
   return (
     <div>
       <label className="label-cap block mb-1">{label}</label>
-      <input
-        inputMode="decimal"
-        value={v}
-        onChange={(e) => set(e.target.value)}
-        className="input-grit"
-      />
+      <input ref={inputRef} inputMode="decimal" defaultValue="" className="input-grit" />
     </div>
   );
 }

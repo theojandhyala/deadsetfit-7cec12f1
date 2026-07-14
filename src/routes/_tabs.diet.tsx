@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Plus, ScanBarcode, Droplets, Bell, BellOff, Trash2, Target, Utensils, ShieldCheck, CalendarDays } from "lucide-react";
 
 import { useAppState, getState } from "@/lib/storage";
@@ -23,11 +23,14 @@ function DietPage() {
 
   const [error, setError] = useState<string | null>(null);
   const [retryAction, setRetryAction] = useState<(() => void) | null>(null);
-  const [name, setName] = useState("");
-  const [cals, setCals] = useState("");
-  const [protein, setProtein] = useState("");
-  const [carbs, setCarbs] = useState("");
-  const [fats, setFats] = useState("");
+  // Manual-add fields are DOM-owned (defaultValue + ref, read on submit).
+  // Controlled value/onChange freezes typing in the iOS WKWebView.
+  const nameRef = useRef<HTMLInputElement>(null);
+  const calsRef = useRef<HTMLInputElement>(null);
+  const proteinRef = useRef<HTMLInputElement>(null);
+  const carbsRef = useRef<HTMLInputElement>(null);
+  const fatsRef = useRef<HTMLInputElement>(null);
+  const barcodeRef = useRef<HTMLInputElement>(null);
   const [barcodeOpen, setBarcodeOpen] = useState(false);
   const [barcodeVal, setBarcodeVal] = useState("");
   const [barcodeLoad, setBarcodeLoad] = useState(false);
@@ -128,18 +131,22 @@ function DietPage() {
   }, [hydrationOn]);
 
   function addFood() {
+    const name = (nameRef.current?.value ?? "").trim();
     if (!name) return;
     const item: FoodLogItem = {
       date: today,
       name,
-      calories: Number(cals) || 0,
-      protein: Number(protein) || 0,
-      carbs: Number(carbs) || 0,
-      fats: Number(fats) || 0,
+      calories: Number(calsRef.current?.value) || 0,
+      protein: Number(proteinRef.current?.value) || 0,
+      carbs: Number(carbsRef.current?.value) || 0,
+      fats: Number(fatsRef.current?.value) || 0,
       source: "manual",
     };
     set((s) => ({ ...s, foodLog: [...s.foodLog, item] }));
-    setName(""); setCals(""); setProtein(""); setCarbs(""); setFats("");
+    for (const r of [nameRef, calsRef, proteinRef, carbsRef, fatsRef]) {
+      if (r.current) r.current.value = "";
+    }
+    nameRef.current?.focus();
   }
 
   function addPresetFood(item: Omit<FoodLogItem, "date" | "source">) {
@@ -157,6 +164,7 @@ function DietPage() {
   }
 
   async function doBarcode() {
+    const barcodeVal = (barcodeRef.current?.value ?? "").replace(/[^0-9]/g, "");
     if (!barcodeVal) return;
     setBarcodeLoad(true); setError(null); setRetryAction(null);
     try {
@@ -607,11 +615,11 @@ function DietPage() {
 
           {/* Quick input row */}
           <div className="grid grid-cols-2 gap-2 mb-2">
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Food" className="input-grit col-span-2" />
-            <input inputMode="numeric" value={cals} onChange={(e) => setCals(e.target.value.replace(/[^0-9]/g, ""))} placeholder="kcal (optional)" className="input-grit" />
-            <input inputMode="numeric" value={protein} onChange={(e) => setProtein(e.target.value.replace(/[^0-9]/g, ""))} placeholder="protein g" className="input-grit" />
-            <input inputMode="numeric" value={carbs} onChange={(e) => setCarbs(e.target.value.replace(/[^0-9]/g, ""))} placeholder="carbs g" className="input-grit" />
-            <input inputMode="numeric" value={fats} onChange={(e) => setFats(e.target.value.replace(/[^0-9]/g, ""))} placeholder="fats g" className="input-grit" />
+            <input ref={nameRef} defaultValue="" placeholder="Food" className="input-grit col-span-2" autoCapitalize="words" />
+            <input ref={calsRef} inputMode="numeric" defaultValue="" placeholder="kcal (optional)" className="input-grit" />
+            <input ref={proteinRef} inputMode="numeric" defaultValue="" placeholder="protein g" className="input-grit" />
+            <input ref={carbsRef} inputMode="numeric" defaultValue="" placeholder="carbs g" className="input-grit" />
+            <input ref={fatsRef} inputMode="numeric" defaultValue="" placeholder="fats g" className="input-grit" />
           </div>
           <button onClick={addFood} className="btn-grit w-full mb-3 gap-2"><Plus size={16} /> Add food</button>
 
@@ -632,7 +640,8 @@ function DietPage() {
           {barcodeOpen && (
             <div className="flex gap-2 mb-3">
               <input
-                value={barcodeVal}
+                ref={barcodeRef}
+                defaultValue=""
                 onChange={(e) => setBarcodeVal(e.target.value.replace(/[^0-9]/g, ""))}
                 placeholder="Enter barcode digits"
                 inputMode="numeric"

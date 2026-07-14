@@ -742,7 +742,7 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
             >
               <Search size={14} style={{ color: "#8A8A8A" }} />
               <input
-                value={query}
+                defaultValue={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search by username..."
                 className="flex-1 bg-transparent text-sm text-white placeholder:text-[#6B7280] outline-none"

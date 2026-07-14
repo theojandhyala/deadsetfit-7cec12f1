@@ -386,10 +386,15 @@ function AboutYouStep({
             <div className="flex items-baseline gap-1">
               <input
                 autoFocus={i === 0}
-                value={f.value}
-                onChange={(e) =>
-                  f.set(e.target.value.replace(f.digitsOnly ? /[^0-9]/g : /[^0-9.]/g, ""))
-                }
+                defaultValue={f.value}
+                onChange={(e) => {
+                  const cleaned = e.target.value.replace(
+                    f.digitsOnly ? /[^0-9]/g : /[^0-9.]/g,
+                    "",
+                  );
+                  e.target.value = cleaned;
+                  f.set(cleaned);
+                }}
                 inputMode="decimal"
                 placeholder={f.placeholder}
                 className="bg-transparent outline-none w-full min-w-0 text-2xl font-display font-extrabold text-grit"
@@ -452,7 +457,7 @@ function Injuries({
       </h1>
       <p className="text-sm text-[#8a8a8a] mb-8">Optional. Skip if none.</p>
       <textarea
-        value={v}
+        defaultValue={v}
         onChange={(e) => setV(e.target.value)}
         rows={5}
         className="input-grit mb-4"
@@ -485,8 +490,18 @@ function UsernameStep({ initial, onSubmit }: { initial?: string; onSubmit: (u: s
         <span className="text-3xl font-display font-extrabold text-grit-dim pb-2">@</span>
         <input
           autoFocus
-          value={clean}
-          onChange={(e) => setV(e.target.value)}
+          defaultValue={clean}
+          onChange={(e) => {
+            const c = e.target.value
+              .toLowerCase()
+              .replace(/[^a-z0-9_]/g, "")
+              .slice(0, 20);
+            e.target.value = c;
+            setV(c);
+          }}
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
           className="bg-transparent outline-none text-4xl font-display font-extrabold text-grit flex-1 pb-2"
           placeholder="ironwolf"
         />
@@ -738,7 +753,7 @@ function PRStep({ onContinue }: { onContinue: () => void }) {
                 </p>
               </div>
               <input
-                value={vals[pr.id] ?? ""}
+                defaultValue={vals[pr.id] ?? ""}
                 onChange={(e) => setVals((v) => ({ ...v, [pr.id]: e.target.value }))}
                 inputMode="decimal"
                 placeholder={pr.placeholder}
@@ -861,8 +876,12 @@ function TargetStep({
       </p>
       <div className="flex items-center gap-3 mb-6">
         <input
-          value={v}
-          onChange={(e) => setV(e.target.value.replace(/[^0-9.]/g, ""))}
+          defaultValue={v}
+          onChange={(e) => {
+            const c = e.target.value.replace(/[^0-9.]/g, "");
+            e.target.value = c;
+            setV(c);
+          }}
           inputMode="decimal"
           placeholder={currentKg ? String(currentKg) : "80"}
           className="input-grit text-2xl display font-extrabold"

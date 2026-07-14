@@ -58,7 +58,7 @@ function LibraryPage() {
 
       <input
         placeholder="SEARCH"
-        value={search}
+        defaultValue={search}
         onChange={(e) => setSearch(e.target.value)}
         className="w-full px-3 py-2 mb-3 text-sm uppercase tracking-wider"
         style={{ background: "#1a1a1a", color: "#f5f5f0", border: "1px solid #2a2a2a" }}

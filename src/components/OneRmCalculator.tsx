@@ -68,7 +68,7 @@ export function OneRmCalculator({
               </label>
               <input
                 id="onerm-weight"
-                value={weight}
+                defaultValue={weight}
                 onChange={(e) => setWeight(e.target.value)}
                 inputMode="decimal"
                 className="input-grit w-full text-center font-display text-xl font-extrabold"
@@ -80,7 +80,7 @@ export function OneRmCalculator({
               </label>
               <input
                 id="onerm-reps"
-                value={reps}
+                defaultValue={reps}
                 onChange={(e) => setReps(e.target.value)}
                 inputMode="numeric"
                 className="input-grit w-full text-center font-display text-xl font-extrabold"

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { getMyProfile, saveProfile } from "@/lib/profile.functions";
@@ -13,7 +13,11 @@ export function UsernameGate() {
   const save = saveProfile;
   const [, setAppState] = useAppState();
   const [open, setOpen] = useState(false);
-  const [value, setValue] = useState("");
+  // DOM-owned input (defaultValue + ref); onChange sanitizes the DOM value
+  // imperatively and mirrors a shadow copy for the validity check. A controlled
+  // value= binding freezes typing in the iOS WKWebView.
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [clean, setClean] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,10 +47,6 @@ export function UsernameGate() {
 
   if (!open) return null;
 
-  const clean = value
-    .toLowerCase()
-    .replace(/[^a-z0-9_]/g, "")
-    .slice(0, 20);
   const valid = clean.length >= 3;
 
   async function submit() {
@@ -79,10 +79,21 @@ export function UsernameGate() {
         <div className="flex items-center gap-2 mb-2 border-b-2 border-grit focus-within:border-accent-red">
           <span className="text-2xl font-display font-extrabold text-grit-dim pb-2">@</span>
           <input
+            ref={inputRef}
             autoFocus
-            value={clean}
-            onChange={(e) => setValue(e.target.value)}
+            defaultValue=""
+            onChange={(e) => {
+              const c = e.target.value
+                .toLowerCase()
+                .replace(/[^a-z0-9_]/g, "")
+                .slice(0, 20);
+              e.target.value = c;
+              setClean(c);
+            }}
             onKeyDown={(e) => e.key === "Enter" && submit()}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             className="bg-transparent outline-none text-2xl font-display font-extrabold text-grit flex-1 pb-2 min-w-0"
             placeholder="ironwolf"
           />

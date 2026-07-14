@@ -120,7 +120,7 @@ export function PRList({ prs }: { prs: PRRecord[] }) {
           type="text"
           inputMode="search"
           placeholder="Search exercises…"
-          value={query}
+          defaultValue={query}
           onChange={(e) => setQuery(e.target.value)}
           className="w-full bg-grit-card border border-grit text-grit pl-9 pr-3 py-2.5 text-sm placeholder:text-grit-dim focus:outline-none focus:border-accent-red"
         />

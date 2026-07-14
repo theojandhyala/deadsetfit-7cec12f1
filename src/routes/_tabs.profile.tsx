@@ -55,9 +55,11 @@ function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [goal, setGoal] = useState<string>(p?.goal || "BULK");
   const [exp, setExp] = useState<string>(p?.experience || "BEGINNER");
-  const [w, setW] = useState(String(p?.weightKg ?? ""));
-  const [h, setH] = useState(String(p?.heightCm ?? ""));
-  const [username, setUsername] = useState(p?.username || "");
+  // Edit-form inputs are DOM-owned (defaultValue + ref, read on save) — the
+  // controlled value/onChange pattern freezes typing in the iOS WKWebView.
+  const usernameRef = useRef<HTMLInputElement>(null);
+  const weightRef = useRef<HTMLInputElement>(null);
+  const heightRef = useRef<HTMLInputElement>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [session, setSession] = useState<{ userId: string } | null | "loading">("loading");
   const [editingPR, setEditingPR] = useState<PRDef | null>(null);
@@ -181,12 +183,12 @@ function ProfilePage() {
 
   async function save() {
     if (!p) return;
-    const clean = username
+    const clean = (usernameRef.current?.value ?? "")
       .toLowerCase()
       .replace(/[^a-z0-9_]/g, "")
       .slice(0, 20);
-    const newWeight = Number(w) || p.weightKg;
-    const newHeight = Number(h) || p.heightCm;
+    const newWeight = Number(weightRef.current?.value) || p.weightKg;
+    const newHeight = Number(heightRef.current?.value) || p.heightCm;
     const newUsername = clean || p.username;
     setSavingProfile(true);
     try {
@@ -439,10 +441,13 @@ function ProfilePage() {
             <>
               <Field label="Username">
                 <input
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  ref={usernameRef}
+                  defaultValue={p.username}
                   className="input-grit w-full"
                   maxLength={20}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                 />
               </Field>
               <Field label="Goal">
@@ -461,16 +466,16 @@ function ProfilePage() {
               </Field>
               <Field label="Weight (kg)">
                 <input
-                  value={w}
-                  onChange={(e) => setW(e.target.value)}
+                  ref={weightRef}
+                  defaultValue={String(p.weightKg ?? "")}
                   inputMode="decimal"
                   className="input-grit text-right w-full"
                 />
               </Field>
               <Field label="Height (cm)">
                 <input
-                  value={h}
-                  onChange={(e) => setH(e.target.value)}
+                  ref={heightRef}
+                  defaultValue={String(p.heightCm ?? "")}
                   inputMode="decimal"
                   className="input-grit text-right w-full"
                 />
@@ -638,17 +643,23 @@ function PREditSheet({
   onSave: (value: number, reps?: number) => void;
   onClose: () => void;
 }) {
-  const [val, setVal] = useState(pr ? String(pr.value) : "");
-  const [reps, setReps] = useState(pr?.reps ? String(pr.reps) : "1");
+  // DOM-owned inputs (defaultValue + ref); a shadow copy drives the live
+  // validation UI only. Controlled value/onChange freezes typing in the iOS
+  // WKWebView — the reason PR editing appeared broken.
+  const valRef = useRef<HTMLInputElement>(null);
+  const repsRef = useRef<HTMLInputElement>(null);
+  const [shadowVal, setShadowVal] = useState(pr ? String(pr.value) : "");
   const unit = prUnit(def);
-  const n = Number(val);
+  const n = Number(shadowVal);
   const valid = Number.isFinite(n) && n > 0;
   const isImprovement = valid && (!pr || n > pr.value);
 
   function save() {
-    if (!valid) return;
-    const r = def.kind === "1RM" ? Math.max(1, Math.round(Number(reps)) || 1) : undefined;
-    onSave(n, r);
+    const raw = Number(valRef.current?.value ?? "");
+    if (!Number.isFinite(raw) || raw <= 0) return;
+    const r =
+      def.kind === "1RM" ? Math.max(1, Math.round(Number(repsRef.current?.value)) || 1) : undefined;
+    onSave(raw, r);
     onClose();
   }
 
@@ -691,9 +702,10 @@ function PREditSheet({
             <p className="label-cap text-[10px] mb-1.5">{def.kind === "1RM" ? "Weight" : "Best"}</p>
             <div className="relative">
               <input
+                ref={valRef}
                 autoFocus
-                value={val}
-                onChange={(e) => setVal(e.target.value)}
+                defaultValue={pr ? String(pr.value) : ""}
+                onChange={(e) => setShadowVal(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") save();
                 }}
@@ -711,8 +723,8 @@ function PREditSheet({
             <div className="w-24">
               <p className="label-cap text-[10px] mb-1.5">Reps</p>
               <input
-                value={reps}
-                onChange={(e) => setReps(e.target.value)}
+                ref={repsRef}
+                defaultValue={pr?.reps ? String(pr.reps) : "1"}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") save();
                 }}

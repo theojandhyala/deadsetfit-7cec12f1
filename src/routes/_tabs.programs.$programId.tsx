@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { ArrowLeft, ChevronUp, ChevronDown, X, Plus, Search } from "lucide-react";
@@ -45,9 +45,11 @@ function BuilderPage() {
   const [day, setDay] = useState<DayKey>("MON");
   const [picker, setPicker] = useState(false);
   const [search, setSearch] = useState("");
+  // DOM-owned day-label input (controlled value= freezes typing in the iOS
+  // WKWebView); presets/day-switches sync it imperatively through this ref.
+  const labelRef = useRef<HTMLInputElement>(null);
   const [muscleFilter, setMuscleFilter] = useState("ALL");
   const [equipmentFilter, setEquipmentFilter] = useState("ALL");
-  const [setDrafts, setSetDrafts] = useState<Record<string, string>>({});
 
   const list = listExercises;
 
@@ -183,18 +185,6 @@ function BuilderPage() {
       },
     }));
   }
-  function setItemSetsDraft(id: string, rawValue: string, reps: string) {
-    const raw = rawValue.replace(/[^\d]/g, "").slice(0, 2);
-    setSetDrafts((drafts) => ({ ...drafts, [id]: raw }));
-    if (!raw) return;
-    setSetsReps(id, Number(raw), reps);
-  }
-  function commitItemSetsDraft(id: string, reps: string) {
-    const raw = setDrafts[id];
-    const sets = Math.max(1, Math.min(12, Number(raw) || 3));
-    setSetDrafts((drafts) => ({ ...drafts, [id]: String(sets) }));
-    setSetsReps(id, sets, reps);
-  }
   function activateAndTrain() {
     set((s) => ({ ...s, activeProgramId: programId }));
     navigate({ to: "/train" });
@@ -209,7 +199,7 @@ function BuilderPage() {
           <ArrowLeft size={20} className="text-grit" />
         </Link>
         <input
-          value={program.name}
+          defaultValue={program.name}
           onChange={(e) => rename(e.target.value)}
           className="flex-1 bg-transparent display text-xl font-extrabold uppercase text-grit outline-none"
         />
@@ -242,7 +232,16 @@ function BuilderPage() {
       {/* Day label input */}
       <div className="px-5 mb-4">
         <label className="label-cap text-grit-dim text-[10px] block mb-1">Day Label</label>
-        <input value={d.label} onChange={(e) => setLabel(e.target.value)} className="input-grit" />
+        <input
+          key={day}
+          ref={labelRef}
+          defaultValue={d.label}
+          onChange={(e) => {
+            e.target.value = e.target.value.toUpperCase();
+            setLabel(e.target.value);
+          }}
+          className="input-grit"
+        />
         <div className="flex gap-1.5 overflow-x-auto pt-2 -mx-1 px-1">
           {[
             "PUSH",
@@ -258,7 +257,10 @@ function BuilderPage() {
           ].map((label) => (
             <button
               key={label}
-              onClick={() => setLabel(label)}
+              onClick={() => {
+                setLabel(label);
+                if (labelRef.current) labelRef.current.value = label.toUpperCase();
+              }}
               className="shrink-0 rounded-full border px-2.5 py-1 text-[9px] label-cap"
               style={{
                 borderColor: d.label === label ? "#E10600" : "#262626",
@@ -316,16 +318,24 @@ function BuilderPage() {
                   <input
                     inputMode="numeric"
                     pattern="[0-9]*"
-                    value={setDrafts[it.id] ?? String(it.sets || 3)}
-                    onChange={(e) => setItemSetsDraft(it.id, e.target.value, it.reps)}
-                    onBlur={() => commitItemSetsDraft(it.id, it.reps)}
+                    defaultValue={String(it.sets || 3)}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/[^\d]/g, "").slice(0, 2);
+                      e.target.value = raw;
+                      if (raw) setSetsReps(it.id, Number(raw), it.reps);
+                    }}
+                    onBlur={(e) => {
+                      const sets = Math.max(1, Math.min(12, Number(e.target.value) || 3));
+                      e.target.value = String(sets);
+                      setSetsReps(it.id, sets, it.reps);
+                    }}
                     onFocus={(e) => e.currentTarget.select()}
                     className="w-14 px-2 py-1 text-xs"
                     style={{ background: "#0a0a0a", border: "1px solid #2a2a2a", color: "#f5f5f0" }}
                   />
                   <span className="label-cap text-grit-dim text-[10px] self-center">SETS ×</span>
                   <input
-                    value={it.reps}
+                    defaultValue={it.reps}
                     onChange={(e) => setSetsReps(it.id, it.sets, e.target.value)}
                     onFocus={(e) => e.currentTarget.select()}
                     maxLength={16}
@@ -376,7 +386,7 @@ function BuilderPage() {
               <input
                 autoFocus
                 placeholder="SEARCH ANY EXERCISE, MUSCLE OR KIT"
-                value={search}
+                defaultValue={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-8 pr-3 py-2 text-xs uppercase tracking-wider"
                 style={{ background: "#0a0a0a", color: "#f5f5f0", border: "1px solid #2a2a2a" }}
