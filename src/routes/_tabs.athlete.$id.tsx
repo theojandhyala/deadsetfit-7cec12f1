@@ -226,8 +226,14 @@ function AthletePage() {
               <div key={pr.id} className="bg-grit-card border border-grit p-3">
                 <p className="label-cap text-[9px] truncate">{pr.label}</p>
                 <p className="display text-2xl font-extrabold text-grit leading-none mt-1">
-                  {pr.value}
-                  <span className="text-xs ml-1 text-grit-dim">{pr.unit}</span>
+                  {pr.value > 0 ? (
+                    <>
+                      {pr.value}
+                      <span className="text-xs ml-1 text-grit-dim">{pr.unit}</span>
+                    </>
+                  ) : (
+                    <span className="text-grit-dim">—</span>
+                  )}
                 </p>
               </div>
             ))}
