@@ -3,12 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Redirect to /auth/ (trailing slash — the static sign-in page). Pointing
-         at /auth loops forever on hosts that serve auth.html for /auth. -->
-    <meta http-equiv="refresh" content="0; url=/auth/" />
+    <!-- Redirect to the explicit static sign-in file. Target /auth/index.html,
+         not the /auth/ directory: the Capacitor iOS bundled webview can't serve
+         a directory index and loops on the SPA otherwise. -->
+    <meta http-equiv="refresh" content="0; url=/auth/index.html" />
     <title>DEADSET — Sign In</title>
     <script>
-      window.location.replace("/auth/");
+      window.location.replace("/auth/index.html");
     </script>
   </head>
   <body style="margin:0;background:#080507;color:#f5f5f0;font-family:system-ui,sans-serif">
@@ -16,7 +17,7 @@
       <div>
         <h1 style="font-size:42px;letter-spacing:-.04em;margin:0">DEAD<span style="color:#f00606">SET</span></h1>
         <p>Opening sign in…</p>
-        <p><a href="/auth/" style="color:#f00606">Tap here if it does not open</a></p>
+        <p><a href="/auth/index.html" style="color:#f00606">Tap here if it does not open</a></p>
       </div>
     </main>
   </body>

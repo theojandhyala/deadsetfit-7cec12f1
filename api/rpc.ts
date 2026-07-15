@@ -645,7 +645,10 @@ const handlers: Record<string, Handler> = {
   async searchAthletes(data, req) {
     const { supabase, userId } = await requireAuth(req);
     const d = z.object({ q: z.string().trim().min(1).max(40) }).parse(data);
-    const q = d.q.replace(/[%_]/g, "");
+    // Strip PostgREST filter metacharacters (,().) as well as ilike wildcards
+    // (%_) so a crafted query can't inject extra clauses into the .or() below.
+    const q = d.q.replace(/[%_,().]/g, "").trim();
+    if (!q) return [];
     const { data: blocks } = await supabase.from("user_blocks").select("blocker_id, blocked_id").or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`);
     const hidden = new Set<string>();
     (blocks ?? []).forEach(b => hidden.add(b.blocker_id === userId ? b.blocked_id : b.blocker_id));
@@ -724,7 +727,9 @@ const handlers: Record<string, Handler> = {
       throw new Error(error.message);
     }
     const month = new Date(Date.now() + 30 * 86400_000).toISOString();
-    await supabase.from("profiles").update({ pro_until: month, referred_by: owner.id }).eq("id", userId);
+    // Admin client: pro_until / referred_by are DB-protected against direct
+    // authenticated writes (see the profiles column-guard trigger).
+    await supabaseAdmin.from("profiles").update({ pro_until: month, referred_by: owner.id }).eq("id", userId);
     const { data: rp } = await supabaseAdmin.from("profiles").select("pro_until").eq("id", owner.id).single();
     const base = rp?.pro_until && new Date(rp.pro_until) > new Date() ? new Date(rp.pro_until) : new Date();
     await supabaseAdmin.from("profiles").update({ pro_until: new Date(base.getTime() + 30 * 86400_000).toISOString() }).eq("id", owner.id);
