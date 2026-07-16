@@ -1116,8 +1116,12 @@ function Friends() {
           maximumAge: 300000,
         }),
       );
+      // City-level precision only (~1 km): the UI promises "never exact
+      // location", so full-precision GPS must not leave the device.
+      const lat = pos.coords.latitude.toFixed(2);
+      const lon = pos.coords.longitude.toFixed(2);
       const r = await fetch(
-        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${pos.coords.latitude}&longitude=${pos.coords.longitude}&localityLanguage=en`,
+        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`,
       );
       const j = await r.json();
       const city = j.city || j.locality || j.principalSubdivision || "";

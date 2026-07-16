@@ -28,6 +28,7 @@ export function RankShareCard({
   onClose,
 }: RankShareProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const avatarStale = useRef(false);
   const [dataUrl, setDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -104,8 +105,21 @@ export function RankShareCard({
 
     if (avatarDataUrl) {
       const img = new Image();
+      img.onload = () => {
+        // The data URL decodes async — a synchronous drawImage right after
+        // setting src exports a blank circle. Redraw the clipped avatar
+        // region once decoded and refresh the exported PNG.
+        if (avatarStale.current) return;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(avatarX, avatarY, avatarR, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(img, avatarX - avatarR, avatarY - avatarR, avatarR * 2, avatarR * 2);
+        ctx.restore();
+        setDataUrl(c.toDataURL("image/png"));
+      };
       img.src = avatarDataUrl;
-      // Draw synchronously if cached
+      // Draw immediately too in case the image is already decoded (cached).
       try { ctx.drawImage(img, avatarX - avatarR, avatarY - avatarR, avatarR * 2, avatarR * 2); } catch { /* */ }
     } else {
       ctx.fillStyle = "#222";
@@ -255,6 +269,11 @@ export function RankShareCard({
     ctx.textAlign = "left";
 
     setDataUrl(c.toDataURL("image/png"));
+    avatarStale.current = false;
+    return () => {
+      // Don't let a stale avatar decode stomp a re-rendered card.
+      avatarStale.current = true;
+    };
   }, [gritPoints, displayName, username, avatarDataUrl, streak, prs, sessions, overall]);
 
   async function shareNow() {
