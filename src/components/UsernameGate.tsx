@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useRouterState } from "@tanstack/react-router";
 
 import { supabase } from "@/integrations/supabase/client";
 import { getMyProfile, saveProfile } from "@/lib/profile.functions";
@@ -20,8 +21,16 @@ export function UsernameGate() {
   const [clean, setClean] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   async function check() {
+    // Onboarding asks for name + username itself — popping this gate on top of
+    // it made new users pick a username twice. It stays a safety net for
+    // profiles that somehow reach the app without one.
+    if (pathname.startsWith("/onboarding") || pathname.startsWith("/auth")) {
+      setOpen(false);
+      return;
+    }
     try {
       const {
         data: { session },
@@ -43,7 +52,7 @@ export function UsernameGate() {
     const { data } = supabase.auth.onAuthStateChange(() => check());
     return () => data.subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [pathname]);
 
   if (!open) return null;
 

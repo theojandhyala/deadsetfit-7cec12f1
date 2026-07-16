@@ -18,6 +18,8 @@ export interface Profile {
   injuries?: string;
   weakness?: Weakness;
   username?: string;
+  /** Real/display name shown on the athlete card (distinct from @username) */
+  displayName?: string;
   avatarDataUrl?: string;
   startingWeightKg?: number;
   /** Up to two muscle groups the lifter wants to prioritise */

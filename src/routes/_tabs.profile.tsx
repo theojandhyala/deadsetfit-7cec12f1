@@ -367,7 +367,7 @@ function ProfilePage() {
           onChange={(e) => e.target.files?.[0] && changePhoto(e.target.files[0])}
         />
         <FifaCard
-          name={p.username || "Athlete"}
+          name={p.displayName || p.username || "Athlete"}
           username={p.username}
           avatarUrl={p.avatarDataUrl}
           badge={badge}

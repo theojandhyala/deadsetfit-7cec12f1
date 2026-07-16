@@ -11,6 +11,7 @@ type AccountProfile = {
   days_per_week?: number | null;
   equipment?: string | null;
   username?: string | null;
+  display_name?: string | null;
   avatar_url?: string | null;
   public_stats?: {
     prefs?: {
@@ -69,6 +70,7 @@ export function profileFromAccount(row: AccountProfile | null | undefined): Prof
       ? (row.equipment as Equipment)
       : "FULL_GYM",
     username: row.username ?? undefined,
+    displayName: row.display_name ?? undefined,
     avatarDataUrl: row.avatar_url ?? undefined,
     startingWeightKg: Number(row.weight_kg ?? 75),
     ...restorePrefs(row),

@@ -124,6 +124,11 @@ function TrainPage() {
     state.schedule ?? (state.profile ? defaultSchedule(state.profile) : ({} as Schedule));
   const day = schedule[selectedDay];
   const programDay = activeProgram?.days[selectedDay];
+  // "Build Your Own" onboarding lands here with an all-REST week.
+  const scheduleIsEmpty =
+    !activeProgram &&
+    !!state.schedule &&
+    DAY_KEYS.every((k) => !(state.schedule?.[k]?.exerciseIds?.length ?? 0));
   const score = calculateGritScore(state);
   const streak = calculateStreak(state.completedDates);
   const gritDisplay = useCountUp(score.total);
@@ -141,6 +146,15 @@ function TrainPage() {
     }
     return null;
   })();
+
+  useEffect(() => {
+    // A fully-blank week means the user chose "Build Your Own" — drop them
+    // straight into the editor so they map out days, exercises, sets and reps
+    // themselves instead of staring at a rest week.
+    if (scheduleIsEmpty && state.profile) setEditMode(true);
+    // Run once on mount only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!editMode) return;
@@ -357,7 +371,7 @@ function TrainPage() {
                     </Link>
                   );
                 }
-                if (!hasSchedule) {
+                if (!hasSchedule || scheduleIsEmpty) {
                   return (
                     <button
                       onClick={startBuildingSplit}
@@ -385,6 +399,21 @@ function TrainPage() {
                 {editMode ? "Done" : "Edit"}
               </button>
             </div>
+
+            {(!state.schedule || scheduleIsEmpty) && !editMode && (
+              <button
+                onClick={() => {
+                  const blank = {} as Schedule;
+                  for (const k of DAY_KEYS) blank[k] = { label: "REST", exerciseIds: [] };
+                  set((s) => ({ ...s, schedule: blank }));
+                  setEditMode(true);
+                }}
+                className="btn-ghost w-full mt-2 min-h-[48px] rounded-2xl text-xs flex items-center justify-center"
+              >
+                <Pencil size={14} className="mr-2" />
+                Start From Scratch — map every day yourself
+              </button>
+            )}
 
             <div className="mt-4 flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
               {DAY_KEYS.map((k) => {

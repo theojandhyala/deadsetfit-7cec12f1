@@ -33,6 +33,7 @@ type Step =
   | "injuries"
   | "weakness"
   | "prs"
+  | "name"
   | "username"
   | "photo"
   | "blueprint";
@@ -55,6 +56,7 @@ function orderFor(mode: Mode | null): Step[] {
     "injuries",
     "weakness",
     "prs",
+    "name",
     "username",
     "photo",
     "blueprint",
@@ -134,7 +136,7 @@ function Onboarding() {
       save({
         data: {
           username: p.username,
-          display_name: p.username,
+          display_name: (p.displayName?.trim() || p.username || "Athlete").slice(0, 60),
           goal: p.goal,
           experience: p.experience,
           gender: p.gender,
@@ -307,6 +309,9 @@ function Onboarding() {
           />
         )}
         {step === "prs" && <PRStep onContinue={() => next({})} />}
+        {step === "name" && (
+          <NameStep initial={draft.displayName} onSubmit={(n) => next({ displayName: n })} />
+        )}
         {step === "username" && (
           <UsernameStep initial={draft.username} onSubmit={(u) => next({ username: u })} />
         )}
@@ -475,6 +480,41 @@ function Injuries({
   );
 }
 
+function NameStep({ initial, onSubmit }: { initial?: string; onSubmit: (name: string) => void }) {
+  // DOM-owned input (defaultValue + shadow state) — controlled value= freezes
+  // typing in the iOS WKWebView.
+  const [shadow, setShadow] = useState(initial ?? "");
+  const valid = shadow.trim().length >= 1;
+  return (
+    <>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">
+        What&apos;s your name?
+      </h1>
+      <p className="text-sm text-[#8a8a8a] mb-8">
+        Shown on your athlete card. Your public @username comes next.
+      </p>
+      <input
+        autoFocus
+        defaultValue={initial ?? ""}
+        onChange={(e) => setShadow(e.target.value)}
+        maxLength={40}
+        autoCapitalize="words"
+        autoCorrect="off"
+        spellCheck={false}
+        className="bg-transparent border-b-2 border-grit focus:border-accent-red outline-none text-3xl font-display font-extrabold text-grit w-full pb-2 mb-8"
+        placeholder="Your name"
+      />
+      <button
+        disabled={!valid}
+        onClick={() => onSubmit(shadow.trim())}
+        className="btn-grit mt-auto disabled:opacity-40"
+      >
+        Continue
+      </button>
+    </>
+  );
+}
+
 function UsernameStep({ initial, onSubmit }: { initial?: string; onSubmit: (u: string) => void }) {
   const [v, setV] = useState(initial ?? "");
   const clean = v
@@ -485,7 +525,9 @@ function UsernameStep({ initial, onSubmit }: { initial?: string; onSubmit: (u: s
   return (
     <>
       <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">Pick a username</h1>
-      <p className="text-sm text-[#8a8a8a] mb-8">Public. Shown on leaderboards and your profile.</p>
+      <p className="text-sm text-[#8a8a8a] mb-8">
+        Your public @handle for leaderboards and the feed. Your name stays on your card.
+      </p>
       <div className="flex items-center gap-2 mb-8 border-b-2 border-grit focus-within:border-accent-red">
         <span className="text-3xl font-display font-extrabold text-grit-dim pb-2">@</span>
         <input
@@ -680,7 +722,9 @@ function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
           <span className="display text-2xl uppercase tracking-wide font-extrabold text-grit block">
             Build Your Own
           </span>
-          <p className="text-xs text-[#8a8a8a] mt-1">Start blank. Add your own splits and lifts.</p>
+          <p className="text-xs text-[#8a8a8a] mt-1">
+            Start blank. Map every day yourself — exercises, sets, reps and weight.
+          </p>
         </button>
       </div>
     </>
@@ -692,29 +736,10 @@ const ONBOARDING_PRS: Array<{
   label: string;
   unit: string;
   placeholder: string;
-  desc: string;
 }> = [
-  {
-    id: "bench-press",
-    label: "Bench Press",
-    unit: "kg",
-    placeholder: "80",
-    desc: "Flat barbell bench press. Bar to mid-chest, drive straight up.",
-  },
-  {
-    id: "squat",
-    label: "Back Squat",
-    unit: "kg",
-    placeholder: "100",
-    desc: "Barbell on upper back. Break at hips & knees, depth at parallel.",
-  },
-  {
-    id: "deadlift",
-    label: "Deadlift",
-    unit: "kg",
-    placeholder: "120",
-    desc: "Conventional barbell deadlift from the floor. Lock out hips at top.",
-  },
+  { id: "bench-press", label: "Bench Press", unit: "kg", placeholder: "80" },
+  { id: "squat", label: "Back Squat", unit: "kg", placeholder: "100" },
+  { id: "deadlift", label: "Deadlift", unit: "kg", placeholder: "120" },
 ];
 
 function PRStep({ onContinue }: { onContinue: () => void }) {
@@ -740,28 +765,35 @@ function PRStep({ onContinue }: { onContinue: () => void }) {
     <>
       <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">Your PRs</h1>
       <p className="text-sm text-[#8a8a8a] mb-6">
-        Drop your best lifts. Powers your athlete card. Leave blank to skip.
+        Best single lift for each. Rough numbers are fine — leave blank to skip.
       </p>
-      <div className="flex flex-col gap-2 mb-6">
+      <div className="flex flex-col gap-3 mb-6">
         {ONBOARDING_PRS.map((pr) => (
-          <div key={pr.id} className="bg-grit-card border border-grit rounded-xl px-3 py-2.5">
-            <div className="flex items-center gap-3">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-grit truncate">{pr.label}</p>
-                <p className="label-cap text-[9px] text-grit-dim">
-                  {pr.unit === "kg" ? "1-rep max" : "max reps"}
-                </p>
-              </div>
+          <div
+            key={pr.id}
+            className="bg-grit-card border border-grit rounded-xl p-4 flex items-center justify-between gap-4"
+          >
+            <div className="min-w-0">
+              <p className="display text-base font-extrabold uppercase text-grit truncate">
+                {pr.label}
+              </p>
+              <p className="label-cap text-[9px] text-grit-dim mt-0.5">1-rep max · optional</p>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
               <input
                 defaultValue={vals[pr.id] ?? ""}
-                onChange={(e) => setVals((v) => ({ ...v, [pr.id]: e.target.value }))}
+                onChange={(e) => {
+                  const clean = e.target.value.replace(/[^0-9.]/g, "");
+                  e.target.value = clean;
+                  setVals((v) => ({ ...v, [pr.id]: clean }));
+                }}
                 inputMode="decimal"
                 placeholder={pr.placeholder}
-                className="input-grit w-20 text-right"
+                className="input-grit w-24 h-12 text-center text-xl font-display font-extrabold"
+                aria-label={`${pr.label} one-rep max in kilograms`}
               />
-              <span className="label-cap text-[10px] text-grit-dim w-8">{pr.unit}</span>
+              <span className="label-cap text-[10px] text-grit-dim">{pr.unit}</span>
             </div>
-            <p className="text-[11px] text-[#8a8a8a] mt-1.5 leading-snug">{pr.desc}</p>
           </div>
         ))}
       </div>
@@ -770,7 +802,7 @@ function PRStep({ onContinue }: { onContinue: () => void }) {
           Continue
         </button>
         <button onClick={onContinue} className="btn-ghost">
-          Skip
+          Skip for now
         </button>
       </div>
     </>
