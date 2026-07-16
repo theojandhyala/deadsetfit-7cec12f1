@@ -73,7 +73,7 @@ gym,workout,tracker,lifting,PR,bench,squat,deadlift,strength,log,fitness,bodybui
 |---|---|
 | Support URL | `https://deadsetfit.org/guide` |
 | Marketing URL | `https://deadsetfit.org` |
-| Copyright | `© 2026 DEADSET` |
+| Copyright | `© 2026 Theo Jandhyala` — this DOES show on the App Store product page, and it's fully yours to set. |
 
 ## App Privacy (questionnaire)
 

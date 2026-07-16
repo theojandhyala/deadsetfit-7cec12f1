@@ -594,12 +594,17 @@ function ProfilePage() {
         </button>
       </section>
 
-      <section className="px-5 pb-10 flex justify-center gap-4 label-cap text-[10px] text-grit-dim">
-        <Link to="/privacy">Privacy</Link>
-        <span>·</span>
-        <Link to="/terms">Terms</Link>
-        <span>·</span>
-        <Link to="/disclaimer">Disclaimer</Link>
+      <section className="px-5 pb-10 flex flex-col items-center gap-2">
+        <div className="flex justify-center gap-4 label-cap text-[10px] text-grit-dim">
+          <Link to="/privacy">Privacy</Link>
+          <span>·</span>
+          <Link to="/terms">Terms</Link>
+          <span>·</span>
+          <Link to="/disclaimer">Disclaimer</Link>
+        </div>
+        <p className="label-cap text-[10px] text-grit-dim">
+          DEADSET — made by Theo Jandhyala
+        </p>
       </section>
 
       <QuickLogFAB />
