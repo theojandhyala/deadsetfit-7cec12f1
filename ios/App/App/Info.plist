@@ -6,6 +6,8 @@
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSHealthShareUsageDescription</key>
 	<string>DEADSET reads your Apple Watch workouts and active energy so training done on your watch counts toward your streak, grit and calorie balance.</string>
 	<key>NSHealthUpdateUsageDescription</key>
