@@ -273,10 +273,22 @@ const CHALLENGES: Challenge[] = [
 const TIER_COLOR = { EASY: "#60a5fa", BEAST: "#fbbf24", GOD: "#E10600", ELITE: "#a855f7" };
 const TIER_LABEL = { EASY: "Entry", BEAST: "Beast", GOD: "God Tier", ELITE: "Elite · Pro" };
 
+// "Finish the work, beat the clock" challenges: LOWER time is better. Holds
+// (plank, dead hang, wall sit, carries) stay higher-is-better.
+const RACE_IDS = new Set(["burpees-50", "burpees-100", "murph"]);
+function lowerIsBetter(id: string) {
+  return RACE_IDS.has(id);
+}
+function beatsTarget(id: string, value: number, target: number) {
+  return lowerIsBetter(id) ? value <= target : value >= target;
+}
+
 function bestRecord(records: ChallengeRecord[] | undefined, id: string) {
   const list = (records || []).filter((r) => r.challengeId === id);
   if (!list.length) return null;
-  return list.reduce((b, r) => (r.value > b.value ? r : b));
+  return list.reduce((b, r) =>
+    lowerIsBetter(id) ? (r.value < b.value ? r : b) : r.value > b.value ? r : b,
+  );
 }
 
 function fmtTime(s: number) {
@@ -312,14 +324,14 @@ function ChallengesPage() {
     if (filter === "ALL") return true;
     if (filter === "BEATEN") {
       const b = bestRecord(state.challengeRecords, c.id);
-      return b && b.value >= c.target;
+      return b && beatsTarget(c.id, b.value, c.target);
     }
     return c.tier === filter;
   });
 
   const beatenCount = CHALLENGES.filter((c) => {
     const b = bestRecord(state.challengeRecords, c.id);
-    return b && b.value >= c.target;
+    return b && beatsTarget(c.id, b.value, c.target);
   }).length;
 
   const TABS: { id: Tab; icon: typeof Flame; label: string }[] = [
@@ -480,7 +492,7 @@ function GrindTab({
         )}
         {filtered.map((c) => {
           const best = bestRecord(state.challengeRecords, c.id);
-          const beat = best && best.value >= c.target;
+          const beat = best && beatsTarget(c.id, best.value, c.target);
           const tierColor = TIER_COLOR[c.tier];
           const pct = best ? Math.min(100, (best.value / c.target) * 100) : 0;
 
@@ -907,7 +919,7 @@ function WarsTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
 
   const totalBeaten = (state.challengeRecords ?? []).reduce((set, r) => {
     const c = CHALLENGES.find((c) => c.id === r.challengeId);
-    if (c && r.value >= c.target) set.add(r.challengeId);
+    if (c && beatsTarget(c.id, r.value, c.target)) set.add(r.challengeId);
     return set;
   }, new Set<string>()).size;
 
@@ -1128,7 +1140,7 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
       onClose();
       return;
     }
-    const beat = value >= challenge.target;
+    const beat = beatsTarget(challenge.id, value, challenge.target);
     set((s) => ({
       ...s,
       challengeRecords: [

@@ -511,7 +511,9 @@ function LiveWorkoutPage() {
     const endedAt = new Date().toISOString();
     set((st) => {
       const live = st.sessions.find((s) => s.id === session!.id);
-      if (!live) return st;
+      // endedAt guard: a double-tap on Finish must not duplicate log entries,
+      // grit awards, or Health exports.
+      if (!live || live.endedAt) return st;
       let totalVolume = 0;
       let prCount = 0;
       live.exercises.forEach((e) =>

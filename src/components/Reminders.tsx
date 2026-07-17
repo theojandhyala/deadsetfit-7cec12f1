@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { useAppState } from "@/lib/storage";
 import { isoDay } from "@/lib/calc";
 import { usePro } from "@/hooks/usePro";
+import { isNativeIos } from "@/lib/platform";
 
 type Reminder = {
   id: string;

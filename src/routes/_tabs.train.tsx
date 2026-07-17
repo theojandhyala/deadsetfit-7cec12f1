@@ -420,7 +420,7 @@ function TrainPage() {
                 const active = k === selectedDay;
                 const isToday = k === todayKey();
                 const lbl =
-                  (activeProgram ? activeProgram.days[k].label : schedule[k]?.label)?.split(
+                  (activeProgram ? activeProgram.days[k]?.label : schedule[k]?.label)?.split(
                     " — ",
                   )[0] || "REST";
                 return (
@@ -507,6 +507,17 @@ function TrainPage() {
       {/* Edit mode: assign muscle group + searchable exercise picker */}
       {editMode && (
         <div className="deadset-section">
+          {activeProgram && (
+            // Edits target the base schedule, which a running program overrides
+            // — say so instead of letting changes look like they did nothing.
+            <div className="mb-3 rounded-2xl border border-amber-500/50 bg-amber-500/10 p-3">
+              <p className="text-xs text-amber-200 leading-relaxed">
+                You're editing your own weekly schedule, but{" "}
+                <b>{activeProgram.name || "a program"}</b> is currently active and takes over
+                your training days. Deactivate it in Programs to train from this schedule.
+              </p>
+            </div>
+          )}
           <div className="bg-grit-card border border-grit p-4">
             <div className="mb-5 rounded-[1.4rem] border border-accent-red/60 bg-black/30 p-4">
               <p className="label-cap text-accent-red text-[10px]">EASY SCHEDULE BUILDER</p>
@@ -645,7 +656,9 @@ function TrainPage() {
                         return { ...s, schedule: sched };
                       });
                     return (
-                      <div key={id} className="border border-grit rounded-xl px-3 py-2">
+                      // Key includes the day: defaultValue inputs must remount when
+                      // the same exercise shows different configs on another day.
+                      <div key={`${selectedDay}-${id}`} className="border border-grit rounded-xl px-3 py-2">
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-xs font-bold text-grit uppercase tracking-wide truncate">
                             {ex.name}

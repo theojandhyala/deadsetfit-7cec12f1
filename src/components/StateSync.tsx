@@ -14,6 +14,7 @@ import {
   finishRemoteStateLoad,
   clearRemoteStateStatus,
   setSyncIssueHandler,
+  reconcilePendingRemoteState,
 } from "@/lib/storage";
 import { loadUserState, saveUserState } from "@/lib/user-state.functions";
 import { withTimeout } from "@/lib/account-restore";
@@ -64,10 +65,20 @@ export function StateSync() {
           // A foreign/unowned local blob must not merge into this account's
           // remote — clear it first so hydrate is clean.
           if (getLocalStateOwner() !== userId) clearLocalState();
-          try {
-            hydrateFromRemote(JSON.parse(res.data), userId);
-          } catch {
-            /* ignore */
+          // Offline edits stashed as pending are NEWER than the remote we just
+          // fetched — push them up instead of letting the older remote hydrate
+          // over them (which would permanently lose the offline session).
+          const localIsNewer =
+            getLocalStateOwner() === userId &&
+            (await reconcilePendingRemoteState(async (json) => {
+              await save({ data: { data: json } });
+            }));
+          if (!localIsNewer) {
+            try {
+              hydrateFromRemote(JSON.parse(res.data), userId);
+            } catch {
+              /* ignore */
+            }
           }
         } else {
           // Genuinely empty account: back up local ONLY if it already belongs

@@ -201,9 +201,18 @@ function DietPage() {
 
   const supps = supplementsFor(profile?.goal);
   const waterPct = Math.min(1, waterToday / Math.max(state.waterTargetMl, 1));
-  const caloriePct = Math.min(1, totals.c / Math.max(calories, 1));
+  const rawCaloriePct = totals.c / Math.max(calories, 1);
+  const caloriePct = Math.min(1, rawCaloriePct);
   const proteinPct = Math.min(1, totals.p / Math.max(macros.protein, 1));
-  const dietScore = Math.round(((caloriePct > 0.9 && caloriePct < 1.12 ? 40 : caloriePct * 35) + proteinPct * 40 + waterPct * 20));
+  // Score against the UNCLAMPED ratio so overeating actually costs points:
+  // in-band = full 40, under = proportional, over = declining with a floor.
+  const calorieScore =
+    rawCaloriePct > 0.9 && rawCaloriePct < 1.12
+      ? 40
+      : rawCaloriePct <= 0.9
+        ? rawCaloriePct * 35
+        : Math.max(10, 40 - (rawCaloriePct - 1.12) * 50);
+  const dietScore = Math.round(calorieScore + proteinPct * 40 + waterPct * 20);
   const remainingCalories = Math.max(0, calories - totals.c);
   const remainingProtein = Math.max(0, macros.protein - Math.round(totals.p));
   const calorieDelta = totals.c - calories;
@@ -617,9 +626,10 @@ function DietPage() {
           <div className="grid grid-cols-2 gap-2 mb-2">
             <input ref={nameRef} defaultValue="" placeholder="Food" className="input-grit col-span-2" autoCapitalize="words" />
             <input ref={calsRef} inputMode="numeric" defaultValue="" onChange={(e) => { e.target.value = e.target.value.replace(/[^0-9]/g, ""); }} placeholder="kcal (optional)" className="input-grit" />
-            <input ref={proteinRef} inputMode="numeric" defaultValue="" onChange={(e) => { e.target.value = e.target.value.replace(/[^0-9]/g, ""); }} placeholder="protein g" className="input-grit" />
-            <input ref={carbsRef} inputMode="numeric" defaultValue="" onChange={(e) => { e.target.value = e.target.value.replace(/[^0-9]/g, ""); }} placeholder="carbs g" className="input-grit" />
-            <input ref={fatsRef} inputMode="numeric" defaultValue="" onChange={(e) => { e.target.value = e.target.value.replace(/[^0-9]/g, ""); }} placeholder="fats g" className="input-grit" />
+            {/* Macros allow decimals (12.5g) — sanitize keeps a single dot. */}
+            <input ref={proteinRef} inputMode="decimal" defaultValue="" onChange={(e) => { e.target.value = e.target.value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1"); }} placeholder="protein g" className="input-grit" />
+            <input ref={carbsRef} inputMode="decimal" defaultValue="" onChange={(e) => { e.target.value = e.target.value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1"); }} placeholder="carbs g" className="input-grit" />
+            <input ref={fatsRef} inputMode="decimal" defaultValue="" onChange={(e) => { e.target.value = e.target.value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1"); }} placeholder="fats g" className="input-grit" />
           </div>
           <button onClick={addFood} className="btn-grit w-full mb-3 gap-2"><Plus size={16} /> Add food</button>
 
@@ -804,7 +814,11 @@ function buildCalorieGoalGrid(
   });
 
   let streak = 0;
-  for (let i = days.length - 1; i >= 0; i--) {
+  // Today doesn't break the streak before it's had a chance to be hit —
+  // count from yesterday while today is still in progress.
+  let i = days.length - 1;
+  if (i >= 0 && days[i].isToday && !days[i].hit) i--;
+  for (; i >= 0; i--) {
     if (!days[i].hit) break;
     streak += 1;
   }

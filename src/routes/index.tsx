@@ -54,9 +54,16 @@ function IndexRoute() {
     (async () => {
       try {
         const { supabase } = await import("@/integrations/supabase/client");
+        // A stalled token refresh must never strand native users on the blank
+        // boot div — time out and fall through to the landing page instead.
         const {
           data: { session },
-        } = await supabase.auth.getSession();
+        } = await Promise.race([
+          supabase.auth.getSession(),
+          new Promise<{ data: { session: null } }>((resolve) =>
+            setTimeout(() => resolve({ data: { session: null } }), 3000),
+          ),
+        ]);
         if (cancelled) return;
         if (session) {
           navigate({ to: "/train", replace: true });

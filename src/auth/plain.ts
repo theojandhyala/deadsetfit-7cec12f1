@@ -24,6 +24,10 @@ const freeNote = document.getElementById("free-note") as HTMLParagraphElement | 
 const closeButton = document.getElementById("close") as HTMLButtonElement;
 
 let mode: "signin" | "signup" = "signin";
+// Landing from a Supabase email link (?code=...) — confirm or recovery.
+// The auth event (SIGNED_IN vs PASSWORD_RECOVERY) decides what happens.
+let recoveryMode = false;
+const hasAuthCode = new URLSearchParams(window.location.search).has("code");
 
 function setMessage(text: string, tone: "neutral" | "error" | "success" = "neutral") {
   message.textContent = text;
@@ -46,9 +50,11 @@ function setBusy(busy: boolean) {
   forgotButton.disabled = busy;
   submitButton.textContent = busy
     ? "Please wait..."
-    : mode === "signup"
-      ? "Create Account"
-      : "Sign In";
+    : recoveryMode
+      ? "Set New Password"
+      : mode === "signup"
+        ? "Create Account"
+        : "Sign In";
 }
 
 function cookieAttributes(maxAge = cookieMaxAge) {
@@ -183,15 +189,35 @@ const supabase =
       })
     : null;
 
+function enterRecoveryMode(session: Session | null) {
+  recoveryMode = true;
+  if (session?.user.email) emailInput.value = session.user.email;
+  emailInput.disabled = true;
+  signinTab.style.display = "none";
+  signupTab.style.display = "none";
+  forgotButton.style.visibility = "hidden";
+  if (freeNote) freeNote.hidden = true;
+  passwordInput.value = "";
+  passwordInput.autocomplete = "new-password";
+  submitButton.textContent = "Set New Password";
+  setMessage("Choose a new password for your account.");
+  passwordInput.focus();
+}
+
 supabase?.auth.onAuthStateChange((event, session) => {
   if (session) saveSessionBackup(session);
   if (event === "PASSWORD_RECOVERY") {
-    setMessage("Password recovery opened. Sign in with your new password after resetting it.");
+    enterRecoveryMode(session);
+  } else if (event === "SIGNED_IN" && hasAuthCode && !recoveryMode && session) {
+    // Email-confirmation link: the session is live — go straight into the app.
+    window.location.replace(destinationFor(session));
   }
 });
 
 async function restoreExistingSession() {
-  if (!supabase) return;
+  // When arriving from an email link, the auth event decides the destination —
+  // never auto-redirect a recovery visit before the new password is set.
+  if (!supabase || hasAuthCode) return;
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -262,11 +288,35 @@ form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const email = emailInput.value.trim().toLowerCase();
   const password = passwordInput.value;
-  if (!email || !password) return;
   if (!supabase) {
     setMessage("Authentication is not configured.", "error");
     return;
   }
+
+  if (recoveryMode) {
+    if (password.length < 6) {
+      setMessage("Password needs at least 6 characters.", "error");
+      return;
+    }
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) saveSessionBackup(session);
+      setMessage("Password updated — taking you in...", "success");
+      window.location.replace(session ? destinationFor(session) : "/auth/index.html");
+    } catch (error) {
+      setMessage(errorMessage(error, "Could not update password"), "error");
+    } finally {
+      setBusy(false);
+    }
+    return;
+  }
+
+  if (!email || !password) return;
 
   setBusy(true);
   setMessage("");

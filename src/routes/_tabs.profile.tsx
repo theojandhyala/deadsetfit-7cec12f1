@@ -197,7 +197,8 @@ function ProfilePage() {
       await persist({
         data: {
           username: newUsername,
-          display_name: newUsername,
+          // Never clobber a distinct display name with the @handle.
+          display_name: (p.displayName?.trim() || newUsername || "Athlete").slice(0, 60),
           goal: goal as "BULK" | "CUT" | "MAINTAIN" | "ATHLETIC",
           experience: exp as "BEGINNER" | "INTERMEDIATE" | "ADVANCED",
           weight_kg: newWeight,

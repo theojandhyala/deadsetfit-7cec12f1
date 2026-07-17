@@ -635,15 +635,21 @@ function Pricing() {
 }
 
 function FAQ() {
+  const nativeIos = isNativeIos();
   const faqs = [
     {
       q: "Is DEADSET free to use?",
       a: "Yes. You can start tracking workouts and progress for free, no card required.",
     },
-    {
-      q: "What does Pro cost?",
-      a: "£4.99/month or £39.99/year (save 33%). Local currency is applied at checkout, and you can cancel any time.",
-    },
+    // App Store Guideline 3.1.1: no subscription price or checkout mention on iOS.
+    ...(nativeIos
+      ? []
+      : [
+          {
+            q: "What does Pro cost?",
+            a: "£4.99/month or £39.99/year (save 33%). Local currency is applied at checkout, and you can cancel any time.",
+          },
+        ]),
     {
       q: "Can I use DEADSET on multiple devices?",
       a: "Yes. Sign in and your app state syncs across devices.",

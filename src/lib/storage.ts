@@ -197,9 +197,40 @@ export function clearLocalState() {
   if (typeof window !== "undefined") {
     localStorage.removeItem(KEY);
     localStorage.removeItem(OWNER_KEY);
+    // The pending stash is part of this state — leaving it behind would flush
+    // the previous user's unsynced data into the next account's remote.
+    localStorage.removeItem(PENDING_SYNC_KEY);
   }
   bumpVersion();
   listeners.forEach((l) => l());
+}
+
+/** Reconcile a stashed pending blob (local edits that never reached the
+ *  server) BEFORE hydrating from remote. The pending blob is strictly newer
+ *  than the fetched remote, so the caller must skip hydrate when this
+ *  returns true — otherwise an older remote clobbers the newer local state
+ *  and the next debounced push destroys it on the server too.
+ *  Returns true when a pending blob exists (pushed or still stashed). */
+export async function reconcilePendingRemoteState(
+  saver: (json: string) => Promise<void>,
+): Promise<boolean> {
+  const pending = readPendingRemoteState();
+  if (!pending) return false;
+  if (pending.length > MAX_SYNC_BYTES) {
+    // A stashed oversized blob would fail forever — drop it and let the
+    // remote hydrate proceed.
+    clearPendingRemoteState(pending);
+    return false;
+  }
+  try {
+    await saver(pending);
+    clearPendingRemoteState(pending);
+  } catch (e) {
+    // Push failed (still offline?) — keep the stash for the next retry, and
+    // still report "local is newer" so hydrate doesn't wipe it.
+    console.warn("pending state reconcile failed", e);
+  }
+  return true;
 }
 
 export function beginRemoteStateLoad(userId: string) {

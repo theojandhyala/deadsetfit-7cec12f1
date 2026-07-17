@@ -208,6 +208,8 @@ function Feed({ userId }: { userId: string }) {
       setPosts(r);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Feed failed");
+      // Show the empty state instead of an infinite spinner on failure.
+      setPosts((cur) => cur ?? []);
     }
   }, [_getFeed]);
   useEffect(() => {
@@ -591,7 +593,8 @@ function CommentsPanel({ postId, onPosted }: { postId: string; onPosted: () => v
     try {
       setItems(await _get({ data: { postId } }));
     } catch {
-      /* */
+      // Failed load renders as "no comments yet" instead of a stuck spinner.
+      setItems((cur) => cur ?? []);
     }
   }, [_get, postId]);
   useEffect(() => {
@@ -654,7 +657,11 @@ function League({ userId }: { userId: string }) {
   useEffect(() => {
     _get()
       .then(setData)
-      .catch(() => toast.error("Leaderboard failed"));
+      .catch(() => {
+        toast.error("Leaderboard failed");
+        // Render the empty board rather than spinning forever.
+        setData((cur) => cur ?? { top: [], me: null });
+      });
   }, [_get]);
 
   if (!data)
@@ -826,7 +833,11 @@ function Invite() {
   useEffect(() => {
     _info()
       .then(setInfo)
-      .catch(() => toast.error("Failed"));
+      .catch(() => {
+        toast.error("Failed");
+        // Render the invite screen without a code instead of spinning forever.
+        setInfo((cur) => cur ?? ({ code: null } as Awaited<ReturnType<typeof getMyReferralInfo>>));
+      });
   }, [_info]);
 
   async function copy() {
@@ -1031,7 +1042,10 @@ function Friends() {
   const loadFriendsHome = useCallback(() => {
     _suggest()
       .then(setSuggested)
-      .catch(() => {});
+      .catch(() => {
+        // Failed suggestions render as an empty list, not an endless spinner.
+        setSuggested((cur) => cur ?? []);
+      });
     _stats()
       .then(setStats)
       .catch(() => {});
@@ -1097,6 +1111,21 @@ function Friends() {
       setStats((s) => (s ? { ...s, following: s.following + (currentlyFollowing ? -1 : 1) } : s));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
+      // Revert the optimistic flip — the server recorded nothing.
+      setResults(
+        (arr) =>
+          arr?.map((r) => (r.id === id ? { ...r, following: currentlyFollowing } : r)) ?? null,
+      );
+      setNearby((n) =>
+        n
+          ? {
+              ...n,
+              athletes: n.athletes.map((a) =>
+                a.id === id ? { ...a, following: currentlyFollowing } : a,
+              ),
+            }
+          : n,
+      );
     } finally {
       setBusy(null);
     }

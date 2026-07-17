@@ -85,8 +85,14 @@ function ProgressPage() {
   }
   function logWeight() {
     const w = Number(weightRef.current?.value);
-    if (!w) return;
-    set((s) => ({ ...s, weights: [...s.weights, { date: isoDay(), weight: w }] }));
+    if (!w || w < 0) return;
+    // One entry per day: re-logging today replaces it (fixes typo re-entry and
+    // the duplicate-key/delete-all collision on same-day rows).
+    const today = isoDay();
+    set((s) => ({
+      ...s,
+      weights: [...s.weights.filter((x) => x.date !== today), { date: today, weight: w }],
+    }));
     if (weightRef.current) weightRef.current.value = "";
   }
   function logMeasurements() {
@@ -96,9 +102,15 @@ function ProgressPage() {
     const legs = +(legsRef.current?.value ?? "") || 0;
     // Don't record an all-empty measurement row — it would pollute the chart.
     if (!chest && !waist && !arms && !legs) return;
+    if (chest < 0 || waist < 0 || arms < 0 || legs < 0) return;
+    // One entry per day: re-logging today replaces it.
+    const today = isoDay();
     set((s) => ({
       ...s,
-      measurements: [...s.measurements, { date: isoDay(), chest, waist, arms, legs }],
+      measurements: [
+        ...s.measurements.filter((m) => m.date !== today),
+        { date: today, chest, waist, arms, legs },
+      ],
     }));
     for (const r of [chestRef, waistRef, armsRef, legsRef]) {
       if (r.current) r.current.value = "";

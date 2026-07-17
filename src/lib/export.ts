@@ -3,7 +3,7 @@ import { Capacitor } from "@capacitor/core";
 import { getState } from "./storage";
 import type { WorkoutSession } from "./types";
 
-export type DeliveryResult = "delivered" | "cancelled";
+export type DeliveryResult = "delivered" | "cancelled" | "failed";
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -46,6 +46,9 @@ async function deliverFile(
       }
     }
   }
+
+  // Anchor downloads no-op inside the iOS webview — never claim success there.
+  if (Capacitor.isNativePlatform()) return "failed";
 
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
