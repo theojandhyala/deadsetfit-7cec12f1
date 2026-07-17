@@ -107,7 +107,7 @@ Privacy Policy URL: `https://deadsetfit.org/privacy`
 
 ## Build
 
-- Attach build **1.0 (3)** (uploaded 16 Jul 2026 — appears after processing).
+- Attach build **1.0 (4)** (uploaded 17 Jul 2026 — contains the final audit-pass fixes; do NOT attach the June build 2 or build 3).
 - Export compliance: already answered in the binary (`ITSAppUsesNonExemptEncryption = false`) — no prompt expected.
 
 ## Screenshots (6.9", 1320×2868 — capture rig ready on iPhone 17 Pro Max sim)
