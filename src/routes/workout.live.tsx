@@ -895,7 +895,9 @@ function SetLogger({
   const progressionLocked = !proLoading && !isProUser;
   const bodyweight = nextWeight <= 0;
   const plates = !bodyweight && nextWeight >= 20 ? plateBreakdown(nextWeight) : null;
-  const ramp = logged === 0 && nextWeight >= 30 ? warmupRamp(nextWeight) : [];
+  // Warm-up ramp stays available until the first working set is logged, so all
+  // ramp steps can be ticked off (logging one warm-up shouldn't hide the rest).
+  const ramp = loggedWorking === 0 && nextWeight >= 30 ? warmupRamp(nextWeight) : [];
 
   function applySuggestion() {
     if (progressionLocked) {
@@ -1040,14 +1042,16 @@ function SetLogger({
 
       {ramp.length > 0 && (
         <div className="mt-3 flex items-center gap-1.5 flex-wrap">
-          <span className="label-cap text-[9px] text-grit-dim">WARM-UP</span>
+          <span className="label-cap text-[9px] text-grit-dim">WARM-UP · TAP TO LOG</span>
           {ramp.map((w) => (
-            <span
+            <button
               key={w.pct}
-              className="text-[10px] text-grit-dim border border-grit rounded-full px-2 py-0.5"
+              type="button"
+              onClick={() => onLog(w.weight, w.reps, "warmup")}
+              className="text-[10px] text-grit-dim border border-grit rounded-full px-2 py-0.5 press hover:border-accent-red hover:text-grit"
             >
               {w.weight}kg×{w.reps}
-            </span>
+            </button>
           ))}
         </div>
       )}
