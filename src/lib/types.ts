@@ -161,6 +161,8 @@ export interface CompletedSet {
   rpe?: number;
   isPR?: boolean;
   isAmrap?: boolean;
+  /** Warm-up sets are excluded from volume and PRs; drop sets count as volume but never PR. */
+  kind?: "warmup" | "drop";
 }
 
 export interface WorkoutSessionExercise {

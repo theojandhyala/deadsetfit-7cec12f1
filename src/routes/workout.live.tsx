@@ -114,7 +114,8 @@ function bestsFor(state: AppState, exerciseId: string): { bestWeight: number; be
   state.sessions.forEach((s) =>
     s.exercises.forEach((e) => {
       if (e.exerciseId !== exerciseId) return;
-      e.sets.forEach((cs) => consider(cs.weight, cs.reps));
+      // Warm-up and drop sets never count toward a lift's best (and so never PR).
+      e.sets.forEach((cs) => cs.kind || consider(cs.weight, cs.reps));
     }),
   );
   return { bestWeight, bestBwReps };
@@ -366,6 +367,7 @@ function LiveWorkoutPage() {
       prs = 0;
     session.exercises.forEach((e) => {
       e.sets.forEach((s) => {
+        if (s.kind === "warmup") return; // warm-ups aren't working volume
         vol += s.weight * s.reps;
         sets += 1;
         if (s.isPR) prs += 1;
@@ -507,17 +509,22 @@ function LiveWorkoutPage() {
   const progress = Math.min(100, Math.round((totals.sets / Math.max(1, plannedSets)) * 100));
 
 
-  function logSet(weight: number, reps: number) {
+  function logSet(weight: number, reps: number, kind?: "warmup" | "drop") {
     const ex = session!.exercises[activeIdx];
     if (!ex) return;
     // Compute the PR flag INSIDE the updater against fresh state, so a rapid
     // double-tap (which reads the same render-closure state twice) can't award
-    // and count the same PR twice.
+    // and count the same PR twice. Warm-up and drop sets never PR.
     let awardedPR = false;
     set((st) => {
       const { bestWeight, bestBwReps } = bestsFor(st, ex.exerciseId);
-      awardedPR = weight > 0 ? weight > bestWeight : reps > bestBwReps;
-      const newSet: CompletedSet = awardedPR ? { weight, reps, isPR: true } : { weight, reps };
+      awardedPR = kind ? false : weight > 0 ? weight > bestWeight : reps > bestBwReps;
+      const newSet: CompletedSet = {
+        weight,
+        reps,
+        ...(awardedPR ? { isPR: true } : {}),
+        ...(kind ? { kind } : {}),
+      };
       return {
         ...st,
         sessions: st.sessions.map((s) =>
@@ -540,9 +547,9 @@ function LiveWorkoutPage() {
         emitGritEarned(25, `NEW PR — ${ex.name.toUpperCase()}`, "pr");
       }
     }
-    // Auto rest-timer: kick off the countdown after each logged set unless the
+    // Auto rest-timer after each working/drop set (not warm-ups) unless the
     // lifter has turned it off (restTimerSeconds === 0).
-    if (restPref > 0) setResting(true);
+    if (restPref > 0 && kind !== "warmup") setResting(true);
   }
 
   function undoLastSet() {
@@ -597,6 +604,7 @@ function LiveWorkoutPage() {
       let prCount = 0;
       live.exercises.forEach((e) =>
         e.sets.forEach((cs) => {
+          if (cs.kind === "warmup") return; // warm-ups aren't working volume
           totalVolume += cs.weight * cs.reps;
           if (cs.isPR) prCount += 1;
         }),
@@ -605,7 +613,7 @@ function LiveWorkoutPage() {
       live.exercises.forEach((e) => {
         let best: CompletedSet | null = null;
         e.sets.forEach((cs) => {
-          if (cs.weight <= 0) return;
+          if (cs.weight <= 0 || cs.kind) return; // only true working sets set the best
           if (!best || cs.weight > best.weight || (cs.weight === best.weight && cs.reps > best.reps))
             best = cs;
         });
@@ -863,7 +871,7 @@ function SetLogger({
   ghost: GhostSet[];
   isProUser: boolean;
   proLoading: boolean;
-  onLog: (weight: number, reps: number) => void;
+  onLog: (weight: number, reps: number, kind?: "warmup" | "drop") => void;
   onUndo: () => void;
   onRpe: (rpe: number) => void;
 }) {
@@ -877,7 +885,11 @@ function SetLogger({
   const editRepsRef = useRef<HTMLInputElement>(null);
 
   const logged = exercise.sets.length;
-  const planned = Math.max(exercise.targetSets + extraSets, logged);
+  // Working rows keep their plan even when warm-up/drop sets are interleaved:
+  // reserve targetSets working rows PLUS however many special sets are logged.
+  const loggedWorking = exercise.sets.filter((s) => !s.kind).length;
+  const plannedWorking = Math.max(exercise.targetSets + extraSets, loggedWorking);
+  const planned = plannedWorking + (logged - loggedWorking);
   const nextWeight = override?.weight ?? defaultWeight;
   const nextReps = override?.reps ?? defaultReps;
   const progressionLocked = !proLoading && !isProUser;
@@ -1080,7 +1092,16 @@ function SetLogger({
                 >
                   {done && <Check size={14} className="text-black" strokeWidth={3} />}
                 </span>
-                <span className="label-cap text-[10px] text-grit-dim">SET {i + 1}</span>
+                <span
+                  className="label-cap text-[10px]"
+                  style={{ color: doneSet?.kind === "drop" ? "#E10600" : "#8a8a8a" }}
+                >
+                  {doneSet?.kind === "drop"
+                    ? "DROP"
+                    : doneSet?.kind === "warmup"
+                      ? "WARM-UP"
+                      : `SET ${done ? exercise.sets.slice(0, i + 1).filter((s) => !s.kind).length : loggedWorking + (i - logged) + 1}`}
+                </span>
               </span>
               <span className="display text-lg font-extrabold text-grit leading-none flex items-center">
                 {done ? fmt(doneSet!.weight, doneSet!.reps) : fmt(nextWeight, nextReps)}
@@ -1158,13 +1179,27 @@ function SetLogger({
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={() => setExtraSets((n) => n + 1)}
-        className="mt-2 w-full border border-dashed border-grit rounded-xl py-2.5 label-cap text-[10px] text-grit-dim press"
-      >
-        + Extra set
-      </button>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => setExtraSets((n) => n + 1)}
+          className="w-full border border-dashed border-grit rounded-xl py-2.5 label-cap text-[10px] text-grit-dim press"
+        >
+          + Extra set
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            // Drop set: ~20% off the working weight, logged straight away and
+            // marked (never a PR, but counts as volume).
+            const dropW = nextWeight > 0 ? Math.max(2.5, Math.round((nextWeight * 0.8) / 2.5) * 2.5) : 0;
+            onLog(dropW, nextReps, "drop");
+          }}
+          className="w-full border border-dashed border-accent-red/40 rounded-xl py-2.5 label-cap text-[10px] text-accent-red press"
+        >
+          + Drop set
+        </button>
+      </div>
 
       {plates && logged < planned && (
         <div className="mt-3 flex items-center gap-1.5 flex-wrap border border-grit rounded-xl px-3 py-2">
