@@ -1,4 +1,5 @@
 import type { AppState } from "./types";
+import { getExercise } from "./exercises";
 
 export interface TopSet {
   /** Session date (ISO day) */
@@ -132,4 +133,53 @@ export function ghostSets(state: AppState, exerciseId: string, currentSessionId:
 export function beatsGhost(set: GhostSet, ghost: GhostSet): boolean {
   if (set.weight !== ghost.weight) return set.weight > ghost.weight;
   return set.reps >= ghost.reps;
+}
+
+export interface ProgressionEntry {
+  exerciseId: string;
+  name: string;
+  suggestion: Suggestion;
+  lastWeight: number;
+}
+
+/**
+ * Scan every lift the user has trained (>=2 completed sessions with working
+ * sets) and return its progression call, "ready to move up" first. Powers the
+ * Progression Ready coaching board — turns the RPE-aware engine into an
+ * at-a-glance "what do I load next" answer across the whole programme.
+ */
+export function progressionBoard(state: AppState): ProgressionEntry[] {
+  // Collect every weighted exercise id + its most recent target-rep string.
+  const targetByExercise = new Map<string, string>();
+  const sessionCount = new Map<string, number>();
+  for (const s of [...state.sessions].filter((x) => x.endedAt).sort((a, b) => b.date.localeCompare(a.date))) {
+    for (const e of s.exercises) {
+      if (!e.sets.some((set) => set.weight > 0)) continue;
+      sessionCount.set(e.exerciseId, (sessionCount.get(e.exerciseId) ?? 0) + 1);
+      if (!targetByExercise.has(e.exerciseId)) {
+        targetByExercise.set(e.exerciseId, e.targetReps || "8");
+      }
+    }
+  }
+
+  const entries: ProgressionEntry[] = [];
+  for (const [exerciseId, targetReps] of targetByExercise) {
+    if ((sessionCount.get(exerciseId) ?? 0) < 2) continue;
+    const suggestion = suggestNextWeight(state, exerciseId, targetReps);
+    if (!suggestion) continue;
+    const hist = topSetHistory(state, exerciseId, 1);
+    entries.push({
+      exerciseId,
+      name: getExercise(exerciseId)?.name ?? exerciseId,
+      suggestion,
+      lastWeight: hist[0]?.weight ?? 0,
+    });
+  }
+  // Ready-to-progress first, then holds; heavier lifts first within each group.
+  return entries.sort((a, b) => {
+    const ra = a.suggestion.kind === "up" ? 0 : 1;
+    const rb = b.suggestion.kind === "up" ? 0 : 1;
+    if (ra !== rb) return ra - rb;
+    return b.lastWeight - a.lastWeight;
+  });
 }

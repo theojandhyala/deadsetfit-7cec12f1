@@ -10,6 +10,7 @@ import { PRList } from "@/components/PRList";
 import { groupForMuscle } from "@/lib/pr-groups";
 import { usePro } from "@/hooks/usePro";
 import { ProBanner } from "@/components/ProBanner";
+import { ProgressionBoard } from "@/components/ProgressionBoard";
 import { openPaywall } from "@/lib/paywall-events";
 import { askConfirm } from "@/lib/confirm";
 import { PR_CATALOG, getPRValue } from "@/lib/fifa-stats";
@@ -363,6 +364,9 @@ function ProgressPage() {
           </div>
         </Link>
       </section>
+
+      {/* Progression Ready — what to load next, per lift (RPE-aware) */}
+      <ProgressionBoard />
 
       {/* Calendar streak */}
       <section className="px-5 mb-6">
