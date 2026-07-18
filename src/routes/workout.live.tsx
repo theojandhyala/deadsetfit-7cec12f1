@@ -14,6 +14,7 @@ import { emitGritEarned } from "@/lib/grit-events";
 import { VideoModal } from "@/components/VideoModal";
 import { ShareCard } from "@/components/ShareCard";
 import { GritEarnedLayer } from "@/components/GritEarnedLayer";
+import { RestTimer } from "@/components/RestTimer";
 import type {
   AppState,
   WorkoutSession,
@@ -304,6 +305,34 @@ function LiveWorkoutPage() {
     set((st) => ({ ...st, sessions: [...st.sessions, s], activeSessionId: s.id }));
   }
 
+  // One-tap restart of the most recent finished session — same exercises and
+  // targets, fresh (empty) sets. The fastest path back into training.
+  function repeatSession(sourceId: string) {
+    set((st) => {
+      const last = st.sessions.find((s) => s.id === sourceId);
+      if (!last) return st;
+      const s: WorkoutSession = {
+        id: crypto.randomUUID(),
+        date: isoDay(),
+        dayKey: last.dayKey,
+        programId: last.programId ?? null,
+        startedAt: new Date().toISOString(),
+        totalVolume: 0,
+        prCount: 0,
+        label: last.label,
+        exercises: last.exercises.map((e) => ({
+          exerciseId: e.exerciseId,
+          name: e.name,
+          primary_muscles: e.primary_muscles,
+          targetSets: Math.max(1, e.sets.length || e.targetSets),
+          targetReps: e.targetReps,
+          sets: [],
+        })),
+      };
+      return { ...st, sessions: [...st.sessions, s], activeSessionId: s.id };
+    });
+  }
+
   useEffect(() => {
     set((st) => {
       if (st.activeSessionId) return st;
@@ -327,6 +356,8 @@ function LiveWorkoutPage() {
   const [finished, setFinished] = useState(false);
   const [finishedSessionId, setFinishedSessionId] = useState<string | null>(null);
   const [share, setShare] = useState(false);
+  const [resting, setResting] = useState(false);
+  const restPref = state.restTimerSeconds ?? 90;
 
   const totals = useMemo(() => {
     if (!session) return { vol: 0, sets: 0, prs: 0 };
@@ -405,6 +436,9 @@ function LiveWorkoutPage() {
     const active = state.programs.find((p) => p.id === state.activeProgramId);
     const schedule = getScheduleForState(state);
     const today = todayKey();
+    const lastDone = [...state.sessions]
+      .filter((s) => s.endedAt && s.exercises.some((e) => e.sets.length > 0))
+      .sort((a, b) => (b.startedAt || b.date).localeCompare(a.startedAt || a.date))[0];
     return (
       <div
         className="min-h-screen flex flex-col p-6"
@@ -417,6 +451,26 @@ function LiveWorkoutPage() {
           <p className="display text-sm uppercase font-extrabold text-grit">Pick a Day</p>
           <div className="w-6" />
         </div>
+        {lastDone && (
+          <button
+            onClick={() => repeatSession(lastDone.id)}
+            className="deadset-3d-panel deadset-lift w-full p-4 mb-5 text-left press"
+            style={{ background: "linear-gradient(135deg, rgba(225,6,0,0.14), #141414)", border: "1.5px solid rgba(225,6,0,0.4)" }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="min-w-0">
+                <p className="label-cap text-accent-red text-[10px]">Fastest start</p>
+                <p className="display text-lg font-extrabold uppercase text-white leading-none mt-0.5 truncate">
+                  Repeat last workout
+                </p>
+                <p className="text-[11px] text-grit-dim mt-1 truncate">
+                  {(lastDone.label || "Session").split(" — ")[0]} · {lastDone.exercises.length} exercises
+                </p>
+              </div>
+              <Play size={22} style={{ color: "#E10600" }} className="shrink-0" />
+            </div>
+          </button>
+        )}
         {active ? (
           <ProgramDayPicker
             active={active}
@@ -486,6 +540,9 @@ function LiveWorkoutPage() {
         emitGritEarned(25, `NEW PR — ${ex.name.toUpperCase()}`, "pr");
       }
     }
+    // Auto rest-timer: kick off the countdown after each logged set unless the
+    // lifter has turned it off (restTimerSeconds === 0).
+    if (restPref > 0) setResting(true);
   }
 
   function undoLastSet() {
@@ -730,6 +787,17 @@ function LiveWorkoutPage() {
 
       {videoQuery && (
         <VideoModal query={videoQuery} title={videoTitle} onClose={() => setVideoQuery(null)} />
+      )}
+      {resting && restPref > 0 && (
+        <RestTimer
+          key={session.exercises[activeIdx]?.sets.length ?? 0}
+          seconds={restPref}
+          onDone={() => setResting(false)}
+          onDisable={() => {
+            set((s) => ({ ...s, restTimerSeconds: 0 }));
+            setResting(false);
+          }}
+        />
       )}
       <GritEarnedLayer />
     </div>

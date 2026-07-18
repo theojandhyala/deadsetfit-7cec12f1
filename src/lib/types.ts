@@ -232,6 +232,8 @@ export interface AppState {
   manualPRs?: Record<string, { value: number; reps?: number; date: string }>;
   units?: "kg" | "lb";
   remindersEnabled?: boolean;
+  /** Auto rest-timer duration after each logged set (seconds); 0 = off. Default 90. */
+  restTimerSeconds?: number;
   streakArmor?: StreakArmor;
   healthSync?: HealthSync;
 }

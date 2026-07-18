@@ -4,6 +4,36 @@ import { ChevronLeft, Camera, Trophy, Flame, Dumbbell, Scale, X } from "lucide-r
 import { useAppState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
 import { calculateStreak } from "@/lib/calc";
+import { topSetHistory } from "@/lib/progression";
+
+// Tiny inline progression chart — top-set weight over recent sessions.
+function Sparkline({ values }: { values: number[] }) {
+  if (values.length < 2) return null;
+  const w = 84;
+  const h = 32;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const pts = values
+    .map((v, i) => {
+      const x = (i / (values.length - 1)) * (w - 4) + 2;
+      const y = h - 2 - ((v - min) / span) * (h - 6);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+  const up = values[values.length - 1] >= values[0];
+  const color = up ? "#E10600" : "#8A8A8A";
+  return (
+    <svg width={w} height={h} className="overflow-visible" aria-hidden>
+      <polyline points={pts} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      {values.map((v, i) => {
+        const x = (i / (values.length - 1)) * (w - 4) + 2;
+        const y = h - 2 - ((v - min) / span) * (h - 6);
+        return <circle key={i} cx={x} cy={y} r={i === values.length - 1 ? 2.5 : 1.5} fill={color} />;
+      })}
+    </svg>
+  );
+}
 
 export const Route = createFileRoute("/_tabs/catalogue")({
   head: () => ({ meta: [{ title: "DEADSET — Your Journey" }] }),
@@ -38,9 +68,17 @@ function CataloguePage() {
   const prs = useMemo(() => {
     const m = state.manualPRs ?? {};
     return Object.entries(m)
-      .map(([id, pr]) => ({ id, name: getExercise(id)?.name ?? id, ...pr }))
+      .map(([id, pr]) => ({
+        id,
+        name: getExercise(id)?.name ?? id,
+        ...pr,
+        // Top-set weight per session over time — powers the climb sparkline.
+        history: topSetHistory(state, id, 8)
+          .map((t) => t.weight)
+          .filter((w) => w > 0),
+      }))
       .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-  }, [state.manualPRs]);
+  }, [state]);
 
   const streak = calculateStreak(state.completedDates);
   const sessions = state.sessions.filter((s) => s.endedAt).length;
@@ -220,18 +258,21 @@ function CataloguePage() {
             {prs.map((pr) => (
               <div
                 key={pr.id}
-                className="deadset-3d-panel bg-grit-card border border-grit p-4 flex items-center justify-between"
+                className="deadset-3d-panel bg-grit-card border border-grit p-4 flex items-center justify-between gap-3"
               >
-                <div>
-                  <p className="display text-base font-extrabold uppercase text-white leading-none">{pr.name}</p>
+                <div className="min-w-0">
+                  <p className="display text-base font-extrabold uppercase text-white leading-none truncate">{pr.name}</p>
                   <p className="text-[10px] text-grit-dim mt-1">
                     {pr.date ? fmtDate(pr.date) : "—"}
                     {pr.reps ? ` · ${pr.reps} reps` : ""}
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="display text-2xl font-extrabold text-accent-red leading-none">{pr.value}</p>
-                  <p className="label-cap text-[8px] text-grit-dim">kg</p>
+                <div className="flex items-center gap-3 shrink-0">
+                  {pr.history.length >= 2 && <Sparkline values={pr.history} />}
+                  <div className="text-right">
+                    <p className="display text-2xl font-extrabold text-accent-red leading-none">{pr.value}</p>
+                    <p className="label-cap text-[8px] text-grit-dim">kg</p>
+                  </div>
                 </div>
               </div>
             ))}
