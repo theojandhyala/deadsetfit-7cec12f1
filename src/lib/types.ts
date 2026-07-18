@@ -28,6 +28,16 @@ export interface Profile {
   sessionMinutes?: 30 | 45 | 60 | 90;
   /** Bodyweight goal, used for journey framing */
   targetWeightKg?: number;
+  /** Onboarding depth — the "why" that drives them (motivation) */
+  motivation?: string;
+  /** Sleep quality band — informs recovery framing */
+  sleepQuality?: "LOW" | "OK" | "GOOD" | "GREAT";
+  /** The outcome they're chasing (their 12-week vision) */
+  dreamOutcome?: string;
+  /** Commitment: the target date they locked in (ISO yyyy-mm-dd) */
+  commitmentDate?: string;
+  /** Whether they completed the lock-in pledge */
+  committed?: boolean;
 }
 
 export type MuscleGroup =

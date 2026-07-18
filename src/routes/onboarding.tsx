@@ -22,6 +22,7 @@ export const Route = createFileRoute("/onboarding")({
 type Step =
   | "mode"
   | "goal"
+  | "why"
   | "days"
   | "equipment"
   | "focus"
@@ -29,14 +30,18 @@ type Step =
   | "schedule"
   | "experience"
   | "about"
+  | "sleep"
   | "target"
+  | "dream"
   | "injuries"
   | "weakness"
   | "prs"
   | "name"
   | "username"
   | "photo"
-  | "blueprint";
+  | "analyzing"
+  | "blueprint"
+  | "commit";
 
 type Mode = "GENERATE" | "BUILD";
 
@@ -45,21 +50,25 @@ function orderFor(mode: Mode | null): Step[] {
   if (!mode) return base;
   const schedule: Step[] =
     mode === "GENERATE"
-      ? ["goal", "days", "equipment", "focus", "session", "schedule"]
-      : ["goal", "days", "equipment", "focus", "session"];
+      ? ["goal", "why", "days", "equipment", "focus", "session", "schedule"]
+      : ["goal", "why", "days", "equipment", "focus", "session"];
   return [
     ...base,
     ...schedule,
     "experience",
     "about",
+    "sleep",
     "target",
+    "dream",
     "injuries",
     "weakness",
     "prs",
     "name",
     "username",
     "photo",
+    "analyzing",
     "blueprint",
+    "commit",
   ];
 }
 
@@ -225,6 +234,20 @@ function Onboarding() {
             onPick={(v) => next({ goal: v as Goal })}
           />
         )}
+        {step === "why" && (
+          <Choice
+            eyebrow="No wrong answer — be honest"
+            title="Why are you really here?"
+            options={[
+              { v: "STRONGER", l: "Get seriously strong", sub: "Move real weight. Numbers that shut people up." },
+              { v: "PHYSIQUE", l: "Build the physique", sub: "Look like you lift. Head-turning." },
+              { v: "CONFIDENCE", l: "Feel confident again", sub: "In my own skin, in the mirror, everywhere." },
+              { v: "DISCIPLINE", l: "Prove I can commit", sub: "No more starting and quitting. This time it sticks." },
+              { v: "COMPETE", l: "Compete and win", sub: "Rank up, beat rivals, top the leaderboard." },
+            ]}
+            onPick={(v) => next({ motivation: v })}
+          />
+        )}
         {step === "experience" && (
           <Choice
             title="Experience level"
@@ -237,6 +260,19 @@ function Onboarding() {
           />
         )}
         {step === "about" && <AboutYouStep initial={draft} onSubmit={(patch) => next(patch)} />}
+        {step === "sleep" && (
+          <Choice
+            eyebrow="Recovery is where you actually grow"
+            title="How's your sleep?"
+            options={[
+              { v: "LOW", l: "Under 6 hours", sub: "We'll build in extra recovery." },
+              { v: "OK", l: "6–7 hours", sub: "Workable — we'll help you protect it." },
+              { v: "GOOD", l: "7–8 hours", sub: "Solid foundation to build on." },
+              { v: "GREAT", l: "8+ hours", sub: "Elite recovery. Let's use it." },
+            ]}
+            onPick={(v) => next({ sleepQuality: v as Profile["sleepQuality"] })}
+          />
+        )}
         {step === "days" && (
           <Choice
             title="Days per week you can train"
@@ -296,6 +332,19 @@ function Onboarding() {
             onSkip={() => next({ targetWeightKg: undefined })}
           />
         )}
+        {step === "dream" && (
+          <Choice
+            eyebrow="Picture 12 weeks from now"
+            title="What does winning look like?"
+            options={[
+              { v: "PLATES", l: "Plates I couldn't touch", sub: "Bench, squat and deadlift up across the board." },
+              { v: "MIRROR", l: "The mirror hits different", sub: "Visibly leaner, fuller, more defined." },
+              { v: "STREAK", l: "A streak I never break", sub: "Training is just who I am now." },
+              { v: "RANK", l: "Top of the rankings", sub: "Elite rank, rivals beaten, respect earned." },
+            ]}
+            onPick={(v) => next({ dreamOutcome: v })}
+          />
+        )}
         {step === "weakness" && (
           <Choice
             title="Your biggest weakness?"
@@ -318,7 +367,14 @@ function Onboarding() {
         {step === "photo" && (
           <PhotoStep onSubmit={(url) => next({ avatarDataUrl: url })} onSkip={() => next({})} />
         )}
+        {step === "analyzing" && <AnalyzingStep draft={draft} onDone={() => next({})} />}
         {step === "blueprint" && <BlueprintStep draft={draft} onEnter={() => next({})} />}
+        {step === "commit" && (
+          <CommitStep
+            draft={draft}
+            onCommit={(commitmentDate) => next({ committed: true, commitmentDate })}
+          />
+        )}
       </div>
     </div>
   );
@@ -326,26 +382,30 @@ function Onboarding() {
 
 function Choice({
   title,
+  eyebrow,
   options,
   onPick,
 }: {
   title: string;
-  options: { v: string; l: string }[];
+  eyebrow?: string;
+  options: { v: string; l: string; sub?: string }[];
   onPick: (v: string) => void;
 }) {
   return (
     <>
+      {eyebrow && <p className="label-cap text-accent-red text-[10px] mb-1">{eyebrow}</p>}
       <h1 className="display text-3xl font-extrabold uppercase text-grit mb-8">{title}</h1>
       <div className="flex flex-col gap-3">
         {options.map((o) => (
           <button
             key={o.v}
             onClick={() => onPick(o.v)}
-            className="bg-grit-card border border-grit p-5 text-left hover:border-accent-red transition-colors"
+            className="bg-grit-card border border-grit p-5 text-left hover:border-accent-red transition-colors press"
           >
-            <span className="display text-lg uppercase tracking-wide font-bold text-grit">
+            <span className="display text-lg uppercase tracking-wide font-bold text-grit block">
               {o.l}
             </span>
+            {o.sub && <span className="text-[12px] text-grit-dim mt-1 block normal-case">{o.sub}</span>}
           </button>
         ))}
       </div>
@@ -1031,9 +1091,141 @@ function BlueprintStep({ draft, onEnter }: { draft: Partial<Profile>; onEnter: (
       <div className="mt-auto">
         <button onClick={onEnter} className="btn-grit w-full">
           <Zap size={16} className="mr-2" />
-          Enter DEADSET
+          One last thing
         </button>
       </div>
     </>
+  );
+}
+
+// Cinematic build-up before the blueprint: sequential, personalized "analysis"
+// lines tick over with a filling progress bar, then auto-advances.
+function AnalyzingStep({ draft, onDone }: { draft: Partial<Profile>; onDone: () => void }) {
+  const p = draft as Profile;
+  const focus = (p.focusMuscles ?? []).join(" + ").toLowerCase();
+  const lines = useMemo(
+    () => [
+      "Reading your goals and your why",
+      `Calibrating a ${p.daysPerWeek ?? 4}-day split${focus ? ` with extra ${focus}` : ""}`,
+      "Setting your calorie and protein targets",
+      "Benchmarking your lifts against the standards",
+      "Locking in your ranked starting point",
+    ],
+    [p.daysPerWeek, focus],
+  );
+  const [done, setDone] = useState(0);
+  useEffect(() => {
+    if (done >= lines.length) {
+      const t = setTimeout(onDone, 750);
+      return () => clearTimeout(t);
+    }
+    const t = setTimeout(() => setDone((d) => d + 1), 720);
+    return () => clearTimeout(t);
+  }, [done, lines.length, onDone]);
+  const pct = Math.round((done / lines.length) * 100);
+  return (
+    <div className="flex-1 flex flex-col justify-center">
+      <p className="label-cap text-accent-red text-[10px] mb-1">Building your blueprint</p>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-8">Locking you in…</h1>
+      <div className="flex flex-col gap-3 mb-8">
+        {lines.map((line, i) => (
+          <div
+            key={i}
+            className={`flex items-center gap-3 transition-opacity duration-300 ${i < done ? "opacity-100" : "opacity-30"}`}
+          >
+            <span
+              className={`w-6 h-6 shrink-0 rounded-full flex items-center justify-center border ${i < done ? "bg-accent-red border-accent-red" : "border-grit"}`}
+            >
+              {i < done ? (
+                <Check size={14} className="text-white" />
+              ) : (
+                <span className="w-1.5 h-1.5 rounded-full bg-grit-dim" />
+              )}
+            </span>
+            <span className="text-sm text-grit font-medium">{line}</span>
+          </div>
+        ))}
+      </div>
+      <div className="h-1.5 bg-grit-card rounded-full overflow-hidden">
+        <div
+          className="h-full bg-accent-red rounded-full transition-all duration-500"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <p className="text-center label-cap text-grit-dim text-[10px] mt-3">{pct}%</p>
+    </div>
+  );
+}
+
+// The lock-in finale: a first-person pledge with a chosen horizon and target
+// date. Tapping "I'm locked in" is the final onboarding action (triggers save).
+function CommitStep({
+  draft,
+  onCommit,
+}: {
+  draft: Partial<Profile>;
+  onCommit: (commitmentDate: string) => void;
+}) {
+  const p = draft as Profile;
+  const name = p.displayName?.trim() || p.username || "Athlete";
+  const goalLine =
+    (
+      {
+        BULK: "build serious size",
+        CUT: "get lean and defined",
+        MAINTAIN: "stay strong and sharp",
+        ATHLETIC: "perform like an athlete",
+      } as Record<string, string>
+    )[p.goal] ?? "transform";
+  const [horizon, setHorizon] = useState(90);
+  const targetDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + horizon);
+    return d;
+  }, [horizon]);
+  const iso = targetDate.toISOString().slice(0, 10);
+  const pretty = targetDate.toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  return (
+    <div className="flex-1 flex flex-col">
+      <p className="label-cap text-accent-red text-[10px] mb-1">The last step is a promise</p>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-5">Lock in.</h1>
+      <div className="deadset-3d-panel border border-accent-red/40 bg-[#0c0c0c] p-5 mb-6">
+        <p className="text-sm text-grit leading-relaxed">
+          I, <span className="font-extrabold text-white">{name}</span>, am done starting over. For
+          the next <span className="text-accent-red font-bold">{horizon} days</span> I show up, I
+          log every session, and I {goalLine}. No excuses.
+        </p>
+        <p className="label-cap text-[9px] text-grit-dim mt-4">Target date</p>
+        <p className="display text-xl font-extrabold text-white">{pretty}</p>
+      </div>
+      <p className="label-cap text-[10px] text-grit-dim mb-2">Choose your horizon</p>
+      <div className="grid grid-cols-3 gap-2 mb-auto">
+        {[30, 90, 180].map((d) => (
+          <button
+            key={d}
+            onClick={() => setHorizon(d)}
+            className="py-3 rounded-xl border press font-bold text-sm"
+            style={{
+              background: horizon === d ? "rgba(225,6,0,0.12)" : "#141414",
+              borderColor: horizon === d ? "#E10600" : "#262626",
+              color: horizon === d ? "#fff" : "#8A8A8A",
+            }}
+          >
+            {d} days
+          </button>
+        ))}
+      </div>
+      <button
+        onClick={() => onCommit(iso)}
+        className="btn-grit w-full mt-6 py-4 text-base animate-subtle-pulse"
+      >
+        <Zap size={16} className="mr-2" />
+        I&apos;m locked in
+      </button>
+    </div>
   );
 }
