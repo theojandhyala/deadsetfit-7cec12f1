@@ -9,76 +9,40 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as UpgradeRouteImport } from './routes/upgrade'
-import { Route as TermsRouteImport } from './routes/terms'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as RecoveryRouteImport } from './routes/recovery'
-import { Route as PrivacyRouteImport } from './routes/privacy'
-import { Route as OnboardingRouteImport } from './routes/onboarding'
-import { Route as LeaderboardRouteImport } from './routes/leaderboard'
-import { Route as GuideRouteImport } from './routes/guide'
-import { Route as DisclaimerRouteImport } from './routes/disclaimer'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as TabsRouteImport } from './routes/_tabs'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as WorkoutLiveRouteImport } from './routes/workout.live'
-import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
-import { Route as TabsTrainRouteImport } from './routes/_tabs.train'
-import { Route as TabsProgressRouteImport } from './routes/_tabs.progress'
-import { Route as TabsProgramsRouteImport } from './routes/_tabs.programs'
-import { Route as TabsProfileRouteImport } from './routes/_tabs.profile'
-import { Route as TabsLibraryRouteImport } from './routes/_tabs.library'
-import { Route as TabsFriendsRouteImport } from './routes/_tabs.friends'
-import { Route as TabsDietRouteImport } from './routes/_tabs.diet'
-import { Route as TabsChallengesRouteImport } from './routes/_tabs.challenges'
+import { Route as TabsRouteImport } from './routes/_tabs'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as DisclaimerRouteImport } from './routes/disclaimer'
+import { Route as GuideRouteImport } from './routes/guide'
+import { Route as LeaderboardRouteImport } from './routes/leaderboard'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as RecoveryRouteImport } from './routes/recovery'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as TermsRouteImport } from './routes/terms'
+import { Route as UpgradeRouteImport } from './routes/upgrade'
 import { Route as TabsCatalogueRouteImport } from './routes/_tabs.catalogue'
-import { Route as TabsProgramsProgramIdRouteImport } from './routes/_tabs.programs.$programId'
-import { Route as TabsLiftExerciseIdRouteImport } from './routes/_tabs.lift.$exerciseId'
+import { Route as TabsChallengesRouteImport } from './routes/_tabs.challenges'
+import { Route as TabsDietRouteImport } from './routes/_tabs.diet'
+import { Route as TabsFriendsRouteImport } from './routes/_tabs.friends'
+import { Route as TabsLibraryRouteImport } from './routes/_tabs.library'
+import { Route as TabsProfileRouteImport } from './routes/_tabs.profile'
+import { Route as TabsProgramsRouteImport } from './routes/_tabs.programs'
+import { Route as TabsProgressRouteImport } from './routes/_tabs.progress'
+import { Route as TabsTrainRouteImport } from './routes/_tabs.train'
+import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
+import { Route as WorkoutLiveRouteImport } from './routes/workout.live'
 import { Route as TabsAthleteIdRouteImport } from './routes/_tabs.athlete.$id'
+import { Route as TabsLiftExerciseIdRouteImport } from './routes/_tabs.lift.$exerciseId'
+import { Route as TabsProgramsProgramIdRouteImport } from './routes/_tabs.programs.$programId'
 
-const UpgradeRoute = UpgradeRouteImport.update({
-  id: '/upgrade',
-  path: '/upgrade',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TermsRoute = TermsRouteImport.update({
-  id: '/terms',
-  path: '/terms',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RecoveryRoute = RecoveryRouteImport.update({
-  id: '/recovery',
-  path: '/recovery',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PrivacyRoute = PrivacyRouteImport.update({
-  id: '/privacy',
-  path: '/privacy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OnboardingRoute = OnboardingRouteImport.update({
-  id: '/onboarding',
-  path: '/onboarding',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LeaderboardRoute = LeaderboardRouteImport.update({
-  id: '/leaderboard',
-  path: '/leaderboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GuideRoute = GuideRouteImport.update({
-  id: '/guide',
-  path: '/guide',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DisclaimerRoute = DisclaimerRouteImport.update({
-  id: '/disclaimer',
-  path: '/disclaimer',
+const TabsRoute = TabsRouteImport.update({
+  id: '/_tabs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -86,58 +50,54 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TabsRoute = TabsRouteImport.update({
-  id: '/_tabs',
+const DisclaimerRoute = DisclaimerRouteImport.update({
+  id: '/disclaimer',
+  path: '/disclaimer',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const GuideRoute = GuideRouteImport.update({
+  id: '/guide',
+  path: '/guide',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorkoutLiveRoute = WorkoutLiveRouteImport.update({
-  id: '/workout/live',
-  path: '/workout/live',
+const LeaderboardRoute = LeaderboardRouteImport.update({
+  id: '/leaderboard',
+  path: '/leaderboard',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
-  id: '/checkout/return',
-  path: '/checkout/return',
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TabsTrainRoute = TabsTrainRouteImport.update({
-  id: '/train',
-  path: '/train',
-  getParentRoute: () => TabsRoute,
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const TabsProgressRoute = TabsProgressRouteImport.update({
-  id: '/progress',
-  path: '/progress',
-  getParentRoute: () => TabsRoute,
+const RecoveryRoute = RecoveryRouteImport.update({
+  id: '/recovery',
+  path: '/recovery',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const TabsProgramsRoute = TabsProgramsRouteImport.update({
-  id: '/programs',
-  path: '/programs',
-  getParentRoute: () => TabsRoute,
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const TabsProfileRoute = TabsProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => TabsRoute,
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const TabsLibraryRoute = TabsLibraryRouteImport.update({
-  id: '/library',
-  path: '/library',
-  getParentRoute: () => TabsRoute,
+const UpgradeRoute = UpgradeRouteImport.update({
+  id: '/upgrade',
+  path: '/upgrade',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const TabsFriendsRoute = TabsFriendsRouteImport.update({
-  id: '/friends',
-  path: '/friends',
-  getParentRoute: () => TabsRoute,
-} as any)
-const TabsDietRoute = TabsDietRouteImport.update({
-  id: '/diet',
-  path: '/diet',
+const TabsCatalogueRoute = TabsCatalogueRouteImport.update({
+  id: '/catalogue',
+  path: '/catalogue',
   getParentRoute: () => TabsRoute,
 } as any)
 const TabsChallengesRoute = TabsChallengesRouteImport.update({
@@ -145,25 +105,65 @@ const TabsChallengesRoute = TabsChallengesRouteImport.update({
   path: '/challenges',
   getParentRoute: () => TabsRoute,
 } as any)
-const TabsCatalogueRoute = TabsCatalogueRouteImport.update({
-  id: '/catalogue',
-  path: '/catalogue',
+const TabsDietRoute = TabsDietRouteImport.update({
+  id: '/diet',
+  path: '/diet',
   getParentRoute: () => TabsRoute,
 } as any)
-const TabsProgramsProgramIdRoute = TabsProgramsProgramIdRouteImport.update({
-  id: '/$programId',
-  path: '/$programId',
-  getParentRoute: () => TabsProgramsRoute,
+const TabsFriendsRoute = TabsFriendsRouteImport.update({
+  id: '/friends',
+  path: '/friends',
+  getParentRoute: () => TabsRoute,
+} as any)
+const TabsLibraryRoute = TabsLibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
+  getParentRoute: () => TabsRoute,
+} as any)
+const TabsProfileRoute = TabsProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => TabsRoute,
+} as any)
+const TabsProgramsRoute = TabsProgramsRouteImport.update({
+  id: '/programs',
+  path: '/programs',
+  getParentRoute: () => TabsRoute,
+} as any)
+const TabsProgressRoute = TabsProgressRouteImport.update({
+  id: '/progress',
+  path: '/progress',
+  getParentRoute: () => TabsRoute,
+} as any)
+const TabsTrainRoute = TabsTrainRouteImport.update({
+  id: '/train',
+  path: '/train',
+  getParentRoute: () => TabsRoute,
+} as any)
+const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
+  id: '/checkout/return',
+  path: '/checkout/return',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkoutLiveRoute = WorkoutLiveRouteImport.update({
+  id: '/workout/live',
+  path: '/workout/live',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TabsAthleteIdRoute = TabsAthleteIdRouteImport.update({
+  id: '/athlete/$id',
+  path: '/athlete/$id',
+  getParentRoute: () => TabsRoute,
 } as any)
 const TabsLiftExerciseIdRoute = TabsLiftExerciseIdRouteImport.update({
   id: '/lift/$exerciseId',
   path: '/lift/$exerciseId',
   getParentRoute: () => TabsRoute,
 } as any)
-const TabsAthleteIdRoute = TabsAthleteIdRouteImport.update({
-  id: '/athlete/$id',
-  path: '/athlete/$id',
-  getParentRoute: () => TabsRoute,
+const TabsProgramsProgramIdRoute = TabsProgramsProgramIdRouteImport.update({
+  id: '/$programId',
+  path: '/$programId',
+  getParentRoute: () => TabsProgramsRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -353,74 +353,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/upgrade': {
-      id: '/upgrade'
-      path: '/upgrade'
-      fullPath: '/upgrade'
-      preLoaderRoute: typeof UpgradeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/terms': {
-      id: '/terms'
-      path: '/terms'
-      fullPath: '/terms'
-      preLoaderRoute: typeof TermsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/recovery': {
-      id: '/recovery'
-      path: '/recovery'
-      fullPath: '/recovery'
-      preLoaderRoute: typeof RecoveryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/privacy': {
-      id: '/privacy'
-      path: '/privacy'
-      fullPath: '/privacy'
-      preLoaderRoute: typeof PrivacyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/onboarding': {
-      id: '/onboarding'
-      path: '/onboarding'
-      fullPath: '/onboarding'
-      preLoaderRoute: typeof OnboardingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/leaderboard': {
-      id: '/leaderboard'
-      path: '/leaderboard'
-      fullPath: '/leaderboard'
-      preLoaderRoute: typeof LeaderboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/guide': {
-      id: '/guide'
-      path: '/guide'
-      fullPath: '/guide'
-      preLoaderRoute: typeof GuideRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/disclaimer': {
-      id: '/disclaimer'
-      path: '/disclaimer'
-      fullPath: '/disclaimer'
-      preLoaderRoute: typeof DisclaimerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_tabs': {
@@ -430,74 +367,81 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TabsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/workout/live': {
-      id: '/workout/live'
-      path: '/workout/live'
-      fullPath: '/workout/live'
-      preLoaderRoute: typeof WorkoutLiveRouteImport
+    '/disclaimer': {
+      id: '/disclaimer'
+      path: '/disclaimer'
+      fullPath: '/disclaimer'
+      preLoaderRoute: typeof DisclaimerRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/checkout/return': {
-      id: '/checkout/return'
-      path: '/checkout/return'
-      fullPath: '/checkout/return'
-      preLoaderRoute: typeof CheckoutReturnRouteImport
+    '/guide': {
+      id: '/guide'
+      path: '/guide'
+      fullPath: '/guide'
+      preLoaderRoute: typeof GuideRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_tabs/train': {
-      id: '/_tabs/train'
-      path: '/train'
-      fullPath: '/train'
-      preLoaderRoute: typeof TabsTrainRouteImport
-      parentRoute: typeof TabsRoute
+    '/leaderboard': {
+      id: '/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/leaderboard'
+      preLoaderRoute: typeof LeaderboardRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_tabs/progress': {
-      id: '/_tabs/progress'
-      path: '/progress'
-      fullPath: '/progress'
-      preLoaderRoute: typeof TabsProgressRouteImport
-      parentRoute: typeof TabsRoute
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_tabs/programs': {
-      id: '/_tabs/programs'
-      path: '/programs'
-      fullPath: '/programs'
-      preLoaderRoute: typeof TabsProgramsRouteImport
-      parentRoute: typeof TabsRoute
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_tabs/profile': {
-      id: '/_tabs/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof TabsProfileRouteImport
-      parentRoute: typeof TabsRoute
+    '/recovery': {
+      id: '/recovery'
+      path: '/recovery'
+      fullPath: '/recovery'
+      preLoaderRoute: typeof RecoveryRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_tabs/library': {
-      id: '/_tabs/library'
-      path: '/library'
-      fullPath: '/library'
-      preLoaderRoute: typeof TabsLibraryRouteImport
-      parentRoute: typeof TabsRoute
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_tabs/friends': {
-      id: '/_tabs/friends'
-      path: '/friends'
-      fullPath: '/friends'
-      preLoaderRoute: typeof TabsFriendsRouteImport
-      parentRoute: typeof TabsRoute
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_tabs/diet': {
-      id: '/_tabs/diet'
-      path: '/diet'
-      fullPath: '/diet'
-      preLoaderRoute: typeof TabsDietRouteImport
+    '/upgrade': {
+      id: '/upgrade'
+      path: '/upgrade'
+      fullPath: '/upgrade'
+      preLoaderRoute: typeof UpgradeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_tabs/catalogue': {
+      id: '/_tabs/catalogue'
+      path: '/catalogue'
+      fullPath: '/catalogue'
+      preLoaderRoute: typeof TabsCatalogueRouteImport
       parentRoute: typeof TabsRoute
     }
     '/_tabs/challenges': {
@@ -507,19 +451,75 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TabsChallengesRouteImport
       parentRoute: typeof TabsRoute
     }
-    '/_tabs/catalogue': {
-      id: '/_tabs/catalogue'
-      path: '/catalogue'
-      fullPath: '/catalogue'
-      preLoaderRoute: typeof TabsCatalogueRouteImport
+    '/_tabs/diet': {
+      id: '/_tabs/diet'
+      path: '/diet'
+      fullPath: '/diet'
+      preLoaderRoute: typeof TabsDietRouteImport
       parentRoute: typeof TabsRoute
     }
-    '/_tabs/programs/$programId': {
-      id: '/_tabs/programs/$programId'
-      path: '/$programId'
-      fullPath: '/programs/$programId'
-      preLoaderRoute: typeof TabsProgramsProgramIdRouteImport
-      parentRoute: typeof TabsProgramsRoute
+    '/_tabs/friends': {
+      id: '/_tabs/friends'
+      path: '/friends'
+      fullPath: '/friends'
+      preLoaderRoute: typeof TabsFriendsRouteImport
+      parentRoute: typeof TabsRoute
+    }
+    '/_tabs/library': {
+      id: '/_tabs/library'
+      path: '/library'
+      fullPath: '/library'
+      preLoaderRoute: typeof TabsLibraryRouteImport
+      parentRoute: typeof TabsRoute
+    }
+    '/_tabs/profile': {
+      id: '/_tabs/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof TabsProfileRouteImport
+      parentRoute: typeof TabsRoute
+    }
+    '/_tabs/programs': {
+      id: '/_tabs/programs'
+      path: '/programs'
+      fullPath: '/programs'
+      preLoaderRoute: typeof TabsProgramsRouteImport
+      parentRoute: typeof TabsRoute
+    }
+    '/_tabs/progress': {
+      id: '/_tabs/progress'
+      path: '/progress'
+      fullPath: '/progress'
+      preLoaderRoute: typeof TabsProgressRouteImport
+      parentRoute: typeof TabsRoute
+    }
+    '/_tabs/train': {
+      id: '/_tabs/train'
+      path: '/train'
+      fullPath: '/train'
+      preLoaderRoute: typeof TabsTrainRouteImport
+      parentRoute: typeof TabsRoute
+    }
+    '/checkout/return': {
+      id: '/checkout/return'
+      path: '/checkout/return'
+      fullPath: '/checkout/return'
+      preLoaderRoute: typeof CheckoutReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workout/live': {
+      id: '/workout/live'
+      path: '/workout/live'
+      fullPath: '/workout/live'
+      preLoaderRoute: typeof WorkoutLiveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_tabs/athlete/$id': {
+      id: '/_tabs/athlete/$id'
+      path: '/athlete/$id'
+      fullPath: '/athlete/$id'
+      preLoaderRoute: typeof TabsAthleteIdRouteImport
+      parentRoute: typeof TabsRoute
     }
     '/_tabs/lift/$exerciseId': {
       id: '/_tabs/lift/$exerciseId'
@@ -528,12 +528,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TabsLiftExerciseIdRouteImport
       parentRoute: typeof TabsRoute
     }
-    '/_tabs/athlete/$id': {
-      id: '/_tabs/athlete/$id'
-      path: '/athlete/$id'
-      fullPath: '/athlete/$id'
-      preLoaderRoute: typeof TabsAthleteIdRouteImport
-      parentRoute: typeof TabsRoute
+    '/_tabs/programs/$programId': {
+      id: '/_tabs/programs/$programId'
+      path: '/$programId'
+      fullPath: '/programs/$programId'
+      preLoaderRoute: typeof TabsProgramsProgramIdRouteImport
+      parentRoute: typeof TabsProgramsRoute
     }
   }
 }
