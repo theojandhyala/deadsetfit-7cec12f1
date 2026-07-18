@@ -329,8 +329,14 @@ async function handleStripeHealth(env: Env): Promise<Response> {
   try {
     const { createStripeClient } = await import("./lib/stripe.server");
     const stripe = createStripeClient("live");
-    await stripe.products.list({ limit: 1 });
-    return Response.json({ ok: true, stripeLiveKey: "valid" }, { headers: { "Cache-Control": "no-store" } });
+    // Report the account id so we can confirm the server key and the
+    // front-end publishable key are on the SAME Stripe account. Account
+    // ids are not secret (they appear in every publishable key).
+    const account = await stripe.accounts.retrieve();
+    return Response.json(
+      { ok: true, stripeLiveKey: "valid", account: account.id },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown error";
     return Response.json(
