@@ -3,6 +3,15 @@
 # Usage: bash fix-stripe-key.sh   → paste the NEW sk_live_ key when asked.
 cd "$(dirname "$0")" || exit 1
 
+# The repo's wrangler config carries a Pages output dir, which makes
+# `wrangler secret put` refuse as "a Pages project". This minimal
+# worker-only config forces Workers mode so the secret lands correctly.
+CFG="$(mktemp /tmp/deadset-secret.XXXXXX.jsonc)"
+cat > "$CFG" <<'EOF'
+{ "name": "deadset", "main": "./src/cloudflare-worker.ts", "compatibility_date": "2025-01-01" }
+EOF
+trap 'rm -f "$CFG"' EXIT
+
 echo ""
 echo "── DEADSET checkout key fix ──"
 echo "Paste your NEW Stripe secret key (starts sk_live_) and press Enter."
@@ -19,16 +28,14 @@ case "$KEY" in
   sk_live_*|rk_live_*) ;;
   *)
     echo "That does not look like a LIVE secret key (should start with sk_live_)."
-    echo "Nothing was changed. Check you copied the right one and run it again."
+    echo "Nothing was changed. Copy the right one and run it again."
     exit 1
     ;;
 esac
 
 echo "Uploading to the checkout server (Cloudflare)..."
-# --name targets the Worker directly; the repo config also declares a Pages
-# output dir, which otherwise makes `secret put` refuse as "a Pages project".
-if ! printf '%s' "$KEY" | npx wrangler secret put STRIPE_LIVE_API_KEY --name deadset; then
-  echo "Upload failed — run it again, or screenshot this window for Claude."
+if ! printf '%s' "$KEY" | npx wrangler secret put STRIPE_LIVE_API_KEY --name deadset -c "$CFG"; then
+  echo "Upload failed — screenshot this window for Claude."
   exit 1
 fi
 unset KEY
@@ -41,5 +48,5 @@ echo "$RESULT"
 echo ""
 case "$RESULT" in
   *'"valid"'*) echo "✅ CHECKOUT IS LIVE. Tell Claude: done" ;;
-  *) echo "Still not valid — wait 30 seconds and run: curl -s https://deadsetfit.org/api/health/stripe" ;;
+  *) echo "Not valid yet — wait 30s then run: curl -s https://deadsetfit.org/api/health/stripe" ;;
 esac
