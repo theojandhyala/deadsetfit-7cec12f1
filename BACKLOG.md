@@ -6,9 +6,14 @@
 
 ## Shipped
 - ✅ **Progress Catalogue** (`/catalogue`) — before/after photo comparison, journey
-  stats, photo timeline + lightbox, PR wall. Linked from the Progress tab.
+  stats, photo timeline + lightbox, PR wall with per-lift climb sparklines,
+  "Share your week" recap card. Linked from the Progress tab.
 - ✅ **Deeper cinematic onboarding** — why/sleep/dream questions, analyzing reveal,
   lock-in pledge.
+- ✅ **Rest timer** — auto-starts after each set (Web Audio chime + vibrate),
+  +15s / skip / turn-off; `restTimerSeconds` pref.
+- ✅ **Repeat last workout** — one-tap restart on the workout day-picker.
+- ✅ **Weekly recap share card** — 9:16 story-ready "My week" image.
 
 ## Context (read first)
 DEADSET is a ranked, competitive fitness app — Vite + React + TanStack Router,

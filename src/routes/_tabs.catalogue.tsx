@@ -1,10 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
 import { ChevronLeft, Camera, Trophy, Flame, Dumbbell, Scale, X } from "lucide-react";
+import { Share2 } from "lucide-react";
 import { useAppState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
 import { calculateStreak } from "@/lib/calc";
 import { topSetHistory } from "@/lib/progression";
+import { WeeklyRecapCard, type WeeklyRecap } from "@/components/WeeklyRecapCard";
 
 // Tiny inline progression chart — top-set weight over recent sessions.
 function Sparkline({ values }: { values: number[] }) {
@@ -82,6 +84,35 @@ function CataloguePage() {
 
   const streak = calculateStreak(state.completedDates);
   const sessions = state.sessions.filter((s) => s.endedAt).length;
+  const [recap, setRecap] = useState<WeeklyRecap | null>(null);
+
+  function buildWeeklyRecap(): WeeklyRecap {
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 86_400_000).toISOString();
+    const wk = state.sessions.filter((s) => s.endedAt && (s.startedAt || s.date) >= weekAgo);
+    const volumeKg = wk.reduce((a, s) => a + (s.totalVolume || 0), 0);
+    const prs = wk.reduce((a, s) => a + (s.prCount || 0), 0);
+    let topLift: WeeklyRecap["topLift"];
+    let best = 0;
+    for (const s of wk) {
+      for (const e of s.exercises) {
+        for (const set of e.sets) {
+          if (set.weight > best) {
+            best = set.weight;
+            topLift = { name: getExercise(e.exerciseId)?.name ?? e.name, value: set.weight };
+          }
+        }
+      }
+    }
+    return {
+      weekLabel: now.toLocaleDateString(undefined, { day: "numeric", month: "short" }),
+      sessions: wk.length,
+      volumeKg,
+      prs,
+      streak,
+      topLift,
+    };
+  }
 
   // Journey start = the earliest thing we can find (photo, session, or weigh-in).
   const journeyStart = useMemo(() => {
@@ -165,6 +196,14 @@ function CataloguePage() {
         <p className="px-5 -mt-1 mb-4 text-xs text-grit-dim">
           {daysTraining} {daysTraining === 1 ? "day" : "days"} of work logged and counting.
         </p>
+      )}
+
+      {sessions > 0 && (
+        <div className="px-5 mb-5">
+          <button onClick={() => setRecap(buildWeeklyRecap())} className="btn-ghost w-full py-3">
+            <Share2 size={16} className="mr-2" /> Share your week
+          </button>
+        </div>
       )}
 
       {/* Journey stats */}
@@ -303,6 +342,8 @@ function CataloguePage() {
           <img src={lightbox} alt="" className="max-h-[85vh] max-w-full rounded-xl object-contain" />
         </div>
       )}
+
+      {recap && <WeeklyRecapCard recap={recap} onClose={() => setRecap(null)} />}
     </div>
   );
 }
