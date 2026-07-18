@@ -4,10 +4,15 @@ import { Flame, Trophy, Crown, Dumbbell, Check, ChevronLeft } from "lucide-react
  *  rounded display and sits in a dark bezel with an ambient red glow. */
 export function PhoneFrame({
   children,
+  image,
+  alt = "DEADSET app screen",
   className = "",
   glow = true,
 }: {
-  children: React.ReactNode;
+  children?: React.ReactNode;
+  /** A real app screenshot; when set it fills the screen and the drawn notch is hidden. */
+  image?: string;
+  alt?: string;
   className?: string;
   glow?: boolean;
 }) {
@@ -32,9 +37,14 @@ export function PhoneFrame({
           className="relative overflow-hidden rounded-[38px]"
           style={{ background: "#0A0A0A", aspectRatio: "9 / 19.3" }}
         >
-          {/* notch */}
-          <div className="pointer-events-none absolute left-1/2 top-2 z-20 h-5 w-24 -translate-x-1/2 rounded-full bg-black" />
-          <div className="h-full overflow-hidden">{children}</div>
+          {image ? (
+            <img src={image} alt={alt} loading="lazy" className="h-full w-full object-cover object-top" />
+          ) : (
+            <>
+              <div className="pointer-events-none absolute left-1/2 top-2 z-20 h-5 w-24 -translate-x-1/2 rounded-full bg-black" />
+              <div className="h-full overflow-hidden">{children}</div>
+            </>
+          )}
         </div>
       </div>
     </div>

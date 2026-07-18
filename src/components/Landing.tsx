@@ -1,13 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { isNativeIos } from "@/lib/platform";
-import {
-  PhoneFrame,
-  TrainScreen,
-  LoggerScreen,
-  CatalogueScreen,
-  RankScreen,
-} from "@/components/LandingShowcase";
+import { PhoneFrame, CatalogueScreen } from "@/components/LandingShowcase";
 import {
   ArrowRight,
   Brain,
@@ -164,9 +158,7 @@ function Hero() {
       </div>
       {/* The product, front and centre */}
       <div className="relative mx-auto mt-6 max-w-md animate-float-in pb-4">
-        <PhoneFrame>
-          <TrainScreen />
-        </PhoneFrame>
+        <PhoneFrame image="/screenshots/train.png" alt="DEADSET train screen" />
       </div>
     </section>
   );
@@ -178,17 +170,21 @@ function ShowcaseRow({
   body,
   bullets,
   screen,
+  image,
+  imageAlt,
   flip,
 }: {
   eyebrow: string;
   title: React.ReactNode;
   body: string;
   bullets: string[];
-  screen: React.ReactNode;
+  screen?: React.ReactNode;
+  image?: string;
+  imageAlt?: string;
   flip?: boolean;
 }) {
   return (
-    <div className={`grid items-center gap-10 lg:grid-cols-2 ${flip ? "" : ""}`}>
+    <div className="grid items-center gap-10 lg:grid-cols-2">
       <div className={flip ? "lg:order-2" : ""}>
         <p className="label-cap text-[10px] text-accent-red">{eyebrow}</p>
         <h3 className="display mt-2 text-3xl font-extrabold uppercase leading-[0.95] text-grit sm:text-5xl">
@@ -205,7 +201,9 @@ function ShowcaseRow({
         </ul>
       </div>
       <div className={flip ? "lg:order-1" : ""}>
-        <PhoneFrame className="mx-auto max-w-[300px]">{screen}</PhoneFrame>
+        <PhoneFrame className="mx-auto max-w-[300px]" image={image} alt={imageAlt}>
+          {screen}
+        </PhoneFrame>
       </div>
     </div>
   );
@@ -235,7 +233,8 @@ function Features() {
             title={<>Every set.<br />Every PR.</>}
             body="Tap to log as you lift — weight × reps, prefilled from last time. Every rep is checked against your full history, so real PRs are detected, never self-reported."
             bullets={["Crash-safe live logging", "Automatic PR detection + flames", "Plate math and warm-up ramps"]}
-            screen={<LoggerScreen />}
+            image="/screenshots/logger.png"
+            imageAlt="DEADSET live workout logger"
           />
           <ShowcaseRow
             flip
@@ -250,7 +249,8 @@ function Features() {
             title={<>Climb the<br />ranks.</>}
             body="Earn grit for every session, PR and streak day. Climb ranked divisions from Bronze to Elite, top the leaderboards, and take rivals head-to-head."
             bullets={["Nine divisions, weekly leagues", "Grit-ranked global leaderboards", "Head-to-head challenges"]}
-            screen={<RankScreen />}
+            image="/screenshots/profile.png"
+            imageAlt="DEADSET athlete card and ranked division"
           />
         </div>
 
