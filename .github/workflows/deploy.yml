@@ -28,6 +28,23 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           VITE_PAYMENTS_CLIENT_TOKEN: ${{ secrets.VITE_PAYMENTS_CLIENT_TOKEN }}
 
+      # The API worker (deadsetfit.org/api/* — rpc, Stripe webhook, health)
+      # must deploy alongside the Pages site or /api/rpc serves stale code
+      # (or the SPA's HTML), which kills checkout and every AI feature.
+      - name: Deploy API worker
+        run: |
+          node -e "
+            const { readFileSync, writeFileSync } = require('node:fs');
+            const config = readFileSync('wrangler.jsonc', 'utf8')
+              .replace(/\n\s*\"pages_build_output_dir\"\s*:\s*\"[^\"]+\",?/, '');
+            writeFileSync('.wrangler.worker.tmp.jsonc', config);
+          "
+          npx wrangler deploy --config .wrangler.worker.tmp.jsonc
+          rm -f .wrangler.worker.tmp.jsonc
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       - name: Create Pages project if needed
         run: |
           mv wrangler.jsonc wrangler.jsonc.bak
