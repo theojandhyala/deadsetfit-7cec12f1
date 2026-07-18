@@ -563,6 +563,28 @@ function LiveWorkoutPage() {
     }));
   }
 
+  // Tag the effort of the most recently logged set (optional, one tap). Feeds
+  // the RPE-aware progression suggestion next session.
+  function rpeLastSet(rpe: number) {
+    set((st) => ({
+      ...st,
+      sessions: st.sessions.map((s) =>
+        s.id === session!.id
+          ? {
+              ...s,
+              exercises: s.exercises.map((e, i) => {
+                if (i !== activeIdx || e.sets.length === 0) return e;
+                const sets = e.sets.map((cs, j) =>
+                  j === e.sets.length - 1 ? { ...cs, rpe } : cs,
+                );
+                return { ...e, sets };
+              }),
+            }
+          : s,
+      ),
+    }));
+  }
+
   function finishWorkout() {
     const day = isoDay();
     const endedAt = new Date().toISOString();
@@ -751,6 +773,7 @@ function LiveWorkoutPage() {
           proLoading={proLoading}
           onLog={logSet}
           onUndo={undoLastSet}
+          onRpe={rpeLastSet}
         />
       </div>
 
@@ -830,6 +853,7 @@ function SetLogger({
   proLoading,
   onLog,
   onUndo,
+  onRpe,
 }: {
   exercise: WorkoutSessionExercise;
   defaultWeight: number;
@@ -841,6 +865,7 @@ function SetLogger({
   proLoading: boolean;
   onLog: (weight: number, reps: number) => void;
   onUndo: () => void;
+  onRpe: (rpe: number) => void;
 }) {
   // Pre-logged flow: every set arrives filled from the plan. In the gym you
   // just tick the row — no typing, no timers. Tap the pencil to adjust a
@@ -1075,6 +1100,36 @@ function SetLogger({
           );
         })}
       </div>
+
+      {/* One-tap effort tag for the set you just logged — optional, and it
+          teaches the progression engine how hard the weight felt. */}
+      {logged > 0 && exercise.sets[logged - 1]?.rpe == null && (
+        <div className="mt-2 border border-grit rounded-xl px-3 py-2.5">
+          <p className="label-cap text-[9px] text-grit-dim mb-2">How hard was set {logged}?</p>
+          <div className="grid grid-cols-4 gap-1.5">
+            {([
+              { label: "Easy", rpe: 7 },
+              { label: "Solid", rpe: 8 },
+              { label: "Hard", rpe: 9 },
+              { label: "Max", rpe: 10 },
+            ] as const).map((o) => (
+              <button
+                key={o.label}
+                type="button"
+                onClick={() => onRpe(o.rpe)}
+                className="rounded-lg border border-grit bg-grit-card py-2 text-[11px] font-bold text-grit press hover:border-accent-red"
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {logged > 0 && exercise.sets[logged - 1]?.rpe != null && (
+        <p className="mt-2 text-center label-cap text-[9px] text-grit-dim">
+          Set {logged} logged at RPE {exercise.sets[logged - 1]!.rpe}
+        </p>
+      )}
 
       {editing && (
         <div className="mt-2 border border-accent-red/40 rounded-xl p-3">

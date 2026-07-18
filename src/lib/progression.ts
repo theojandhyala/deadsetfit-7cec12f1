@@ -39,6 +39,15 @@ export interface Suggestion {
   /** "up" = add weight, "hold" = repeat weight, "start" = first prescription */
   kind: "up" | "hold";
   reason: string;
+  /** True when the lift is clearly ready to progress (hit reps with reps in reserve). */
+  ready?: boolean;
+}
+
+/** Average RPE of the working sets that recorded one (undefined if none did). */
+function avgRpe(sets: { rpe?: number }[]): number | undefined {
+  const rated = sets.map((s) => s.rpe).filter((r): r is number => typeof r === "number" && r > 0);
+  if (rated.length === 0) return undefined;
+  return rated.reduce((a, b) => a + b, 0) / rated.length;
 }
 
 /** Minimum rep target from strings like "8-12", "5", "AMRAP". */
@@ -68,13 +77,25 @@ export function suggestNextWeight(
     const top = Math.max(...working.map((s) => s.weight));
     const target = minTargetReps(targetReps);
     const allHit = working.every((s) => s.reps >= target);
+    const jump = BIG_JUMP.has(exerciseId) ? 5 : 2.5;
+    const effort = avgRpe(working);
+
     if (allHit) {
-      const jump = BIG_JUMP.has(exerciseId) ? 5 : 2.5;
-      return {
-        weightKg: top + jump,
-        kind: "up",
-        reason: `All sets hit ${target}+ reps at ${top}kg last time`,
-      };
+      // Autoregulation: hitting the reps AT RPE 9+ (grinding) means the weight
+      // is already near-max — consolidate before adding. Reps in reserve
+      // (RPE ≤ 8) means it moved well; progress with confidence.
+      if (effort !== undefined && effort >= 9) {
+        return {
+          weightKg: top,
+          kind: "hold",
+          reason: `Hit ${target}+ reps but at RPE ${effort.toFixed(0)} — lock in ${top}kg before adding`,
+        };
+      }
+      const reason =
+        effort !== undefined
+          ? `All sets hit ${target}+ reps at RPE ${effort.toFixed(0)} — reps in reserve, move up`
+          : `All sets hit ${target}+ reps at ${top}kg last time`;
+      return { weightKg: top + jump, kind: "up", reason, ready: true };
     }
     return {
       weightKg: top,

@@ -45,7 +45,7 @@ The research backs this: social accountability and gamification (leaderboards, b
 3. **updated_at sync conflict guard** (two-device last-write-wins clobbers data).
 
 ### TIER 1 — Match the 2026 logging standard (this is now expected, not optional)
-1. **RPE / RIR effort logging** per set, with a **deterministic progression suggestion**: "Last week 100kg×5 @ RIR 2 → try 102.5kg today." Rule-based tables, no AI. This is the single biggest feature gap vs Fitbod/Jefit/RepXP — and DEADSET can do it at $0.
+1. ✅ **RPE / RIR effort logging** (shipped) per set, with a **deterministic progression suggestion**: "Last week 100kg×5 @ RIR 2 → try 102.5kg today." Rule-based tables, no AI. This is the single biggest feature gap vs Fitbod/Jefit/RepXP — and DEADSET can do it at $0.
 2. **"Progression ready" nudges** — when a lift beats its target reps at low RIR, flag it to add weight. Turns logging into coaching.
 3. **Superset / drop set / warm-up sets** in the logger. Standard everywhere.
 4. **Rich exercise library** — this is where Fitbod (1,600) and Load Muscle (4,000) win. Ship **400+ exercises minimum**, each with: muscle targeting, equipment filter, form cues, and a demo (looping GIF/video or clear animation). DEADSET has VideoModal — build the structured library behind it.
