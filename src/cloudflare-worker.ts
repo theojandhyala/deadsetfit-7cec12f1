@@ -321,11 +321,31 @@ async function handleStripeWebhook(request: Request, env: Env): Promise<Response
   }
 }
 
+/** Live-tests the stored Stripe key with a read-only call. Returns only
+ *  ok/error text — never key material. Lets us catch a rolled/expired key
+ *  from the outside instead of discovering it via a failed checkout. */
+async function handleStripeHealth(env: Env): Promise<Response> {
+  installRuntimeEnv(env);
+  try {
+    const { createStripeClient } = await import("./lib/stripe.server");
+    const stripe = createStripeClient("live");
+    await stripe.products.list({ limit: 1 });
+    return Response.json({ ok: true, stripeLiveKey: "valid" }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown error";
+    return Response.json(
+      { ok: false, stripeLiveKey: "FAILED", error: message.slice(0, 200) },
+      { status: 500, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     installRuntimeEnv(env);
     const url = new URL(request.url);
     if (url.pathname === "/api/health") return handleHealth(env);
+    if (url.pathname === "/api/health/stripe") return handleStripeHealth(env);
     if (url.pathname === "/api/public/payments/webhook") return handleStripeWebhook(request, env);
     if (url.pathname === "/api/rpc") return handleRpc(request);
     if (url.pathname.startsWith("/api/")) {
