@@ -40,7 +40,7 @@ The research backs this: social accountability and gamification (leaderboards, b
 ## 3. Feature roadmap (priority order, research-justified)
 
 ### TIER 0 — Integrity & table stakes (before any scale push)
-1. **Server-authoritative ranked stats.** grit/PR values are client-writable = leaderboards spoofable. The competition moat dies if the board can be faked. *(Also in BACKLOG.md Tier 0.)*
+1. 🟡 **Server-authoritative ranked stats** — DONE in code (deployed): the server derives grit_points + public_stats from the synced user_state blob via the service role and saveProfile no longer accepts them, closing the app-API spoof. The defense-in-depth guard trigger (blocks the raw-PostgREST bypass) is QUEUED in Lovable — apply it by unpausing the Lovable editor queue. Note: not bulletproof anti-cheat (a cheater could fabricate a self-consistent fake history in their blob); true anti-cheat needs server-side set logging.
 2. **Progress photos out of the 2 MB sync blob** → object storage. Silent data loss otherwise.
 3. **updated_at sync conflict guard** (two-device last-write-wins clobbers data).
 
