@@ -31,6 +31,7 @@ import { Route as TabsLibraryRouteImport } from './routes/_tabs.library'
 import { Route as TabsFriendsRouteImport } from './routes/_tabs.friends'
 import { Route as TabsDietRouteImport } from './routes/_tabs.diet'
 import { Route as TabsChallengesRouteImport } from './routes/_tabs.challenges'
+import { Route as TabsCatalogueRouteImport } from './routes/_tabs.catalogue'
 import { Route as TabsProgramsProgramIdRouteImport } from './routes/_tabs.programs.$programId'
 import { Route as TabsLiftExerciseIdRouteImport } from './routes/_tabs.lift.$exerciseId'
 import { Route as TabsAthleteIdRouteImport } from './routes/_tabs.athlete.$id'
@@ -144,6 +145,11 @@ const TabsChallengesRoute = TabsChallengesRouteImport.update({
   path: '/challenges',
   getParentRoute: () => TabsRoute,
 } as any)
+const TabsCatalogueRoute = TabsCatalogueRouteImport.update({
+  id: '/catalogue',
+  path: '/catalogue',
+  getParentRoute: () => TabsRoute,
+} as any)
 const TabsProgramsProgramIdRoute = TabsProgramsProgramIdRouteImport.update({
   id: '/$programId',
   path: '/$programId',
@@ -172,6 +178,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
   '/upgrade': typeof UpgradeRoute
+  '/catalogue': typeof TabsCatalogueRoute
   '/challenges': typeof TabsChallengesRoute
   '/diet': typeof TabsDietRoute
   '/friends': typeof TabsFriendsRoute
@@ -198,6 +205,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
   '/upgrade': typeof UpgradeRoute
+  '/catalogue': typeof TabsCatalogueRoute
   '/challenges': typeof TabsChallengesRoute
   '/diet': typeof TabsDietRoute
   '/friends': typeof TabsFriendsRoute
@@ -226,6 +234,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
   '/upgrade': typeof UpgradeRoute
+  '/_tabs/catalogue': typeof TabsCatalogueRoute
   '/_tabs/challenges': typeof TabsChallengesRoute
   '/_tabs/diet': typeof TabsDietRoute
   '/_tabs/friends': typeof TabsFriendsRoute
@@ -254,6 +263,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/terms'
     | '/upgrade'
+    | '/catalogue'
     | '/challenges'
     | '/diet'
     | '/friends'
@@ -280,6 +290,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/terms'
     | '/upgrade'
+    | '/catalogue'
     | '/challenges'
     | '/diet'
     | '/friends'
@@ -307,6 +318,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/terms'
     | '/upgrade'
+    | '/_tabs/catalogue'
     | '/_tabs/challenges'
     | '/_tabs/diet'
     | '/_tabs/friends'
@@ -495,6 +507,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TabsChallengesRouteImport
       parentRoute: typeof TabsRoute
     }
+    '/_tabs/catalogue': {
+      id: '/_tabs/catalogue'
+      path: '/catalogue'
+      fullPath: '/catalogue'
+      preLoaderRoute: typeof TabsCatalogueRouteImport
+      parentRoute: typeof TabsRoute
+    }
     '/_tabs/programs/$programId': {
       id: '/_tabs/programs/$programId'
       path: '/$programId'
@@ -532,6 +551,7 @@ const TabsProgramsRouteWithChildren = TabsProgramsRoute._addFileChildren(
 )
 
 interface TabsRouteChildren {
+  TabsCatalogueRoute: typeof TabsCatalogueRoute
   TabsChallengesRoute: typeof TabsChallengesRoute
   TabsDietRoute: typeof TabsDietRoute
   TabsFriendsRoute: typeof TabsFriendsRoute
@@ -545,6 +565,7 @@ interface TabsRouteChildren {
 }
 
 const TabsRouteChildren: TabsRouteChildren = {
+  TabsCatalogueRoute: TabsCatalogueRoute,
   TabsChallengesRoute: TabsChallengesRoute,
   TabsDietRoute: TabsDietRoute,
   TabsFriendsRoute: TabsFriendsRoute,

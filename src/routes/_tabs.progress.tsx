@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useRef, useState, type RefObject } from "react";
-import { Camera, Trophy, Flame, Trash2, Lock } from "lucide-react";
+import { Camera, Trophy, Flame, Trash2, Lock, Image as ImageIcon } from "lucide-react";
 
 import { useAppState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
@@ -340,6 +340,26 @@ function ProgressPage() {
         <Stat label="SESSIONS" value={`${totalSessions}`} sub="LOGGED" />
         <Stat label="VOLUME" value={`${Math.round(totalVolume).toLocaleString()}`} sub="KG" />
         <Stat label="PRS" value={`${totalPRs}`} sub="HIT" accent={totalPRs > 0} />
+      </section>
+
+      {/* The Catalogue — visual journey (photos, PR wall, before/after) */}
+      <section className="px-5 mb-6 animate-slide-up delay-50">
+        <Link
+          to="/catalogue"
+          className="deadset-3d-panel deadset-lift block w-full p-4 press"
+          style={{ background: "linear-gradient(135deg, rgba(225,6,0,0.14), #141414)", border: "1.5px solid rgba(225,6,0,0.4)" }}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="label-cap text-accent-red text-[10px]">The Catalogue</p>
+              <p className="display text-xl font-extrabold uppercase text-white leading-none mt-0.5">
+                See your journey
+              </p>
+              <p className="text-[11px] text-grit-dim mt-1">Before → now, your PR wall, every photo.</p>
+            </div>
+            <ImageIcon size={26} style={{ color: "#E10600" }} />
+          </div>
+        </Link>
       </section>
 
       {/* Calendar streak */}
