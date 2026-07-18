@@ -2,7 +2,9 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { createStripeClient, getStripeErrorMessage } from "../src/lib/stripe.server";
 import { supabaseAdmin } from "../src/integrations/supabase/client.server";
-import { gritLevel } from "../src/lib/calc";
+import { gritLevel, calculateGritScore } from "../src/lib/calc";
+import { buildPublicStats } from "../src/lib/fifa-stats";
+import type { AppState } from "../src/lib/types";
 import type { Database } from "../src/integrations/supabase/types";
 
 interface AuthCtx {
@@ -458,6 +460,22 @@ const handlers: Record<string, Handler> = {
     try { parsed = JSON.parse(d.data); } catch { throw new Error("Invalid JSON"); }
     const { error } = await supabase.from("user_state").upsert({ user_id: userId, data: parsed as never }, { onConflict: "user_id" });
     if (error) throw new Error(error.message);
+    // Server-authoritative leaderboard stats: derive grit + public_stats from
+    // the state we just persisted, so ranks can't be spoofed by POSTing a grit
+    // number to the profile API. Written with the SERVICE ROLE because the
+    // guard trigger reverts authenticated writes to these columns. Best-effort:
+    // a derive failure (e.g. a malformed blob) must never fail the state sync.
+    try {
+      const state = parsed as AppState;
+      const grit = Math.max(0, Math.min(1000, Math.round(calculateGritScore(state).total)));
+      const stats = buildPublicStats(state);
+      await supabaseAdmin
+        .from("profiles")
+        .update({ grit_points: grit, public_stats: stats as never })
+        .eq("id", userId);
+    } catch {
+      /* leaderboard derive is best-effort — never block the sync */
+    }
     return { ok: true };
   },
 
@@ -478,8 +496,10 @@ const handlers: Record<string, Handler> = {
       bio: z.string().max(500).optional(),
       avatar_url: z.string().max(2_000_000).optional(),
       onboarded: z.boolean().optional(),
-      public_stats: z.record(z.string(), z.any()).optional(),
-      grit_points: z.number().int().min(0).max(1000).optional(),
+      // grit_points and public_stats are intentionally NOT accepted here: they
+      // are leaderboard-ranking values and are derived server-side from the
+      // user_state blob in saveUserState. Accepting them from the client is the
+      // spoof this closes. Zod strips any that are sent.
     });
     const d = ProfileSchema.parse(data);
     if (d.username) {
