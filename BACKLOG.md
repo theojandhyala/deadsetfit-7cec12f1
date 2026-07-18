@@ -4,6 +4,12 @@
 > before scaling, then work down. Each item says *why it matters* so scope can be
 > cut intelligently, not randomly.
 
+## Shipped
+- ✅ **Progress Catalogue** (`/catalogue`) — before/after photo comparison, journey
+  stats, photo timeline + lightbox, PR wall. Linked from the Progress tab.
+- ✅ **Deeper cinematic onboarding** — why/sleep/dream questions, analyzing reveal,
+  lock-in pledge.
+
 ## Context (read first)
 DEADSET is a ranked, competitive fitness app — Vite + React + TanStack Router,
 localStorage-first with Supabase sync, wrapped with Capacitor for iOS. The moat
