@@ -2,6 +2,13 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { isNativeIos } from "@/lib/platform";
 import {
+  PhoneFrame,
+  TrainScreen,
+  LoggerScreen,
+  CatalogueScreen,
+  RankScreen,
+} from "@/components/LandingShowcase";
+import {
   ArrowRight,
   Brain,
   CalendarDays,
@@ -99,234 +106,170 @@ function Section({
 }
 
 function Hero() {
-  const proof = ["Live set logging", "Auto PR detection", "Streak Armor", "Weekly leagues"];
-  const metrics = [
-    { label: "Today's plan", value: "Push strength", Icon: Target },
-    { label: "Readiness", value: "87%", Icon: Gauge },
-    { label: "Next PR", value: "Bench +2.5kg", Icon: Medal },
-  ];
-
+  const proof = ["Live set logging", "Auto PR detection", "Ranked leagues", "Progress photos"];
   return (
     <section id="home" className="relative overflow-hidden px-4 sm:px-6">
       <div
         className="absolute inset-0 -z-10"
         style={{
           background:
-            "radial-gradient(ellipse 60% 50% at 78% 32%, rgba(225,6,0,0.16), transparent 68%), radial-gradient(ellipse 42% 38% at 12% 78%, rgba(230,50,34,0.08), transparent 70%), linear-gradient(180deg, #060606 0%, #050505 100%)",
+            "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(225,6,0,0.22), transparent 60%), linear-gradient(180deg, #0a0607 0%, #050505 55%)",
         }}
         aria-hidden="true"
       />
       <div
-        className="absolute inset-0 -z-10 opacity-[0.16]"
+        className="absolute inset-0 -z-10 opacity-[0.12]"
         style={{
           backgroundImage:
-            "linear-gradient(rgba(255,255,255,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.12) 1px, transparent 1px)",
-          backgroundSize: "44px 44px",
-          maskImage: "radial-gradient(ellipse 70% 60% at 50% 40%, black, transparent 85%)",
+            "linear-gradient(rgba(255,255,255,.14) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.14) 1px, transparent 1px)",
+          backgroundSize: "46px 46px",
+          maskImage: "radial-gradient(ellipse 80% 55% at 50% 25%, black, transparent 80%)",
         }}
         aria-hidden="true"
       />
-      <div className="absolute left-0 top-24 -z-10 h-72 w-72 rounded-full bg-accent-red/10 blur-3xl" aria-hidden="true" />
-      <div className="mx-auto grid min-h-[calc(100svh-64px)] max-w-7xl items-center gap-12 pb-16 pt-12 sm:pb-20 sm:pt-16 lg:grid-cols-[1.04fr_.96fr]">
-        <div className="w-full max-w-[58rem] animate-slide-up">
-          <div className="mb-5 flex max-w-full flex-wrap items-center gap-2 sm:mb-7">
-            <span className="inline-flex items-center gap-2 rounded-full border border-accent-red/30 bg-accent-red/10 px-3.5 py-2">
-              <Zap size={14} className="text-accent-red" />
-              <span className="label-cap text-[9px] text-grit sm:text-[10px]">Built for the lift, not the feed</span>
-            </span>
-            <span className="hidden rounded-full border border-white/10 bg-white/[0.035] px-3.5 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-grit-dim sm:inline-flex">
-              iOS ready training system
-            </span>
-          </div>
-          <h1 className="display max-w-[9ch] text-[clamp(3.1rem,14vw,4.2rem)] font-black uppercase leading-[0.84] text-grit sm:max-w-[12ch] sm:text-[clamp(5.5rem,11vw,7.2rem)] lg:text-[clamp(6.5rem,8.4vw,8.6rem)]">
-            <span className="block animate-hero-word">Train smarter.</span>
-            <span className="block animate-hero-word text-white/90 [animation-delay:90ms]">Track everything.</span>
-            <span className="block animate-hero-word text-accent-red [animation-delay:180ms]">Forge your body.</span>
-          </h1>
-          <p className="mt-7 max-w-2xl text-base leading-7 text-grit-dim sm:text-lg">
-            DEADSET turns workouts, PRs, food, progress photos, friends, and ranked competition into
-            one sharp training loop. Open it, lift, log, improve, repeat.
-          </p>
-          <div className="mt-9 grid gap-3 sm:flex sm:flex-wrap">
-            <Link to="/auth" className="btn-grit min-h-12 rounded-2xl px-7 py-4 text-sm">
-              Get started <ArrowRight size={16} className="ml-2" />
-            </Link>
-            <a href="#features" className="btn-ghost min-h-12 rounded-2xl px-7 py-4 text-sm">
-              Explore system
-            </a>
-          </div>
-          <div className="mt-10 flex flex-wrap gap-2">
-            {proof.map((item) => (
-              <span
-                key={item}
-                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3.5 py-2 text-xs font-bold text-grit-dim"
-              >
-                <CheckCircle2 size={13} className="text-accent-red" />
-                {item}
-              </span>
-            ))}
-          </div>
+      <div className="mx-auto max-w-3xl pt-14 pb-4 text-center sm:pt-20">
+        <div className="mb-6 flex justify-center animate-slide-up">
+          <span className="inline-flex items-center gap-2 rounded-full border border-accent-red/30 bg-accent-red/10 px-4 py-2">
+            <Zap size={14} className="text-accent-red" />
+            <span className="label-cap text-[10px] text-grit">Built for the lift, not the feed</span>
+          </span>
         </div>
-        <div className="relative mx-auto w-full max-w-[420px] animate-float-in lg:mr-0">
-          <div className="absolute -inset-10 rounded-[48px] bg-accent-red/15 blur-3xl" aria-hidden="true" />
-          <div
-            className="relative overflow-hidden rounded-[32px] border border-white/10 p-4"
-            style={{
-              background: "linear-gradient(160deg, #141415, #0a0a0b 60%)",
-              boxShadow:
-                "0 30px 70px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05), 0 0 60px rgba(225,6,0,0.08)",
-            }}
-          >
-            <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-3">
-              <Logo />
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#4ade80]/30 bg-[#4ade80]/10 px-2.5 py-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#4ade80] shadow-[0_0_10px_rgba(74,222,128,.8)]" />
-                <span className="label-cap text-[8px] text-[#4ade80]">Live</span>
-              </span>
-            </div>
-            <div className="space-y-3">
-              {metrics.map(({ Icon, ...item }, index) => (
-                <div
-                  key={item.label}
-                  className="animate-metric-in rounded-2xl border border-white/10 bg-white/[0.05] p-4"
-                  style={{ animationDelay: `${220 + index * 90}ms` }}
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-accent-red/30 bg-accent-red/10 text-accent-red">
-                        <Icon size={18} />
-                      </span>
-                      <div>
-                        <p className="label-cap text-[9px] text-grit-dim">{item.label}</p>
-                        <p className="mt-1 text-sm font-black text-grit">{item.value}</p>
-                      </div>
-                    </div>
-                    <span className="h-2 w-2 rounded-full bg-[#4ade80] shadow-[0_0_18px_rgba(74,222,128,.75)]" />
-                  </div>
-                </div>
-              ))}
-              <div className="relative overflow-hidden rounded-2xl border border-accent-red/30 bg-accent-red/10 p-4">
-                <div className="absolute inset-y-0 left-0 w-1 bg-accent-red" />
-                <p className="label-cap text-[9px] text-accent-red">Weekly league</p>
-                <p className="mt-2 text-sm leading-6 text-grit">
-                  2nd in Gold division. One more logged session this week and you promote.
-                </p>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {["STR", "GRIT", "RANK"].map((label, i) => (
-                  <div key={label} className="rounded-xl border border-white/10 bg-black/45 p-3 text-center">
-                    <p className="display text-2xl font-black text-grit">{[82, 640, 12][i]}</p>
-                    <p className="label-cap mt-1 text-[8px] text-grit-dim">{label}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+        <h1 className="display animate-slide-up text-[clamp(3rem,13vw,6rem)] font-black uppercase leading-[0.86] text-grit">
+          <span className="block">Train like</span>
+          <span className="block text-accent-red">it counts.</span>
+        </h1>
+        <p className="mx-auto mt-6 max-w-xl animate-slide-up text-base leading-7 text-grit-dim sm:text-lg">
+          The gym tracker built for lifters who want proof, not vibes. Log every set, catch every PR,
+          and climb the ranks — all in one sharp loop.
+        </p>
+        <div className="mt-8 flex animate-slide-up flex-col items-center justify-center gap-3 sm:flex-row">
+          <Link to="/auth" className="btn-grit w-full max-w-xs rounded-2xl px-8 py-4 text-sm sm:w-auto">
+            Get started free <ArrowRight size={16} className="ml-2" />
+          </Link>
+          <a href="#showcase" className="btn-ghost w-full max-w-xs rounded-2xl px-8 py-4 text-sm sm:w-auto">
+            See it in action
+          </a>
         </div>
+        <div className="mt-7 flex flex-wrap justify-center gap-2">
+          {proof.map((item) => (
+            <span
+              key={item}
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/30 px-3 py-1.5 text-[11px] font-bold text-grit-dim"
+            >
+              <CheckCircle2 size={12} className="text-accent-red" />
+              {item}
+            </span>
+          ))}
+        </div>
+      </div>
+      {/* The product, front and centre */}
+      <div className="relative mx-auto mt-6 max-w-md animate-float-in pb-4">
+        <PhoneFrame>
+          <TrainScreen />
+        </PhoneFrame>
       </div>
     </section>
   );
 }
 
+function ShowcaseRow({
+  eyebrow,
+  title,
+  body,
+  bullets,
+  screen,
+  flip,
+}: {
+  eyebrow: string;
+  title: React.ReactNode;
+  body: string;
+  bullets: string[];
+  screen: React.ReactNode;
+  flip?: boolean;
+}) {
+  return (
+    <div className={`grid items-center gap-10 lg:grid-cols-2 ${flip ? "" : ""}`}>
+      <div className={flip ? "lg:order-2" : ""}>
+        <p className="label-cap text-[10px] text-accent-red">{eyebrow}</p>
+        <h3 className="display mt-2 text-3xl font-extrabold uppercase leading-[0.95] text-grit sm:text-5xl">
+          {title}
+        </h3>
+        <p className="mt-4 max-w-md text-grit-dim">{body}</p>
+        <ul className="mt-5 space-y-2.5">
+          {bullets.map((b) => (
+            <li key={b} className="flex items-start gap-2.5 text-sm text-grit">
+              <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-accent-red" />
+              {b}
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className={flip ? "lg:order-1" : ""}>
+        <PhoneFrame className="mx-auto max-w-[300px]">{screen}</PhoneFrame>
+      </div>
+    </div>
+  );
+}
+
 function Features() {
-  const items: { Icon: typeof Camera; t: string; d: string; pro?: boolean }[] = [
-    {
-      Icon: Dumbbell,
-      t: "LIVE SET LOGGING",
-      d: "Log every set as you lift — weight × reps, prefilled from your last session, crash-safe.",
-    },
-    {
-      Icon: Zap,
-      t: "AUTO PR DETECTION",
-      d: "Every set is checked against your full history. Real PRs, detected — not self-reported.",
-    },
-    {
-      Icon: Gauge,
-      t: "PLATE MATH + WARM-UPS",
-      d: "Per-side plate breakdown for any weight, and a warm-up ramp into your working sets.",
-    },
-    {
-      Icon: ShieldCheck,
-      t: "STREAK ARMOR",
-      d: "Miss a day, keep the fire. Three shields a month auto-protect your streak.",
-      pro: true,
-    },
-    {
-      Icon: LineChart,
-      t: "STRENGTH STANDARDS",
-      d: "Your big three classified untrained → elite against bodyweight, with rep-max tables.",
-      pro: true,
-    },
-    {
-      Icon: Flame,
-      t: "MUSCLE RECOVERY",
-      d: "Per-muscle readiness computed from the volume you actually logged. Train what's fresh.",
-      pro: true,
-    },
-    {
-      Icon: Utensils,
-      t: "NUTRITION + MACROS",
-      d: "Barcode lookup, fast logging, weekly averages, protein per kg and macro split.",
-    },
-    {
-      Icon: Camera,
-      t: "PROGRESS PHOTOS",
-      d: "Weekly check-ins compared side by side with dates and bodyweight delta.",
-    },
-    {
-      Icon: CalendarDays,
-      t: "PROGRAMS THAT WORK",
-      d: "Build your own split, or run 5/3/1, StrongLifts, PHUL, Arnold and nSuns — fully loaded.",
-    },
-    {
-      Icon: Trophy,
-      t: "RANKED LEAGUES",
-      d: "Nine divisions from Bronze to DEADSET. Grit-ranked leaderboards, real competition.",
-    },
-    {
-      Icon: Medal,
-      t: "CHALLENGES + BADGES",
-      d: "25 tests from entry to ELITE tier, with a trophy case that proves the work.",
-    },
-    {
-      Icon: Cloud,
-      t: "SYNC + YOUR DATA",
-      d: "Signed-in state syncs across devices. Export your history whenever you want.",
-    },
+  const extras: { Icon: typeof Camera; t: string; d: string }[] = [
+    { Icon: Utensils, t: "NUTRITION + MACROS", d: "Barcode scan, fast logging, protein per kg and macro split." },
+    { Icon: CalendarDays, t: "PROVEN PROGRAMS", d: "5/3/1, StrongLifts, PHUL, Arnold, nSuns — or build your own." },
+    { Icon: ShieldCheck, t: "STREAK ARMOR", d: "Miss a day, keep the fire. Auto-shields protect your streak." },
+    { Icon: LineChart, t: "STRENGTH STANDARDS", d: "Big-three classified untrained → elite, with rep-max tables." },
+    { Icon: Medal, t: "CHALLENGES + BADGES", d: "25 tests to ELITE tier, and a trophy case that proves it." },
+    { Icon: Cloud, t: "SYNC + EXPORT", d: "Your state syncs across devices. Export your history any time." },
   ];
   return (
-    <Section id="features" className="bg-[#050505]">
-      <h2
-        className="display mb-3 text-4xl font-extrabold sm:text-6xl"
-        style={{ fontStyle: "italic" }}
-      >
-        ALL SIGNAL.
-        <span className="block text-accent-red">NO NOISE.</span>
-      </h2>
-      <p className="mb-10 max-w-2xl text-grit-dim">
-        A tighter training system: logging, food, progress, and rank progression in one place.
-      </p>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {items.map(({ Icon, ...f }) => (
-          <div key={f.t} className="deadset-card-soft group flex gap-4 p-5 transition-transform duration-200 hover:-translate-y-1">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-accent-red/30 bg-accent-red/10 text-accent-red">
-              <Icon size={18} />
+    <section id="showcase" className="relative overflow-hidden bg-[#050505] px-4 py-20 sm:px-6 sm:py-28">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-14 text-center sm:mb-20">
+          <p className="label-cap text-[10px] text-accent-red">The whole loop, one app</p>
+          <h2 className="display mt-2 text-4xl font-extrabold uppercase text-grit sm:text-6xl">
+            Everything you need.<span className="block text-accent-red">Nothing you don&apos;t.</span>
+          </h2>
+        </div>
+        <div className="space-y-24 sm:space-y-32">
+          <ShowcaseRow
+            eyebrow="Log · Detect · Celebrate"
+            title={<>Every set.<br />Every PR.</>}
+            body="Tap to log as you lift — weight × reps, prefilled from last time. Every rep is checked against your full history, so real PRs are detected, never self-reported."
+            bullets={["Crash-safe live logging", "Automatic PR detection + flames", "Plate math and warm-up ramps"]}
+            screen={<LoggerScreen />}
+          />
+          <ShowcaseRow
+            flip
+            eyebrow="See the work pay off"
+            title={<>Watch yourself<br />change.</>}
+            body="Your journey in one place: before/after photos side by side, a wall of every PR you've hit, and each lift's climb charted over time."
+            bullets={["Before → now photo comparison", "PR wall with progression sparklines", "Bodyweight and measurement trends"]}
+            screen={<CatalogueScreen />}
+          />
+          <ShowcaseRow
+            eyebrow="Real competition"
+            title={<>Climb the<br />ranks.</>}
+            body="Earn grit for every session, PR and streak day. Climb ranked divisions from Bronze to Elite, top the leaderboards, and take rivals head-to-head."
+            bullets={["Nine divisions, weekly leagues", "Grit-ranked global leaderboards", "Head-to-head challenges"]}
+            screen={<RankScreen />}
+          />
+        </div>
+
+        {/* Everything else */}
+        <div className="mt-24 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {extras.map(({ Icon, ...f }) => (
+            <div key={f.t} className="deadset-card-soft flex gap-4 p-5">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-accent-red/30 bg-accent-red/10 text-accent-red">
+                <Icon size={18} />
+              </div>
+              <div>
+                <p className="label-cap text-sm text-grit">{f.t}</p>
+                <p className="mt-1 text-xs leading-relaxed text-grit-dim">{f.d}</p>
+              </div>
             </div>
-            <div>
-              <p className="label-cap flex items-center gap-2 text-sm text-grit">
-                {f.t}
-                {f.pro && (
-                  <span className="label-cap rounded border border-accent-red/40 px-1 text-[8px] text-accent-red">
-                    PRO
-                  </span>
-                )}
-              </p>
-              <p className="mt-1 text-xs leading-relaxed text-grit-dim">{f.d}</p>
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-    </Section>
+    </section>
   );
 }
 
@@ -762,7 +705,6 @@ export function Landing() {
       <Hero />
       <Features />
       <About />
-      <Benefits />
       <Reviews />
       <Pricing />
       <FAQ />
