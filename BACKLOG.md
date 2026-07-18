@@ -14,6 +14,10 @@
   +15s / skip / turn-off; `restTimerSeconds` pref.
 - ✅ **Repeat last workout** — one-tap restart on the workout day-picker.
 - ✅ **Weekly recap share card** — 9:16 story-ready "My week" image.
+- ✅ **Onboarding Pro conversion step** (web only) — Free vs Pro tick table,
+  monthly/yearly pricing with save-33% badge, Go Pro → /upgrade or start free.
+- ✅ **Pro promotion surfaces** — ProBanner now on Train, Progress and Diet
+  (self-gated off iOS + Pro users + per-session dismiss).
 
 ## Context (read first)
 DEADSET is a ranked, competitive fitness app — Vite + React + TanStack Router,

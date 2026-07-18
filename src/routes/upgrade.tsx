@@ -19,6 +19,7 @@ import {
   type SupportedCurrency,
 } from "@/lib/currency";
 import { isNativeIos } from "@/lib/platform";
+import { COMPARE_ROWS } from "@/lib/pro-features";
 
 export const Route = createFileRoute("/upgrade")({
   head: () => ({ meta: [{ title: "DEADSET — Go Pro" }] }),
@@ -70,25 +71,6 @@ const PRO_FEATURES = [
   },
 ];
 
-const COMPARE_ROWS: { label: string; free: boolean | string; pro: boolean | string }[] = [
-  { label: "Workout logging", free: true, pro: true },
-  { label: "Basic programs", free: true, pro: true },
-  { label: "Social feed & kudos", free: true, pro: true },
-  { label: "Challenges (basic)", free: true, pro: true },
-  { label: "Custom split builder", free: "1 program", pro: "Unlimited" },
-  { label: "Streak Armor", free: false, pro: true },
-  { label: "Progression intelligence + Ghost Mode", free: false, pro: true },
-  { label: "Weekly report card", free: false, pro: true },
-  { label: "Advanced analytics", free: false, pro: true },
-  { label: "Strength standards & rep maxes", free: false, pro: true },
-  { label: "Muscle recovery tracking", free: false, pro: true },
-  { label: "Advanced nutrition & macros", free: false, pro: true },
-  { label: "Progress photo comparison", free: false, pro: true },
-  { label: "Elite challenges & badges", free: false, pro: true },
-  { label: "H2H Challenges", free: false, pro: true },
-  { label: "Full Weekly Leagues", free: false, pro: true },
-  { label: "Featured programs", free: false, pro: true },
-];
 
 function UpgradePage() {
   const navigate = useNavigate();

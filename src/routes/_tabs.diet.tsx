@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { calculateCalories, calculateMacros, isoDay } from "@/lib/calc";
 import { lookupBarcode } from "@/lib/diet.functions";
 import { usePro } from "@/hooks/usePro";
+import { ProBanner } from "@/components/ProBanner";
 import { todayActiveBurn, healthSupported } from "@/lib/health";
 import { openPaywall } from "@/lib/paywall-events";
 import { Lock } from "lucide-react";
@@ -263,6 +264,7 @@ function DietPage() {
 
   return (
     <div className="deadset-page">
+      <ProBanner />
       <header className="deadset-section">
         <div className="deadset-hero-card p-5">
           <div className="relative">

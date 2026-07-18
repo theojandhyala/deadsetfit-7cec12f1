@@ -9,6 +9,7 @@ import { QuickLogFAB } from "@/components/QuickLogFAB";
 import { PRList } from "@/components/PRList";
 import { groupForMuscle } from "@/lib/pr-groups";
 import { usePro } from "@/hooks/usePro";
+import { ProBanner } from "@/components/ProBanner";
 import { openPaywall } from "@/lib/paywall-events";
 import { askConfirm } from "@/lib/confirm";
 import { PR_CATALOG, getPRValue } from "@/lib/fifa-stats";
@@ -321,6 +322,7 @@ function ProgressPage() {
       style={{ background: "#0A0A0A", minHeight: "100vh" }}
       className="deadset-page animate-fade-in"
     >
+      <ProBanner />
       <header className="px-5 pt-6 pb-4 animate-slide-down">
         <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "#E10600" }}>
           DEADSET

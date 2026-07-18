@@ -13,6 +13,9 @@ import { saveUserState } from "@/lib/user-state.functions";
 import { profileFromAccount, profileQuestionsComplete, withTimeout } from "@/lib/account-restore";
 import type { Equipment, Experience, FocusMuscle, Gender, Goal, Profile, Weakness } from "@/lib/types";
 import { buildPublicStats } from "@/lib/fifa-stats";
+import { isNativeIos } from "@/lib/platform";
+import { PRO_HIGHLIGHTS } from "@/lib/pro-features";
+import { CURRENCY_META, currencyForCountry, detectCountry, type SupportedCurrency } from "@/lib/currency";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "DEADSET — Onboarding" }] }),
@@ -41,7 +44,8 @@ type Step =
   | "photo"
   | "analyzing"
   | "blueprint"
-  | "commit";
+  | "commit"
+  | "pro";
 
 type Mode = "GENERATE" | "BUILD";
 
@@ -69,6 +73,9 @@ function orderFor(mode: Mode | null): Step[] {
     "analyzing",
     "blueprint",
     "commit",
+    // App Store 3.1.1: the Pro pitch (prices, upgrade CTA) is web-only. On
+    // native iOS onboarding ends at the commit pledge.
+    ...(isNativeIos() ? [] : (["pro"] as Step[])),
   ];
 }
 
@@ -79,6 +86,9 @@ function Onboarding() {
   const [userId, setUserId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Partial<Profile>>({});
   const savingRef = useRef(false);
+  // Where to land after the final save: the web pro step can point this at
+  // /upgrade; everything else finishes into the app.
+  const destinationRef = useRef<"/train" | "/upgrade">("/train");
   const save = saveProfile;
   const saveFullState = saveUserState;
   const getProfile = getMyProfile;
@@ -166,7 +176,7 @@ function Onboarding() {
           await saveFullState({ data: { data: JSON.stringify(nextState) } }).catch(() => {
             toast.warning("Setup saved locally. We'll keep trying to sync it.");
           });
-          navigate({ to: "/train", replace: true });
+          navigate({ to: destinationRef.current, replace: true });
         })
         .catch((e: Error) => {
           savingRef.current = false;
@@ -373,6 +383,14 @@ function Onboarding() {
           <CommitStep
             draft={draft}
             onCommit={(commitmentDate) => next({ committed: true, commitmentDate })}
+          />
+        )}
+        {step === "pro" && (
+          <ProChoiceStep
+            onChoose={(goPro) => {
+              destinationRef.current = goPro ? "/upgrade" : "/train";
+              next({});
+            }}
           />
         )}
       </div>
@@ -1095,6 +1113,106 @@ function BlueprintStep({ draft, onEnter }: { draft: Partial<Profile>; onEnter: (
         </button>
       </div>
     </>
+  );
+}
+
+// Web-only conversion moment at the end of onboarding: Free vs Pro with
+// ticks, a monthly/yearly toggle, and a clear "start free" escape hatch.
+// (Never rendered on native iOS — App Store 3.1.1.)
+function ProChoiceStep({ onChoose }: { onChoose: (goPro: boolean) => void }) {
+  const [plan, setPlan] = useState<"monthly" | "yearly">("yearly");
+  const [currency, setCurrency] = useState<SupportedCurrency>("gbp");
+  useEffect(() => {
+    detectCountry().then((c) => setCurrency(currencyForCountry(c)));
+  }, []);
+  const meta = CURRENCY_META[currency];
+  return (
+    <div className="flex-1 flex flex-col">
+      <p className="label-cap text-accent-red text-[10px] mb-1">One decision left</p>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-1">Choose your edge</h1>
+      <p className="text-xs text-grit-dim mb-5">
+        Everything core is free forever. Pro is for the ones chasing rank.
+      </p>
+
+      {/* Free vs Pro ticks */}
+      <div className="bg-grit-card border border-grit rounded-2xl overflow-hidden mb-4">
+        <div className="grid grid-cols-[1fr_56px_56px] items-center px-4 py-2.5 border-b border-grit">
+          <span className="label-cap text-[9px] text-grit-dim">Feature</span>
+          <span className="label-cap text-[9px] text-grit-dim text-center">Free</span>
+          <span className="label-cap text-[9px] text-accent-red text-center">Pro</span>
+        </div>
+        <div className="grid grid-cols-[1fr_56px_56px] items-center px-4 py-2.5 border-b border-grit/60">
+          <span className="text-xs text-grit font-medium">All core training & social</span>
+          <span className="text-center"><Check size={14} className="inline text-grit" /></span>
+          <span className="text-center"><Check size={14} className="inline text-accent-red" /></span>
+        </div>
+        {PRO_HIGHLIGHTS.map((r) => (
+          <div
+            key={r.label}
+            className="grid grid-cols-[1fr_56px_56px] items-center px-4 py-2.5 border-b border-grit/60 last:border-b-0"
+          >
+            <span className="text-xs text-grit font-medium">{r.label}</span>
+            <span className="text-center text-grit-dim text-xs">
+              {typeof r.free === "string" ? r.free : "—"}
+            </span>
+            <span className="text-center">
+              {typeof r.pro === "string" ? (
+                <span className="text-xs text-accent-red font-bold">{r.pro}</span>
+              ) : (
+                <Check size={14} className="inline text-accent-red" />
+              )}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Month vs year */}
+      <div className="grid grid-cols-2 gap-2 mb-5">
+        <button
+          onClick={() => setPlan("yearly")}
+          className="rounded-2xl border p-3 text-left press relative"
+          style={{
+            background: plan === "yearly" ? "rgba(225,6,0,0.12)" : "#141414",
+            borderColor: plan === "yearly" ? "#E10600" : "#262626",
+          }}
+        >
+          <span
+            className="absolute -top-2 left-3 text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-full text-white"
+            style={{ background: "#E10600" }}
+          >
+            Save 33%
+          </span>
+          <p className="label-cap text-[9px] text-grit-dim">Yearly</p>
+          <p className="display text-xl font-extrabold text-white leading-none mt-0.5">{meta.yearly}</p>
+          <p className="text-[10px] text-grit-dim">per year</p>
+        </button>
+        <button
+          onClick={() => setPlan("monthly")}
+          className="rounded-2xl border p-3 text-left press"
+          style={{
+            background: plan === "monthly" ? "rgba(225,6,0,0.12)" : "#141414",
+            borderColor: plan === "monthly" ? "#E10600" : "#262626",
+          }}
+        >
+          <p className="label-cap text-[9px] text-grit-dim">Monthly</p>
+          <p className="display text-xl font-extrabold text-white leading-none mt-0.5">{meta.monthly}</p>
+          <p className="text-[10px] text-grit-dim">per month · cancel anytime</p>
+        </button>
+      </div>
+
+      <div className="mt-auto">
+        <button onClick={() => onChoose(true)} className="btn-grit w-full py-4 text-base animate-subtle-pulse">
+          <Zap size={16} className="mr-2" />
+          Unlock DEADSET Pro
+        </button>
+        <button
+          onClick={() => onChoose(false)}
+          className="mt-3 w-full text-center label-cap text-[10px] text-grit-dim press py-2"
+        >
+          Start free — upgrade any time
+        </button>
+      </div>
+    </div>
   );
 }
 
