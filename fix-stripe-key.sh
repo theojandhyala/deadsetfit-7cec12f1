@@ -25,7 +25,9 @@ case "$KEY" in
 esac
 
 echo "Uploading to the checkout server (Cloudflare)..."
-if ! printf '%s' "$KEY" | npx wrangler secret put STRIPE_LIVE_API_KEY; then
+# --name targets the Worker directly; the repo config also declares a Pages
+# output dir, which otherwise makes `secret put` refuse as "a Pages project".
+if ! printf '%s' "$KEY" | npx wrangler secret put STRIPE_LIVE_API_KEY --name deadset; then
   echo "Upload failed — run it again, or screenshot this window for Claude."
   exit 1
 fi
