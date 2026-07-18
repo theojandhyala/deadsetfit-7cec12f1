@@ -424,26 +424,31 @@ function UpgradePage() {
                   <p className="text-xs text-accent-red">{checkoutError}</p>
                 </div>
               )}
+              {/* Embedded checkout is the default so payment stays inside
+                  DEADSET, on-brand, never bouncing to a Stripe-branded page.
+                  The hosted redirect remains a one-tap fallback below (and the
+                  embedded component itself falls back to hosted on error). */}
               <button
-                onClick={startHostedCheckout}
+                onClick={() => setShowCheckout(true)}
                 disabled={checkoutLoading}
                 className="btn-grit w-full py-4 text-base rounded-2xl animate-subtle-pulse"
               >
-                {checkoutLoading ? (
-                  <Loader2 size={16} className="inline mr-2 animate-spin" />
-                ) : (
-                  <Crown size={16} className="inline mr-2" />
-                )}
-                {checkoutLoading ? "Opening Stripe…" : "Unlock DEADSET Pro"}
+                <Crown size={16} className="inline mr-2" />
+                Unlock DEADSET Pro
               </button>
               <button
-                onClick={() => setShowCheckout(true)}
+                onClick={startHostedCheckout}
+                disabled={checkoutLoading}
                 className="btn-ghost mt-3 w-full py-3 text-xs rounded-2xl"
               >
-                Use embedded checkout instead
+                {checkoutLoading ? (
+                  <><Loader2 size={14} className="inline mr-2 animate-spin" />Opening Stripe…</>
+                ) : (
+                  "Prefer a separate page? Open secure Stripe checkout"
+                )}
               </button>
               <p className="mt-3 text-center text-[10px] uppercase tracking-widest" style={{ color: "#6B7280" }}>
-                Promo codes enabled · Cancel anytime
+                Secure payment by Stripe · Promo codes enabled · Cancel anytime
               </p>
             </>
           )}

@@ -332,7 +332,13 @@ async function handleStripeHealth(env: Env): Promise<Response> {
     // Report the account id so we can confirm the server key and the
     // front-end publishable key are on the SAME Stripe account. Account
     // ids are not secret (they appear in every publishable key).
-    const account = await stripe.accounts.retrieve();
+    // Confirm the key works and surface which account it belongs to, so we
+    // can verify the server key and front-end publishable key match. The
+    // account id is not secret (it is embedded in every publishable key).
+    // `GET /v1/account` (no id) returns the key's own account — the SDK types
+    // require an id arg, so call through a cast.
+    const retrieveOwn = stripe.accounts.retrieve as (...a: unknown[]) => Promise<{ id: string }>;
+    const account = await retrieveOwn();
     return Response.json(
       { ok: true, stripeLiveKey: "valid", account: account.id },
       { headers: { "Cache-Control": "no-store" } },
