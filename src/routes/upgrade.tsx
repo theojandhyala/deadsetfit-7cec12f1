@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   ChevronLeft, Crown, Loader2, Shield, BarChart3,
-  Swords, Zap, Star, Users, Trophy, Flame,
+  Swords, Zap, Star, Users, Trophy, Flame, Check,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
@@ -173,16 +173,129 @@ function UpgradePage() {
   }
 
   if (!user) {
+    // Logged-out visitors get the FULL pitch — hero, tick table, pricing —
+    // with sign-in as the final CTA, not a bare gate.
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center" style={{ background: "#0A0A0A" }}>
-        <Crown size={36} style={{ color: "#E10600" }} />
-        <h1 className="display text-3xl font-extrabold text-white uppercase tracking-wider mt-5">Sign in for Pro</h1>
-        <p className="mt-2 text-sm" style={{ color: "#8A8A8A" }}>
-          {sessionError || "Create an account or sign in first, then checkout will load."}
+      <div className="min-h-screen pb-12" style={{ background: "#0A0A0A" }}>
+        {/* Hero with the app's red glow */}
+        <div
+          className="relative px-6 pt-14 pb-10 text-center overflow-hidden"
+          style={{
+            background:
+              "radial-gradient(ellipse 90% 70% at 50% -10%, rgba(225,6,0,0.28), transparent 65%)",
+          }}
+        >
+          <div
+            className="mx-auto w-16 h-16 rounded-2xl flex items-center justify-center"
+            style={{
+              background: "linear-gradient(135deg, #E10600, #7a0300)",
+              boxShadow: "0 10px 40px rgba(225,6,0,0.45)",
+            }}
+          >
+            <Crown size={30} color="#fff" />
+          </div>
+          <h1 className="display text-4xl font-extrabold uppercase tracking-wide mt-5 leading-none">
+            <span className="text-white">DEADSET</span>{" "}
+            <span style={{ color: "#E10600" }}>PRO</span>
+          </h1>
+          <p className="mt-3 text-sm max-w-xs mx-auto leading-relaxed" style={{ color: "#8A8A8A" }}>
+            Everything core is free forever. Pro is for the ones chasing rank —
+            deeper competition, sharper insight, real status.
+          </p>
+        </div>
+
+        {/* Pricing cards */}
+        <div className="px-5 grid grid-cols-2 gap-3 -mt-2">
+          <div
+            className="deadset-3d-panel rounded-2xl p-4 text-left"
+            style={{ background: "rgba(225,6,0,0.10)", border: "2px solid #E10600" }}
+          >
+            <span
+              className="inline-block text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full text-white"
+              style={{ background: "#E10600" }}
+            >
+              Best value · Save 33%
+            </span>
+            <p className="label-cap text-[9px] text-grit-dim mt-2">Yearly</p>
+            <p className="display text-3xl font-extrabold text-white leading-none mt-1">
+              {priceLabels.yearly}
+            </p>
+            <p className="text-[10px] mt-1" style={{ color: "#8A8A8A" }}>
+              per year
+            </p>
+          </div>
+          <div
+            className="deadset-3d-panel rounded-2xl p-4 text-left"
+            style={{ background: "#141414", border: "1.5px solid #262626" }}
+          >
+            <p className="label-cap text-[9px] text-grit-dim mt-1">Monthly</p>
+            <p className="display text-3xl font-extrabold text-white leading-none mt-1">
+              {priceLabels.monthly}
+            </p>
+            <p className="text-[10px] mt-1" style={{ color: "#8A8A8A" }}>
+              per month · cancel anytime
+            </p>
+          </div>
+        </div>
+
+        {/* Free vs Pro — the full table */}
+        <div className="px-5 mt-6">
+          <div className="deadset-3d-panel bg-grit-card border border-grit rounded-2xl overflow-hidden">
+            <div className="grid grid-cols-[1fr_52px_52px] items-center px-4 py-3 border-b border-grit bg-[#101010]">
+              <span className="label-cap text-[9px] text-grit-dim">What you get</span>
+              <span className="label-cap text-[9px] text-grit-dim text-center">Free</span>
+              <span className="label-cap text-[9px] text-center" style={{ color: "#E10600" }}>
+                Pro
+              </span>
+            </div>
+            {COMPARE_ROWS.map((r) => (
+              <div
+                key={r.label}
+                className="grid grid-cols-[1fr_52px_52px] items-center px-4 py-2.5 border-b border-grit/50 last:border-b-0"
+              >
+                <span className="text-xs text-grit font-medium">{r.label}</span>
+                <span className="text-center text-[10px] leading-tight text-grit-dim px-0.5">
+                  {typeof r.free === "string" ? r.free : r.free ? <Check size={14} className="inline text-grit" /> : "—"}
+                </span>
+                <span className="text-center px-0.5">
+                  {typeof r.pro === "string" ? (
+                    <span className="text-[10px] leading-tight font-bold" style={{ color: "#E10600" }}>{r.pro}</span>
+                  ) : (
+                    <Check size={14} className="inline" style={{ color: "#E10600" }} />
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Trust strip */}
+        <p className="mt-4 px-8 text-center label-cap text-[9px] leading-relaxed" style={{ color: "#6B7280" }}>
+          Secure payment by Stripe · Promo codes enabled · Cancel anytime
         </p>
-        <button onClick={() => navigate({ to: "/auth" })} className="btn-grit mt-6 w-full py-3">
-          Sign in / Create account
-        </button>
+
+        {/* CTA */}
+        <div className="px-5 mt-5">
+          {sessionError && (
+            <p className="mb-3 text-center text-xs" style={{ color: "#E10600" }}>{sessionError}</p>
+          )}
+          <button
+            onClick={() => navigate({ to: "/auth" })}
+            className="btn-grit w-full py-4 text-base rounded-2xl animate-subtle-pulse"
+          >
+            <Crown size={16} className="inline mr-2" />
+            Sign in / Create account
+          </button>
+          <p className="mt-2.5 text-center text-[10px]" style={{ color: "#6B7280" }}>
+            Takes under a minute — then checkout loads right here.
+          </p>
+          <Link
+            to="/"
+            className="mt-4 block text-center label-cap text-[10px] text-grit-dim press py-2"
+          >
+            ← Back to DEADSET
+          </Link>
+        </div>
       </div>
     );
   }
