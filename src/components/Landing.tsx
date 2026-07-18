@@ -68,7 +68,7 @@ function Nav() {
         </nav>
         <Link
           to="/auth"
-          className="label-cap press inline-flex min-h-10 items-center gap-2 border px-4 py-2 text-xs text-grit"
+          className="label-cap press inline-flex min-h-10 items-center gap-2 rounded-full border px-5 py-2 text-xs text-grit"
           style={{
             borderColor: "rgba(230,50,34,.55)",
             background: "linear-gradient(135deg, rgba(230,50,34,.18), rgba(255,255,255,.035))",
@@ -130,11 +130,11 @@ function Hero() {
       <div className="mx-auto grid min-h-[calc(100svh-64px)] max-w-7xl items-center gap-12 pb-16 pt-12 sm:pb-20 sm:pt-16 lg:grid-cols-[1.04fr_.96fr]">
         <div className="w-full max-w-[58rem] animate-slide-up">
           <div className="mb-5 flex max-w-full flex-wrap items-center gap-2 sm:mb-7">
-            <span className="inline-flex items-center gap-2 border border-accent-red/30 bg-accent-red/10 px-3 py-2">
+            <span className="inline-flex items-center gap-2 rounded-full border border-accent-red/30 bg-accent-red/10 px-3.5 py-2">
               <Zap size={14} className="text-accent-red" />
               <span className="label-cap text-[9px] text-grit sm:text-[10px]">Built for the lift, not the feed</span>
             </span>
-            <span className="hidden border border-white/10 bg-white/[0.035] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-grit-dim sm:inline-flex">
+            <span className="hidden rounded-full border border-white/10 bg-white/[0.035] px-3.5 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-grit-dim sm:inline-flex">
               iOS ready training system
             </span>
           </div>
@@ -148,10 +148,10 @@ function Hero() {
             one sharp training loop. Open it, lift, log, improve, repeat.
           </p>
           <div className="mt-9 grid gap-3 sm:flex sm:flex-wrap">
-            <Link to="/auth" className="btn-grit min-h-12 rounded-none px-7 py-4 text-sm">
+            <Link to="/auth" className="btn-grit min-h-12 rounded-2xl px-7 py-4 text-sm">
               Get started <ArrowRight size={16} className="ml-2" />
             </Link>
-            <a href="#features" className="btn-ghost min-h-12 rounded-none px-7 py-4 text-sm">
+            <a href="#features" className="btn-ghost min-h-12 rounded-2xl px-7 py-4 text-sm">
               Explore system
             </a>
           </div>
@@ -159,7 +159,7 @@ function Hero() {
             {proof.map((item) => (
               <span
                 key={item}
-                className="inline-flex items-center gap-2 border border-white/10 bg-black/30 px-3 py-2 text-xs font-bold text-grit-dim"
+                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3.5 py-2 text-xs font-bold text-grit-dim"
               >
                 <CheckCircle2 size={13} className="text-accent-red" />
                 {item}
@@ -167,23 +167,33 @@ function Hero() {
             ))}
           </div>
         </div>
-        <div className="relative mx-auto w-full max-w-[430px] animate-float-in lg:mr-0">
-          <div className="absolute -inset-8 rounded-[42px] bg-accent-red/10 blur-3xl" aria-hidden="true" />
-          <div className="relative overflow-hidden border border-white/10 bg-black/80 p-4 shadow-2xl">
+        <div className="relative mx-auto w-full max-w-[420px] animate-float-in lg:mr-0">
+          <div className="absolute -inset-10 rounded-[48px] bg-accent-red/15 blur-3xl" aria-hidden="true" />
+          <div
+            className="relative overflow-hidden rounded-[32px] border border-white/10 p-4"
+            style={{
+              background: "linear-gradient(160deg, #141415, #0a0a0b 60%)",
+              boxShadow:
+                "0 30px 70px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05), 0 0 60px rgba(225,6,0,0.08)",
+            }}
+          >
             <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-3">
               <Logo />
-              <span className="label-cap text-[9px] text-accent-red">Live build</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#4ade80]/30 bg-[#4ade80]/10 px-2.5 py-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#4ade80] shadow-[0_0_10px_rgba(74,222,128,.8)]" />
+                <span className="label-cap text-[8px] text-[#4ade80]">Live</span>
+              </span>
             </div>
             <div className="space-y-3">
               {metrics.map(({ Icon, ...item }, index) => (
                 <div
                   key={item.label}
-                  className="animate-metric-in border border-white/10 bg-white/[0.035] p-4"
+                  className="animate-metric-in rounded-2xl border border-white/10 bg-white/[0.05] p-4"
                   style={{ animationDelay: `${220 + index * 90}ms` }}
                 >
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                      <span className="flex h-10 w-10 items-center justify-center border border-accent-red/30 bg-accent-red/10 text-accent-red">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-accent-red/30 bg-accent-red/10 text-accent-red">
                         <Icon size={18} />
                       </span>
                       <div>
@@ -195,7 +205,7 @@ function Hero() {
                   </div>
                 </div>
               ))}
-              <div className="relative overflow-hidden border border-accent-red/30 bg-accent-red/10 p-4">
+              <div className="relative overflow-hidden rounded-2xl border border-accent-red/30 bg-accent-red/10 p-4">
                 <div className="absolute inset-y-0 left-0 w-1 bg-accent-red" />
                 <p className="label-cap text-[9px] text-accent-red">Weekly league</p>
                 <p className="mt-2 text-sm leading-6 text-grit">
@@ -204,7 +214,7 @@ function Hero() {
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {["STR", "GRIT", "RANK"].map((label, i) => (
-                  <div key={label} className="border border-white/10 bg-black/45 p-3 text-center">
+                  <div key={label} className="rounded-xl border border-white/10 bg-black/45 p-3 text-center">
                     <p className="display text-2xl font-black text-grit">{[82, 640, 12][i]}</p>
                     <p className="label-cap mt-1 text-[8px] text-grit-dim">{label}</p>
                   </div>
@@ -299,7 +309,7 @@ function Features() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {items.map(({ Icon, ...f }) => (
           <div key={f.t} className="deadset-card-soft group flex gap-4 p-5 transition-transform duration-200 hover:-translate-y-1">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-accent-red/30 bg-accent-red/10 text-accent-red">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-accent-red/30 bg-accent-red/10 text-accent-red">
               <Icon size={18} />
             </div>
             <div>
@@ -408,8 +418,15 @@ function Benefits() {
     <Section id="benefits" className="bg-grit-card/30">
       <div className="grid items-center gap-10 lg:grid-cols-2">
         <div className="relative mx-auto w-full max-w-[400px]">
-          <div className="absolute -inset-8 rounded-[42px] bg-accent-red/10 blur-3xl" aria-hidden="true" />
-          <div className="relative overflow-hidden border border-white/10 bg-black/80 p-4 shadow-2xl">
+          <div className="absolute -inset-10 rounded-[48px] bg-accent-red/15 blur-3xl" aria-hidden="true" />
+          <div
+            className="relative overflow-hidden rounded-[32px] border border-white/10 p-4"
+            style={{
+              background: "linear-gradient(160deg, #141415, #0a0a0b 60%)",
+              boxShadow:
+                "0 30px 70px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05), 0 0 60px rgba(225,6,0,0.08)",
+            }}
+          >
             <div className="mb-3 flex items-center justify-between border-b border-white/10 pb-3">
               <div>
                 <p className="label-cap text-[9px] text-accent-red">LIVE · PUSH DAY</p>
@@ -428,7 +445,7 @@ function Benefits() {
               ].map((s) => (
                 <div
                   key={s.set}
-                  className="flex items-center justify-between border border-white/10 bg-white/[0.035] px-3 py-2.5"
+                  className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2.5"
                 >
                   <span className="label-cap text-[9px] text-grit-dim">SET {s.set}</span>
                   <span className="display text-base font-extrabold text-grit">
@@ -437,14 +454,14 @@ function Benefits() {
                   </span>
                 </div>
               ))}
-              <div className="flex items-center justify-between border border-accent-red/30 bg-accent-red/10 px-3 py-2.5">
+              <div className="flex items-center justify-between rounded-xl border border-accent-red/30 bg-accent-red/10 px-3 py-2.5">
                 <div>
                   <p className="label-cap text-[8px] text-accent-red">NEW PR DETECTED</p>
                   <p className="text-xs font-bold text-grit">82.5kg beats your 80kg best</p>
                 </div>
                 <Trophy size={16} className="text-accent-red" />
               </div>
-              <div className="flex items-center justify-between border border-white/10 bg-black/45 px-3 py-2.5">
+              <div className="flex items-center justify-between rounded-xl border border-white/10 bg-black/45 px-3 py-2.5">
                 <div>
                   <p className="label-cap text-[8px] text-grit-dim">REST</p>
                   <p className="font-mono text-lg font-extrabold tabular-nums text-grit">01:24</p>
@@ -479,9 +496,9 @@ function Benefits() {
             {items.map(({ Icon, ...b }) => (
               <div
                 key={b.t}
-                className="flex items-start gap-4 border border-white/10 bg-black/25 p-4"
+                className="deadset-card-soft flex items-start gap-4 p-4"
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-accent-red/30 bg-accent-red/10 text-accent-red">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-accent-red/30 bg-accent-red/10 text-accent-red">
                   <Icon size={18} />
                 </div>
                 <div>
@@ -588,14 +605,14 @@ function Pricing() {
           </Link>
         </div>
         <div
-          className="relative flex flex-col p-6"
+          className="relative flex flex-col rounded-[22px] p-6"
           style={{
             background: "linear-gradient(160deg, rgba(225,6,0,0.12), rgba(20,20,20,0.9))",
-            border: "1px solid rgba(225,6,0,0.4)",
-            boxShadow: "0 0 60px rgba(225,6,0,0.12)",
+            border: "1.5px solid rgba(225,6,0,0.45)",
+            boxShadow: "0 20px 50px rgba(0,0,0,0.4), 0 0 60px rgba(225,6,0,0.14)",
           }}
         >
-          <span className="label-cap absolute -top-2.5 left-6 border border-accent-red/50 bg-[#050505] px-2 py-0.5 text-[9px] text-accent-red">
+          <span className="label-cap absolute -top-2.5 left-6 rounded-full border border-accent-red/50 bg-[#050505] px-2.5 py-0.5 text-[9px] text-accent-red">
             MOST SERIOUS
           </span>
           <p className="label-cap text-sm text-accent-red">DEADSET PRO</p>
