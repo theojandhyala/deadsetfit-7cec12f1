@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { restoreSupabaseSession, supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/account-restore";
+import { getInviteUrl } from "@/lib/referral";
 import { blockUser, reportContent } from "@/lib/account.functions";
 import { askConfirm, askText } from "@/lib/confirm";
 import {
@@ -186,6 +187,15 @@ function FriendsPage() {
 // ============ FEED ============
 type FeedPost = Awaited<ReturnType<typeof getFeed>>[number];
 
+function FeedStat({ label, v }: { label: string; v: number | string }) {
+  return (
+    <div>
+      <p className="display font-extrabold text-grit text-lg leading-none tabular-nums">{v}</p>
+      <p className="label-cap text-[9px] text-grit-dim mt-0.5">{label}</p>
+    </div>
+  );
+}
+
 function Feed({ userId }: { userId: string }) {
   const _getFeed = getFeed;
   const _createPost = createPost;
@@ -324,7 +334,7 @@ function Feed({ userId }: { userId: string }) {
   }
 
   async function share(p: FeedPost) {
-    const url = window.location.href;
+    const url = await getInviteUrl();
     if (navigator.share)
       try {
         await navigator.share({ title: "DEADSET", text: p.content, url });
@@ -333,7 +343,7 @@ function Feed({ userId }: { userId: string }) {
         /* user cancelled */
       }
     await navigator.clipboard.writeText(url);
-    toast.success("Link copied");
+    toast.success("Invite link copied");
   }
 
   if (!posts)
@@ -524,6 +534,32 @@ function Feed({ userId }: { userId: string }) {
                     {String((p.metadata as { lift?: string }).lift)} ·{" "}
                     {String((p.metadata as { weight?: number }).weight)}kg
                   </p>
+                </div>
+              </div>
+            )}
+          {(p.kind === "workout" || p.kind === "pr") &&
+            p.metadata &&
+            typeof p.metadata === "object" &&
+            "sets" in p.metadata && (
+              <div className="bg-grit-card border border-grit rounded-xl p-3 mb-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Dumbbell size={16} className="text-accent-red" />
+                  <p className="display font-extrabold uppercase text-grit text-base leading-none">
+                    {String((p.metadata as { label?: string }).label ?? "Workout")}
+                  </p>
+                  {Number((p.metadata as { prCount?: number }).prCount) > 0 && (
+                    <span className="ml-auto label-cap text-[9px] bg-accent-red text-white px-1.5 py-0.5 rounded">
+                      {Number((p.metadata as { prCount?: number }).prCount)} PR
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-4">
+                  <FeedStat label="Exercises" v={Number((p.metadata as { exercises?: number }).exercises) || 0} />
+                  <FeedStat label="Sets" v={Number((p.metadata as { sets?: number }).sets) || 0} />
+                  <FeedStat
+                    label="Volume"
+                    v={`${Math.round((Number((p.metadata as { volume?: number }).volume) || 0) / 1000 * 10) / 10}t`}
+                  />
                 </div>
               </div>
             )}
