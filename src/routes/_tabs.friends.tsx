@@ -29,6 +29,7 @@ import {
 import { restoreSupabaseSession, supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/account-restore";
 import { getInviteUrl } from "@/lib/referral";
+import { NotificationsBell } from "@/components/NotificationsBell";
 import { blockUser, reportContent } from "@/lib/account.functions";
 import { askConfirm, askText } from "@/lib/confirm";
 import {
@@ -156,9 +157,12 @@ function FriendsPage() {
 
   return (
     <div>
-      <header className="px-5 pt-4 pb-2">
-        <p className="label-cap">FRIENDS</p>
-        <h1 className="display text-4xl font-extrabold text-grit leading-none mt-1">YOUR CREW</h1>
+      <header className="px-5 pt-4 pb-2 flex items-start justify-between">
+        <div>
+          <p className="label-cap">FRIENDS</p>
+          <h1 className="display text-4xl font-extrabold text-grit leading-none mt-1">YOUR CREW</h1>
+        </div>
+        <NotificationsBell />
       </header>
       <div className="px-5 mt-3 flex gap-2 border-b border-grit overflow-x-auto">
         {(["FRIENDS", "FEED", "ARENA", "INVITE"] as Tab[]).map((t) => (

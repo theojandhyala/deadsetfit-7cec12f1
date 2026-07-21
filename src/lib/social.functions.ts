@@ -20,6 +20,17 @@ export const getComments = ({ data }: { data: { postId: string } }) =>
 export const getLeaderboard = (scope: FeedScope = "global") =>
   callRpc<{ top: any[]; me: any | null }>("getSocialLeaderboard", { scope });
 
+export type NotifType = "follow" | "reaction" | "comment";
+export interface AppNotification {
+  type: NotifType;
+  actor: { id: string; username: string | null; display_name: string | null; avatar_url: string | null };
+  created_at: string;
+  reaction?: string;
+  postId?: string;
+  snippet?: string;
+}
+export const getNotifications = () => callRpc<AppNotification[]>("getNotifications");
+
 export const toggleFollow = ({ data }: { data: { userId: string } }) =>
   callRpc<{ following: boolean }>("toggleFollow", data);
 

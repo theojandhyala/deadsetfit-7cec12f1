@@ -665,6 +665,51 @@ const handlers: Record<string, Handler> = {
     };
   },
 
+  async getNotifications(_data, req) {
+    const { supabase, userId } = await requireAuth(req);
+    const hidden = await blockedUserIds(supabase, userId);
+    const { data: myPosts } = await supabase.from("posts").select("id").eq("user_id", userId);
+    const myPostIds = (myPosts ?? []).map((p) => p.id as string);
+    const noPosts = { data: [] as Array<Record<string, unknown>> };
+    const [followsRes, likesRes, commentsRes] = await Promise.all([
+      supabase.from("follows").select("follower_id, created_at").eq("following_id", userId)
+        .order("created_at", { ascending: false }).limit(40),
+      myPostIds.length
+        ? supabase.from("post_likes").select("post_id, user_id, reaction, created_at").in("post_id", myPostIds)
+            .neq("user_id", userId).order("created_at", { ascending: false }).limit(40)
+        : Promise.resolve(noPosts),
+      myPostIds.length
+        ? supabase.from("post_comments").select("post_id, user_id, content, created_at").in("post_id", myPostIds)
+            .neq("user_id", userId).order("created_at", { ascending: false }).limit(40)
+        : Promise.resolve(noPosts),
+    ]);
+    const actorIds = new Set<string>();
+    (followsRes.data ?? []).forEach((f) => actorIds.add(f.follower_id as string));
+    (likesRes.data ?? []).forEach((l) => actorIds.add(l.user_id as string));
+    (commentsRes.data ?? []).forEach((c) => actorIds.add(c.user_id as string));
+    const { data: profs } = await supabase.from("public_profiles")
+      .select("id, username, display_name, avatar_url")
+      .in("id", actorIds.size ? Array.from(actorIds) : ["00000000-0000-0000-0000-000000000000"]);
+    const pm = new Map((profs ?? []).map((p) => [p.id, p]));
+    const actor = (id: string) => pm.get(id) ?? { id, username: null, display_name: "Athlete", avatar_url: null };
+    type Notif = { type: "follow" | "reaction" | "comment"; actor: unknown; created_at: string; reaction?: string; postId?: string; snippet?: string };
+    const notifs: Notif[] = [];
+    (followsRes.data ?? []).forEach((f) => {
+      if (hidden.has(f.follower_id as string)) return;
+      notifs.push({ type: "follow", actor: actor(f.follower_id as string), created_at: f.created_at as string });
+    });
+    (likesRes.data ?? []).forEach((l) => {
+      if (hidden.has(l.user_id as string)) return;
+      notifs.push({ type: "reaction", actor: actor(l.user_id as string), created_at: l.created_at as string, reaction: l.reaction as string, postId: l.post_id as string });
+    });
+    (commentsRes.data ?? []).forEach((c) => {
+      if (hidden.has(c.user_id as string)) return;
+      notifs.push({ type: "comment", actor: actor(c.user_id as string), created_at: c.created_at as string, postId: c.post_id as string, snippet: String(c.content ?? "").slice(0, 80) });
+    });
+    notifs.sort((a, b) => b.created_at.localeCompare(a.created_at));
+    return notifs.slice(0, 40);
+  },
+
   async toggleFollow(data, req) {
     const { supabase, userId } = await requireAuth(req);
     const d = z.object({ userId: z.string().uuid() }).parse(data);
