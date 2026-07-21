@@ -104,6 +104,14 @@ export function ProProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Reflect Pro status onto the document root so the whole app can pick up
+  // the gold Pro identity via [data-pro="true"] CSS — makes the upgrade obvious.
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.dataset.pro = isPro ? "true" : "false";
+    }
+  }, [isPro]);
+
   useEffect(() => {
     refresh();
     const { data } = supabase.auth.onAuthStateChange((event) => {

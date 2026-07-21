@@ -19,6 +19,7 @@ import { ConfirmSheet } from "../components/ConfirmSheet";
 import { CelebrationLayer } from "../components/CelebrationLayer";
 import { Toaster } from "../components/ui/sonner";
 import { ProProvider } from "../hooks/usePro";
+import { ProWelcome } from "../components/ProWelcome";
 
 function NotFoundComponent() {
   return (
@@ -173,6 +174,7 @@ function RootComponent() {
         {!isAuthRoute && <UsernameGate />}
         {!isAuthRoute && <PaywallSheet />}
         {!isAuthRoute && <CelebrationLayer />}
+        {!isAuthRoute && <ProWelcome />}
         <ConfirmSheet />
         <Toaster />
       </ProProvider>

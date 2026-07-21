@@ -20,6 +20,7 @@ import {
 } from "@/lib/currency";
 import { isNativeIos } from "@/lib/platform";
 import { COMPARE_ROWS } from "@/lib/pro-features";
+import { ProBadge } from "@/components/ProBadge";
 
 export const Route = createFileRoute("/upgrade")({
   head: () => ({ meta: [{ title: "DEADSET — Go Pro" }] }),
@@ -384,6 +385,29 @@ function UpgradePage() {
                 <Flame size={13} style={{ color: "#E10600" }} />
                 <span className="text-xs font-bold text-white">Cancel any time</span>
               </div>
+            </div>
+          </div>
+
+          {/* The visible payoff — your identity goes gold the moment you upgrade */}
+          <div
+            className="rounded-2xl border border-pro pro-glow p-4 mb-6 flex items-center gap-4"
+            style={{ background: "linear-gradient(135deg, #201a0c 0%, #2b2108 55%, #0d0a04 100%)" }}
+          >
+            <div
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full"
+              style={{ background: "radial-gradient(circle at 50% 35%, #f8d566, #eab212 70%)" }}
+            >
+              <Crown size={22} strokeWidth={2.5} className="text-[#14110a]" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-extrabold text-white">Your card goes gold</p>
+                <ProBadge size="sm" />
+              </div>
+              <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "#b7ac8e" }}>
+                A gold athlete card, the PRO badge on your profile, and the full arsenal below —
+                unlocked the instant you upgrade.
+              </p>
             </div>
           </div>
 

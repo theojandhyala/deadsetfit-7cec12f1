@@ -40,6 +40,9 @@
   --color-grit-dim: #8a8a8a;
   --color-accent-red: #e63222;
   --color-border-grit: #262626;
+  /* DEADSET Pro — gold identity layer (distinct from the brand red) */
+  --color-pro-gold: #f4c33a;
+  --color-pro-gold-dim: #c8971f;
 }
 
 :root {
@@ -159,6 +162,79 @@
   .border-accent-red {
     border-color: #e63222;
   }
+  /* === DEADSET Pro gold identity === */
+  .text-pro {
+    color: #f4c33a;
+  }
+  .bg-pro {
+    background-color: #f4c33a;
+  }
+  .border-pro {
+    border-color: #f4c33a;
+  }
+  /* The gold PRO pill/badge */
+  .pro-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: 4px;
+    padding: 0.12rem 0.4rem;
+    font-family: var(--font-display);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: #14110a;
+    background: linear-gradient(180deg, #f8d566, #eab212);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.35) inset,
+      0 2px 8px rgba(234, 178, 18, 0.35);
+  }
+  /* Soft gold glow for Pro surfaces */
+  .pro-glow {
+    box-shadow:
+      0 18px 48px rgba(0, 0, 0, 0.3),
+      0 0 0 1px rgba(244, 195, 58, 0.4),
+      0 0 34px rgba(234, 178, 18, 0.22);
+  }
+  /* Gold gradient text (headlines on Pro surfaces) */
+  .text-pro-gradient {
+    background: linear-gradient(92deg, #f8d566 0%, #eab212 60%, #f8d566 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+  /* When the signed-in user is Pro, the whole app picks up subtle gold cues
+     so the upgrade is impossible to miss. Applied via <html data-pro="true">. */
+  [data-pro="true"] .pro-only-hidden {
+    display: none;
+  }
+}
+
+/* Gold sweep animation used on the Welcome-to-Pro moment */
+@keyframes pro-sweep {
+  0% {
+    transform: translateX(-120%) rotate(8deg);
+  }
+  100% {
+    transform: translateX(220%) rotate(8deg);
+  }
+}
+@keyframes pro-pop {
+  0% {
+    transform: scale(0.82);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.04);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@layer utilities {
   .border-grit {
     border-color: #262626;
   }

@@ -12,6 +12,7 @@ import {
   Settings,
   Sparkles,
   Heart,
+  Check,
 } from "lucide-react";
 import { useAppState, flushRemoteState } from "@/lib/storage";
 import { askConfirm, withDeadline } from "@/lib/confirm";
@@ -28,6 +29,7 @@ import { deleteMyAccount } from "@/lib/account.functions";
 import { usePro } from "@/hooks/usePro";
 import { isNativeIos } from "@/lib/platform";
 import { FifaCard } from "@/components/FifaCard";
+import { ProBadge } from "@/components/ProBadge";
 import { QuickLogFAB } from "@/components/QuickLogFAB";
 import { StatsGrid } from "@/components/StatsGrid";
 import { LiftLevels } from "@/components/LiftLevels";
@@ -341,7 +343,10 @@ function ProfilePage() {
   return (
     <div className="deadset-page">
       <header className="px-5 pt-4 pb-3 flex items-start justify-between">
-        <p className="label-cap">YOUR CARD</p>
+        <div className="flex items-center gap-2">
+          <p className="label-cap">YOUR CARD</p>
+          {isPro && <ProBadge size="sm" />}
+        </div>
         <button
           onClick={() => (editing ? save() : setEditing(true))}
           disabled={savingProfile}
@@ -380,6 +385,7 @@ function ProfilePage() {
           heightCm={p.heightCm}
           goal={p.goal}
           experience={p.experience}
+          isPro={isPro}
         />
       </section>
 
@@ -521,22 +527,54 @@ function ProfilePage() {
       {/* DEADSET Pro */}
       <section className="px-5 mb-6">
         <div
-          className={`border p-5 relative overflow-hidden ${isPro ? "border-yellow-500/70" : "border-accent-red"}`}
+          className={`border p-5 relative overflow-hidden ${isPro ? "border-pro pro-glow" : "border-accent-red"}`}
           style={{
             background: isPro
-              ? "linear-gradient(135deg, #1a1a1a 0%, #2b2108 55%, #100804 100%)"
+              ? "linear-gradient(135deg, #1c180c 0%, #2b2108 55%, #0d0a04 100%)"
               : "linear-gradient(135deg, #1a1a1a 0%, #2a0d0a 100%)",
           }}
         >
-          <Crown size={20} className={isPro ? "text-yellow-400 mb-2" : "text-accent-red mb-2"} />
-          <p className="display text-2xl font-extrabold uppercase text-grit">
-            {isPro ? "DEADSET Pro Active" : "DEADSET Pro"}
+          {isPro && (
+            <div className="absolute top-4 right-4">
+              <ProBadge size="md" />
+            </div>
+          )}
+          <Crown size={20} className={isPro ? "text-pro mb-2" : "text-accent-red mb-2"} />
+          <p className={`display text-2xl font-extrabold uppercase ${isPro ? "text-pro-gradient" : "text-grit"}`}>
+            DEADSET Pro
           </p>
-          <p className="text-xs text-[#8a8a8a] mt-1 mb-4">
-            {isPro
-              ? `Unlocked: Streak Armor, H2H challenges, full weekly leagues, advanced analytics and featured programs.${currentPeriodEnd ? ` Renews ${new Date(currentPeriodEnd).toLocaleDateString()}.` : ""}${cancelAtPeriodEnd ? " Cancels at period end." : ""}`
-              : "Streak Armor, H2H challenges, full leagues, advanced analytics, featured programs."}
-          </p>
+          {isPro ? (
+            <>
+              <p className="label-cap text-[10px] text-pro/90 mt-0.5">Membership active</p>
+              <div className="grid grid-cols-1 gap-1.5 mt-3 mb-4">
+                {[
+                  "Streak Armor — never lose your streak",
+                  "Progression intelligence + Ghost Mode",
+                  "Full Weekly Leagues + H2H challenges",
+                  "Advanced analytics & strength standards",
+                  "Unlimited custom programs + featured plans",
+                ].map((perk) => (
+                  <div key={perk} className="flex items-center gap-2 text-xs text-grit">
+                    <Check size={13} className="text-pro shrink-0" strokeWidth={3} />
+                    <span>{perk}</span>
+                  </div>
+                ))}
+              </div>
+              {(currentPeriodEnd || cancelAtPeriodEnd) && (
+                <p className="text-[11px] text-[#8a8a8a] mb-4">
+                  {cancelAtPeriodEnd
+                    ? `Cancels ${currentPeriodEnd ? new Date(currentPeriodEnd).toLocaleDateString() : "at period end"}.`
+                    : currentPeriodEnd
+                      ? `Renews ${new Date(currentPeriodEnd).toLocaleDateString()}.`
+                      : ""}
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-xs text-[#8a8a8a] mt-1 mb-4">
+              Streak Armor, H2H challenges, full leagues, advanced analytics, featured programs.
+            </p>
+          )}
           {isPro ? (
             nativeIos ? (
               // App Store 3.1.1: no billing-management link on iOS.
@@ -564,7 +602,7 @@ function ProfilePage() {
             </Link>
           )}
           {isPro && proStatus && (
-            <p className="mt-3 label-cap text-[10px] text-yellow-400/80">Status: {proStatus}</p>
+            <p className="mt-3 label-cap text-[10px] text-pro/80">Status: {proStatus}</p>
           )}
         </div>
       </section>

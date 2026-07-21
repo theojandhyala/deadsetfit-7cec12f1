@@ -1,6 +1,9 @@
 import type { HeadlinePR } from "@/lib/fifa-stats";
 import { RankEmblem } from "@/components/RankEmblem";
 import { getRank } from "@/lib/rank";
+import { ProBadge } from "@/components/ProBadge";
+
+const PRO_GOLD = "#f4c33a";
 
 /**
  * FIFA-style athlete card.
@@ -21,6 +24,7 @@ export function FifaCard({
   goal,
   experience,
   compact,
+  isPro = false,
 }: {
   name: string;
   username?: string | null;
@@ -35,18 +39,29 @@ export function FifaCard({
   goal?: string;
   experience?: string;
   compact?: boolean;
+  /** When true, the card wears the gold DEADSET Pro treatment. */
+  isPro?: boolean;
 }) {
   const rank = getRank(gritPoints ?? overall ?? 0);
+  const edge = isPro ? PRO_GOLD : badgeC;
   return (
     <div
       className={"relative overflow-hidden border " + (compact ? "rounded-2xl p-3" : "rounded-[22px] p-4")}
       style={{
-        borderColor: `${badgeC}66`,
-        background:
-          "radial-gradient(circle at 90% 0%, rgba(230,50,34,0.18), transparent 36%), linear-gradient(145deg, rgba(22,23,27,.98), rgba(9,9,10,.98) 62%, rgba(0,0,0,.98))",
-        boxShadow: `0 18px 48px rgba(0,0,0,.26), inset 0 1px 0 rgba(255,255,255,.06)`,
+        borderColor: isPro ? `${PRO_GOLD}99` : `${badgeC}66`,
+        background: isPro
+          ? "radial-gradient(circle at 90% 0%, rgba(244,195,58,0.22), transparent 40%), linear-gradient(145deg, rgba(26,23,14,.98), rgba(12,10,6,.98) 62%, rgba(0,0,0,.98))"
+          : "radial-gradient(circle at 90% 0%, rgba(230,50,34,0.18), transparent 36%), linear-gradient(145deg, rgba(22,23,27,.98), rgba(9,9,10,.98) 62%, rgba(0,0,0,.98))",
+        boxShadow: isPro
+          ? `0 18px 48px rgba(0,0,0,.34), 0 0 30px rgba(234,178,18,.20), inset 0 1px 0 rgba(255,255,255,.08)`
+          : `0 18px 48px rgba(0,0,0,.26), inset 0 1px 0 rgba(255,255,255,.06)`,
       }}
     >
+      {isPro && (
+        <div className="absolute top-3 right-3 z-10">
+          <ProBadge size={compact ? "sm" : "md"} />
+        </div>
+      )}
       {/* Header row: rank + badge + avatar */}
       <div className="flex items-start gap-3">
         <div className="flex flex-col items-center" style={{ minWidth: compact ? 48 : 56 }}>
@@ -58,7 +73,7 @@ export function FifaCard({
         <div
           className="rounded-full border overflow-hidden bg-[#1a1a1a] flex items-center justify-center shrink-0"
           style={{
-            borderColor: `${badgeC}99`,
+            borderColor: `${edge}99`,
             width: compact ? 52 : 62,
             height: compact ? 52 : 62,
           }}
