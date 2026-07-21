@@ -536,12 +536,20 @@ const handlers: Record<string, Handler> = {
   },
 
   // === Social: feed ===
-  async getFeed(_data, req) {
+  async getFeed(data, req) {
     const { supabase, userId } = await requireAuth(req);
+    const scope = (data as { scope?: string } | undefined)?.scope === "following" ? "following" : "global";
     const { data: blocks } = await supabase.from("user_blocks").select("blocker_id, blocked_id").or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`);
     const hidden = new Set<string>();
     (blocks ?? []).forEach(b => hidden.add(b.blocker_id === userId ? b.blocked_id : b.blocker_id));
     let query = supabase.from("posts").select("id, user_id, kind, content, image_url, metadata, created_at").order("created_at", { ascending: false }).limit(50);
+    if (scope === "following") {
+      // Scope to people the viewer follows (plus their own posts).
+      const { data: follows } = await supabase.from("follows").select("following_id").eq("follower_id", userId);
+      const allowed = (follows ?? []).map(f => f.following_id as string);
+      allowed.push(userId);
+      query = query.in("user_id", allowed);
+    }
     if (hidden.size > 0) query = query.not("user_id", "in", `(${Array.from(hidden).join(",")})`);
     const { data: posts, error } = await query;
     if (error) throw new Error(error.message);
@@ -629,14 +637,22 @@ const handlers: Record<string, Handler> = {
   },
 
   // === Social: grit leaderboard ===
-  async getSocialLeaderboard(_data, req) {
+  async getSocialLeaderboard(data, req) {
     const { supabase, userId } = await requireAuth(req);
+    const scope = (data as { scope?: string } | undefined)?.scope === "following" ? "following" : "global";
     const hidden = await blockedUserIds(supabase, userId);
-    const { data, error } = await supabase.from("public_profiles")
+    let lbQuery = supabase.from("public_profiles")
       .select("id, display_name, username, avatar_url, grit_points")
       .order("grit_points", { ascending: false }).limit(100);
+    if (scope === "following") {
+      const { data: follows } = await supabase.from("follows").select("following_id").eq("follower_id", userId);
+      const allowed = (follows ?? []).map(f => f.following_id as string);
+      allowed.push(userId);
+      lbQuery = lbQuery.in("id", allowed);
+    }
+    const { data: rows, error } = await lbQuery;
     if (error) throw new Error(error.message);
-    const all = data ?? [];
+    const all = rows ?? [];
     // Rank against the true field, then drop blocked users from the visible list
     // so their content is hidden without renumbering everyone else.
     const me = all.find(p => p.id === userId);

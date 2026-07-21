@@ -1,7 +1,9 @@
 import { callRpc } from "./rpc-client";
 
-export const getFeed = () =>
-  callRpc<any[]>("getFeed");
+export type FeedScope = "global" | "following";
+
+export const getFeed = (scope: FeedScope = "global") =>
+  callRpc<any[]>("getFeed", { scope });
 
 export const createPost = ({ data }: { data: { kind: "workout" | "pr" | "progress" | "text"; content?: string; image_url?: string | null; metadata?: Record<string, unknown> } }) =>
   callRpc<any>("createPost", data);
@@ -15,8 +17,8 @@ export const addComment = ({ data }: { data: { postId: string; content: string }
 export const getComments = ({ data }: { data: { postId: string } }) =>
   callRpc<any[]>("getComments", data);
 
-export const getLeaderboard = () =>
-  callRpc<{ top: any[]; me: any | null }>("getSocialLeaderboard");
+export const getLeaderboard = (scope: FeedScope = "global") =>
+  callRpc<{ top: any[]; me: any | null }>("getSocialLeaderboard", { scope });
 
 export const toggleFollow = ({ data }: { data: { userId: string } }) =>
   callRpc<{ following: boolean }>("toggleFollow", data);

@@ -48,6 +48,7 @@ import {
   updateMyLocation,
   getMyLocation,
   getNearbyAthletes,
+  type FeedScope,
 } from "@/lib/social.functions";
 import { RankShareCard } from "@/components/RankShareCard";
 import { toast } from "sonner";
@@ -211,17 +212,18 @@ function Feed({ userId }: { userId: string }) {
   const [openComments, setOpenComments] = useState<string | null>(null);
   const [pickerFor, setPickerFor] = useState<string | null>(null);
   const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [scope, setScope] = useState<FeedScope>("global");
 
   const load = useCallback(async () => {
     try {
-      const r = await _getFeed();
+      const r = await _getFeed(scope);
       setPosts(r);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Feed failed");
       // Show the empty state instead of an infinite spinner on failure.
       setPosts((cur) => cur ?? []);
     }
-  }, [_getFeed]);
+  }, [_getFeed, scope]);
   useEffect(() => {
     load();
   }, [load]);
@@ -355,6 +357,19 @@ function Feed({ userId }: { userId: string }) {
 
   return (
     <div className="px-5 pb-6">
+      <div className="flex gap-1 mb-4 p-1 bg-grit-card border border-grit rounded-xl">
+        {(["following", "global"] as FeedScope[]).map((s) => (
+          <button
+            key={s}
+            onClick={() => setScope(s)}
+            className={`flex-1 py-2 rounded-lg label-cap text-[11px] transition-colors press ${
+              scope === s ? "bg-accent-red text-white" : "text-grit-dim"
+            }`}
+          >
+            {s === "following" ? "Following" : "Global"}
+          </button>
+        ))}
+      </div>
       {!composing ? (
         <button
           onClick={() => setComposing(true)}
@@ -442,7 +457,9 @@ function Feed({ userId }: { userId: string }) {
 
       {posts.length === 0 && (
         <div className="bg-grit-card border border-grit p-6 text-center text-sm text-[#8a8a8a]">
-          Feed is empty. Be the first to post.
+          {scope === "following"
+            ? "No posts from people you follow yet. Follow athletes in the Friends tab to fill this feed."
+            : "Feed is empty. Be the first to post."}
         </div>
       )}
 
@@ -689,16 +706,17 @@ function League({ userId }: { userId: string }) {
   const _get = getLeaderboard;
   const [data, setData] = useState<Awaited<ReturnType<typeof getLeaderboard>> | null>(null);
   const [sharing, setSharing] = useState(false);
+  const [scope, setScope] = useState<FeedScope>("global");
 
   useEffect(() => {
-    _get()
+    _get(scope)
       .then(setData)
       .catch(() => {
         toast.error("Leaderboard failed");
         // Render the empty board rather than spinning forever.
         setData((cur) => cur ?? { top: [], me: null });
       });
-  }, [_get]);
+  }, [_get, scope]);
 
   if (!data)
     return (
@@ -735,6 +753,21 @@ function League({ userId }: { userId: string }) {
             <Trophy size={14} /> PR Boards
           </Link>
         </div>
+      </div>
+
+      {/* Scope: friends vs global */}
+      <div className="flex gap-1 mb-4 p-1 bg-grit-card border border-grit rounded-xl">
+        {(["following", "global"] as FeedScope[]).map((s) => (
+          <button
+            key={s}
+            onClick={() => setScope(s)}
+            className={`flex-1 py-2 rounded-lg label-cap text-[11px] transition-colors press ${
+              scope === s ? "bg-accent-red text-white" : "text-grit-dim"
+            }`}
+          >
+            {s === "following" ? "Following" : "Global"}
+          </button>
+        ))}
       </div>
 
       {/* My league card */}
