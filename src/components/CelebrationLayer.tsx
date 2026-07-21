@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Flame, Sparkles } from "lucide-react";
 import { onGritEarned, type GritAnimationEvent } from "@/lib/grit-events";
+import { maybeNudge } from "@/lib/upgrade-prompts";
 
 /**
  * Full-screen takeover for the moments that deserve more than a toast:
@@ -18,6 +19,8 @@ export function CelebrationLayer() {
         setEvent(e);
         if (timer.current) clearTimeout(timer.current);
         timer.current = setTimeout(() => setEvent(null), 1900);
+        // High-intent moment: after the celebration, a capped Pro nudge can ride along.
+        if (e.kind === "pr") setTimeout(() => maybeNudge("pr"), 2400);
       }),
     [],
   );

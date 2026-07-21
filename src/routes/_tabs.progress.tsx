@@ -11,6 +11,7 @@ import { groupForMuscle } from "@/lib/pr-groups";
 import { usePro } from "@/hooks/usePro";
 import { ProBanner } from "@/components/ProBanner";
 import { ProgressionBoard } from "@/components/ProgressionBoard";
+import { ProIntelligence } from "@/components/ProIntelligence";
 import { openPaywall } from "@/lib/paywall-events";
 import { askConfirm } from "@/lib/confirm";
 import { PR_CATALOG, getPRValue } from "@/lib/fifa-stats";
@@ -394,6 +395,11 @@ function ProgressPage() {
               analyticsLocked ? "pointer-events-none select-none blur-[6px] opacity-60" : undefined
             }
           >
+            {/* Pro Intelligence — the flagship deterministic engine */}
+            <div className="mb-6">
+              <ProIntelligence state={state} />
+            </div>
+
             {/* Training Consistency Heatmap */}
             <div className="mb-6">
               <p className="label-cap mb-2">Training Consistency</p>
@@ -557,15 +563,19 @@ function ProgressPage() {
           </div>
           {analyticsLocked && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="bg-grit-card border p-4 max-w-[260px] text-center">
-                <Lock size={20} className="text-accent-red mx-auto mb-2" />
-                <p className="label-cap mb-1">Advanced Analytics</p>
-                <p className="text-xs text-grit-dim mb-3">
-                  Volume balance, tonnage, curves and heatmap.
+              <div className="border p-5 max-w-[280px] text-center rounded-2xl border-pro pro-glow" style={{ background: "linear-gradient(135deg, #201a0c 0%, #2b2108 55%, #0d0a04 100%)" }}>
+                <Lock size={20} className="text-pro mx-auto mb-2" />
+                <p className="display text-lg font-extrabold uppercase text-pro-gradient leading-none">
+                  DEADSET Intelligence
+                </p>
+                <p className="text-xs text-[#b7ac8e] mt-2 mb-3 leading-relaxed">
+                  Volume Optimizer, Plateau Breaker, strength projections and your muscle-balance
+                  score — the coaching other apps charge $15/mo for.
                 </p>
                 <button
                   onClick={() => openPaywall("advanced-analytics")}
-                  className="btn-grit px-4 py-2 text-xs"
+                  className="w-full rounded-lg py-2.5 font-display font-extrabold uppercase tracking-wide text-[#14110a] text-sm"
+                  style={{ background: "linear-gradient(180deg, #f8d566, #eab212)" }}
                 >
                   Unlock With Pro
                 </button>

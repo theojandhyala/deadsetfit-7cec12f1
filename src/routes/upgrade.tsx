@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   ChevronLeft, Crown, Loader2, Shield, BarChart3,
-  Swords, Zap, Star, Users, Trophy, Flame, Check,
+  Swords, Zap, Star, Users, Trophy, Flame, Check, Activity,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
@@ -28,6 +28,12 @@ export const Route = createFileRoute("/upgrade")({
 });
 
 const PRO_FEATURES = [
+  {
+    icon: Activity,
+    color: "#f4c33a",
+    title: "DEADSET Intelligence",
+    desc: "Volume Optimizer (MEV/MAV/MRV), Plateau Breaker, strength-trajectory projections and a muscle-balance score — the science-based coaching other apps charge $15/mo for, built in.",
+  },
   {
     icon: Shield,
     color: "#FAFAFA",
