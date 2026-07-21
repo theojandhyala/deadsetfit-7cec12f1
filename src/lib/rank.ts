@@ -112,9 +112,9 @@ const TIERS: Array<{
     tier: "DEADSET",
     min: 990,
     max: 1000,
-    color: "#E10600",
-    glowColor: "#E10600",
-    gradient: ["#450a0a", "#E10600"],
+    color: "#e63222",
+    glowColor: "#e63222",
+    gradient: ["#450a0a", "#e63222"],
     icon: "🔥",
   },
 ];

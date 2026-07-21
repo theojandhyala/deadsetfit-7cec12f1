@@ -24,7 +24,7 @@ export const Route = createFileRoute("/_tabs/progress")({
 function ProgressPage() {
   const [state, set] = useAppState();
   const { isPro, loading } = usePro();
-  const analyticsLocked = !loading && !isPro;
+  const analyticsLocked = loading || !isPro;
   const photoRef = useRef<HTMLInputElement>(null);
   const [compare, setCompare] = useState<string[]>([]);
   // Log inputs are DOM-owned (defaultValue + ref, read on submit) — controlled
@@ -325,7 +325,7 @@ function ProgressPage() {
     >
       <ProBanner />
       <header className="px-5 pt-6 pb-4 animate-slide-down">
-        <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "#E10600" }}>
+        <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "#e63222" }}>
           DEADSET
         </p>
         <h1 className="display text-3xl font-extrabold uppercase text-white">Track The Work</h1>
@@ -350,7 +350,7 @@ function ProgressPage() {
         <Link
           to="/catalogue"
           className="deadset-3d-panel deadset-lift block w-full p-4 press"
-          style={{ background: "linear-gradient(135deg, rgba(225,6,0,0.14), #141414)", border: "1.5px solid rgba(225,6,0,0.4)" }}
+          style={{ background: "linear-gradient(135deg, rgba(230,50,34,0.14), #141414)", border: "1.5px solid rgba(230,50,34,0.4)" }}
         >
           <div className="flex items-center justify-between">
             <div>
@@ -360,7 +360,7 @@ function ProgressPage() {
               </p>
               <p className="text-[11px] text-grit-dim mt-1">Before → now, your PR wall, every photo.</p>
             </div>
-            <ImageIcon size={26} style={{ color: "#E10600" }} />
+            <ImageIcon size={26} style={{ color: "#e63222" }} />
           </div>
         </Link>
       </section>
@@ -406,7 +406,16 @@ function ProgressPage() {
             <div className="mb-6">
               <p className="label-cap mb-2">Weekly Tonnage (8 Weeks)</p>
               <div className="rounded-2xl p-4 flex flex-col gap-2">
-                {(() => {
+                {weeklyTonnage.every((w) => w.volume === 0) ? (
+                  <div className="text-center py-6">
+                    <p className="text-sm text-grit-dim">
+                      Log a session to start tracking your weekly tonnage.
+                    </p>
+                    <Link to="/workout/live" className="btn-ghost inline-block mt-3">
+                      Start a workout
+                    </Link>
+                  </div>
+                ) : (() => {
                   const max = Math.max(...weeklyTonnage.map((w) => w.volume), 1);
                   return weeklyTonnage.map((wk) => (
                     <div key={wk.label}>
@@ -423,7 +432,7 @@ function ProgressPage() {
                           className="h-full"
                           style={{
                             width: `${(wk.volume / max) * 100}%`,
-                            background: wk.isCurrent ? "#E10600" : "#7a1410",
+                            background: wk.isCurrent ? "#e63222" : "#7a1410",
                           }}
                         />
                       </div>
@@ -507,7 +516,7 @@ function ProgressPage() {
                         <p className="display text-sm uppercase font-extrabold text-white truncate">
                           {c.name}
                         </p>
-                        <p className="display text-lg font-extrabold text-[#E10600]">
+                        <p className="display text-lg font-extrabold text-[#e63222]">
                           {Math.max(...c.points.map((p) => p.weight))}KG
                         </p>
                       </div>
@@ -535,7 +544,7 @@ function ProgressPage() {
                         </div>
                         <div className="h-2 bg-[#0a0a0a]">
                           <div
-                            className="h-full bg-[#E10600]"
+                            className="h-full bg-[#e63222]"
                             style={{ width: `${(vol / max) * 100}%` }}
                           />
                         </div>
@@ -599,7 +608,7 @@ function ProgressPage() {
                       <span className="font-bold text-grit">{w.weight} kg</span>
                       <button
                         onClick={() => deleteWeight(w.date)}
-                        className="text-[#8A8A8A] hover:text-[#E10600]"
+                        className="text-[#8A8A8A] hover:text-[#e63222]"
                         aria-label="Delete entry"
                       >
                         <Trash2 size={12} />
@@ -628,7 +637,7 @@ function ProgressPage() {
               <MeasurementsChart entries={state.measurements} />
               <div className="flex gap-3 justify-center mt-2 text-[10px] label-cap">
                 <span className="flex items-center gap-1">
-                  <i className="w-2 h-2 inline-block" style={{ background: "#E10600" }} />
+                  <i className="w-2 h-2 inline-block" style={{ background: "#e63222" }} />
                   Chest
                 </span>
                 <span className="flex items-center gap-1">
@@ -660,7 +669,7 @@ function ProgressPage() {
                     </span>
                     <button
                       onClick={() => deleteMeasurement(m.date)}
-                      className="text-[#8A8A8A] hover:text-[#E10600]"
+                      className="text-[#8A8A8A] hover:text-[#e63222]"
                       aria-label="Delete entry"
                     >
                       <Trash2 size={12} />
@@ -753,7 +762,7 @@ function ProgressPage() {
                       <button
                         onClick={() => togglePhoto(c.date)}
                         className="relative border block w-full"
-                        style={{ borderColor: sel ? "#E10600" : "#262626" }}
+                        style={{ borderColor: sel ? "#e63222" : "#262626" }}
                       >
                         <img
                           src={c.photoDataUrl}
@@ -770,7 +779,7 @@ function ProgressPage() {
                       <button
                         onClick={() => deleteCheckIn(c.date)}
                         aria-label="Delete photo"
-                        className="absolute top-1 right-1 bg-black/80 rounded-2xl text-[#E10600] p-1 hover:bg-[#E10600] hover:text-black"
+                        className="absolute top-1 right-1 bg-black/80 rounded-2xl text-[#e63222] p-1 hover:bg-[#e63222] hover:text-black"
                       >
                         <Trash2 size={10} />
                       </button>
@@ -819,7 +828,7 @@ function Stat({
       </p>
       <p
         className="display text-3xl font-extrabold leading-none mt-1"
-        style={{ color: accent ? "#E10600" : "#ffffff" }}
+        style={{ color: accent ? "#e63222" : "#ffffff" }}
       >
         {value}
       </p>
@@ -907,7 +916,7 @@ function ConsistencyHeatmap({ completedDates }: { completedDates: string[] }) {
                   width: CELL,
                   height: CELL,
                   background:
-                    cell.count === 0 ? "#0A0A0A" : cell.count === 1 ? "#7a1410" : "#E10600",
+                    cell.count === 0 ? "#0A0A0A" : cell.count === 1 ? "#7a1410" : "#e63222",
                   flexShrink: 0,
                 }}
               />
@@ -918,7 +927,7 @@ function ConsistencyHeatmap({ completedDates }: { completedDates: string[] }) {
       {/* Legend */}
       <div className="flex items-center gap-2 mt-2">
         <span className="text-[9px] label-cap text-[#8A8A8A]">Less</span>
-        {["#0A0A0A", "#7a1410", "#E10600"].map((c) => (
+        {["#0A0A0A", "#7a1410", "#e63222"].map((c) => (
           <div key={c} style={{ width: CELL, height: CELL, background: c, flexShrink: 0 }} />
         ))}
         <span className="text-[9px] label-cap text-[#8A8A8A]">More</span>
@@ -955,7 +964,7 @@ function StreakCalendar({ completedDates }: { completedDates: string[] }) {
               title={c.date}
               className="w-3 h-3"
               style={{
-                background: c.done ? "#E10600" : "#0A0A0A",
+                background: c.done ? "#e63222" : "#0A0A0A",
                 outline: c.isToday ? "1px solid #f5f5f0" : undefined,
               }}
             />
@@ -983,7 +992,7 @@ function LineChart({ points }: { points: number[] }) {
     .join(" ");
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-20" preserveAspectRatio="none">
-      <polyline points={pts} fill="none" stroke="#E10600" strokeWidth="2" />
+      <polyline points={pts} fill="none" stroke="#e63222" strokeWidth="2" />
     </svg>
   );
 }
@@ -1007,7 +1016,7 @@ function WeightChart({ entries }: { entries: { date: string; weight: number }[] 
     .join(" ");
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-24">
-      <polyline points={pts} fill="none" stroke="#E10600" strokeWidth="2" />
+      <polyline points={pts} fill="none" stroke="#e63222" strokeWidth="2" />
       {entries.map((e, i) => {
         const x = pad + (i * (w - pad * 2)) / (entries.length - 1);
         const y = h - pad - ((e.weight - min) / range) * (h - pad * 2);
@@ -1041,7 +1050,7 @@ function MeasurementsChart({
     h = 110,
     pad = 8;
   const keys: { k: "chest" | "waist" | "arms" | "legs"; color: string }[] = [
-    { k: "chest", color: "#E10600" },
+    { k: "chest", color: "#e63222" },
     { k: "waist", color: "#ffffff" },
     { k: "arms", color: "#7acc7a" },
     { k: "legs", color: "#7aa3cc" },

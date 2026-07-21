@@ -178,7 +178,7 @@ export type GritLevel = GritBadge;
 export function badgeColor(b: GritBadge): string {
   switch (b) {
     case "DEADSET GOD":
-      return "#E10600";
+      return "#e63222";
     case "ELITE":
       return "#a78bfa";
     case "BEAST":

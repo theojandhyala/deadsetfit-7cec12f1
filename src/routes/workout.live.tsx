@@ -457,7 +457,7 @@ function LiveWorkoutPage() {
           <button
             onClick={() => repeatSession(lastDone.id)}
             className="deadset-3d-panel deadset-lift w-full p-4 mb-5 text-left press"
-            style={{ background: "linear-gradient(135deg, rgba(225,6,0,0.14), #141414)", border: "1.5px solid rgba(225,6,0,0.4)" }}
+            style={{ background: "linear-gradient(135deg, rgba(230,50,34,0.14), #141414)", border: "1.5px solid rgba(230,50,34,0.4)" }}
           >
             <div className="flex items-center justify-between">
               <div className="min-w-0">
@@ -469,7 +469,7 @@ function LiveWorkoutPage() {
                   {(lastDone.label || "Session").split(" — ")[0]} · {lastDone.exercises.length} exercises
                 </p>
               </div>
-              <Play size={22} style={{ color: "#E10600" }} className="shrink-0" />
+              <Play size={22} style={{ color: "#e63222" }} className="shrink-0" />
             </div>
           </button>
         )}
@@ -892,7 +892,7 @@ function SetLogger({
   const planned = plannedWorking + (logged - loggedWorking);
   const nextWeight = override?.weight ?? defaultWeight;
   const nextReps = override?.reps ?? defaultReps;
-  const progressionLocked = !proLoading && !isProUser;
+  const progressionLocked = proLoading || !isProUser;
   const bodyweight = nextWeight <= 0;
   const plates = !bodyweight && nextWeight >= 20 ? plateBreakdown(nextWeight) : null;
   // Warm-up ramp stays available until the first working set is logged, so all
@@ -1098,7 +1098,7 @@ function SetLogger({
                 </span>
                 <span
                   className="label-cap text-[10px]"
-                  style={{ color: doneSet?.kind === "drop" ? "#E10600" : "#8a8a8a" }}
+                  style={{ color: doneSet?.kind === "drop" ? "#e63222" : "#8a8a8a" }}
                 >
                   {doneSet?.kind === "drop"
                     ? "DROP"

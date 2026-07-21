@@ -384,7 +384,7 @@ function ProgramsPage() {
   const [state, set] = useAppState();
   const nav = useNavigate();
   const { isPro, loading } = usePro();
-  const locked = !loading && !isPro;
+  const locked = loading || !isPro;
   const [preview, setPreview] = useState<string | null>(null);
 
   const customProgramCount = state.programs.filter(
@@ -456,9 +456,11 @@ function ProgramsPage() {
       <p className="label-cap text-grit-dim text-xs mb-5">Build your own splits</p>
 
       {state.programs.length === 0 && (
-        <div className="bg-grit-card border border-grit p-6 text-center mb-5">
-          <p className="label-cap text-grit-dim text-xs mb-1">No programs yet</p>
-          <p className="text-sm text-grit">Create one below to start building.</p>
+        <div className="bg-grit-card border border-grit p-6 text-center mb-5 animate-pop-in">
+          <p className="display text-xl font-extrabold uppercase text-grit">Build your first split</p>
+          <p className="text-sm text-grit-dim mt-1">
+            Start from an expert template below, or build your own day by day.
+          </p>
         </div>
       )}
 
@@ -471,7 +473,7 @@ function ProgramsPage() {
             <li
               key={p.id}
               className="bg-grit-card border"
-              style={{ borderColor: isActive ? "#E10600" : "#262626" }}
+              style={{ borderColor: isActive ? "#e63222" : "#262626" }}
             >
               <div className="flex items-stretch">
                 <Link
@@ -587,7 +589,7 @@ function ProgramsPage() {
           <li key={t.type}>
             <button
               onClick={() => create(t)}
-              className="w-full bg-grit-card border border-grit p-4 flex items-center justify-between text-left"
+              className="w-full bg-grit-card border border-grit p-4 flex items-center justify-between text-left press"
             >
               <div>
                 <div className="display uppercase font-extrabold text-grit text-base">{t.name}</div>

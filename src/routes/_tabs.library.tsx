@@ -71,7 +71,7 @@ function LibraryPage() {
             onClick={() => setCategory(c)}
             className="px-3 py-1.5 text-[11px] label-cap whitespace-nowrap"
             style={{
-              background: category === c ? "#E10600" : "#1a1a1a",
+              background: category === c ? "#e63222" : "#1a1a1a",
               color: category === c ? "#0a0a0a" : "#f5f5f0",
               border: "1px solid #2a2a2a",
             }}
@@ -87,7 +87,7 @@ function LibraryPage() {
             onClick={() => setEquipment(e)}
             className="px-3 py-1.5 text-[11px] label-cap whitespace-nowrap"
             style={{
-              background: equipment === e ? "#E10600" : "#0a0a0a",
+              background: equipment === e ? "#e63222" : "#0a0a0a",
               color: equipment === e ? "#0a0a0a" : "#f5f5f0",
               border: "1px solid #2a2a2a",
             }}
@@ -121,7 +121,7 @@ function LibraryPage() {
                       style={{
                         width: 4,
                         height: 16,
-                        background: d <= ex.difficulty ? "#E10600" : "#2a2a2a",
+                        background: d <= ex.difficulty ? "#e63222" : "#2a2a2a",
                       }}
                     />
                   ))}
@@ -175,7 +175,7 @@ function LibraryPage() {
               <p className="text-sm text-grit leading-relaxed">{open.instructions}</p>
               <div
                 className="mt-3 p-3"
-                style={{ background: "#1a1a1a", borderLeft: "3px solid #E10600" }}
+                style={{ background: "#1a1a1a", borderLeft: "3px solid #e63222" }}
               >
                 <div className="label-cap text-[10px] text-grit-dim mb-1">PRO TIP</div>
                 <p className="text-sm text-grit">{open.pro_tip}</p>
@@ -194,7 +194,7 @@ function LibraryPage() {
               <button
                 onClick={() => setVideo(open.youtube_query)}
                 className="w-full mt-5 py-3 label-cap text-sm"
-                style={{ background: "#E10600", color: "#0a0a0a" }}
+                style={{ background: "#e63222", color: "#0a0a0a" }}
               >
                 Watch Form Video
               </button>

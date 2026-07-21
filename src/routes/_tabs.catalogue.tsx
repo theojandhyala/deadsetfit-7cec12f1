@@ -24,7 +24,7 @@ function Sparkline({ values }: { values: number[] }) {
     })
     .join(" ");
   const up = values[values.length - 1] >= values[0];
-  const color = up ? "#E10600" : "#8A8A8A";
+  const color = up ? "#e63222" : "#8A8A8A";
   return (
     <svg width={w} height={h} className="overflow-visible" aria-hidden>
       <polyline points={pts} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
@@ -210,7 +210,7 @@ function CataloguePage() {
       <section className="px-5 mb-6 grid grid-cols-4 gap-2 animate-slide-up">
         {stats.map((s) => (
           <div key={s.label} className="deadset-3d-panel bg-grit-card border border-grit p-3 text-center">
-            <s.icon size={16} className="mx-auto mb-1" style={{ color: "#E10600" }} />
+            <s.icon size={16} className="mx-auto mb-1" style={{ color: "#e63222" }} />
             <p className="display text-xl font-extrabold text-white leading-none">{s.value}</p>
             <p className="label-cap text-[8px] text-grit-dim mt-1">{s.label}</p>
           </div>
@@ -258,7 +258,7 @@ function CataloguePage() {
             onClick={() => fileRef.current?.click()}
             className="deadset-3d-panel border border-dashed border-grit bg-grit-card w-full p-8 text-center press"
           >
-            <Camera size={28} className="mx-auto mb-3" style={{ color: "#E10600" }} />
+            <Camera size={28} className="mx-auto mb-3" style={{ color: "#e63222" }} />
             <p className="display text-lg font-extrabold uppercase text-grit">Start your before shot</p>
             <p className="text-xs text-grit-dim mt-1">The photo you'll be glad you took.</p>
           </button>

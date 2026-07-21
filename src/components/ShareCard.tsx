@@ -26,12 +26,12 @@ export function ShareCard({ session, onClose }: { session: WorkoutSession; onClo
     ctx.fillRect(0, 0, w, h);
 
     // Top + bottom safe-zone hint rails (TikTok UI overlays the edges)
-    ctx.fillStyle = "#E10600";
+    ctx.fillStyle = "#e63222";
     ctx.fillRect(0, 0, w, 16);
     ctx.fillRect(0, h - 16, w, 16);
 
     // Diagonal red wedge top-right
-    ctx.fillStyle = "#E10600";
+    ctx.fillStyle = "#e63222";
     ctx.beginPath();
     ctx.moveTo(w, 0);
     ctx.lineTo(w, 520);
@@ -48,7 +48,7 @@ export function ShareCard({ session, onClose }: { session: WorkoutSession; onClo
     ctx.fillText("FORGE YOUR BODY", 70, 285);
 
     // Session complete badge
-    ctx.fillStyle = "#E10600";
+    ctx.fillStyle = "#e63222";
     ctx.font = "700 38px Arial, sans-serif";
     ctx.fillText("SESSION COMPLETE", 70, 460);
 
@@ -79,7 +79,7 @@ export function ShareCard({ session, onClose }: { session: WorkoutSession; onClo
       ctx.strokeStyle = "#2a2a2a";
       ctx.lineWidth = 3;
       ctx.strokeRect(x, y, cellW, cellH);
-      ctx.fillStyle = "#E10600";
+      ctx.fillStyle = "#e63222";
       ctx.font = "700 30px Arial, sans-serif";
       ctx.fillText(s.k, x + 28, y + 62);
       ctx.fillStyle = "#f5f5f0";
@@ -93,7 +93,7 @@ export function ShareCard({ session, onClose }: { session: WorkoutSession; onClo
     ctx.fillText(new Date(session.startedAt).toDateString().toUpperCase(), 70, 1540);
 
     // CTA bottom
-    ctx.fillStyle = "#E10600";
+    ctx.fillStyle = "#e63222";
     ctx.fillRect(70, 1670, w - 140, 4);
     ctx.fillStyle = "#f5f5f0";
     ctx.font = "900 76px Impact, 'Arial Black', sans-serif";

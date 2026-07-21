@@ -16,7 +16,7 @@ export const TIER_COLORS: Record<StandardTier, string> = {
   NOVICE: "#b8b8b0",
   INTERMEDIATE: "#fbbf24",
   ADVANCED: "#e63222",
-  ELITE: "#E10600",
+  ELITE: "#e63222",
 };
 
 type LiftId = "bench-press" | "squat" | "deadlift";

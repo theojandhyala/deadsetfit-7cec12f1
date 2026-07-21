@@ -55,7 +55,7 @@ export function ProgressionBoard() {
                 <div className="flex items-center gap-2 shrink-0">
                   <span
                     className={"display text-lg font-extrabold leading-none" + (locked ? " blur-[5px] select-none" : "")}
-                    style={{ color: up ? "#E10600" : "#8A8A8A" }}
+                    style={{ color: up ? "#e63222" : "#8A8A8A" }}
                   >
                     {e.suggestion.weightKg}kg
                   </span>

@@ -87,7 +87,7 @@ export function TopBar() {
           style={{ fontStyle: "italic", letterSpacing: "0.12em" }}
         >
           <span style={{ color: "#ffffff" }}>DEAD</span>
-          <span style={{ color: "#E10600" }}>SET</span>
+          <span style={{ color: "#e63222" }}>SET</span>
         </span>
       </div>
 

@@ -64,14 +64,14 @@ export function RankShareCard({
     ctx.fillRect(0, 0, W, H);
 
     // ── DEADSET logo ─────────────────────────────────────────────
-    ctx.fillStyle = "#E10600";
+    ctx.fillStyle = "#e63222";
     roundRect(ctx, 60, 62, 10, 86, 5);
     ctx.fill();
     ctx.fillStyle = "#ffffff";
     ctx.font = "900 italic 88px 'Arial Black', Impact, sans-serif";
     ctx.textAlign = "left";
     ctx.fillText("DEAD", 92, 126);
-    ctx.fillStyle = "#E10600";
+    ctx.fillStyle = "#e63222";
     ctx.fillText("SET", 92 + ctx.measureText("DEAD").width, 126);
 
     ctx.fillStyle = "#8c8c94";
@@ -186,7 +186,7 @@ export function RankShareCard({
     ctx.textAlign = "center";
     ctx.fillText((displayName || "ATHLETE").toUpperCase().slice(0, 20), W / 2, embY + embR + 260);
     if (username) {
-      ctx.fillStyle = "#E10600";
+      ctx.fillStyle = "#e63222";
       ctx.font = "700 34px Arial, sans-serif";
       ctx.fillText(`@${username}`, W / 2, embY + embR + 310);
     }
@@ -259,7 +259,7 @@ export function RankShareCard({
     });
 
     // ── CTA footer ───────────────────────────────────────────────
-    ctx.fillStyle = "#E10600";
+    ctx.fillStyle = "#e63222";
     ctx.fillRect(0, H - 100, W, 4);
 
     ctx.fillStyle = "#333";
@@ -346,7 +346,7 @@ export function RankShareCard({
           <button
             onClick={shareNow}
             className="flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm"
-            style={{ background: "#E10600", color: "#fff" }}
+            style={{ background: "#e63222", color: "#fff" }}
           >
             <Share2 size={16} />
             Post

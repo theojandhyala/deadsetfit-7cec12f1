@@ -31,7 +31,7 @@ export function WeeklyRecapCard({ recap, onClose }: { recap: WeeklyRecap; onClos
     bg.addColorStop(1, "#141414");
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = "#E10600";
+    ctx.fillStyle = "#e63222";
     ctx.fillRect(0, 0, w, 16);
     ctx.fillRect(0, h - 16, w, 16);
     ctx.beginPath();
@@ -48,7 +48,7 @@ export function WeeklyRecapCard({ recap, onClose }: { recap: WeeklyRecap; onClos
     ctx.fillStyle = "#8a8a8a";
     ctx.fillText("FORGE YOUR BODY", 70, 285);
 
-    ctx.fillStyle = "#E10600";
+    ctx.fillStyle = "#e63222";
     ctx.font = "700 38px Arial, sans-serif";
     ctx.fillText("MY WEEK", 70, 460);
     ctx.fillStyle = "#f5f5f0";
@@ -80,7 +80,7 @@ export function WeeklyRecapCard({ recap, onClose }: { recap: WeeklyRecap; onClos
     }
 
     if (recap.topLift) {
-      ctx.fillStyle = "#E10600";
+      ctx.fillStyle = "#e63222";
       ctx.font = "700 36px Arial, sans-serif";
       ctx.fillText("TOP LIFT OF THE WEEK", 70, y + 20);
       ctx.fillStyle = "#f5f5f0";

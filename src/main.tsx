@@ -15,7 +15,7 @@ function renderBootFailure(error: unknown) {
     <main style="min-height:100vh;display:grid;place-items:center;background:#0a0a0a;color:#f5f5f0;font-family:Inter,system-ui,sans-serif;padding:24px;text-align:center">
       <div style="max-width:360px">
         <h1 style="margin:0;font-family:Impact,'Arial Black',sans-serif;font-size:44px;font-style:italic;letter-spacing:-.04em">
-          DEAD<span style="color:#E10600">SET</span>
+          DEAD<span style="color:#e63222">SET</span>
         </h1>
         <p style="margin:18px 0 0;color:#f5f5f0;font-size:14px;font-weight:800;letter-spacing:.14em;text-transform:uppercase">
           Loading hit a snag
@@ -23,7 +23,7 @@ function renderBootFailure(error: unknown) {
         <p style="margin:10px 0 22px;color:#8a8a8a;font-size:13px;line-height:1.5">
           Your account data is safe. Reload the app to pull the latest version.
         </p>
-        <button onclick="window.location.reload()" style="appearance:none;border:0;background:#E10600;color:white;padding:14px 22px;font-weight:900;letter-spacing:.12em;text-transform:uppercase">
+        <button onclick="window.location.reload()" style="appearance:none;border:0;background:#e63222;color:white;padding:14px 22px;font-weight:900;letter-spacing:.12em;text-transform:uppercase">
           Reload DEADSET
         </button>
       </div>

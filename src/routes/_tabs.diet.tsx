@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Plus, ScanBarcode, Droplets, Bell, BellOff, Trash2, Target, Utensils, ShieldCheck, CalendarDays } from "lucide-react";
 
@@ -46,7 +46,7 @@ function DietPage() {
   const waterToday = state.water.filter(w => w.date === today).reduce((s, w) => s + w.ml, 0);
 
   const { isPro, loading: proLoading } = usePro();
-  const nutritionLocked = !proLoading && !isPro;
+  const nutritionLocked = proLoading || !isPro;
 
   // Apple Watch active burn (native iOS + Health connected only)
   const [activeBurn, setActiveBurn] = useState<number | null>(null);
@@ -268,6 +268,19 @@ function DietPage() {
       <header className="deadset-section">
         <div className="deadset-hero-card p-5">
           <div className="relative">
+            {calories === 0 ? (
+              <div className="text-center py-4">
+                <p className="label-cap text-accent-red">Fuel dashboard</p>
+                <p className="display text-2xl font-extrabold text-grit mt-3 uppercase">Set your nutrition goal</p>
+                <p className="text-sm text-grit-dim mt-1 mb-4">
+                  Tell us your target and we'll build your daily calories and macros.
+                </p>
+                <Link to="/onboarding" className="btn-grit inline-block rounded-2xl">
+                  Set my goal
+                </Link>
+              </div>
+            ) : (
+            <>
             <p className="label-cap text-accent-red">Fuel dashboard</p>
             <div className="flex items-end justify-between gap-4 mt-2">
               <div>
@@ -296,19 +309,23 @@ function DietPage() {
               <ProgressLine label="Protein" value={Math.round(totals.p)} target={macros.protein} color="#e63222" unit="g" />
               <ProgressLine label="Water" value={waterToday} target={state.waterTargetMl} color="#3b9eff" unit="ml" />
             </div>
+            </>
+            )}
           </div>
         </div>
       </header>
 
-      <section className="deadset-section">
-        <CalorieGoalGrid
-          days={calorieGrid.days}
-          streak={calorieGrid.streak}
-          hitCount={calorieGrid.hitCount}
-          target={calories}
-          goal={profile?.goal}
-        />
-      </section>
+      {calories > 0 && (
+        <section className="deadset-section">
+          <CalorieGoalGrid
+            days={calorieGrid.days}
+            streak={calorieGrid.streak}
+            hitCount={calorieGrid.hitCount}
+            target={calories}
+            goal={profile?.goal}
+          />
+        </section>
+      )}
 
       {/* Advanced Nutrition (Pro) — needs real targets to grade against */}
       {calories > 0 && macros.protein > 0 && (

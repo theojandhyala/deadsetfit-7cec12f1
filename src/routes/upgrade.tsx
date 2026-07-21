@@ -42,7 +42,7 @@ const PRO_FEATURES = [
   },
   {
     icon: Trophy,
-    color: "#E10600",
+    color: "#e63222",
     title: "Weekly Leagues — Full Access",
     desc: "Compete across all nine divisions — Bronze to DEADSET. Promote, relegate, dominate.",
   },
@@ -166,7 +166,7 @@ function UpgradePage() {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: "#0A0A0A" }}>
         <div className="text-center px-6">
-          <Loader2 className="animate-spin mx-auto" size={24} style={{ color: "#E10600" }} />
+          <Loader2 className="animate-spin mx-auto" size={24} style={{ color: "#e63222" }} />
           <p className="label-cap mt-4 text-xs text-grit-dim">Opening Pro</p>
         </div>
       </div>
@@ -183,21 +183,21 @@ function UpgradePage() {
           className="relative px-6 pt-14 pb-10 text-center overflow-hidden"
           style={{
             background:
-              "radial-gradient(ellipse 90% 70% at 50% -10%, rgba(225,6,0,0.28), transparent 65%)",
+              "radial-gradient(ellipse 90% 70% at 50% -10%, rgba(230,50,34,0.28), transparent 65%)",
           }}
         >
           <div
             className="mx-auto w-16 h-16 rounded-2xl flex items-center justify-center"
             style={{
-              background: "linear-gradient(135deg, #E10600, #7a0300)",
-              boxShadow: "0 10px 40px rgba(225,6,0,0.45)",
+              background: "linear-gradient(135deg, #e63222, #7a0300)",
+              boxShadow: "0 10px 40px rgba(230,50,34,0.45)",
             }}
           >
             <Crown size={30} color="#fff" />
           </div>
           <h1 className="display text-4xl font-extrabold uppercase tracking-wide mt-5 leading-none">
             <span className="text-white">DEADSET</span>{" "}
-            <span style={{ color: "#E10600" }}>PRO</span>
+            <span style={{ color: "#e63222" }}>PRO</span>
           </h1>
           <p className="mt-3 text-sm max-w-xs mx-auto leading-relaxed" style={{ color: "#8A8A8A" }}>
             Everything core is free forever. Pro is for the ones chasing rank —
@@ -209,11 +209,11 @@ function UpgradePage() {
         <div className="px-5 grid grid-cols-2 gap-3 -mt-2">
           <div
             className="deadset-3d-panel rounded-2xl p-4 text-left"
-            style={{ background: "rgba(225,6,0,0.10)", border: "2px solid #E10600" }}
+            style={{ background: "rgba(230,50,34,0.10)", border: "2px solid #e63222" }}
           >
             <span
               className="inline-block text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full text-white"
-              style={{ background: "#E10600" }}
+              style={{ background: "#e63222" }}
             >
               Best value · Save 33%
             </span>
@@ -245,7 +245,7 @@ function UpgradePage() {
             <div className="grid grid-cols-[1fr_52px_52px] items-center px-4 py-3 border-b border-grit bg-[#101010]">
               <span className="label-cap text-[9px] text-grit-dim">What you get</span>
               <span className="label-cap text-[9px] text-grit-dim text-center">Free</span>
-              <span className="label-cap text-[9px] text-center" style={{ color: "#E10600" }}>
+              <span className="label-cap text-[9px] text-center" style={{ color: "#e63222" }}>
                 Pro
               </span>
             </div>
@@ -260,9 +260,9 @@ function UpgradePage() {
                 </span>
                 <span className="text-center px-0.5">
                   {typeof r.pro === "string" ? (
-                    <span className="text-[10px] leading-tight font-bold" style={{ color: "#E10600" }}>{r.pro}</span>
+                    <span className="text-[10px] leading-tight font-bold" style={{ color: "#e63222" }}>{r.pro}</span>
                   ) : (
-                    <Check size={14} className="inline" style={{ color: "#E10600" }} />
+                    <Check size={14} className="inline" style={{ color: "#e63222" }} />
                   )}
                 </span>
               </div>
@@ -271,14 +271,14 @@ function UpgradePage() {
         </div>
 
         {/* Trust strip */}
-        <p className="mt-4 px-8 text-center label-cap text-[9px] leading-relaxed" style={{ color: "#6B7280" }}>
+        <p className="mt-4 px-8 text-center label-cap text-[9px] leading-relaxed" style={{ color: "#8a8a8a" }}>
           Secure payment by Stripe · Promo codes enabled · Cancel anytime
         </p>
 
         {/* CTA */}
         <div className="px-5 mt-5">
           {sessionError && (
-            <p className="mb-3 text-center text-xs" style={{ color: "#E10600" }}>{sessionError}</p>
+            <p className="mb-3 text-center text-xs" style={{ color: "#e63222" }}>{sessionError}</p>
           )}
           <button
             onClick={() => navigate({ to: "/auth" })}
@@ -287,7 +287,7 @@ function UpgradePage() {
             <Crown size={16} className="inline mr-2" />
             Sign in / Create account
           </button>
-          <p className="mt-2.5 text-center text-[10px]" style={{ color: "#6B7280" }}>
+          <p className="mt-2.5 text-center text-[10px]" style={{ color: "#8a8a8a" }}>
             Takes under a minute — then checkout loads right here.
           </p>
           <Link
@@ -306,7 +306,7 @@ function UpgradePage() {
       <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center" style={{ background: "#0A0A0A" }}>
         <div
           className="w-20 h-20 rounded-full flex items-center justify-center mb-6"
-          style={{ background: "linear-gradient(135deg, #E10600 0%, #E10600 100%)", boxShadow: "0 8px 32px rgba(225,6,0,0.5)" }}
+          style={{ background: "linear-gradient(135deg, #e63222 0%, #e63222 100%)", boxShadow: "0 8px 32px rgba(230,50,34,0.5)" }}
         >
           <Crown size={36} color="#fff" />
         </div>
@@ -318,7 +318,7 @@ function UpgradePage() {
             onClick={openBillingPortal}
             disabled={billingLoading}
             className="mt-3 text-xs uppercase tracking-widest disabled:opacity-60"
-            style={{ color: "#6B7280" }}
+            style={{ color: "#8a8a8a" }}
           >
             {billingLoading ? "Opening billing…" : "Manage subscription"}
           </button>
@@ -349,7 +349,7 @@ function UpgradePage() {
         <div className="px-5 pb-16 deadset-3d-scene">
           {loading && (
             <div className="mb-4 border border-white/10 bg-white/[0.03] px-4 py-3 text-center">
-              <Loader2 className="mr-2 inline animate-spin" size={13} style={{ color: "#E10600" }} />
+              <Loader2 className="mr-2 inline animate-spin" size={13} style={{ color: "#e63222" }} />
               <span className="label-cap text-[10px] text-grit-dim">
                 Checking your Pro status in the background
               </span>
@@ -359,11 +359,11 @@ function UpgradePage() {
           <div className="text-center mb-8 animate-slide-up">
             <div
               className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 deadset-float deadset-pulse-glow"
-              style={{ background: "linear-gradient(135deg, #E10600 0%, #E10600 100%)", boxShadow: "0 8px 32px rgba(225,6,0,0.4)" }}
+              style={{ background: "linear-gradient(135deg, #e63222 0%, #e63222 100%)", boxShadow: "0 8px 32px rgba(230,50,34,0.4)" }}
             >
               <Crown size={28} color="#fff" />
             </div>
-            <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: "#E10600" }}>
+            <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: "#e63222" }}>
               DEADSET Pro
             </p>
             <h1 className="display text-4xl font-extrabold text-white uppercase leading-tight">
@@ -374,7 +374,7 @@ function UpgradePage() {
             </p>
             <div className="flex items-center justify-center gap-4 mt-4">
               <div className="flex items-center gap-1.5 animate-pop-in delay-50">
-                <Users size={13} style={{ color: "#E10600" }} />
+                <Users size={13} style={{ color: "#e63222" }} />
                 <span className="text-xs font-bold text-white">15 Pro features</span>
               </div>
               <div className="flex items-center gap-1.5 animate-pop-in delay-150">
@@ -382,7 +382,7 @@ function UpgradePage() {
                 <span className="text-xs font-bold text-white">9 ranked leagues</span>
               </div>
               <div className="flex items-center gap-1.5 animate-pop-in delay-250">
-                <Flame size={13} style={{ color: "#E10600" }} />
+                <Flame size={13} style={{ color: "#e63222" }} />
                 <span className="text-xs font-bold text-white">Cancel any time</span>
               </div>
             </div>
@@ -437,7 +437,7 @@ function UpgradePage() {
           <button
             onClick={() => setShowCompare(v => !v)}
             className="w-full text-center text-xs font-bold uppercase tracking-widest mb-4 py-2 press"
-            style={{ color: "#E10600" }}
+            style={{ color: "#e63222" }}
           >
             {showCompare ? "Hide" : "See"} Free vs Pro comparison
           </button>
@@ -452,7 +452,7 @@ function UpgradePage() {
               >
                 <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#8A8A8A" }}>Feature</span>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-center" style={{ color: "#8A8A8A" }}>Free</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-center" style={{ color: "#E10600" }}>Pro</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-center" style={{ color: "#e63222" }}>Pro</span>
               </div>
               {COMPARE_ROWS.map((row, i) => (
                 <div
@@ -469,7 +469,7 @@ function UpgradePage() {
                   </span>
                   <span
                     className={`text-center font-bold ${typeof row.pro === "string" ? "text-[10px] uppercase tracking-wider" : "text-sm"}`}
-                    style={{ color: "#E10600" }}
+                    style={{ color: "#e63222" }}
                   >
                     {typeof row.pro === "string" ? row.pro : "✓"}
                   </span>
@@ -480,7 +480,7 @@ function UpgradePage() {
 
           {iosNative ? (
             <div className="deadset-3d-panel mb-6 p-5 text-center" style={{ background: "#141414", border: "1.5px solid #262626" }}>
-              <Crown size={24} className="mx-auto mb-3" style={{ color: "#E10600" }} />
+              <Crown size={24} className="mx-auto mb-3" style={{ color: "#e63222" }} />
               <p className="display text-xl font-extrabold uppercase text-white">Pro is coming to iPhone</p>
               <p className="mt-2 text-sm leading-relaxed" style={{ color: "#8A8A8A" }}>
                 DEADSET Pro isn’t available on iPhone yet. Keep training free — every core
@@ -495,13 +495,13 @@ function UpgradePage() {
                   onClick={() => setPlan("yearly")}
                   className="deadset-3d-panel deadset-lift animate-subtle-pulse w-full text-left p-4 relative press"
                   style={{
-                    background: plan === "yearly" ? "rgba(225,6,0,0.1)" : "#141414",
-                    border: `2px solid ${plan === "yearly" ? "#E10600" : "#262626"}`,
+                    background: plan === "yearly" ? "rgba(230,50,34,0.1)" : "#141414",
+                    border: `2px solid ${plan === "yearly" ? "#e63222" : "#262626"}`,
                   }}
                 >
                   <span
                     className="absolute -top-2.5 left-4 text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full text-white"
-                    style={{ background: "#E10600" }}
+                    style={{ background: "#e63222" }}
                   >
                     Most Popular · Save 33%
                   </span>
@@ -521,8 +521,8 @@ function UpgradePage() {
                   onClick={() => setPlan("monthly")}
                   className="deadset-3d-panel deadset-lift w-full text-left p-4 press"
                   style={{
-                    background: plan === "monthly" ? "rgba(225,6,0,0.1)" : "#141414",
-                    border: `2px solid ${plan === "monthly" ? "#E10600" : "#262626"}`,
+                    background: plan === "monthly" ? "rgba(230,50,34,0.1)" : "#141414",
+                    border: `2px solid ${plan === "monthly" ? "#e63222" : "#262626"}`,
                   }}
                 >
                   <div className="flex items-baseline justify-between">
@@ -566,7 +566,7 @@ function UpgradePage() {
                   "Prefer a separate page? Open secure Stripe checkout"
                 )}
               </button>
-              <p className="mt-3 text-center text-[10px] uppercase tracking-widest" style={{ color: "#6B7280" }}>
+              <p className="mt-3 text-center text-[10px] uppercase tracking-widest" style={{ color: "#8a8a8a" }}>
                 Secure payment by Stripe · Promo codes enabled · Cancel anytime
               </p>
             </>

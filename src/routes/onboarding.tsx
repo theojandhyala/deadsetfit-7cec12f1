@@ -626,7 +626,7 @@ function UsernameStep({ initial, onSubmit }: { initial?: string; onSubmit: (u: s
           placeholder="ironwolf"
         />
       </div>
-      <button disabled={!valid} onClick={() => onSubmit(clean)} className="btn-grit mt-auto">
+      <button disabled={!valid} onClick={() => onSubmit(clean)} className="btn-grit mt-auto disabled:opacity-40">
         Continue
       </button>
     </>
@@ -782,7 +782,7 @@ function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
       <div className="flex flex-col gap-3">
         <button
           onClick={() => onPick("GENERATE")}
-          className="bg-grit-card border-2 border-accent-red rounded-3xl p-6 text-left hover:bg-[#1a0a08] transition-colors"
+          className="bg-grit-card border-2 border-accent-red rounded-3xl p-6 text-left hover:bg-[#1a0a08] transition-colors press"
         >
           <div className="flex items-center gap-2 mb-1">
             <Zap size={14} className="text-accent-red" />
@@ -795,7 +795,7 @@ function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
         </button>
         <button
           onClick={() => onPick("BUILD")}
-          className="bg-grit-card border border-grit rounded-3xl p-6 text-left hover:border-accent-red transition-colors"
+          className="bg-grit-card border border-grit rounded-3xl p-6 text-left hover:border-accent-red transition-colors press"
         >
           <span className="display text-2xl uppercase tracking-wide font-extrabold text-grit block">
             Build Your Own
@@ -1172,13 +1172,13 @@ function ProChoiceStep({ onChoose }: { onChoose: (goPro: boolean) => void }) {
           onClick={() => setPlan("yearly")}
           className="rounded-2xl border p-3 text-left press relative"
           style={{
-            background: plan === "yearly" ? "rgba(225,6,0,0.12)" : "#141414",
-            borderColor: plan === "yearly" ? "#E10600" : "#262626",
+            background: plan === "yearly" ? "rgba(230,50,34,0.12)" : "#141414",
+            borderColor: plan === "yearly" ? "#e63222" : "#262626",
           }}
         >
           <span
             className="absolute -top-2 left-3 text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-full text-white"
-            style={{ background: "#E10600" }}
+            style={{ background: "#e63222" }}
           >
             Save 33%
           </span>
@@ -1190,8 +1190,8 @@ function ProChoiceStep({ onChoose }: { onChoose: (goPro: boolean) => void }) {
           onClick={() => setPlan("monthly")}
           className="rounded-2xl border p-3 text-left press"
           style={{
-            background: plan === "monthly" ? "rgba(225,6,0,0.12)" : "#141414",
-            borderColor: plan === "monthly" ? "#E10600" : "#262626",
+            background: plan === "monthly" ? "rgba(230,50,34,0.12)" : "#141414",
+            borderColor: plan === "monthly" ? "#e63222" : "#262626",
           }}
         >
           <p className="label-cap text-[9px] text-grit-dim">Monthly</p>
@@ -1328,8 +1328,8 @@ function CommitStep({
             onClick={() => setHorizon(d)}
             className="py-3 rounded-xl border press font-bold text-sm"
             style={{
-              background: horizon === d ? "rgba(225,6,0,0.12)" : "#141414",
-              borderColor: horizon === d ? "#E10600" : "#262626",
+              background: horizon === d ? "rgba(230,50,34,0.12)" : "#141414",
+              borderColor: horizon === d ? "#e63222" : "#262626",
               color: horizon === d ? "#fff" : "#8A8A8A",
             }}
           >

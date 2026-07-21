@@ -43,7 +43,7 @@ export function CelebrationLayer() {
     >
       <span
         className="celebrate-flash pointer-events-none absolute inset-0"
-        style={{ background: "radial-gradient(circle at 50% 45%, rgba(225,6,0,0.35), transparent 60%)" }}
+        style={{ background: "radial-gradient(circle at 50% 45%, rgba(230,50,34,0.35), transparent 60%)" }}
         aria-hidden="true"
       />
       <span

@@ -134,7 +134,7 @@ function TrainPage() {
   const gritDisplay = useCountUp(score.total);
 
   const { isPro, loading: proLoading } = usePro();
-  const armorLocked = !proLoading && !isPro;
+  const armorLocked = proLoading || !isPro;
   const armorShields = Math.max(0, Math.min(3, state.streakArmor?.shields ?? 0));
   const armorSavedDate = (() => {
     const used = state.streakArmor?.usedDates;
@@ -865,7 +865,15 @@ function TrainPage() {
             {(day?.exerciseIds || []).length === 0 && (
               <div className="bg-grit-card border border-grit p-8 text-center">
                 <p className="display text-2xl uppercase text-grit font-extrabold">Rest Day</p>
-                <p className="text-sm text-[#8a8a8a] mt-2">Recover. Eat. Sleep.</p>
+                <p className="text-sm text-grit-dim mt-2 mb-4">Recover. Eat. Sleep.</p>
+                <div className="flex flex-col gap-2 max-w-xs mx-auto">
+                  <Link to="/workout/live" className="btn-grit inline-block rounded-2xl">
+                    Train anyway
+                  </Link>
+                  <Link to="/programs" className="btn-ghost inline-block">
+                    Build my split
+                  </Link>
+                </div>
               </div>
             )}
             {(day?.exerciseIds || []).map((id) => {

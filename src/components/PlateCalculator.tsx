@@ -18,7 +18,7 @@ function platesPerSide(targetKg: number, barKg: number) {
 }
 
 const PLATE_COLOR: Record<number, string> = {
-  25: "#E10600",
+  25: "#e63222",
   20: "#1a1a1a",
   15: "#f5c542",
   10: "#1e63d1",

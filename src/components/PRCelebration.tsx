@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Trophy, X } from "lucide-react";
 
 const PARTICLES = Array.from({ length: 56 });
-const COLORS = ["#E10600", "#f5c542", "#f5f5f0", "#ff6b35", "#ffffff"];
+const COLORS = ["#e63222", "#f5c542", "#f5f5f0", "#ff6b35", "#ffffff"];
 
 export function PRCelebration({
   exerciseName,
@@ -84,18 +84,18 @@ export function PRCelebration({
             width: 88,
             height: 88,
             borderRadius: "50%",
-            background: "rgba(225,6,0,0.15)",
-            border: "2px solid rgba(225,6,0,0.4)",
-            boxShadow: "0 0 40px rgba(225,6,0,0.5), 0 0 80px rgba(225,6,0,0.2)",
+            background: "rgba(230,50,34,0.15)",
+            border: "2px solid rgba(230,50,34,0.4)",
+            boxShadow: "0 0 40px rgba(230,50,34,0.5), 0 0 80px rgba(230,50,34,0.2)",
             animation: "pr-pulse 1s ease-in-out infinite alternate",
           }}
         >
-          <Trophy size={44} strokeWidth={2} style={{ color: "#E10600" }} />
+          <Trophy size={44} strokeWidth={2} style={{ color: "#e63222" }} />
         </div>
 
         <p
           className="label-cap text-sm tracking-[0.5em] mb-3"
-          style={{ color: "#E10600", animation: "pr-flash 0.6s ease-in-out 4" }}
+          style={{ color: "#e63222", animation: "pr-flash 0.6s ease-in-out 4" }}
         >
           NEW PERSONAL RECORD
         </p>
@@ -147,8 +147,8 @@ export function PRCelebration({
           50% { opacity: 0.15; }
         }
         @keyframes pr-pulse {
-          from { box-shadow: 0 0 30px rgba(225,6,0,0.4), 0 0 60px rgba(225,6,0,0.15); }
-          to   { box-shadow: 0 0 50px rgba(225,6,0,0.7), 0 0 100px rgba(225,6,0,0.3); }
+          from { box-shadow: 0 0 30px rgba(230,50,34,0.4), 0 0 60px rgba(230,50,34,0.15); }
+          to   { box-shadow: 0 0 50px rgba(230,50,34,0.7), 0 0 100px rgba(230,50,34,0.3); }
         }
       `}</style>
     </div>

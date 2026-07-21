@@ -125,7 +125,7 @@ export function RankEmblem({
           {showProgress && rank.tier !== "DEADSET" && (
             <span
               className="font-semibold mt-0.5"
-              style={{ fontSize: `calc(${labelSize} * 0.9)`, color: "#6b7280" }}
+              style={{ fontSize: `calc(${labelSize} * 0.9)`, color: "#8a8a8a" }}
             >
               {toNext} pts to {rank.nextTier}
             </span>

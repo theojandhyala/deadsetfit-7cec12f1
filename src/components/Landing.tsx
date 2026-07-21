@@ -38,7 +38,7 @@ function Logo() {
       style={{ fontStyle: "italic" }}
     >
       <span style={{ color: "#f5f5f0" }}>DEAD</span>
-      <span style={{ color: "#E10600" }}>SET</span>
+      <span style={{ color: "#e63222" }}>SET</span>
     </span>
   );
 }
@@ -107,7 +107,7 @@ function Hero() {
         className="absolute inset-0 -z-10"
         style={{
           background:
-            "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(225,6,0,0.22), transparent 60%), linear-gradient(180deg, #0a0607 0%, #050505 55%)",
+            "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(230,50,34,0.22), transparent 60%), linear-gradient(180deg, #0a0607 0%, #050505 55%)",
         }}
         aria-hidden="true"
       />
@@ -286,7 +286,7 @@ function About() {
         className="absolute inset-0 -z-10"
         style={{
           background:
-            "radial-gradient(ellipse 55% 65% at 88% 50%, rgba(225,6,0,0.10), transparent 70%), #0a0a0a",
+            "radial-gradient(ellipse 55% 65% at 88% 50%, rgba(230,50,34,0.10), transparent 70%), #0a0a0a",
         }}
         aria-hidden="true"
       />
@@ -367,7 +367,7 @@ function Benefits() {
             style={{
               background: "linear-gradient(160deg, #141415, #0a0a0b 60%)",
               boxShadow:
-                "0 30px 70px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05), 0 0 60px rgba(225,6,0,0.08)",
+                "0 30px 70px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05), 0 0 60px rgba(230,50,34,0.08)",
             }}
           >
             <div className="mb-3 flex items-center justify-between border-b border-white/10 pb-3">
@@ -550,9 +550,9 @@ function Pricing() {
         <div
           className="relative flex flex-col rounded-[22px] p-6"
           style={{
-            background: "linear-gradient(160deg, rgba(225,6,0,0.12), rgba(20,20,20,0.9))",
-            border: "1.5px solid rgba(225,6,0,0.45)",
-            boxShadow: "0 20px 50px rgba(0,0,0,0.4), 0 0 60px rgba(225,6,0,0.14)",
+            background: "linear-gradient(160deg, rgba(230,50,34,0.12), rgba(20,20,20,0.9))",
+            border: "1.5px solid rgba(230,50,34,0.45)",
+            boxShadow: "0 20px 50px rgba(0,0,0,0.4), 0 0 60px rgba(230,50,34,0.14)",
           }}
         >
           <span className="label-cap absolute -top-2.5 left-6 rounded-full border border-accent-red/50 bg-[#050505] px-2.5 py-0.5 text-[9px] text-accent-red">
@@ -648,8 +648,8 @@ function FAQ() {
             onClick={() => setOpen(open === i ? null : i)}
             className="press flex w-full items-start justify-between gap-4 p-4 text-left"
             style={{
-              background: open === i ? "rgba(225,6,0,0.05)" : "rgba(20,20,20,0.7)",
-              border: `1px solid ${open === i ? "rgba(225,6,0,0.25)" : "rgba(255,255,255,0.05)"}`,
+              background: open === i ? "rgba(230,50,34,0.05)" : "rgba(20,20,20,0.7)",
+              border: `1px solid ${open === i ? "rgba(230,50,34,0.25)" : "rgba(255,255,255,0.05)"}`,
             }}
           >
             <div className="flex-1">

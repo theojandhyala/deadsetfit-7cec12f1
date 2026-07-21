@@ -21,7 +21,7 @@ export function PhoneFrame({
       {glow && (
         <div
           className="absolute -inset-8 rounded-[60px] blur-3xl"
-          style={{ background: "radial-gradient(circle, rgba(225,6,0,0.22), transparent 70%)" }}
+          style={{ background: "radial-gradient(circle, rgba(230,50,34,0.22), transparent 70%)" }}
           aria-hidden="true"
         />
       )}
@@ -100,7 +100,7 @@ export function TrainScreen() {
         </div>
       </div>
       <div className="mt-auto p-4">
-        <div className="flex items-center justify-center gap-2 rounded-2xl bg-accent-red py-3 text-xs font-extrabold uppercase tracking-wide text-white shadow-[0_8px_24px_rgba(225,6,0,0.4)]">
+        <div className="flex items-center justify-center gap-2 rounded-2xl bg-accent-red py-3 text-xs font-extrabold uppercase tracking-wide text-white shadow-[0_8px_24px_rgba(230,50,34,0.4)]">
           <Dumbbell size={14} /> Start workout
         </div>
       </div>
@@ -186,7 +186,7 @@ export function CatalogueScreen() {
               <span className="text-[11px] font-extrabold uppercase text-white">{l.n}</span>
               <div className="flex items-center gap-2">
                 <svg width="40" height="16" aria-hidden>
-                  <polyline points="2,13 12,10 22,7 38,3" fill="none" stroke="#E10600" strokeWidth="2" strokeLinecap="round" />
+                  <polyline points="2,13 12,10 22,7 38,3" fill="none" stroke="#e63222" strokeWidth="2" strokeLinecap="round" />
                 </svg>
                 <span className="text-base font-extrabold text-accent-red">{l.v}</span>
               </div>

@@ -263,9 +263,9 @@ function BuilderPage() {
               }}
               className="shrink-0 rounded-full border px-2.5 py-1 text-[9px] label-cap"
               style={{
-                borderColor: d.label === label ? "#E10600" : "#262626",
-                color: d.label === label ? "#E10600" : "#8A8A8A",
-                background: d.label === label ? "rgba(225,6,0,.08)" : "transparent",
+                borderColor: d.label === label ? "#e63222" : "#262626",
+                color: d.label === label ? "#e63222" : "#8A8A8A",
+                background: d.label === label ? "rgba(230,50,34,.08)" : "transparent",
               }}
             >
               {label}
@@ -400,9 +400,9 @@ function BuilderPage() {
                     onClick={() => setMuscleFilter(m)}
                     className="shrink-0 rounded-full border px-2.5 py-1 text-[9px] label-cap"
                     style={{
-                      borderColor: muscleFilter === m ? "#E10600" : "#262626",
-                      color: muscleFilter === m ? "#E10600" : "#8A8A8A",
-                      background: muscleFilter === m ? "rgba(225,6,0,.08)" : "transparent",
+                      borderColor: muscleFilter === m ? "#e63222" : "#262626",
+                      color: muscleFilter === m ? "#e63222" : "#8A8A8A",
+                      background: muscleFilter === m ? "rgba(230,50,34,.08)" : "transparent",
                     }}
                   >
                     {m}
@@ -416,9 +416,9 @@ function BuilderPage() {
                     onClick={() => setEquipmentFilter(eq)}
                     className="shrink-0 rounded-full border px-2.5 py-1 text-[9px] label-cap"
                     style={{
-                      borderColor: equipmentFilter === eq ? "#E10600" : "#262626",
-                      color: equipmentFilter === eq ? "#E10600" : "#8A8A8A",
-                      background: equipmentFilter === eq ? "rgba(225,6,0,.08)" : "transparent",
+                      borderColor: equipmentFilter === eq ? "#e63222" : "#262626",
+                      color: equipmentFilter === eq ? "#e63222" : "#8A8A8A",
+                      background: equipmentFilter === eq ? "rgba(230,50,34,.08)" : "transparent",
                     }}
                   >
                     {eq}

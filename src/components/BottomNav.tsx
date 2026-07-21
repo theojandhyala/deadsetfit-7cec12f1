@@ -63,21 +63,21 @@ export function BottomNav() {
               <Link
                 to={to}
                 className="flex flex-col items-center justify-center gap-1.5 h-[70px] relative press"
-                style={{ color: active ? "#E10600" : "#6B7280" }}
+                style={{ color: active ? "#e63222" : "#8a8a8a" }}
               >
                 <div className="relative">
                   <Icon size={22} strokeWidth={active ? 2.5 : 2} />
                 </div>
                 <span
                   className="text-[10px] font-semibold"
-                  style={{ color: active ? "#E10600" : "#6B7280" }}
+                  style={{ color: active ? "#e63222" : "#8a8a8a" }}
                 >
                   {label}
                 </span>
                 {active && (
                   <span
                     className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-[3px] rounded-t-full"
-                    style={{ background: "#E10600" }}
+                    style={{ background: "#e63222" }}
                   />
                 )}
               </Link>
@@ -100,8 +100,8 @@ export function BottomNav() {
                 borderRadius: "50%",
                 background: isRecordActive
                   ? "#d93e00"
-                  : "linear-gradient(135deg, #E10600 0%, #E10600 100%)",
-                boxShadow: "0 8px 28px rgba(225,6,0,0.34)",
+                  : "linear-gradient(135deg, #e63222 0%, #e63222 100%)",
+                boxShadow: "0 8px 28px rgba(230,50,34,0.34)",
                 transform: isRecordActive ? "translateY(-4px) scale(1.04)" : "translateY(-9px)",
                 transition: "box-shadow 0.2s ease, transform 0.15s ease",
               }}
@@ -120,27 +120,27 @@ export function BottomNav() {
               <Link
                 to={to}
                 className="flex flex-col items-center justify-center gap-1.5 h-[70px] relative press"
-                style={{ color: active ? "#E10600" : "#6B7280" }}
+                style={{ color: active ? "#e63222" : "#8a8a8a" }}
               >
                 <div className="relative">
                   <Icon size={22} strokeWidth={active ? 2.5 : 2} />
                   {showBadge && (
                     <span
                       className="absolute -top-1 -right-1 w-2 h-2 rounded-full"
-                      style={{ background: "#E10600" }}
+                      style={{ background: "#e63222" }}
                     />
                   )}
                 </div>
                 <span
                   className="text-[10px] font-semibold"
-                  style={{ color: active ? "#E10600" : "#6B7280" }}
+                  style={{ color: active ? "#e63222" : "#8a8a8a" }}
                 >
                   {label}
                 </span>
                 {active && (
                   <span
                     className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-[3px] rounded-t-full"
-                    style={{ background: "#E10600" }}
+                    style={{ background: "#e63222" }}
                   />
                 )}
               </Link>

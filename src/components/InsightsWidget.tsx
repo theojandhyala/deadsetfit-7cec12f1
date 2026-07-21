@@ -60,14 +60,14 @@ export function InsightsWidget() {
   return (
     <div
       className="mx-4 mb-4 rounded-2xl overflow-hidden"
-      style={{ background: "linear-gradient(135deg, rgba(225,6,0,0.1) 0%, #141414 100%)", border: "1.5px solid rgba(225,6,0,0.3)" }}
+      style={{ background: "linear-gradient(135deg, rgba(230,50,34,0.1) 0%, #141414 100%)", border: "1.5px solid rgba(230,50,34,0.3)" }}
     >
       <div className="p-4">
         <div className="flex items-center gap-4">
           <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
             <svg width={size} height={size} className="-rotate-90 absolute inset-0">
               <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#262626" strokeWidth={sw} />
-              <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#E10600" strokeWidth={sw}
+              <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#e63222" strokeWidth={sw}
                 strokeDasharray={`${circ * pct} ${circ}`} strokeLinecap="round"
                 style={{ transition: "stroke-dasharray 700ms ease" }} />
             </svg>
@@ -88,7 +88,7 @@ export function InsightsWidget() {
                 </span>
               )}
               {streak > 0 && (
-                <span className="flex items-center gap-1 text-[10px] font-bold" style={{ color: "#E10600" }}>
+                <span className="flex items-center gap-1 text-[10px] font-bold" style={{ color: "#e63222" }}>
                   <Zap size={10} /> {streak}d streak
                 </span>
               )}
@@ -96,7 +96,7 @@ export function InsightsWidget() {
           </div>
 
           <Link to="/progress" className="flex-shrink-0 press" aria-label="See progress">
-            <ChevronRight size={18} style={{ color: "#6B7280" }} />
+            <ChevronRight size={18} style={{ color: "#8a8a8a" }} />
           </Link>
         </div>
 
