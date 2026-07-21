@@ -54,7 +54,12 @@ jobs:
           node -e "
             const { readFileSync, writeFileSync } = require('node:fs');
             const config = readFileSync('wrangler.jsonc', 'utf8')
-              .replace(/\n\s*\"pages_build_output_dir\"\s*:\s*\"[^\"]+\",?/, '');
+              .replace(/\n\s*\"pages_build_output_dir\"\s*:\s*\"[^\"]+\",?/, '')
+              // Strip routes: the custom-domain route already exists and binds by
+              // worker name, so a script-only deploy updates it in place. This
+              // avoids the /workers/routes API (needs a zone-level token perm)
+              // and only uses Workers Scripts:Edit, which the token already has.
+              .replace(/\n\s*\"routes\"\s*:\s*\[[\s\S]*?\],?/, '');
             writeFileSync('.wrangler.worker.tmp.jsonc', config);
           "
           npx wrangler deploy --config .wrangler.worker.tmp.jsonc
