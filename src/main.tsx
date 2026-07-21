@@ -2,7 +2,11 @@ import { createRoot } from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
 import { router } from "./router";
 import { restoreSupabaseSession } from "./integrations/supabase/client";
+import { capturePendingRef } from "./lib/referral";
 import "./styles.css";
+
+// Grab any ?ref= invite code before the router rewrites the URL.
+capturePendingRef();
 
 // Signals the index.html boot watchdog that the entry module executed.
 (window as unknown as Record<string, unknown>).__DEADSET_BOOT_OK = true;

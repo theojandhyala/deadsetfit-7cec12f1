@@ -196,6 +196,11 @@ function SettingsPage() {
             on={hydration}
             onChange={(v) => set((s) => ({ ...s, hydrationAlertsEnabled: v }))}
           />
+          <Toggle
+            label="Auto-share workouts to feed"
+            on={state.autoShareWorkouts ?? true}
+            onChange={(v) => set((s) => ({ ...s, autoShareWorkouts: v }))}
+          />
         </div>
         <p className="text-[10px] text-grit-dim mt-2">
           Shown inside the app while you use it — not device push notifications.

@@ -10,6 +10,7 @@ import { usePro } from "@/hooks/usePro";
 import { openPaywall } from "@/lib/paywall-events";
 import { askConfirm } from "@/lib/confirm";
 import { exportSessionToHealth } from "@/lib/health";
+import { shareWorkoutToFeed } from "@/lib/auto-share";
 import { emitGritEarned } from "@/lib/grit-events";
 import { VideoModal } from "@/components/VideoModal";
 import { ShareCard } from "@/components/ShareCard";
@@ -644,6 +645,11 @@ function LiveWorkoutPage() {
     if (getState().healthSync?.enabled && getState().healthSync?.exportWorkouts) {
       const finished = getState().sessions.find((s) => s.id === session!.id);
       if (finished) void exportSessionToHealth(finished);
+    }
+    // Auto-share to the social feed (default on) so friends see the session.
+    if (getState().autoShareWorkouts !== false) {
+      const finished = getState().sessions.find((s) => s.id === session!.id);
+      if (finished) void shareWorkoutToFeed(finished);
     }
   }
 

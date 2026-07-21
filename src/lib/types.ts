@@ -236,6 +236,8 @@ export interface AppState {
   remindersEnabled?: boolean;
   /** Auto rest-timer duration after each logged set (seconds); 0 = off. Default 90. */
   restTimerSeconds?: number;
+  /** Auto-post finished workouts to the social feed. Default on (undefined = on). */
+  autoShareWorkouts?: boolean;
   streakArmor?: StreakArmor;
   healthSync?: HealthSync;
 }

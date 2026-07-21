@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 
-import { ArrowLeft, Loader2, UserPlus, UserCheck, Trophy, Flag, Ban } from "lucide-react";
+import { ArrowLeft, Loader2, UserPlus, UserCheck, Trophy, Flag, Ban, Swords } from "lucide-react";
 import { toast } from "sonner";
 import { askConfirm, askText } from "@/lib/confirm";
 import { getAthleteCard, toggleFollow } from "@/lib/social.functions";
@@ -211,6 +211,24 @@ function AthletePage() {
         </section>
       )}
 
+      {/* Head-to-head summary vs you */}
+      {!card.isMe && (
+        <VersusPanel
+          myOverall={Number((card.my_public_stats as Record<string, unknown> | null)?.overall) || 0}
+          themOverall={overall}
+          myGrit={Number(card.my_grit_points ?? 0)}
+          themGrit={Number(card.grit_points ?? 0)}
+          mine={
+            ((card.my_public_stats as Record<string, unknown> | null)?.topPRs as Array<{
+              id: string;
+              value: number;
+            }>) || []
+          }
+          them={topPRs}
+          themName={card.username || card.display_name || "them"}
+        />
+      )}
+
       {/* Headline PRs + head-to-head vs you */}
       <section className="px-5 mb-5">
         <p className="label-cap mb-2 flex items-center gap-2">
@@ -275,6 +293,85 @@ function Tile({ label, v }: { label: string; v: number }) {
       <p className="display font-extrabold text-grit text-xl leading-none">{v}</p>
       <p className="label-cap text-[10px] text-grit-dim mt-1">{label}</p>
     </div>
+  );
+}
+
+function VersusPanel({
+  myOverall,
+  themOverall,
+  myGrit,
+  themGrit,
+  mine,
+  them,
+  themName,
+}: {
+  myOverall: number;
+  themOverall: number;
+  myGrit: number;
+  themGrit: number;
+  mine: Array<{ id: string; value: number }>;
+  them: Array<{ id: string; value: number }>;
+  themName: string;
+}) {
+  // Tally lift wins across shared PRs.
+  let myWins = 0;
+  let themWins = 0;
+  const myMap = new Map(mine.map((p) => [p.id, p.value]));
+  for (const t of them) {
+    const m = myMap.get(t.id) ?? 0;
+    if (m > t.value) myWins += 1;
+    else if (t.value > m) themWins += 1;
+  }
+
+  const Row = ({ label, a, b }: { label: string; a: number; b: number }) => {
+    const youWin = a > b;
+    const themWin = b > a;
+    return (
+      <div className="flex items-center gap-2 py-1.5">
+        <span
+          className="display text-lg font-extrabold tabular-nums w-14 text-left"
+          style={{ color: youWin ? "#22c55e" : themWin ? "#8a8a8a" : "#f5f5f0" }}
+        >
+          {a}
+        </span>
+        <span className="flex-1 text-center label-cap text-[10px] text-grit-dim">{label}</span>
+        <span
+          className="display text-lg font-extrabold tabular-nums w-14 text-right"
+          style={{ color: themWin ? "#e63222" : youWin ? "#8a8a8a" : "#f5f5f0" }}
+        >
+          {b}
+        </span>
+      </div>
+    );
+  };
+
+  const overallLead = myWins + (myOverall > themOverall ? 1 : 0) >= themWins + (themOverall > myOverall ? 1 : 0);
+
+  return (
+    <section className="px-5 mb-5">
+      <p className="label-cap mb-2 flex items-center gap-2">
+        <Swords size={12} className="text-accent-red" /> Head-to-Head
+      </p>
+      <div className="bg-grit-card border border-grit rounded-2xl p-4">
+        <div className="flex items-center justify-between mb-1">
+          <span className="label-cap text-[10px] text-grit">You</span>
+          <span
+            className="label-cap text-[10px] font-bold"
+            style={{ color: overallLead ? "#22c55e" : "#e63222" }}
+          >
+            {overallLead ? "You lead" : "You trail"}
+          </span>
+          <span className="label-cap text-[10px] text-grit truncate max-w-[38%] text-right">
+            @{themName}
+          </span>
+        </div>
+        <div className="divide-y divide-[#222]">
+          <Row label="OVR" a={myOverall} b={themOverall} />
+          <Row label="DS PTS" a={myGrit} b={themGrit} />
+          <Row label="Lifts won" a={myWins} b={themWins} />
+        </div>
+      </div>
+    </section>
   );
 }
 
