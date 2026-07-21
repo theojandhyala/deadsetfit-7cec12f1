@@ -10,6 +10,7 @@ import { WeeklyRecap } from "@/components/WeeklyRecap";
 import { QuickLogFAB } from "@/components/QuickLogFAB";
 import { RankedArena } from "@/components/RankedArena";
 import { TodayReadiness } from "@/components/TodayReadiness";
+import { TrainingInsight } from "@/components/TrainingInsight";
 import { useAppState } from "@/lib/storage";
 import { EXERCISES, getExercise } from "@/lib/exercises";
 import { calculateGritScore, calculateStreak, defaultSchedule, isoDay, todayKey } from "@/lib/calc";
@@ -450,6 +451,9 @@ function TrainPage() {
         </div>
       </header>
       <TodayReadiness state={state} schedule={schedule} />
+      <div className="px-5">
+        <TrainingInsight />
+      </div>
       <WeeklyReportCard />
       <ProBanner />
       <Reminders />

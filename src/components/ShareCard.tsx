@@ -3,6 +3,7 @@ import { X, Download, Share2 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { toast } from "sonner";
 import type { WorkoutSession } from "@/lib/types";
+import { getInviteUrl } from "@/lib/referral";
 
 // 9:16 TikTok / Reels / Shorts ready (1080 x 1920)
 export function ShareCard({ session, onClose }: { session: WorkoutSession; onClose: () => void }) {
@@ -111,10 +112,11 @@ export function ShareCard({ session, onClose }: { session: WorkoutSession; onClo
       const blob = await (await fetch(dataUrl)).blob();
       const file = new File([blob], "deadset-session.png", { type: "image/png" });
       if (navigator.canShare?.({ files: [file] })) {
+        const invite = await getInviteUrl();
         await navigator.share({
           files: [file],
           title: "DEADSET",
-          text: "Just crushed a session. #deadset #gymtok",
+          text: `Just crushed a session on DEADSET. Train with me → ${invite} #deadset #gymtok`,
         });
         return;
       }

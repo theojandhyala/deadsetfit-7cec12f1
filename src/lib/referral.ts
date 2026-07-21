@@ -2,10 +2,36 @@
 // We capture the code on first load (before any auth), then redeem it once the
 // user is signed in — both people get 30 days of Pro. Closes the viral loop that
 // was previously dropped (the ?ref param was never read).
-import { redeemReferral } from "./social.functions";
+import { redeemReferral, getMyReferralInfo } from "./social.functions";
 import { toast } from "sonner";
 
 const PENDING_KEY = "deadset_pending_ref";
+const CODE_KEY = "deadset_my_ref_code";
+const ORIGIN = "https://deadsetfit.org";
+
+/**
+ * The current user's invite URL (…/?ref=CODE), used when sharing cards so shares
+ * drive installs and both people earn Pro. Caches the code; falls back to the
+ * plain site URL when signed out / offline.
+ */
+export async function getInviteUrl(): Promise<string> {
+  let code: string | null = null;
+  try {
+    code = localStorage.getItem(CODE_KEY);
+  } catch {
+    /* ignore */
+  }
+  if (!code) {
+    try {
+      const info = await getMyReferralInfo();
+      code = info?.code ?? null;
+      if (code) localStorage.setItem(CODE_KEY, code);
+    } catch {
+      /* signed out or offline */
+    }
+  }
+  return code ? `${ORIGIN}/?ref=${encodeURIComponent(code)}` : ORIGIN;
+}
 
 /** Read ?ref= off the URL, stash it, and strip it from the address bar. */
 export function capturePendingRef() {

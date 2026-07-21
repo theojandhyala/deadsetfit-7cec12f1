@@ -328,3 +328,79 @@ export function muscleBalance(state: AppState, now = Date.now()): MuscleBalance 
 
   return { score: Math.max(0, score), hasData: total >= 6, ratios };
 }
+
+// ————————————————————————————————————————————————————————
+// Headline insights — the single most useful things to surface in-flow
+// (e.g. on the Train screen). Ordered by urgency.
+// ————————————————————————————————————————————————————————
+export type InsightTone = "warn" | "info" | "good";
+export interface Insight {
+  tone: InsightTone;
+  title: string;
+  message: string;
+}
+
+const MUSCLE_NAME: Record<MuscleGroup, string> = {
+  CHEST: "Chest",
+  BACK: "Back",
+  SHOULDERS: "Shoulders",
+  ARMS: "Arms",
+  LEGS: "Legs",
+  CORE: "Core",
+};
+
+export function allInsights(state: AppState, now = Date.now()): Insight[] {
+  const out: Insight[] = [];
+
+  // 1. Overreaching muscles — highest urgency (recovery risk).
+  for (const v of weeklyVolume(state, now)) {
+    if (v.zone === "OVER") {
+      out.push({
+        tone: "warn",
+        title: `${MUSCLE_NAME[v.muscle]} is overreaching`,
+        message: `${v.sets} sets this week — past your recoverable max. Pull back next session.`,
+      });
+    }
+  }
+
+  // 2. Plateaus.
+  for (const p of plateaus(state)) {
+    out.push({
+      tone: "warn",
+      title: `${p.name} has stalled`,
+      message: `Deload to ${p.deloadWeight}kg, then rebuild past ${p.peakE1rm}kg.`,
+    });
+  }
+
+  // 3. Muscles below their minimum effective volume.
+  for (const v of weeklyVolume(state, now)) {
+    if (v.zone === "BELOW" && v.sets > 0) {
+      const need = v.landmark.mev - v.sets;
+      if (need > 0)
+        out.push({
+          tone: "info",
+          title: `${MUSCLE_NAME[v.muscle]} is below target`,
+          message: `Add ${need} set${need === 1 ? "" : "s"} this week to hit the growth zone.`,
+        });
+    }
+  }
+
+  // 4. Positive momentum — a lift on track to a milestone.
+  for (const t of trajectories(state, now)) {
+    if (t.trend === "up" && t.nextMilestone && t.etaDate) {
+      const d = new Date(t.etaDate).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      out.push({
+        tone: "good",
+        title: `${t.name} is climbing`,
+        message: `On track for ${t.nextMilestone}kg around ${d} at +${t.perWeek}kg/week.`,
+      });
+      break; // one positive note is enough
+    }
+  }
+
+  return out;
+}
+
+export function topInsight(state: AppState, now = Date.now()): Insight | null {
+  return allInsights(state, now)[0] ?? null;
+}

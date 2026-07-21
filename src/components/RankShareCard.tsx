@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { X, Download, Share2 } from "lucide-react";
 import { getRank } from "@/lib/rank";
 import type { HeadlinePR } from "@/lib/fifa-stats";
+import { getInviteUrl } from "@/lib/referral";
 
 export type RankShareProps = {
   gritPoints: number;
@@ -282,10 +283,11 @@ export function RankShareCard({
       const blob = await (await fetch(dataUrl)).blob();
       const file = new File([blob], "deadset-rank.png", { type: "image/png" });
       if (navigator.canShare?.({ files: [file] })) {
+        const invite = await getInviteUrl();
         await navigator.share({
           files: [file],
           title: "DEADSET",
-          text: `${getRank(gritPoints).label} rank · ${gritPoints} grit · Can you beat me? #deadset #gymtok #liftingmotivation`,
+          text: `${getRank(gritPoints).label} rank · ${gritPoints} grit · Can you beat me? → ${invite} #deadset #gymtok`,
         });
         return;
       }
