@@ -409,3 +409,43 @@ export function allInsights(state: AppState, now = Date.now()): Insight[] {
 export function topInsight(state: AppState, now = Date.now()): Insight | null {
   return allInsights(state, now)[0] ?? null;
 }
+
+// ————————————————————————————————————————————————————————
+// Bodyweight trajectory — trend + projected date to hit a target weight
+// ————————————————————————————————————————————————————————
+export interface BodyweightTrend {
+  perWeek: number; // kg/week (signed)
+  trend: Trend;
+  current: number;
+  target?: number;
+  etaDate: string | null; // projected date to reach target
+}
+
+export function bodyweightTrend(
+  weights: { date: string; weight: number }[],
+  targetWeightKg?: number,
+  now = Date.now(),
+): BodyweightTrend | null {
+  const pts = (weights ?? [])
+    .filter((w) => w.weight > 0)
+    .slice()
+    .sort((a, b) => a.date.localeCompare(b.date));
+  if (pts.length < 2) return null;
+  const t0 = new Date(pts[0].date).getTime();
+  const xy = pts.map((w) => ({ x: (new Date(w.date).getTime() - t0) / DAY_MS, y: w.weight }));
+  const { slope } = linreg(xy); // kg/day
+  const perWeek = Math.round(slope * 7 * 10) / 10;
+  const current = pts[pts.length - 1].weight;
+  const trend: Trend = perWeek > 0.05 ? "up" : perWeek < -0.05 ? "down" : "flat";
+
+  let etaDate: string | null = null;
+  if (targetWeightKg && Math.abs(slope) > 0.0001) {
+    const gap = targetWeightKg - current;
+    // Only project when moving toward the target.
+    if (Math.sign(gap) === Math.sign(slope)) {
+      const days = Math.ceil(gap / slope);
+      if (days > 0 && days <= 730) etaDate = new Date(now + days * DAY_MS).toISOString();
+    }
+  }
+  return { perWeek, trend, current, target: targetWeightKg, etaDate };
+}

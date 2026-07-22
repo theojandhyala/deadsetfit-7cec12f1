@@ -902,14 +902,15 @@ const handlers: Record<string, Handler> = {
       .select("id, username, display_name, avatar_url, bio, grit_points, public_stats").eq("id", d.userId).maybeSingle();
     if (error) throw new Error(error.message);
     if (!row) throw new Error("Athlete not found");
-    const [{ data: follow }, { count: followers }, { count: following }, meRow] = await Promise.all([
+    const [{ data: follow }, { data: followBack }, { count: followers }, { count: following }, meRow] = await Promise.all([
       supabase.from("follows").select("follower_id").eq("follower_id", userId).eq("following_id", d.userId).maybeSingle(),
+      userId === d.userId ? Promise.resolve({ data: null }) : supabase.from("follows").select("follower_id").eq("follower_id", d.userId).eq("following_id", userId).maybeSingle(),
       supabase.from("follows").select("*", { count: "exact", head: true }).eq("following_id", d.userId),
       supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", d.userId),
       userId === d.userId ? Promise.resolve(null) : supabase.from("public_profiles").select("public_stats, grit_points").eq("id", userId).maybeSingle(),
     ]);
     return {
-      ...row, level: gritLevel(row.grit_points ?? 0), following: !!follow,
+      ...row, level: gritLevel(row.grit_points ?? 0), following: !!follow, followsMe: !!followBack,
       followerCount: followers ?? 0, followingCount: following ?? 0, isMe: userId === d.userId,
       my_public_stats: (meRow as any)?.data?.public_stats ?? null, my_grit_points: (meRow as any)?.data?.grit_points ?? null,
     };

@@ -164,6 +164,11 @@ function AthletePage() {
       {/* Follow + counts */}
       {!card.isMe && (
         <section className="px-5 mb-5">
+          {(card as { followsMe?: boolean }).followsMe && (
+            <div className="mb-2 inline-flex items-center gap-1 label-cap text-[10px] text-grit-dim border border-grit rounded px-2 py-0.5">
+              Follows you
+            </div>
+          )}
           <div className="grid grid-cols-3 gap-2 mb-3">
             <Tile label="Followers" v={card.followerCount} />
             <Tile label="Following" v={card.followingCount} />

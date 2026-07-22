@@ -11,6 +11,7 @@ import { QuickLogFAB } from "@/components/QuickLogFAB";
 import { RankedArena } from "@/components/RankedArena";
 import { TodayReadiness } from "@/components/TodayReadiness";
 import { TrainingInsight } from "@/components/TrainingInsight";
+import { WeeklyMission } from "@/components/WeeklyMission";
 import { useAppState } from "@/lib/storage";
 import { EXERCISES, getExercise } from "@/lib/exercises";
 import { calculateGritScore, calculateStreak, defaultSchedule, isoDay, todayKey } from "@/lib/calc";
@@ -453,6 +454,7 @@ function TrainPage() {
       <TodayReadiness state={state} schedule={schedule} />
       <div className="px-5">
         <TrainingInsight />
+        <WeeklyMission state={state} />
       </div>
       <WeeklyReportCard />
       <ProBanner />

@@ -12,6 +12,7 @@ import { usePro } from "@/hooks/usePro";
 import { ProBanner } from "@/components/ProBanner";
 import { ProgressionBoard } from "@/components/ProgressionBoard";
 import { ProIntelligence } from "@/components/ProIntelligence";
+import { bodyweightTrend } from "@/lib/pro-intelligence";
 import { openPaywall } from "@/lib/paywall-events";
 import { askConfirm } from "@/lib/confirm";
 import { PR_CATALOG, getPRValue } from "@/lib/fifa-stats";
@@ -605,6 +606,34 @@ function ProgressPage() {
             </button>
           </div>
           <WeightChart entries={state.weights} />
+          {(() => {
+            const bw = bodyweightTrend(state.weights, state.profile?.targetWeightKg);
+            if (!bw) return null;
+            const color = bw.trend === "down" ? "#3b9eff" : bw.trend === "up" ? "#22c55e" : "#8a8a8a";
+            return (
+              <div className="mt-3 border-t border-grit pt-3 flex items-center justify-between">
+                <div>
+                  <p className="label-cap text-[10px] text-grit-dim">Trend</p>
+                  <p className="display text-lg font-extrabold leading-none" style={{ color }}>
+                    {bw.perWeek > 0 ? "+" : ""}{bw.perWeek}
+                    <span className="text-[10px] text-grit-dim ml-1">kg/wk</span>
+                  </p>
+                </div>
+                {bw.target && (
+                  <div className="text-right">
+                    <p className="label-cap text-[10px] text-grit-dim">Target {bw.target}kg</p>
+                    <p className="text-xs text-grit">
+                      {bw.etaDate
+                        ? `~${new Date(bw.etaDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
+                        : bw.current === bw.target
+                          ? "Reached 🎯"
+                          : "Trend not closing the gap"}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
           {state.weights.length > 0 && (
             <div className="mt-3 border-t border-grit pt-3 max-h-40 overflow-y-auto">
               <p className="label-cap text-[10px] mb-1">History</p>
