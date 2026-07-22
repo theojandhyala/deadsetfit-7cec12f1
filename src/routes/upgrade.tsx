@@ -32,7 +32,7 @@ const PRO_FEATURES = [
     icon: Activity,
     color: "#f4c33a",
     title: "DEADSET Intelligence",
-    desc: "Volume Optimizer (MEV/MAV/MRV), Plateau Breaker, strength-trajectory projections and a muscle-balance score — the science-based coaching other apps charge $15/mo for, built in.",
+    desc: "Volume Optimizer (MEV/MAV/MRV), Plateau Breaker, strength-trajectory projections and a muscle-balance score — the science-based coaching other apps lock behind a subscription, built in.",
   },
   {
     icon: Shield,

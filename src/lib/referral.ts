@@ -74,8 +74,18 @@ export async function redeemPendingRef() {
       /* ignore */
     }
     if (res?.ok) toast.success("Referral applied — 30 days of Pro unlocked 🔥");
-  } catch {
-    // Network/transient error — leave the code pending to retry on next sign-in.
+  } catch (e) {
+    // A server rejection (self-referral, already redeemed, invalid code) throws
+    // a regular Error — clear the code so we never retry a permanent failure in
+    // a loop. Only a genuine network error (fetch → TypeError) stays pending to
+    // retry on the next sign-in.
+    if (!(e instanceof TypeError)) {
+      try {
+        localStorage.removeItem(PENDING_KEY);
+      } catch {
+        /* ignore */
+      }
+    }
   } finally {
     inFlight = false;
   }

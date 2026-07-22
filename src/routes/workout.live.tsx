@@ -594,6 +594,10 @@ function LiveWorkoutPage() {
   }
 
   function finishWorkout() {
+    // Guard the whole action, not just the reducer: set() is synchronous, so
+    // after the first tap getState() already reflects endedAt. Without this,
+    // a fast double-tap fires grit, the feed post and the Health export twice.
+    if (getState().sessions.find((s) => s.id === session!.id)?.endedAt) return;
     const day = isoDay();
     const endedAt = new Date().toISOString();
     set((st) => {

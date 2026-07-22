@@ -545,7 +545,7 @@ const handlers: Record<string, Handler> = {
     let query = supabase.from("posts").select("id, user_id, kind, content, image_url, metadata, created_at").order("created_at", { ascending: false }).limit(50);
     if (scope === "following") {
       // Scope to people the viewer follows (plus their own posts).
-      const { data: follows } = await supabase.from("follows").select("following_id").eq("follower_id", userId);
+      const { data: follows } = await supabase.from("follows").select("following_id").eq("follower_id", userId).limit(2000);
       const allowed = (follows ?? []).map(f => f.following_id as string);
       allowed.push(userId);
       query = query.in("user_id", allowed);
@@ -645,7 +645,7 @@ const handlers: Record<string, Handler> = {
       .select("id, display_name, username, avatar_url, grit_points")
       .order("grit_points", { ascending: false }).limit(100);
     if (scope === "following") {
-      const { data: follows } = await supabase.from("follows").select("following_id").eq("follower_id", userId);
+      const { data: follows } = await supabase.from("follows").select("following_id").eq("follower_id", userId).limit(2000);
       const allowed = (follows ?? []).map(f => f.following_id as string);
       allowed.push(userId);
       lbQuery = lbQuery.in("id", allowed);
@@ -668,7 +668,11 @@ const handlers: Record<string, Handler> = {
   async getNotifications(_data, req) {
     const { supabase, userId } = await requireAuth(req);
     const hidden = await blockedUserIds(supabase, userId);
-    const { data: myPosts } = await supabase.from("posts").select("id").eq("user_id", userId);
+    // Bound to recent posts: an activity bell only needs likes/comments on
+    // recent posts, and an unbounded id list would overflow the .in() URL for
+    // heavy users and silently drop their notifications.
+    const { data: myPosts } = await supabase.from("posts").select("id").eq("user_id", userId)
+      .order("created_at", { ascending: false }).limit(200);
     const myPostIds = (myPosts ?? []).map((p) => p.id as string);
     const noPosts = { data: [] as Array<Record<string, unknown>> };
     const [followsRes, likesRes, commentsRes] = await Promise.all([
@@ -706,7 +710,7 @@ const handlers: Record<string, Handler> = {
       if (hidden.has(c.user_id as string)) return;
       notifs.push({ type: "comment", actor: actor(c.user_id as string), created_at: c.created_at as string, postId: c.post_id as string, snippet: String(c.content ?? "").slice(0, 80) });
     });
-    notifs.sort((a, b) => b.created_at.localeCompare(a.created_at));
+    notifs.sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
     return notifs.slice(0, 40);
   },
 

@@ -570,7 +570,7 @@ function ProgressPage() {
                 </p>
                 <p className="text-xs text-[#b7ac8e] mt-2 mb-3 leading-relaxed">
                   Volume Optimizer, Plateau Breaker, strength projections and your muscle-balance
-                  score — the coaching other apps charge $15/mo for.
+                  score — the science-based coaching other apps lock behind a subscription.
                 </p>
                 <button
                   onClick={() => openPaywall("advanced-analytics")}

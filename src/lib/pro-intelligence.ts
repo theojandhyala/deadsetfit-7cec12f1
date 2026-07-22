@@ -27,8 +27,10 @@ function volumeByMuscle(state: AppState, windowDays: number, now: number): Map<M
     const at = new Date(s.startedAt).getTime();
     if (!Number.isFinite(at) || at < since) continue;
     for (const ex of s.exercises) {
-      // Warm-ups don't drive growth — count only real working sets.
-      const working = ex.sets.filter((set) => set.kind !== "warmup" && set.weight > 0).length;
+      // Warm-ups don't drive growth — count only real working sets. Gate on
+      // reps (not weight) so bodyweight work (push-ups, pull-ups, planks — all
+      // logged at weight 0) still counts toward weekly volume and balance.
+      const working = ex.sets.filter((set) => set.kind !== "warmup" && set.reps > 0).length;
       if (!working) continue;
       const groups = new Set<MuscleGroup>();
       for (const raw of ex.primary_muscles ?? []) {
@@ -170,7 +172,7 @@ export interface Plateau {
   prescription: string;
 }
 
-export function plateaus(state: AppState, stallWindow = 3): Plateau[] {
+export function plateaus(state: AppState, stallWindow = 3, now = Date.now()): Plateau[] {
   const out: Plateau[] = [];
   for (const series of liftSeriesAll(state, stallWindow + 1)) {
     const pts = series.points;
@@ -182,6 +184,9 @@ export function plateaus(state: AppState, stallWindow = 3): Plateau[] {
     if (recentPeak > priorPeak) continue; // still progressing — not stalled
 
     const last = pts[pts.length - 1];
+    // Don't nag about a lift the user has abandoned — only flag recent stalls.
+    const lastAt = new Date(last.date).getTime();
+    if (Number.isFinite(lastAt) && now - lastAt > 21 * DAY_MS) continue;
     const deload = roundToPlate(last.weight * 0.9);
     out.push({
       exerciseId: series.exerciseId,
@@ -364,7 +369,7 @@ export function allInsights(state: AppState, now = Date.now()): Insight[] {
   }
 
   // 2. Plateaus.
-  for (const p of plateaus(state)) {
+  for (const p of plateaus(state, 3, now)) {
     out.push({
       tone: "warn",
       title: `${p.name} has stalled`,

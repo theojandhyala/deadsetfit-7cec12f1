@@ -7,7 +7,9 @@ const SEEN_KEY = "deadset_notifs_seen_at";
 const REACTION_EMOJI: Record<string, string> = { fire: "🔥", beast: "💪", respect: "🙌", goat: "🐐" };
 
 function timeAgo(iso: string): string {
-  const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return "now";
+  const s = Math.max(0, (Date.now() - t) / 1000);
   if (s < 60) return "now";
   if (s < 3600) return `${Math.floor(s / 60)}m`;
   if (s < 86400) return `${Math.floor(s / 3600)}h`;
@@ -92,38 +94,49 @@ export function NotificationsBell() {
             ) : (
               <ul className="divide-y divide-[#1c1c1c]">
                 {items.map((n, i) => {
-                  const name = n.actor.display_name || n.actor.username || "Athlete";
+                  const actor = n.actor ?? { id: "", username: null, display_name: null, avatar_url: null };
+                  const name = actor.display_name || actor.username || "Athlete";
+                  const rowClass = "flex items-center gap-3 px-4 py-3 press";
+                  const inner = (
+                    <>
+                      <div className="w-9 h-9 rounded-full overflow-hidden bg-[#1a1a1a] flex items-center justify-center shrink-0 border border-grit">
+                        {actor.avatar_url ? (
+                          <img src={actor.avatar_url} alt="" className="w-full h-full object-cover" />
+                        ) : n.type === "follow" ? (
+                          <UserPlus size={15} className="text-accent-red" />
+                        ) : n.type === "comment" ? (
+                          <MessageCircle size={15} className="text-accent-red" />
+                        ) : (
+                          <span className="text-sm">{REACTION_EMOJI[n.reaction || "fire"]}</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-grit leading-snug">
+                          <span className="font-bold">{name}</span>{" "}
+                          {n.type === "follow"
+                            ? "started following you"
+                            : n.type === "reaction"
+                              ? `reacted ${REACTION_EMOJI[n.reaction || "fire"]} to your post`
+                              : `commented: "${n.snippet}"`}
+                        </p>
+                      </div>
+                      <span className="text-[11px] text-grit-dim shrink-0">{timeAgo(n.created_at)}</span>
+                    </>
+                  );
                   return (
-                    <li key={i}>
-                      <Link
-                        to="/athlete/$id"
-                        params={{ id: n.actor.id }}
-                        onClick={() => setOpen(false)}
-                        className="flex items-center gap-3 px-4 py-3 press"
-                      >
-                        <div className="w-9 h-9 rounded-full overflow-hidden bg-[#1a1a1a] flex items-center justify-center shrink-0 border border-grit">
-                          {n.actor.avatar_url ? (
-                            <img src={n.actor.avatar_url} alt="" className="w-full h-full object-cover" />
-                          ) : n.type === "follow" ? (
-                            <UserPlus size={15} className="text-accent-red" />
-                          ) : n.type === "comment" ? (
-                            <MessageCircle size={15} className="text-accent-red" />
-                          ) : (
-                            <span className="text-sm">{REACTION_EMOJI[n.reaction || "fire"]}</span>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-grit leading-snug">
-                            <span className="font-bold">{name}</span>{" "}
-                            {n.type === "follow"
-                              ? "started following you"
-                              : n.type === "reaction"
-                                ? `reacted ${REACTION_EMOJI[n.reaction || "fire"]} to your post`
-                                : `commented: "${n.snippet}"`}
-                          </p>
-                        </div>
-                        <span className="text-[11px] text-grit-dim shrink-0">{timeAgo(n.created_at)}</span>
-                      </Link>
+                    <li key={`${n.type}-${actor.id}-${n.created_at}-${i}`}>
+                      {actor.id ? (
+                        <Link
+                          to="/athlete/$id"
+                          params={{ id: actor.id }}
+                          onClick={() => setOpen(false)}
+                          className={rowClass}
+                        >
+                          {inner}
+                        </Link>
+                      ) : (
+                        <div className={rowClass}>{inner}</div>
+                      )}
                     </li>
                   );
                 })}

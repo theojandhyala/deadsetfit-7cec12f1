@@ -46,9 +46,11 @@ function SectionTitle({ icon: Icon, title, sub }: { icon: typeof Activity; title
 }
 
 export function ProIntelligence({ state }: { state: AppState }) {
-  const now = Date.now();
+  // Stable within a mount — a raw Date.now() would change every render and
+  // defeat the memoization below (three full passes over history per render).
+  const now = useMemo(() => Date.now(), []);
   const volume = useMemo(() => weeklyVolume(state, now), [state, now]);
-  const stalls = useMemo(() => plateaus(state), [state]);
+  const stalls = useMemo(() => plateaus(state, 3, now), [state, now]);
   const traj = useMemo(() => trajectories(state, now), [state, now]);
   const balance = useMemo(() => muscleBalance(state, now), [state, now]);
 

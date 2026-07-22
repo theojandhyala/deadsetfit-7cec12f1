@@ -683,7 +683,14 @@ function CommentsPanel({ postId, onPosted }: { postId: string; onPosted: () => v
       ) : (
         items.map((c) => (
           <div key={c.id} className="mb-2 text-xs">
-            <span className="font-bold text-grit">{c.author?.display_name || "User"}</span>
+            {c.author?.id ? (
+              // Tappable so a commenter can be reported/blocked from their profile (UGC 1.2).
+              <Link to="/athlete/$id" params={{ id: c.author.id }} className="font-bold text-grit press">
+                {c.author?.display_name || "User"}
+              </Link>
+            ) : (
+              <span className="font-bold text-grit">{c.author?.display_name || "User"}</span>
+            )}
             <span className="text-[#8a8a8a] ml-2">{c.content}</span>
           </div>
         ))

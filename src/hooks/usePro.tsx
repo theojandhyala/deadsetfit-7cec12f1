@@ -32,11 +32,19 @@ function readCachedPro(): CachedProState | null {
 }
 
 function writeCachedPro(status: Omit<ProState, "loading" | "refresh">) {
-  localStorage.setItem(PRO_CACHE_KEY, JSON.stringify({ ...status, checkedAt: Date.now() }));
+  try {
+    localStorage.setItem(PRO_CACHE_KEY, JSON.stringify({ ...status, checkedAt: Date.now() }));
+  } catch {
+    /* storage unavailable (private mode / quota) — cache is best-effort */
+  }
 }
 
 function clearCachedPro() {
-  localStorage.removeItem(PRO_CACHE_KEY);
+  try {
+    localStorage.removeItem(PRO_CACHE_KEY);
+  } catch {
+    /* ignore */
+  }
 }
 
 async function rejectOnTimeout<T>(promise: PromiseLike<T>, timeoutMs: number, message: string): Promise<T> {
