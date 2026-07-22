@@ -31,6 +31,27 @@ export interface AppNotification {
 }
 export const getNotifications = () => callRpc<AppNotification[]>("getNotifications");
 
+export type DuelMetric = "volume" | "sessions" | "prs";
+export interface Duel {
+  id: string;
+  metric: DuelMetric;
+  status: "pending" | "active" | "declined" | "cancelled" | "completed";
+  role: "challenger" | "opponent";
+  needsMyResponse: boolean;
+  start_at: string | null;
+  end_at: string | null;
+  ended: boolean;
+  myScore: number;
+  theirScore: number;
+  winner: "me" | "them" | "tie" | null;
+  opponent: { id: string; username: string | null; display_name: string | null; avatar_url: string | null };
+}
+export const createDuel = ({ data }: { data: { opponentId: string; metric?: DuelMetric; days?: number } }) =>
+  callRpc<{ id: string }>("createDuel", data);
+export const respondDuel = ({ data }: { data: { duelId: string; action: "accept" | "decline" | "cancel" } }) =>
+  callRpc<{ ok: boolean; status: string }>("respondDuel", data);
+export const getDuels = () => callRpc<Duel[]>("getDuels");
+
 export const toggleFollow = ({ data }: { data: { userId: string } }) =>
   callRpc<{ following: boolean }>("toggleFollow", data);
 

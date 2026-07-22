@@ -727,6 +727,129 @@ const handlers: Record<string, Handler> = {
     return { following: true };
   },
 
+  async createDuel(data, req) {
+    const { supabase, userId } = await requireAuth(req);
+    const d = z.object({
+      opponentId: z.string().uuid(),
+      metric: z.enum(["volume", "sessions", "prs"]).default("volume"),
+      days: z.number().int().min(1).max(30).default(7),
+    }).parse(data);
+    if (d.opponentId === userId) throw new Error("You can't duel yourself");
+    // One active/pending duel per pair at a time.
+    const { data: existing } = await (supabase as any).from("duels")
+      .select("id")
+      .in("status", ["pending", "active"])
+      .or(`and(challenger_id.eq.${userId},opponent_id.eq.${d.opponentId}),and(challenger_id.eq.${d.opponentId},opponent_id.eq.${userId})`)
+      .maybeSingle();
+    if (existing) throw new Error("You already have an open duel with this athlete");
+    const { data: row, error } = await (supabase as any).from("duels")
+      .insert({ challenger_id: userId, opponent_id: d.opponentId, metric: d.metric, status: "pending" })
+      .select("id").single();
+    if (error) throw new Error(error.message);
+    return { id: row.id };
+  },
+
+  async respondDuel(data, req) {
+    const { supabase, userId } = await requireAuth(req);
+    const d = z.object({
+      duelId: z.string().uuid(),
+      action: z.enum(["accept", "decline", "cancel"]),
+    }).parse(data);
+    const { data: duel } = await (supabase as any).from("duels")
+      .select("id, challenger_id, opponent_id, status").eq("id", d.duelId).maybeSingle();
+    if (!duel) throw new Error("Duel not found");
+    if (d.action === "cancel") {
+      if (duel.challenger_id !== userId) throw new Error("Only the challenger can cancel");
+      if (duel.status !== "pending") throw new Error("Can only cancel a pending duel");
+      await (supabase as any).from("duels").update({ status: "cancelled" }).eq("id", d.duelId);
+      return { ok: true, status: "cancelled" };
+    }
+    // accept / decline — opponent only, on a pending duel.
+    if (duel.opponent_id !== userId) throw new Error("Only the challenged athlete can respond");
+    if (duel.status !== "pending") throw new Error("This duel is no longer pending");
+    if (d.action === "decline") {
+      await (supabase as any).from("duels").update({ status: "declined" }).eq("id", d.duelId);
+      return { ok: true, status: "declined" };
+    }
+    const now = new Date();
+    const start = now.toISOString();
+    // Default 7-day window from acceptance.
+    const end = new Date(now.getTime() + 7 * 86400000).toISOString();
+    await (supabase as any).from("duels").update({ status: "active", start_at: start, end_at: end }).eq("id", d.duelId);
+    return { ok: true, status: "active" };
+  },
+
+  async getDuels(_data, req) {
+    const { supabase, userId } = await requireAuth(req);
+    const { data: duels, error } = await (supabase as any).from("duels")
+      .select("id, challenger_id, opponent_id, metric, status, start_at, end_at, created_at")
+      .in("status", ["pending", "active", "completed"])
+      .order("created_at", { ascending: false }).limit(25);
+    if (error) throw new Error(error.message);
+    const rows = (duels ?? []) as Array<{
+      id: string; challenger_id: string; opponent_id: string; metric: string;
+      status: string; start_at: string | null; end_at: string | null; created_at: string;
+    }>;
+    if (rows.length === 0) return [];
+
+    // Opponent profiles for display.
+    const otherIds: string[] = Array.from(new Set(rows.map((x) => (x.challenger_id === userId ? x.opponent_id : x.challenger_id))));
+    const { data: profs } = await supabaseAdmin.from("public_profiles")
+      .select("id, username, display_name, avatar_url")
+      .in("id", otherIds.length ? otherIds : ["00000000-0000-0000-0000-000000000000"]);
+    const pm = new Map((profs ?? []).map((p: { id: string | null }) => [p.id as string, p]));
+
+    // Live score for a participant over a window, from their logged sessions.
+    const scoreCache = new Map<string, AppState | null>();
+    const loadState = async (uid: string): Promise<AppState | null> => {
+      if (scoreCache.has(uid)) return scoreCache.get(uid) ?? null;
+      const { data } = await supabaseAdmin.from("user_state").select("data").eq("user_id", uid).maybeSingle();
+      const state = (data?.data ?? null) as AppState | null;
+      scoreCache.set(uid, state);
+      return state;
+    };
+    const scoreFor = (state: AppState | null, metric: string, startMs: number, endMs: number): number => {
+      const sessions = (state?.sessions ?? []).filter((s) => {
+        if (!s.endedAt) return false;
+        const t = Date.parse(s.startedAt || s.date);
+        return Number.isFinite(t) && t >= startMs && t <= endMs;
+      });
+      if (metric === "sessions") return sessions.length;
+      if (metric === "prs") return sessions.reduce((n, s) => n + (s.prCount ?? 0), 0);
+      return Math.round(sessions.reduce((n, s) => n + (s.totalVolume ?? 0), 0));
+    };
+
+    const out = [];
+    for (const x of rows) {
+      const iAmChallenger = x.challenger_id === userId;
+      const otherId = iAmChallenger ? x.opponent_id : x.challenger_id;
+      let myScore = 0, theirScore = 0, ended = false;
+      if (x.status === "active" || x.status === "completed") {
+        const startMs = x.start_at ? Date.parse(x.start_at) : 0;
+        const endMs = x.end_at ? Date.parse(x.end_at) : 0;
+        const [mine, theirs] = await Promise.all([loadState(userId), loadState(otherId)]);
+        myScore = scoreFor(mine, x.metric, startMs, endMs);
+        theirScore = scoreFor(theirs, x.metric, startMs, endMs);
+        ended = !!x.end_at && Date.now() >= endMs;
+      }
+      out.push({
+        id: x.id,
+        metric: x.metric,
+        status: x.status,
+        role: iAmChallenger ? "challenger" : "opponent",
+        needsMyResponse: x.status === "pending" && !iAmChallenger,
+        start_at: x.start_at,
+        end_at: x.end_at,
+        ended,
+        myScore,
+        theirScore,
+        winner: ended ? (myScore > theirScore ? "me" : theirScore > myScore ? "them" : "tie") : null,
+        opponent: pm.get(otherId) ?? { id: otherId, username: null, display_name: "Athlete", avatar_url: null },
+      });
+    }
+    return out;
+  },
+
   async searchAthletes(data, req) {
     const { supabase, userId } = await requireAuth(req);
     const d = z.object({ q: z.string().trim().min(1).max(40) }).parse(data);

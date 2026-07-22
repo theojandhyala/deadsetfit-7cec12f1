@@ -24,6 +24,7 @@ import { isoDay } from "@/lib/calc";
 import { openPaywall } from "@/lib/paywall-events";
 import type { ChallengeRecord } from "@/lib/types";
 import { createPost, searchAthletes } from "@/lib/social.functions";
+import { DuelsPanel } from "@/components/DuelsPanel";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_tabs/challenges")({
@@ -716,6 +717,11 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
 
   return (
     <div className="px-5 flex flex-col gap-4">
+      {/* Real tracked duels — challenge, accept, auto-scored live */}
+      <DuelsPanel />
+
+      <p className="label-cap text-[10px] text-grit-dim -mb-1">Or post an open challenge to your feed</p>
+
       {/* Step 1: Search for opponent */}
       <div
         className="p-4 rounded-2xl"
