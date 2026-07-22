@@ -1026,9 +1026,36 @@ function Invite() {
           {copied ? <Check size={14} /> : <Copy size={14} />}
           <span className="label-cap text-xs">{copied ? "Copied" : "Copy invite link"}</span>
         </button>
-        <p className="text-xs text-[#8a8a8a] mt-3">
-          You've invited <span className="text-grit font-bold">{info.count}</span> mate(s).
-        </p>
+        {(() => {
+          const tiers = [1, 3, 5, 10, 25];
+          const labels: Record<number, string> = { 1: "First Recruit", 3: "Squad Builder", 5: "Recruiter", 10: "Ambassador", 25: "Legend" };
+          const count = info.count ?? 0;
+          const next = tiers.find((t) => count < t) ?? null;
+          const cur = [...tiers].reverse().find((t) => count >= t) ?? null;
+          const prev = cur ?? 0;
+          const prog = next ? Math.min(1, (count - prev) / (next - prev)) : 1;
+          return (
+            <div className="mt-3">
+              <div className="flex items-center justify-between text-xs mb-1.5">
+                <span className="text-[#8a8a8a]">
+                  Invited <span className="text-grit font-bold">{count}</span> · earned{" "}
+                  <span className="text-grit font-bold">{count * 30}</span> Pro days
+                </span>
+                {cur && <span className="label-cap text-[9px] text-accent-red">{labels[cur]}</span>}
+              </div>
+              {next && (
+                <>
+                  <div className="h-1.5 rounded-full bg-[#0a0a0a] overflow-hidden">
+                    <div className="h-full bg-accent-red rounded-full" style={{ width: `${Math.round(prog * 100)}%` }} />
+                  </div>
+                  <p className="text-[10px] text-[#8a8a8a] mt-1">
+                    {next - count} more to {labels[next]}
+                  </p>
+                </>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Redeem */}

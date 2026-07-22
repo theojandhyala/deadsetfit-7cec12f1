@@ -23,6 +23,7 @@ import {
 } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/account-restore";
 import { calculateStreak, calculateGritScore, gritBadge, badgeColor, isoDay } from "@/lib/calc";
+import { currentMilestone, nextMilestone, milestoneProgress } from "@/lib/streak-milestones";
 import { emitGritEarned } from "@/lib/grit-events";
 import { saveProfile } from "@/lib/profile.functions";
 import { deleteMyAccount } from "@/lib/account.functions";
@@ -395,21 +396,47 @@ function ProfilePage() {
 
       {/* Streak */}
       <section className="px-5 mb-5">
-        <div className="bg-grit-card border border-grit rounded-2xl p-4 flex items-center gap-4">
-          <Flame size={28} className="text-accent-red" />
-          <div>
-            <p className="label-cap">Current Streak</p>
-            <p className="display text-2xl font-extrabold text-grit leading-none">
-              {streak}
-              <span className="text-sm ml-2 text-grit-dim">{streak === 1 ? "day" : "days"}</span>
-            </p>
+        <div className="bg-grit-card border border-grit rounded-2xl p-4">
+          <div className="flex items-center gap-4">
+            <Flame size={28} className="text-accent-red" />
+            <div>
+              <p className="label-cap">Current Streak</p>
+              <p className="display text-2xl font-extrabold text-grit leading-none">
+                {streak}
+                <span className="text-sm ml-2 text-grit-dim">{streak === 1 ? "day" : "days"}</span>
+              </p>
+            </div>
+            <div className="ml-auto text-right">
+              <p className="label-cap">DEADSET Score</p>
+              <p className="display text-2xl font-extrabold leading-none" style={{ color: badgeC }}>
+                {score.total}
+              </p>
+            </div>
           </div>
-          <div className="ml-auto text-right">
-            <p className="label-cap">DEADSET Score</p>
-            <p className="display text-2xl font-extrabold leading-none" style={{ color: badgeC }}>
-              {score.total}
-            </p>
-          </div>
+          {(() => {
+            const cur = currentMilestone(streak);
+            const next = nextMilestone(streak);
+            return (
+              <div className="mt-3 pt-3 border-t border-grit">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs text-grit">
+                    {cur ? `${cur.emoji} ${cur.label}` : "🔥 First milestone: 3 days"}
+                  </span>
+                  {next && (
+                    <span className="label-cap text-[10px] text-grit-dim">
+                      {next.days - streak} to {next.label}
+                    </span>
+                  )}
+                </div>
+                <div className="h-1.5 rounded-full bg-[#0a0a0a] overflow-hidden">
+                  <div
+                    className="h-full bg-accent-red rounded-full"
+                    style={{ width: `${Math.round(milestoneProgress(streak) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </section>
 

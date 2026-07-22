@@ -419,13 +419,13 @@ const handlers: Record<string, Handler> = {
   // === Leaderboard (strength PRs) ===
   async getLeaderboard(data, req) {
     const { supabase, userId } = await requireAuth(req);
-    const d = z.object({ category: z.enum(["RANK", "OVERALL", "BENCH", "SQUAT", "DEADLIFT", "TOTAL"]), limit: z.number().int().min(1).max(100).optional() }).parse(data);
+    const d = z.object({ category: z.enum(["RANK", "OVERALL", "BENCH", "SQUAT", "DEADLIFT", "TOTAL", "STREAK"]), limit: z.number().int().min(1).max(100).optional() }).parse(data);
     const hidden = await blockedUserIds(supabase, userId);
     const { data: allRows, error } = await supabase.from("public_profiles").select("id, username, display_name, avatar_url, level, grit_points, public_stats").limit(500);
     if (error) throw error;
     const rows = (allRows ?? []).filter((r: any) => !r.id || !hidden.has(r.id as string));
     type TopPR = { id?: string; value?: number; unit?: string };
-    type PublicStats = { overall?: number; topPRs?: TopPR[] };
+    type PublicStats = { overall?: number; streak?: number; topPRs?: TopPR[] };
     const getPRValue = (stats: PublicStats, id: string) => Number((stats.topPRs ?? []).find(p => p?.id === id)?.value ?? 0);
     const cat = d.category;
     const enriched = (rows ?? [])
@@ -435,6 +435,7 @@ const handlers: Record<string, Handler> = {
         let value = 0, unit = "kg";
         if (cat === "RANK") { value = Number(r.grit_points ?? 0); unit = "GRIT"; }
         else if (cat === "OVERALL") { value = Number(stats.overall ?? 0); unit = "OVR"; }
+        else if (cat === "STREAK") { value = Number(stats.streak ?? 0); unit = "DAYS"; }
         else if (cat === "TOTAL") value = getPRValue(stats, "bench-press") + getPRValue(stats, "squat") + getPRValue(stats, "deadlift");
         else if (cat === "BENCH") value = getPRValue(stats, "bench-press");
         else if (cat === "SQUAT") value = getPRValue(stats, "squat");

@@ -22,6 +22,7 @@ import { ProProvider } from "../hooks/usePro";
 import { ProWelcome } from "../components/ProWelcome";
 import { UpgradeNudge } from "../components/UpgradeNudge";
 import { ReferralRedeemer } from "../components/ReferralRedeemer";
+import { StreakMilestoneWatcher } from "../components/StreakMilestoneWatcher";
 
 function NotFoundComponent() {
   return (
@@ -178,6 +179,7 @@ function RootComponent() {
         {!isAuthRoute && <CelebrationLayer />}
         {!isAuthRoute && <ProWelcome />}
         {!isAuthRoute && <UpgradeNudge />}
+        {!isAuthRoute && <StreakMilestoneWatcher />}
         <ReferralRedeemer />
         <ConfirmSheet />
         <Toaster />

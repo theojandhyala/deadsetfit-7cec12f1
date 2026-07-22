@@ -240,6 +240,8 @@ export interface PublicStats {
   HYP: number;
   CON: number;
   DIE: number;
+  /** Current consecutive-day training streak (for the streak leaderboard) */
+  streak: number;
   topPRs: HeadlinePR[];
   goal?: string;
   experience?: string;
@@ -263,6 +265,7 @@ export function buildPublicStats(state: AppState): PublicStats {
     HYP: stats.HYP,
     CON: stats.CON,
     DIE: stats.DIE,
+    streak: calculateStreak(state.completedDates),
     topPRs: buildHeadlinePRs(state),
     goal: state.profile?.goal,
     experience: state.profile?.experience,

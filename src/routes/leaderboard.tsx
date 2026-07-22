@@ -12,6 +12,7 @@ export const Route = createFileRoute("/leaderboard")({
 
 const CATS: { key: LeaderboardCategory; label: string }[] = [
   { key: "RANK", label: "RANK" },
+  { key: "STREAK", label: "STREAK" },
   { key: "OVERALL", label: "OVERALL" },
   { key: "TOTAL", label: "TOTAL" },
   { key: "BENCH", label: "BENCH" },

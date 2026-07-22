@@ -8,6 +8,7 @@ import { calculateCalories, calculateMacros, isoDay } from "@/lib/calc";
 import { lookupBarcode } from "@/lib/diet.functions";
 import { usePro } from "@/hooks/usePro";
 import { ProBanner } from "@/components/ProBanner";
+import { NutritionIntelligence } from "@/components/NutritionIntelligence";
 import { todayActiveBurn, healthSupported } from "@/lib/health";
 import { openPaywall } from "@/lib/paywall-events";
 import { Lock } from "lucide-react";
@@ -418,6 +419,45 @@ function DietPage() {
           )}
         </div>
       </section>
+      )}
+
+      {/* Nutrition Intelligence (Pro) — adherence, energy balance, goal coaching */}
+      {calories > 0 && macros.protein > 0 && week.loggedDays > 0 && (
+        <section className="deadset-section">
+          <div className="bg-grit-card border border-grit rounded-2xl p-4 relative">
+            <div className="flex items-center justify-between mb-3">
+              <p className="label-cap text-[10px] text-accent-red">NUTRITION INTELLIGENCE</p>
+              <span className="label-cap text-[9px] text-accent-red border border-accent-red/40 rounded px-1.5">
+                PRO
+              </span>
+            </div>
+            <div
+              className={nutritionLocked ? "pointer-events-none select-none blur-[6px] opacity-60" : undefined}
+              aria-hidden={nutritionLocked || undefined}
+            >
+              <NutritionIntelligence
+                foodLog={state.foodLog}
+                calorieTarget={calories}
+                proteinTarget={macros.protein}
+                goal={profile?.goal}
+              />
+            </div>
+            {nutritionLocked && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center">
+                <div className="bg-grit-card border p-4 max-w-[260px] text-center">
+                  <Lock size={16} className="text-accent-red mx-auto mb-2" />
+                  <p className="label-cap text-[10px] mb-1">NUTRITION INTELLIGENCE</p>
+                  <p className="text-xs text-grit-dim mb-3">
+                    Adherence score, energy balance and goal-aware coaching.
+                  </p>
+                  <button onClick={() => openPaywall("nutrition")} className="btn-grit px-4 py-2 text-xs">
+                    UNLOCK WITH PRO
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
       )}
 
       <section className="deadset-section">
