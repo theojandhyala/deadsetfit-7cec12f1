@@ -12,6 +12,7 @@ import { RankedArena } from "@/components/RankedArena";
 import { TodayReadiness } from "@/components/TodayReadiness";
 import { TrainingInsight } from "@/components/TrainingInsight";
 import { WeeklyMission } from "@/components/WeeklyMission";
+import { RestDayRecovery } from "@/components/RestDayRecovery";
 import { useAppState } from "@/lib/storage";
 import { EXERCISES, getExercise } from "@/lib/exercises";
 import { calculateGritScore, calculateStreak, defaultSchedule, isoDay, todayKey } from "@/lib/calc";
@@ -815,6 +816,7 @@ function TrainPage() {
                 <Link to="/workout/live" className="btn-ghost inline-block">
                   Train another day
                 </Link>
+                <RestDayRecovery state={state} />
               </div>
             )}
             {programDay?.items.map((it) => {
@@ -880,6 +882,7 @@ function TrainPage() {
                     Build my split
                   </Link>
                 </div>
+                <RestDayRecovery state={state} />
               </div>
             )}
             {(day?.exerciseIds || []).map((id) => {

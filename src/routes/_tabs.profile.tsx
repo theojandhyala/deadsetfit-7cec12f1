@@ -13,6 +13,7 @@ import {
   Sparkles,
   Heart,
   Check,
+  Share2,
 } from "lucide-react";
 import { useAppState, flushRemoteState } from "@/lib/storage";
 import { askConfirm, withDeadline } from "@/lib/confirm";
@@ -31,6 +32,7 @@ import { usePro } from "@/hooks/usePro";
 import { isNativeIos } from "@/lib/platform";
 import { FifaCard } from "@/components/FifaCard";
 import { ProBadge } from "@/components/ProBadge";
+import { StreakShareCard } from "@/components/StreakShareCard";
 import { QuickLogFAB } from "@/components/QuickLogFAB";
 import { StatsGrid } from "@/components/StatsGrid";
 import { LiftLevels } from "@/components/LiftLevels";
@@ -67,6 +69,7 @@ function ProfilePage() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [session, setSession] = useState<{ userId: string } | null | "loading">("loading");
   const [editingPR, setEditingPR] = useState<PRDef | null>(null);
+  const [showStreakShare, setShowStreakShare] = useState(false);
   const {
     isPro,
     status: proStatus,
@@ -400,7 +403,18 @@ function ProfilePage() {
           <div className="flex items-center gap-4">
             <Flame size={28} className="text-accent-red" />
             <div>
-              <p className="label-cap">Current Streak</p>
+              <p className="label-cap flex items-center gap-2">
+                Current Streak
+                {streak >= 3 && (
+                  <button
+                    onClick={() => setShowStreakShare(true)}
+                    aria-label="Share streak"
+                    className="text-accent-red press"
+                  >
+                    <Share2 size={12} />
+                  </button>
+                )}
+              </p>
               <p className="display text-2xl font-extrabold text-grit leading-none">
                 {streak}
                 <span className="text-sm ml-2 text-grit-dim">{streak === 1 ? "day" : "days"}</span>
@@ -674,6 +688,15 @@ function ProfilePage() {
       </section>
 
       <QuickLogFAB />
+
+      {showStreakShare && (
+        <StreakShareCard
+          streak={streak}
+          displayName={p.displayName || p.username || "Athlete"}
+          username={p.username}
+          onClose={() => setShowStreakShare(false)}
+        />
+      )}
     </div>
   );
 }

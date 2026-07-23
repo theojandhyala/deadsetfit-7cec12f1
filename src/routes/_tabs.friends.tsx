@@ -467,6 +467,39 @@ function Feed({ userId }: { userId: string }) {
         </div>
       )}
 
+      {(() => {
+        const weekAgo = Date.now() - 7 * 86400000;
+        const prs = posts.filter(
+          (p) =>
+            p.kind === "pr" &&
+            p.metadata &&
+            typeof p.metadata === "object" &&
+            "lift" in p.metadata &&
+            "weight" in p.metadata &&
+            new Date(p.created_at).getTime() >= weekAgo,
+        );
+        if (prs.length === 0) return null;
+        const top = prs.reduce((a, b) =>
+          Number((b.metadata as { weight?: number }).weight) > Number((a.metadata as { weight?: number }).weight) ? b : a,
+        );
+        const m = top.metadata as { lift?: string; weight?: number };
+        const name = top.author?.display_name || top.author?.username || "Athlete";
+        return (
+          <div
+            className="rounded-2xl p-4 mb-3 border border-accent-red"
+            style={{ background: "linear-gradient(135deg, rgba(230,50,34,0.14), #141414)" }}
+          >
+            <p className="label-cap text-[10px] text-accent-red flex items-center gap-1.5">
+              <Trophy size={12} /> PR of the week
+            </p>
+            <p className="display text-2xl font-extrabold uppercase text-grit mt-1">
+              {String(m.lift)} · {String(m.weight)}kg
+            </p>
+            <p className="text-xs text-grit-dim mt-0.5">by {name}</p>
+          </div>
+        );
+      })()}
+
       {posts.map((p) => (
         <article key={p.id} className="bg-grit-card border border-grit p-4 mb-3">
           <header className="flex items-center gap-3 mb-3">
