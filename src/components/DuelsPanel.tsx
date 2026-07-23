@@ -223,7 +223,7 @@ function NewDuelModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
     if (!selected) return;
     setSending(true);
     try {
-      await createDuel({ data: { opponentId: selected.id, metric, days: 7 } });
+      await createDuel({ data: { opponentId: selected.id, metric } });
       toast.success(`Challenge sent to ${selected.name}`);
       onCreated();
       onClose();

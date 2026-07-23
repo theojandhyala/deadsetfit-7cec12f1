@@ -290,6 +290,56 @@ async function blockedUserIds(supabase: any, userId: string): Promise<Set<string
   return hidden;
 }
 
+// ─── Duel scoring (service-role; used by createDuel/getDuels) ─────────────────
+async function loadUserStateBlob(uid: string): Promise<AppState | null> {
+  const { data } = await supabaseAdmin.from("user_state").select("data").eq("user_id", uid).maybeSingle();
+  return ((data as { data?: unknown } | null)?.data ?? null) as AppState | null;
+}
+
+function scoreOverWindow(state: AppState | null, metric: string, startMs: number, endMs: number): number {
+  const sessions = (state?.sessions ?? []).filter((s) => {
+    if (!s.endedAt) return false;
+    const t = Date.parse(s.startedAt || s.date);
+    return Number.isFinite(t) && t >= startMs && t <= endMs;
+  });
+  if (metric === "sessions") return sessions.length;
+  if (metric === "prs") return sessions.reduce((n, s) => n + (s.prCount ?? 0), 0);
+  return Math.round(sessions.reduce((n, s) => n + (s.totalVolume ?? 0), 0));
+}
+
+async function duelScores(duel: {
+  challenger_id: string; opponent_id: string; metric: string; start_at: string | null; end_at: string | null;
+}): Promise<{ challenger: number; opponent: number }> {
+  const startMs = duel.start_at ? Date.parse(duel.start_at) : 0;
+  const endMs = duel.end_at ? Date.parse(duel.end_at) : Date.now();
+  const [c, o] = await Promise.all([loadUserStateBlob(duel.challenger_id), loadUserStateBlob(duel.opponent_id)]);
+  return {
+    challenger: scoreOverWindow(c, duel.metric, startMs, endMs),
+    opponent: scoreOverWindow(o, duel.metric, startMs, endMs),
+  };
+}
+
+// Flip any of a pair's expired active duels to completed (with final scores) so
+// an ended-but-unviewed duel never permanently blocks a rematch.
+async function finalizeExpiredDuelsForPair(a: string, b: string): Promise<void> {
+  const nowIso = new Date().toISOString();
+  const { data: expired } = await (supabaseAdmin as any).from("duels")
+    .select("id, challenger_id, opponent_id, metric, start_at, end_at")
+    .eq("status", "active").lt("end_at", nowIso)
+    .or(`and(challenger_id.eq.${a},opponent_id.eq.${b}),and(challenger_id.eq.${b},opponent_id.eq.${a})`);
+  for (const x of (expired ?? []) as Array<{
+    id: string; challenger_id: string; opponent_id: string; metric: string; start_at: string | null; end_at: string | null;
+  }>) {
+    const s = await duelScores(x);
+    await (supabaseAdmin as any).from("duels").update({
+      status: "completed",
+      challenger_score: s.challenger,
+      opponent_score: s.opponent,
+      winner_id: s.challenger > s.opponent ? x.challenger_id : s.opponent > s.challenger ? x.opponent_id : null,
+    }).eq("id", x.id).eq("status", "active");
+  }
+}
+
 // ─── Handlers ────────────────────────────────────────────────────────────────
 
 type Handler = (data: any, req: any) => Promise<unknown>;
@@ -729,24 +779,31 @@ const handlers: Record<string, Handler> = {
   },
 
   async createDuel(data, req) {
-    const { supabase, userId } = await requireAuth(req);
+    // Duels are a Pro feature — enforce server-side, not just in the UI.
+    const { userId } = await requirePro(req);
     const d = z.object({
       opponentId: z.string().uuid(),
       metric: z.enum(["volume", "sessions", "prs"]).default("volume"),
-      days: z.number().int().min(1).max(30).default(7),
     }).parse(data);
     if (d.opponentId === userId) throw new Error("You can't duel yourself");
-    // One active/pending duel per pair at a time.
-    const { data: existing } = await (supabase as any).from("duels")
+    // Respect blocks in both directions (App Store 1.2 — no dueling to harass).
+    const blocked = await blockedUserIds(supabaseAdmin, userId);
+    if (blocked.has(d.opponentId)) throw new Error("You can't duel this athlete");
+    // Finalize any of this pair's expired duels first, so an ended-but-unviewed
+    // duel doesn't permanently block a rematch.
+    await finalizeExpiredDuelsForPair(userId, d.opponentId);
+    const { data: existing, error: exErr } = await (supabaseAdmin as any).from("duels")
       .select("id")
       .in("status", ["pending", "active"])
       .or(`and(challenger_id.eq.${userId},opponent_id.eq.${d.opponentId}),and(challenger_id.eq.${d.opponentId},opponent_id.eq.${userId})`)
-      .maybeSingle();
-    if (existing) throw new Error("You already have an open duel with this athlete");
-    const { data: row, error } = await (supabase as any).from("duels")
+      .limit(1);
+    if (exErr) throw new Error(exErr.message);
+    if (existing && existing.length) throw new Error("You already have an open duel with this athlete");
+    const { data: row, error } = await (supabaseAdmin as any).from("duels")
       .insert({ challenger_id: userId, opponent_id: d.opponentId, metric: d.metric, status: "pending" })
       .select("id").single();
-    if (error) throw new Error(error.message);
+    // The partial unique index rejects a concurrent duplicate — surface it kindly.
+    if (error) throw new Error(/duels_open_pair/.test(error.message) ? "You already have an open duel with this athlete" : error.message);
     return { id: row.id };
   },
 
@@ -756,87 +813,92 @@ const handlers: Record<string, Handler> = {
       duelId: z.string().uuid(),
       action: z.enum(["accept", "decline", "cancel"]),
     }).parse(data);
+    // Read under RLS (participants only); all writes go through the service role.
     const { data: duel } = await (supabase as any).from("duels")
       .select("id, challenger_id, opponent_id, status").eq("id", d.duelId).maybeSingle();
     if (!duel) throw new Error("Duel not found");
     if (d.action === "cancel") {
       if (duel.challenger_id !== userId) throw new Error("Only the challenger can cancel");
-      if (duel.status !== "pending") throw new Error("Can only cancel a pending duel");
-      await (supabase as any).from("duels").update({ status: "cancelled" }).eq("id", d.duelId);
+      // Guard the transition on the row's current status to avoid TOCTOU races.
+      const { data: upd } = await (supabaseAdmin as any).from("duels")
+        .update({ status: "cancelled" }).eq("id", d.duelId).eq("status", "pending").select("id");
+      if (!upd || !upd.length) throw new Error("Can only cancel a pending duel");
       return { ok: true, status: "cancelled" };
     }
-    // accept / decline — opponent only, on a pending duel.
     if (duel.opponent_id !== userId) throw new Error("Only the challenged athlete can respond");
-    if (duel.status !== "pending") throw new Error("This duel is no longer pending");
     if (d.action === "decline") {
-      await (supabase as any).from("duels").update({ status: "declined" }).eq("id", d.duelId);
+      const { data: upd } = await (supabaseAdmin as any).from("duels")
+        .update({ status: "declined" }).eq("id", d.duelId).eq("status", "pending").select("id");
+      if (!upd || !upd.length) throw new Error("This duel is no longer pending");
       return { ok: true, status: "declined" };
     }
     const now = new Date();
-    const start = now.toISOString();
-    // Default 7-day window from acceptance.
-    const end = new Date(now.getTime() + 7 * 86400000).toISOString();
-    await (supabase as any).from("duels").update({ status: "active", start_at: start, end_at: end }).eq("id", d.duelId);
+    const end = new Date(now.getTime() + 7 * 86400000).toISOString(); // 7-day window
+    const { data: upd } = await (supabaseAdmin as any).from("duels")
+      .update({ status: "active", start_at: now.toISOString(), end_at: end })
+      .eq("id", d.duelId).eq("status", "pending").select("id");
+    if (!upd || !upd.length) throw new Error("This duel is no longer pending");
     return { ok: true, status: "active" };
   },
 
   async getDuels(_data, req) {
     const { supabase, userId } = await requireAuth(req);
+    // Rows via RLS (participants only).
     const { data: duels, error } = await (supabase as any).from("duels")
-      .select("id, challenger_id, opponent_id, metric, status, start_at, end_at, created_at")
+      .select("id, challenger_id, opponent_id, metric, status, start_at, end_at, created_at, challenger_score, opponent_score, winner_id")
       .in("status", ["pending", "active", "completed"])
       .order("created_at", { ascending: false }).limit(25);
     if (error) throw new Error(error.message);
-    const rows = (duels ?? []) as Array<{
+    type Row = {
       id: string; challenger_id: string; opponent_id: string; metric: string;
       status: string; start_at: string | null; end_at: string | null; created_at: string;
-    }>;
+      challenger_score: number | null; opponent_score: number | null; winner_id: string | null;
+    };
+    const rows = (duels ?? []) as Row[];
     if (rows.length === 0) return [];
 
-    // Opponent profiles for display.
-    const otherIds: string[] = Array.from(new Set(rows.map((x) => (x.challenger_id === userId ? x.opponent_id : x.challenger_id))));
+    const blocked = await blockedUserIds(supabaseAdmin, userId);
+    const otherOf = (x: Row) => (x.challenger_id === userId ? x.opponent_id : x.challenger_id);
+    const visible = rows.filter((x) => !blocked.has(otherOf(x)));
+    if (visible.length === 0) return [];
+
+    const otherIds = Array.from(new Set(visible.map(otherOf)));
     const { data: profs } = await supabaseAdmin.from("public_profiles")
       .select("id, username, display_name, avatar_url")
       .in("id", otherIds.length ? otherIds : ["00000000-0000-0000-0000-000000000000"]);
     const pm = new Map((profs ?? []).map((p: { id: string | null }) => [p.id as string, p]));
 
-    // Live score for a participant over a window, from their logged sessions.
-    const scoreCache = new Map<string, AppState | null>();
-    const loadState = async (uid: string): Promise<AppState | null> => {
-      if (scoreCache.has(uid)) return scoreCache.get(uid) ?? null;
-      const { data } = await supabaseAdmin.from("user_state").select("data").eq("user_id", uid).maybeSingle();
-      const state = (data?.data ?? null) as AppState | null;
-      scoreCache.set(uid, state);
-      return state;
-    };
-    const scoreFor = (state: AppState | null, metric: string, startMs: number, endMs: number): number => {
-      const sessions = (state?.sessions ?? []).filter((s) => {
-        if (!s.endedAt) return false;
-        const t = Date.parse(s.startedAt || s.date);
-        return Number.isFinite(t) && t >= startMs && t <= endMs;
-      });
-      if (metric === "sessions") return sessions.length;
-      if (metric === "prs") return sessions.reduce((n, s) => n + (s.prCount ?? 0), 0);
-      return Math.round(sessions.reduce((n, s) => n + (s.totalVolume ?? 0), 0));
-    };
-
     const out = [];
-    for (const x of rows) {
+    for (const x of visible) {
       const iAmChallenger = x.challenger_id === userId;
-      const otherId = iAmChallenger ? x.opponent_id : x.challenger_id;
+      const otherId = otherOf(x);
       let myScore = 0, theirScore = 0, ended = false;
-      if (x.status === "active" || x.status === "completed") {
-        const startMs = x.start_at ? Date.parse(x.start_at) : 0;
-        const endMs = x.end_at ? Date.parse(x.end_at) : 0;
-        const [mine, theirs] = await Promise.all([loadState(userId), loadState(otherId)]);
-        myScore = scoreFor(mine, x.metric, startMs, endMs);
-        theirScore = scoreFor(theirs, x.metric, startMs, endMs);
-        ended = !!x.end_at && Date.now() >= endMs;
+
+      if (x.status === "completed") {
+        // Use the frozen final scores.
+        myScore = Number((iAmChallenger ? x.challenger_score : x.opponent_score) ?? 0);
+        theirScore = Number((iAmChallenger ? x.opponent_score : x.challenger_score) ?? 0);
+        ended = true;
+      } else if (x.status === "active") {
+        const s = await duelScores(x);
+        myScore = iAmChallenger ? s.challenger : s.opponent;
+        theirScore = iAmChallenger ? s.opponent : s.challenger;
+        if (x.end_at && Date.now() >= Date.parse(x.end_at)) {
+          // Transition to completed once, persisting the final scores.
+          ended = true;
+          await (supabaseAdmin as any).from("duels").update({
+            status: "completed",
+            challenger_score: s.challenger,
+            opponent_score: s.opponent,
+            winner_id: s.challenger > s.opponent ? x.challenger_id : s.opponent > s.challenger ? x.opponent_id : null,
+          }).eq("id", x.id).eq("status", "active");
+        }
       }
+
       out.push({
         id: x.id,
         metric: x.metric,
-        status: x.status,
+        status: ended && x.status === "active" ? "completed" : x.status,
         role: iAmChallenger ? "challenger" : "opponent",
         needsMyResponse: x.status === "pending" && !iAmChallenger,
         start_at: x.start_at,

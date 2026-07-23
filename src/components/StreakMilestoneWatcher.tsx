@@ -36,15 +36,19 @@ export function StreakMilestoneWatcher() {
   useEffect(() => {
     const seen = readSeen();
     const reached = milestone?.days ?? 0;
-    if (!initialised.current) {
-      initialised.current = true;
-      // Already past this milestone before the feature existed → mark, don't celebrate.
-      if (reached > seen) writeSeen(reached);
+    const first = !initialised.current;
+    initialised.current = true;
+    // Streak fell below the last celebrated milestone (broke and rebuilding) —
+    // reset so re-reaching it celebrates again rather than staying silent forever.
+    if (reached < seen) {
+      writeSeen(reached);
       return;
     }
-    if (milestone && milestone.days > seen) {
-      setHit(milestone);
-      writeSeen(milestone.days);
+    if (milestone && reached > seen) {
+      // On first observation, existing progress is marked silently (no retro spam);
+      // a genuine new crossing while the app is open celebrates.
+      if (!first) setHit(milestone);
+      writeSeen(reached);
     }
   }, [milestone]);
 

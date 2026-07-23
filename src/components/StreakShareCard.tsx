@@ -122,8 +122,9 @@ export function StreakShareCard({
         });
         return;
       }
-    } catch {
-      /* fall through to download */
+    } catch (e) {
+      // User cancelled the native share sheet — don't fall back to a download.
+      if (e instanceof Error && e.name === "AbortError") return;
     }
     download();
   }
