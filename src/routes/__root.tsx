@@ -23,6 +23,7 @@ import { ProWelcome } from "../components/ProWelcome";
 import { UpgradeNudge } from "../components/UpgradeNudge";
 import { ReferralRedeemer } from "../components/ReferralRedeemer";
 import { StreakMilestoneWatcher } from "../components/StreakMilestoneWatcher";
+import { captureAttribution } from "../lib/attribution";
 
 function NotFoundComponent() {
   return (
@@ -167,6 +168,11 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const isAuthRoute = pathname === "/auth" || pathname.startsWith("/auth/");
+
+  // Record where this visitor came from (referrer/UTM) for admin analytics.
+  useEffect(() => {
+    if (!isAuthRoute) captureAttribution();
+  }, [isAuthRoute]);
 
   return (
     <QueryClientProvider client={queryClient}>

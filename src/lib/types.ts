@@ -240,4 +240,11 @@ export interface AppState {
   autoShareWorkouts?: boolean;
   streakArmor?: StreakArmor;
   healthSync?: HealthSync;
+  /** Where this user came from, captured on their first visit (referrer/UTM). */
+  signupSource?: {
+    source: string;
+    referrer?: string;
+    landing?: string;
+    capturedAt: string;
+  };
 }

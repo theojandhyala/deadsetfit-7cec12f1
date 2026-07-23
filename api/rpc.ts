@@ -1094,6 +1094,83 @@ const handlers: Record<string, Handler> = {
     if (error) throw new Error(error.message);
     return { ok: true };
   },
+
+  // === Admin: growth & revenue analytics (owner only) ===
+  async adminStats(_data, req) {
+    const { email } = await requireAuth(req);
+    const ADMIN_EMAILS = ["theojandhyala@icloud.com"];
+    if (!email || !ADMIN_EMAILS.includes(email.toLowerCase())) {
+      throw Object.assign(new Error("Not authorized"), { status: 403 });
+    }
+
+    // Signups: one row per profile with created_at.
+    const { data: profiles, error: pErr } = await supabaseAdmin
+      .from("profiles")
+      .select("id,username,display_name,created_at,city,country")
+      .order("created_at", { ascending: false })
+      .limit(2000);
+    if (pErr) throw new Error(pErr.message);
+
+    const dayKey = (iso: string) => iso.slice(0, 10);
+    const perDay = new Map<string, number>();
+    for (const p of profiles ?? []) {
+      if (!p.created_at) continue;
+      const k = dayKey(p.created_at);
+      perDay.set(k, (perDay.get(k) ?? 0) + 1);
+    }
+    // Last 30 days, zero-filled so the chart has a continuous axis.
+    const signupsPerDay: { date: string; count: number }[] = [];
+    const cursor = new Date();
+    cursor.setDate(cursor.getDate() - 29);
+    for (let i = 0; i < 30; i++) {
+      const k = cursor.toISOString().slice(0, 10);
+      signupsPerDay.push({ date: k, count: perDay.get(k) ?? 0 });
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    // Subscriptions from our own table (webhook-fed).
+    const { data: subs } = await supabaseAdmin
+      .from("subscriptions")
+      .select("user_id,status,price_id,current_period_end,created_at")
+      .order("created_at", { ascending: false })
+      .limit(1000);
+    const now = Date.now();
+    const activeSubs = (subs ?? []).filter(
+      (s) =>
+        ["active", "trialing", "past_due"].includes(s.status) &&
+        (!s.current_period_end || new Date(s.current_period_end).getTime() > now),
+    );
+    const plans = new Map<string, number>();
+    for (const s of activeSubs) plans.set(s.price_id ?? "unknown", (plans.get(s.price_id ?? "unknown") ?? 0) + 1);
+
+    // Acquisition sources, harvested from each user's synced app state.
+    const sources = new Map<string, number>();
+    try {
+      const { data: states } = await supabaseAdmin.from("user_state").select("data").limit(2000);
+      for (const row of states ?? []) {
+        const src = (row.data as { signupSource?: { source?: string } } | null)?.signupSource?.source;
+        sources.set(src || "unknown", (sources.get(src || "unknown") ?? 0) + 1);
+      }
+    } catch {
+      /* attribution is best-effort */
+    }
+
+    return {
+      totalUsers: profiles?.length ?? 0,
+      signupsPerDay,
+      recentSignups: (profiles ?? []).slice(0, 15).map((p) => ({
+        username: p.username,
+        displayName: p.display_name,
+        date: p.created_at,
+        location: [p.city, p.country].filter(Boolean).join(", ") || null,
+      })),
+      activeSubscriptions: activeSubs.length,
+      subscriptionPlans: [...plans.entries()].map(([plan, count]) => ({ plan, count })),
+      sources: [...sources.entries()]
+        .map(([source, count]) => ({ source, count }))
+        .sort((a, b) => b.count - a.count),
+    };
+  },
 };
 
 // ─── Main handler ─────────────────────────────────────────────────────────────
