@@ -25,6 +25,7 @@ import { ReferralRedeemer } from "../components/ReferralRedeemer";
 import { StreakMilestoneWatcher } from "../components/StreakMilestoneWatcher";
 import { captureAttribution } from "../lib/attribution";
 import { WeeklyRecapNudge } from "../components/WeeklyRecapNudge";
+import { FeatureTour } from "../components/FeatureTour";
 
 function NotFoundComponent() {
   return (
@@ -188,6 +189,7 @@ function RootComponent() {
         {!isAuthRoute && <UpgradeNudge />}
         {!isAuthRoute && <StreakMilestoneWatcher />}
         {!isAuthRoute && <WeeklyRecapNudge />}
+        {!isAuthRoute && <FeatureTour />}
         <ReferralRedeemer />
         <ConfirmSheet />
         <Toaster />
