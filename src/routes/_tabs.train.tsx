@@ -302,6 +302,39 @@ function TrainPage() {
 
   return (
     <div className="deadset-page">
+      {/* First-workout activation: unmissable until the very first session is
+          logged, then never seen again. */}
+      {(state.sessions ?? []).length === 0 && (
+        <div className="deadset-section pt-4">
+          <div
+            className="deadset-3d-panel border border-accent-red/50 p-5 animate-slide-up"
+            style={{ background: "linear-gradient(135deg, rgba(225,6,0,0.14), rgba(20,20,20,0.9))" }}
+          >
+            <p className="label-cap text-[10px] text-accent-red">START HERE</p>
+            <h2 className="display mt-1 text-3xl font-black uppercase text-grit leading-none">
+              YOUR FIRST WORKOUT
+            </h2>
+            <p className="mt-2 text-sm text-grit-dim leading-relaxed">
+              {(() => {
+                const today = todayKey();
+                const todayIds =
+                  activeProgram?.days[today]?.items.length ||
+                  schedule[today]?.exerciseIds?.length ||
+                  0;
+                return todayIds > 0
+                  ? `Today is ${(schedule[today]?.label || "TRAINING DAY").split("—")[0].trim()} — ${todayIds} exercises, about 25 minutes. Log it and your streak starts.`
+                  : "Pick any day's session — log one workout and your streak starts.";
+              })()}
+            </p>
+            <Link
+              to="/workout/live"
+              className="btn-grit mt-4 flex min-h-[56px] w-full items-center justify-center rounded-2xl text-base"
+            >
+              <Flame size={20} className="mr-2" /> START NOW
+            </Link>
+          </div>
+        </div>
+      )}
       <header className="deadset-section">
         <div className="deadset-hero-card p-5">
           <div className="relative">
