@@ -11,7 +11,9 @@ import { getExercise } from "@/lib/exercises";
 import { getMyProfile, saveProfile } from "@/lib/profile.functions";
 import { saveUserState } from "@/lib/user-state.functions";
 import { profileFromAccount, profileQuestionsComplete, withTimeout } from "@/lib/account-restore";
-import type { Equipment, Experience, FocusMuscle, Gender, Goal, Profile, Weakness } from "@/lib/types";
+import type { DayKey, Equipment, Experience, FocusMuscle, Gender, Goal, Profile, Weakness } from "@/lib/types";
+import { WeekdayPicker } from "@/components/WeekdayPicker";
+import { daysPerWeekFor, describeDays, MIN_TRAINING_DAYS } from "@/lib/training-days";
 import { buildPublicStats } from "@/lib/fifa-stats";
 import { isNativeIos } from "@/lib/platform";
 import { PRO_HIGHLIGHTS } from "@/lib/pro-features";
@@ -45,31 +47,47 @@ type Step =
   | "analyzing"
   | "blueprint"
   | "commit"
+  | "tune"
   | "pro";
 
 type Mode = "GENERATE" | "BUILD";
 
-function orderFor(mode: Mode | null): Step[] {
-  const base: Step[] = ["mode"];
-  if (!mode) return base;
-  const schedule: Step[] =
-    mode === "GENERATE"
-      ? ["goal", "why", "days", "equipment", "focus", "session", "schedule"]
-      : ["goal", "why", "days", "equipment", "focus", "session"];
+/**
+ * Everything we genuinely need before a lifter can train. Keep this list short —
+ * it is the promise the first screen makes, and every addition is another wall
+ * between signing up and the app doing something useful.
+ */
+const CORE_QUESTIONS: Step[] = [
+  "goal",
+  "days",
+  "equipment",
+  "session",
+  "experience",
+  "about",
+  "name",
+  "username",
+];
+
+/**
+ * Optional depth. These sharpen the plan but nothing here blocks training, so
+ * they sit behind the "fine-tune" gate and every one of them can be skipped.
+ */
+const EXTRA_QUESTIONS: Step[] = [
+  "focus",
+  "prs",
+  "target",
+  "injuries",
+  "why",
+  "sleep",
+  "dream",
+  "weakness",
+  "photo",
+];
+
+/** The reveal at the end: build animation, the plan, the pledge, the Pro pitch. */
+function payoffSteps(mode: Mode): Step[] {
   return [
-    ...base,
-    ...schedule,
-    "experience",
-    "about",
-    "sleep",
-    "target",
-    "dream",
-    "injuries",
-    "weakness",
-    "prs",
-    "name",
-    "username",
-    "photo",
+    ...(mode === "GENERATE" ? (["schedule"] as Step[]) : []),
     "analyzing",
     "blueprint",
     "commit",
@@ -79,10 +97,23 @@ function orderFor(mode: Mode | null): Step[] {
   ];
 }
 
+function orderFor(mode: Mode | null, fineTune: boolean): Step[] {
+  const base: Step[] = ["mode"];
+  if (!mode) return base;
+  return [
+    ...base,
+    ...CORE_QUESTIONS,
+    "tune",
+    ...(fineTune ? EXTRA_QUESTIONS : []),
+    ...payoffSteps(mode),
+  ];
+}
+
 function Onboarding() {
   const navigate = useNavigate();
   const [idx, setIdx] = useState(0);
   const [mode, setMode] = useState<Mode | null>(null);
+  const [fineTune, setFineTune] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Partial<Profile>>({});
   const savingRef = useRef(false);
@@ -92,8 +123,12 @@ function Onboarding() {
   const save = saveProfile;
   const saveFullState = saveUserState;
   const getProfile = getMyProfile;
-  const ORDER = useMemo(() => orderFor(mode), [mode]);
+  const ORDER = useMemo(() => orderFor(mode, fineTune), [mode, fineTune]);
   const step = ORDER[idx];
+  // The first screen only knows about itself, so a raw idx/length would read
+  // "1 / 1" at 100% before a single question is answered. Show the length of
+  // the shortest real run instead until the mode is picked.
+  const totalSteps = mode ? ORDER.length : orderFor("GENERATE", false).length;
 
   useEffect(() => {
     let cancelled = false;
@@ -212,14 +247,14 @@ function Onboarding() {
           <GritLogo className="text-3xl" />
         </div>
         <span className="label-cap">
-          {idx + 1} / {ORDER.length}
+          {idx + 1} / {totalSteps}
         </span>
       </div>
       <div className="px-6">
         <div className="h-1.5 bg-grit-card rounded-full overflow-hidden">
           <div
             className="h-full bg-accent-red rounded-full transition-all"
-            style={{ width: `${((idx + 1) / ORDER.length) * 100}%` }}
+            style={{ width: `${Math.min(100, ((idx + 1) / totalSteps) * 100)}%` }}
           />
         </div>
       </div>
@@ -284,15 +319,22 @@ function Onboarding() {
           />
         )}
         {step === "days" && (
-          <Choice
-            title="Days per week you can train"
-            options={[
-              { v: "3", l: "3 days" },
-              { v: "4", l: "4 days" },
-              { v: "5", l: "5 days" },
-              { v: "6", l: "6 days" },
-            ]}
-            onPick={(v) => next({ daysPerWeek: Number(v) as 3 | 4 | 5 | 6 })}
+          <TrainingDaysStep
+            initial={draft.trainingDays}
+            onSubmit={(days) => next({ trainingDays: days, daysPerWeek: daysPerWeekFor(days) })}
+          />
+        )}
+        {step === "tune" && (
+          <TuneGateStep
+            draft={draft}
+            onFineTune={() => {
+              setFineTune(true);
+              setIdx(idx + 1);
+            }}
+            onSkip={() => {
+              setFineTune(false);
+              setIdx(idx + 1);
+            }}
           />
         )}
         {step === "equipment" && (
@@ -725,7 +767,7 @@ function SchedulePreview({
       </h1>
       <p className="text-sm text-[#8a8a8a] mb-6">
         {draft.daysPerWeek} days · {(draft.equipment ?? "").replace("_", " ").toLowerCase()} · tuned
-        for {(draft.goal ?? "").toLowerCase()}. Tweak anytime in Programs.
+        for {(draft.goal ?? "").toLowerCase()}. Change it any time from Train → Edit.
       </p>
       <div className="flex flex-col gap-1.5 mb-6">
         {DAYS.map((d) => {
@@ -791,7 +833,9 @@ function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
           <span className="display text-2xl uppercase tracking-wide font-extrabold text-grit block">
             Generate Schedule
           </span>
-          <p className="text-xs text-[#8a8a8a] mt-1">Answer 3 questions. We build your week.</p>
+          <p className="text-xs text-[#8a8a8a] mt-1">
+            Answer 8 quick questions. We build your week.
+          </p>
         </button>
         <button
           onClick={() => onPick("BUILD")}
@@ -881,6 +925,108 @@ function PRStep({ onContinue }: { onContinue: () => void }) {
         </button>
         <button onClick={onContinue} className="btn-ghost">
           Skip for now
+        </button>
+      </div>
+    </>
+  );
+}
+
+function TrainingDaysStep({
+  initial,
+  onSubmit,
+}: {
+  initial?: DayKey[];
+  onSubmit: (days: DayKey[]) => void;
+}) {
+  const [days, setDays] = useState<DayKey[]>(initial ?? ["MON", "WED", "FRI"]);
+  const enough = days.length >= MIN_TRAINING_DAYS;
+  return (
+    <>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">
+        Which days do you train?
+      </h1>
+      <p className="text-sm text-[#8a8a8a] mb-6">
+        Tap the days that suit your week. We'll put your workouts on exactly those
+        days and rest you on the others.
+      </p>
+
+      <WeekdayPicker value={days} onChange={setDays} />
+
+      <p className="text-sm mt-4" style={{ color: enough ? "#f5f5f0" : "#8a8a8a" }}>
+        {enough ? (
+          <>
+            <span className="font-bold">{days.length} days a week</span> —{" "}
+            {describeDays(days)}.
+          </>
+        ) : (
+          `Pick at least ${MIN_TRAINING_DAYS} days.`
+        )}
+      </p>
+
+      <div className="mt-auto flex flex-col gap-3">
+        <button
+          onClick={() => onSubmit(days)}
+          disabled={!enough}
+          className="btn-grit disabled:opacity-40"
+        >
+          Continue
+        </button>
+        <p className="text-center text-xs text-[#6a6a6a]">
+          You can change these any time from Train.
+        </p>
+      </div>
+    </>
+  );
+}
+
+const EQUIPMENT_LABEL: Record<string, string> = {
+  FULL_GYM: "Full gym",
+  HOME_GYM: "Home gym",
+  BODYWEIGHT: "Bodyweight",
+};
+
+function TuneGateStep({
+  draft,
+  onFineTune,
+  onSkip,
+}: {
+  draft: Partial<Profile>;
+  onFineTune: () => void;
+  onSkip: () => void;
+}) {
+  const days = draft.trainingDays ?? [];
+  const summary = [
+    days.length > 0 ? `${days.length} days — ${describeDays(days)}` : null,
+    draft.equipment ? EQUIPMENT_LABEL[draft.equipment] : null,
+    draft.sessionMinutes ? `${draft.sessionMinutes} min sessions` : null,
+  ].filter(Boolean) as string[];
+
+  return (
+    <>
+      <p className="label-cap text-accent-red text-[10px] mb-2">That's everything we need</p>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">
+        Ready to train
+      </h1>
+      <p className="text-sm text-[#8a8a8a] mb-6">
+        We can build your week right now. The extra questions only sharpen it —
+        skip them and you can add the detail later from your profile.
+      </p>
+
+      <div className="border border-grit rounded-2xl bg-grit-card p-4 mb-6">
+        {summary.map((line) => (
+          <div key={line} className="flex items-center gap-2.5 py-1">
+            <Check size={15} className="text-accent-red flex-shrink-0" />
+            <span className="text-sm text-grit">{line}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-auto flex flex-col gap-3">
+        <button onClick={onSkip} className="btn-grit">
+          Build my week — I'm ready
+        </button>
+        <button onClick={onFineTune} className="btn-ghost">
+          Fine-tune first (about a minute)
         </button>
       </div>
     </>
@@ -1223,21 +1369,23 @@ function AnalyzingStep({ draft, onDone }: { draft: Partial<Profile>; onDone: () 
   const focus = (p.focusMuscles ?? []).join(" + ").toLowerCase();
   const lines = useMemo(
     () => [
-      "Reading your goals and your why",
+      p.motivation ? "Reading your goals and your why" : "Reading your goals",
       `Calibrating a ${p.daysPerWeek ?? 4}-day split${focus ? ` with extra ${focus}` : ""}`,
       "Setting your calorie and protein targets",
       "Benchmarking your lifts against the standards",
       "Locking in your ranked starting point",
     ],
-    [p.daysPerWeek, focus],
+    [p.daysPerWeek, p.motivation, focus],
   );
   const [done, setDone] = useState(0);
   useEffect(() => {
     if (done >= lines.length) {
-      const t = setTimeout(onDone, 750);
+      const t = setTimeout(onDone, 400);
       return () => clearTimeout(t);
     }
-    const t = setTimeout(() => setDone((d) => d + 1), 720);
+    // Fast enough to read as "working", short enough that nobody sits waiting:
+    // five lines plus the hand-off lands under two seconds.
+    const t = setTimeout(() => setDone((d) => d + 1), 300);
     return () => clearTimeout(t);
   }, [done, lines.length, onDone]);
   const pct = Math.round((done / lines.length) * 100);

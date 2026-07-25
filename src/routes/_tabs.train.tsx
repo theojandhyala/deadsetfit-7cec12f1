@@ -20,6 +20,9 @@ import { usePro } from "@/hooks/usePro";
 import { useCountUp } from "@/hooks/useCountUp";
 import { WeeklyReportCard } from "@/components/WeeklyReportCard";
 import { openPaywall } from "@/lib/paywall-events";
+import { WeekdayPicker } from "@/components/WeekdayPicker";
+import { daysPerWeekFor, describeDays } from "@/lib/training-days";
+import { FirstRunTour } from "@/components/FirstRunTour";
 import type { DayKey, Schedule, Program, Exercise } from "@/lib/types";
 
 const DAY_KEYS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
@@ -224,6 +227,46 @@ function TrainPage() {
     }));
   }
 
+  // A day counts as a training day when it actually has exercises on it — that
+  // stays true whether the week came from onboarding or from hand-editing here.
+  const trainingDays: DayKey[] = DAY_KEYS.filter(
+    (k) => (schedule[k]?.exerciseIds?.length ?? 0) > 0,
+  );
+
+  /**
+   * Rewrites the week around a new set of training days. Days that were already
+   * being trained keep exactly what the user put on them; only newly-enabled
+   * days get generated content, and switched-off days become rest.
+   */
+  function applyTrainingDays(nextDays: DayKey[]) {
+    const profile = state.profile;
+    if (!profile) return;
+    // daysPerWeek feeds calorie/TDEE maths and the profile card, so it has to
+    // track the picker rather than stay frozen at whatever onboarding saved.
+    const nextProfile = {
+      ...profile,
+      trainingDays: nextDays,
+      daysPerWeek: daysPerWeekFor(nextDays),
+    };
+    const generated = defaultSchedule(nextProfile);
+    set((s) => {
+      const current = s.schedule || schedule;
+      const nextSchedule = {} as Schedule;
+      for (const k of DAY_KEYS) {
+        if (!nextDays.includes(k)) {
+          nextSchedule[k] = { label: "REST", exerciseIds: [] };
+          continue;
+        }
+        const existing = current[k];
+        nextSchedule[k] =
+          (existing?.exerciseIds?.length ?? 0) > 0
+            ? existing
+            : { label: generated[k].label, exerciseIds: [...generated[k].exerciseIds] };
+      }
+      return { ...s, schedule: nextSchedule, profile: nextProfile };
+    });
+  }
+
   function updateDayTrainingDose(next: { sets?: number; reps?: string }) {
     set((s) => {
       const existingSchedule = s.schedule || schedule;
@@ -301,6 +344,9 @@ function TrainPage() {
 
   return (
     <div className="deadset-page">
+      {/* Held back until there's a profile, so the tour never opens over a
+          half-loaded page or during the onboarding redirect. */}
+      <FirstRunTour active={!!state.profile} />
       <header className="deadset-section">
         <div className="deadset-hero-card p-5">
           <div className="relative">
@@ -525,8 +571,30 @@ function TrainPage() {
             </div>
           )}
           <div className="bg-grit-card border border-grit p-4">
+            <div className="mb-5 rounded-[1.4rem] border border-grit bg-black/30 p-4">
+              <p className="label-cap text-accent-red text-[10px]">STEP 1 — YOUR WEEK</p>
+              <h2 className="display text-2xl font-extrabold uppercase text-grit leading-none mt-1">
+                Which days do you train?
+              </h2>
+              <p className="text-xs text-grit-dim mt-2 mb-3 leading-relaxed">
+                Tap a day to turn training on or off. New days get a workout that
+                fits your split; days you switch off become rest.
+              </p>
+              <WeekdayPicker value={trainingDays} onChange={applyTrainingDays} />
+              <p className="text-xs text-grit-dim mt-3">
+                {trainingDays.length > 0 ? (
+                  <>
+                    <b className="text-grit">{trainingDays.length} days a week</b> ·{" "}
+                    {describeDays(trainingDays)}
+                  </>
+                ) : (
+                  "No training days yet — tap a day to start."
+                )}
+              </p>
+            </div>
+
             <div className="mb-5 rounded-[1.4rem] border border-accent-red/60 bg-black/30 p-4">
-              <p className="label-cap text-accent-red text-[10px]">EASY SCHEDULE BUILDER</p>
+              <p className="label-cap text-accent-red text-[10px]">STEP 2 — EDIT ONE DAY</p>
               <h2 className="display text-2xl font-extrabold uppercase text-grit leading-none mt-1">
                 {DAY_FULL[selectedDay]}
               </h2>
@@ -803,7 +871,7 @@ function TrainPage() {
             className="label-cap text-[10px]"
             style={{ color: editMode ? "#e63222" : "#8a8a8a" }}
           >
-            {editMode ? "Done editing" : "Edit plan"}
+            {editMode ? "Done" : "Edit my week"}
           </button>
         </div>
         {activeProgram ? (
@@ -876,9 +944,12 @@ function TrainPage() {
                   <Link to="/workout/live" className="btn-grit inline-block rounded-2xl">
                     Train anyway
                   </Link>
-                  <Link to="/programs" className="btn-ghost inline-block">
-                    Build my split
-                  </Link>
+                  {/* This used to link to Programs — a separate system that
+                      overrides the schedule rather than editing it. Open the
+                      real editor instead, which is what the label promises. */}
+                  <button onClick={() => setEditMode(true)} className="btn-ghost">
+                    Edit my week
+                  </button>
                 </div>
               </div>
             )}

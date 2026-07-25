@@ -1,4 +1,25 @@
-import type { Profile, AppState, SetLog } from "./types";
+import type { Profile, AppState, SetLog, DayKey } from "./types";
+
+export const WEEK: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+
+/** The weekday spread used when a lifter hasn't picked their own training days. */
+const DEFAULT_TRAINING_DAYS: Record<number, DayKey[]> = {
+  3: ["MON", "WED", "FRI"],
+  4: ["MON", "TUE", "THU", "FRI"],
+  5: ["MON", "TUE", "WED", "THU", "FRI"],
+  6: ["MON", "TUE", "WED", "THU", "FRI", "SAT"],
+};
+
+/**
+ * Turns a possibly-missing or malformed `trainingDays` into a clean, week-ordered
+ * list. Falls back to the default spread so profiles saved before day-picking
+ * existed keep the exact schedule they already had.
+ */
+export function normaliseTrainingDays(days: DayKey[] | undefined, wanted: number): DayKey[] {
+  const cleaned = WEEK.filter((d) => days?.includes(d));
+  if (cleaned.length > 0) return cleaned;
+  return DEFAULT_TRAINING_DAYS[wanted] ?? DEFAULT_TRAINING_DAYS[3];
+}
 
 export function calculateCalories(p: Profile): number {
   // Mifflin-St Jeor
@@ -79,11 +100,24 @@ export function defaultSchedule(p: Profile) {
     ids: ["plank", "hanging-leg-raise", "cable-crunch", "ab-wheel"],
   };
 
-  let plan: Day[];
-  if (d === 3) plan = [FULL, REST, FULL, REST, FULL, REST, REST];
-  else if (d === 4) plan = [UPPER, LOWER, REST, UPPER, LOWER, REST, REST];
-  else if (d === 5) plan = [PUSH, PULL, LEGS, UPPER, LOWER, REST, REST];
-  else plan = [PUSH, PULL, LEGS, SHO, ARMS, CORE, REST];
+  // The workouts that make up one week, in the order they should be trained.
+  let rotation: Day[];
+  if (d === 3) rotation = [FULL, FULL, FULL];
+  else if (d === 4) rotation = [UPPER, LOWER, UPPER, LOWER];
+  else if (d === 5) rotation = [PUSH, PULL, LEGS, UPPER, LOWER];
+  else rotation = [PUSH, PULL, LEGS, SHO, ARMS, CORE];
+
+  // Which weekdays those workouts land on. An explicit `trainingDays` wins;
+  // otherwise fall back to the spread this app has always used.
+  const chosen = normaliseTrainingDays(p.trainingDays, rotation.length);
+
+  // Each slot gets its own copy: the same workout can appear on several days,
+  // and days must never share an `exerciseIds` array.
+  const plan: Day[] = WEEK.map(() => ({ label: REST.label, ids: [] }));
+  chosen.forEach((dayKey, i) => {
+    const source = rotation[i % rotation.length];
+    plan[WEEK.indexOf(dayKey)] = { label: source.label, ids: [...source.ids] };
+  });
 
   // Personalisation: bias the split toward the lifter's focus muscles by
   // appending one extra exercise on the days that already hit that muscle.
@@ -112,17 +146,8 @@ export function defaultSchedule(p: Profile) {
     if (day.ids.length > cap) day.ids = day.ids.slice(0, cap);
   }
 
-  const days: ("MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN")[] = [
-    "MON",
-    "TUE",
-    "WED",
-    "THU",
-    "FRI",
-    "SAT",
-    "SUN",
-  ];
   const result: Record<string, { label: string; exerciseIds: string[] }> = {};
-  days.forEach((d, i) => {
+  WEEK.forEach((d, i) => {
     result[d] = { label: plan[i].label, exerciseIds: plan[i].ids };
   });
   return result as import("./types").Schedule;
