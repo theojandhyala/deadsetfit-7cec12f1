@@ -82,7 +82,10 @@ export function ProProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    if (!isPaymentsConfigured()) {
+    // Native iOS never queries subscription/purchase state: there is nothing to
+    // buy in the app and every feature is already unlocked, so the app makes no
+    // payment-related requests at all (App Store Guideline 3.1.1).
+    if (isNativeIos() || !isPaymentsConfigured()) {
       setLoading(false);
       return;
     }
