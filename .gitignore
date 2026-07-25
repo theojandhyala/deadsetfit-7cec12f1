@@ -33,3 +33,6 @@ dist-ssr
 .vercel
 .env*
 appstore-screenshots/READY-*.png
+.shotwork/
+appstore-screenshots/FINAL-*.png
+appstore-screenshots/READY-*.png
