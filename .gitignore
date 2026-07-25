@@ -32,3 +32,4 @@ dist-ssr
 *.sw?
 .vercel
 .env*
+appstore-screenshots/READY-*.png
