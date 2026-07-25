@@ -94,6 +94,12 @@ function UpgradePage() {
   const [iosNative, setIosNative] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
 
+  // The whole upgrade surface is web-only. On native iOS every feature is free,
+  // so this page has nothing to offer and must not exist (Guideline 3.1.1).
+  useEffect(() => {
+    if (isNativeIos()) navigate({ to: "/profile", replace: true });
+  }, [navigate]);
+
   useEffect(() => {
     let cancelled = false;
     setIosNative(isNativeIos());

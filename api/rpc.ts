@@ -779,8 +779,11 @@ const handlers: Record<string, Handler> = {
   },
 
   async createDuel(data, req) {
-    // Duels are a Pro feature — enforce server-side, not just in the UI.
-    const { userId } = await requirePro(req);
+    // NOTE: intentionally not requirePro. Duels are free on native iOS (where
+    // Pro can't be sold — Guideline 3.1.1) and the server can't tell platforms
+    // apart without a spoofable flag, so a server-side Pro gate would lock out
+    // every iOS user. Web monetisation is gated in DuelsPanel instead.
+    const { userId } = await requireAuth(req);
     const d = z.object({
       opponentId: z.string().uuid(),
       metric: z.enum(["volume", "sessions", "prs"]).default("volume"),

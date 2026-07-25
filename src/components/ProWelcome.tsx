@@ -21,7 +21,8 @@ const UNLOCKED = [
  * redirect-return flows alike.
  */
 export function ProWelcome() {
-  const { isPro } = usePro();
+  // Only celebrate a real purchase — not the blanket iOS entitlement.
+  const { isPaidPro: isPro } = usePro();
   const [show, setShow] = useState(false);
   const prev = useRef<boolean | null>(null);
 

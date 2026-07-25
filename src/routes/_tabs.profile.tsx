@@ -71,7 +71,9 @@ function ProfilePage() {
   const [editingPR, setEditingPR] = useState<PRDef | null>(null);
   const [showStreakShare, setShowStreakShare] = useState(false);
   const {
-    isPro,
+    // Identity/badging reflects a real paid subscription, not the blanket
+    // iOS entitlement — a free iOS user shouldn't wear a PRO badge.
+    isPaidPro: isPro,
     status: proStatus,
     currentPeriodEnd,
     cancelAtPeriodEnd,
@@ -565,7 +567,9 @@ function ProfilePage() {
         </div>
       </section>
 
-      {/* DEADSET Pro */}
+      {/* DEADSET Pro — web only. On iOS every feature is already unlocked, so
+          there is no subscription to advertise or manage (Guideline 3.1.1). */}
+      {!nativeIos && (
       <section className="px-5 mb-6">
         <div
           className={`border p-5 relative overflow-hidden ${isPro ? "border-pro pro-glow" : "border-accent-red"}`}
@@ -617,26 +621,14 @@ function ProfilePage() {
             </p>
           )}
           {isPro ? (
-            nativeIos ? (
-              // App Store 3.1.1: no billing-management link on iOS.
+            <div className="grid grid-cols-2 gap-2">
+              <Link to="/upgrade" className="btn-ghost w-full inline-flex justify-center">
+                Manage Pro
+              </Link>
               <button onClick={() => void refreshPro()} className="btn-grit w-full">
-                Refresh status
+                Refresh
               </button>
-            ) : (
-              <div className="grid grid-cols-2 gap-2">
-                <Link to="/upgrade" className="btn-ghost w-full inline-flex justify-center">
-                  Manage Pro
-                </Link>
-                <button onClick={() => void refreshPro()} className="btn-grit w-full">
-                  Refresh
-                </button>
-              </div>
-            )
-          ) : nativeIos ? (
-            // App Store 3.1.1: no purchase CTA on iOS.
-            <p className="text-xs text-grit-dim">
-              Pro isn’t available on iPhone yet — every core feature stays unlocked.
-            </p>
+            </div>
           ) : (
             <Link to="/upgrade" className="btn-grit w-full inline-flex justify-center">
               Upgrade — Go Pro
@@ -647,6 +639,7 @@ function ProfilePage() {
           )}
         </div>
       </section>
+      )}
 
       <section className="px-5 mb-6 flex flex-col gap-2">
         <Link to="/recovery" className="btn-ghost w-full inline-flex items-center justify-center">
