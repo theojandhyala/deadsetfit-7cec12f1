@@ -272,7 +272,9 @@ const CHALLENGES: Challenge[] = [
 ];
 
 const TIER_COLOR = { EASY: "#60a5fa", BEAST: "#fbbf24", GOD: "#e63222", ELITE: "#a855f7" };
-const TIER_LABEL = { EASY: "Entry", BEAST: "Beast", GOD: "God Tier", ELITE: "Elite · Pro" };
+// "Elite" is deliberately not labelled "Pro" — this label renders on iOS, where
+// every tier is free, so a "Pro" suffix would imply paid content (Guideline 3.1.1).
+const TIER_LABEL = { EASY: "Entry", BEAST: "Beast", GOD: "God Tier", ELITE: "Elite" };
 
 // "Finish the work, beat the clock" challenges: LOWER time is better. Holds
 // (plank, dead hang, wall sit, carries) stay higher-is-better.
