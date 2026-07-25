@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Play, ListPlus, Flame, Trophy, Heart, Pencil, Shield, Lock } from "lucide-react";
+import { Play, ListPlus, Flame, Trophy, Heart, Pencil, Shield, Lock, LineChart } from "lucide-react";
 
 import { VideoModal } from "@/components/VideoModal";
 import { Reminders } from "@/components/Reminders";
@@ -497,49 +497,163 @@ function TrainPage() {
           </div>
         </div>
       </header>
-      <TodayReadiness state={state} schedule={schedule} />
-      <div className="px-5">
-        <TrainingInsight />
-        <WeeklyMission state={state} />
-      </div>
-      <WeeklyReportCard />
-      <ProBanner />
-      <Reminders />
 
-      <div className="deadset-section">
-        <div className="grid grid-cols-3 gap-2">
-          <Link
-            to="/programs"
-            className="btn-ghost rounded-2xl py-3 flex items-center justify-center gap-2 text-xs"
+      {/* Exercises */}
+      <div className="deadset-section flex flex-col gap-3">
+        <div className="deadset-section-title">
+          <div>
+            <p className="label-cap text-accent-red text-[10px]">Workout plan</p>
+            <h2 className="display text-2xl font-black uppercase text-grit leading-none">
+              {selectedDay === todayKey() ? "Today" : DAY_FULL[selectedDay]}
+            </h2>
+          </div>
+          <button
+            onClick={() => setEditMode((v) => !v)}
+            className="label-cap text-[10px]"
+            style={{ color: editMode ? "#e63222" : "#8a8a8a" }}
           >
-            <ListPlus size={14} /> Plan
-          </Link>
-          <Link
-            to="/challenges"
-            className="btn-ghost rounded-2xl py-3 flex items-center justify-center gap-2 text-xs"
-          >
-            <Trophy size={14} /> Arena
-          </Link>
-          <Link
-            to="/recovery"
-            className="btn-ghost rounded-2xl py-3 flex items-center justify-center gap-2 text-xs"
-          >
-            <Heart size={14} /> Recover
-          </Link>
+            {editMode ? "Done" : "Edit my week"}
+          </button>
         </div>
+        {activeProgram ? (
+          <>
+            {(programDay?.items.length || 0) === 0 && (
+              <div className="bg-grit-card border border-grit p-8 text-center">
+                <p className="display text-2xl uppercase text-grit font-extrabold">Rest Day</p>
+                <p className="text-sm text-[#8a8a8a] mt-2 mb-4">Recover. Eat. Sleep.</p>
+                <Link to="/workout/live" className="btn-ghost inline-block">
+                  Train another day
+                </Link>
+              </div>
+            )}
+            {programDay?.items.map((it) => {
+              const pr = bestSet(state.logs, it.id);
+              return (
+                <div key={it.id} className="bg-grit-card border border-grit overflow-hidden press">
+                  <button
+                    className="w-full p-3 text-left"
+                    onClick={() =>
+                      setVideoState({ query: it.youtube_query || it.name, title: it.name })
+                    }
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="display uppercase font-extrabold text-grit text-lg leading-tight">
+                        {it.name}
+                      </div>
+                      <Play size={18} className="text-accent-red flex-shrink-0" />
+                    </div>
+                    <div className="text-xs text-[#8a8a8a] mt-1">
+                      {it.sets} × {it.reps}
+                    </div>
+                    <div className="flex gap-2 mt-2 flex-wrap">
+                      <span className="text-[10px] px-2 py-0.5 border border-grit uppercase font-bold tracking-wider">
+                        {it.equipment}
+                      </span>
+                      {it.primary_muscles.slice(0, 2).map((m) => (
+                        <span
+                          key={m}
+                          className="text-[10px] px-2 py-0.5 border border-grit uppercase font-bold tracking-wider text-grit-dim"
+                        >
+                          {m}
+                        </span>
+                      ))}
+                      {pr && (
+                        <span className="text-[10px] px-2 py-0.5 bg-accent-red text-white uppercase font-bold tracking-wider">
+                          PR {pr}KG
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                </div>
+              );
+            })}
+            {(programDay?.items.length || 0) > 0 && (
+              <button onClick={completeWorkout} className="btn-grit mt-4 mb-2 rounded-2xl">
+                {state.completedDates.includes(isoDay())
+                  ? "Workout Complete ✓"
+                  : "Complete Workout"}
+              </button>
+            )}
+          </>
+        ) : (
+          <>
+            {(day?.exerciseIds || []).length === 0 && (
+              <div className="bg-grit-card border border-grit p-8 text-center">
+                <p className="display text-2xl uppercase text-grit font-extrabold">Rest Day</p>
+                <p className="text-sm text-grit-dim mt-2 mb-4">Recover. Eat. Sleep.</p>
+                <div className="flex flex-col gap-2 max-w-xs mx-auto">
+                  <Link to="/workout/live" className="btn-grit inline-block rounded-2xl">
+                    Train anyway
+                  </Link>
+                  {/* This used to link to Programs — a separate system that
+                      overrides the schedule rather than editing it. Open the
+                      real editor instead, which is what the label promises. */}
+                  <button onClick={() => setEditMode(true)} className="btn-ghost">
+                    Edit my week
+                  </button>
+                </div>
+              </div>
+            )}
+            {(day?.exerciseIds || []).map((id) => {
+              const ex = getExercise(id);
+              if (!ex) return null;
+              const pr = bestSet(state.logs, id);
+              return (
+                <div key={id} className="bg-grit-card border border-grit overflow-hidden press">
+                  <button
+                    className="w-full grid grid-cols-[96px_1fr] gap-0 text-left"
+                    onClick={() =>
+                      setVideoState({
+                        videoId: ex.videoId,
+                        title: ex.name,
+                        clipStart: ex.clipStart,
+                        clipEnd: ex.clipEnd,
+                        cue: ex.instruction,
+                      })
+                    }
+                  >
+                    <div className="relative bg-black" style={{ aspectRatio: "1 / 1" }}>
+                      <img
+                        src={`https://img.youtube.com/vi/${ex.videoId}/mqdefault.jpg`}
+                        alt={ex.name}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                        <Play size={26} className="text-white" />
+                      </div>
+                    </div>
+                    <div className="p-3">
+                      <div className="display uppercase font-extrabold text-grit text-lg leading-tight">
+                        {ex.name}
+                      </div>
+                      <div className="text-xs text-[#8a8a8a] mt-1">
+                        {day?.sets ?? ex.sets} × {day?.reps ?? ex.reps}
+                      </div>
+                      <div className="flex gap-2 mt-2">
+                        <span className="text-[10px] px-2 py-0.5 border border-grit uppercase font-bold tracking-wider">
+                          {ex.skill}
+                        </span>
+                        {pr && (
+                          <span className="text-[10px] px-2 py-0.5 bg-accent-red text-white uppercase font-bold tracking-wider">
+                            PR {pr}KG
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              );
+            })}
+            {(day?.exerciseIds?.length || 0) > 0 && (
+              <button onClick={completeWorkout} className="btn-grit mt-4 mb-2 rounded-2xl">
+                {state.completedDates.includes(isoDay())
+                  ? "Workout Complete ✓"
+                  : "Complete Workout"}
+              </button>
+            )}
+          </>
+        )}
       </div>
-
-      <section className="deadset-section">
-        <RankedArena state={state} compact />
-      </section>
-      <div className="deadset-section">
-        <Big3Card state={state} />
-      </div>
-      <div className="deadset-section">
-        <WeeklyRecap state={state} />
-      </div>
-
-      <DailyQuests />
 
       {activeProgram && (
         <div className="px-5 mb-3">
@@ -564,10 +678,18 @@ function TrainPage() {
             // — say so instead of letting changes look like they did nothing.
             <div className="mb-3 rounded-2xl border border-amber-500/50 bg-amber-500/10 p-3">
               <p className="text-xs text-amber-200 leading-relaxed">
-                You're editing your own weekly schedule, but{" "}
-                <b>{activeProgram.name || "a program"}</b> is currently active and takes over
-                your training days. Deactivate it in Programs to train from this schedule.
+                You're editing your own weekly schedule, but the program{" "}
+                <b>{activeProgram.name || "a program"}</b> is running and takes over your
+                training days, so these edits won't show up yet.
               </p>
+              {/* Previously this told the user to go and deactivate it, with no
+                  such control anywhere. Do it for them, right here. */}
+              <button
+                onClick={() => set((s) => ({ ...s, activeProgramId: null }))}
+                className="btn-ghost mt-2.5 w-full min-h-[42px] rounded-xl text-xs"
+              >
+                Stop the program — use my own schedule
+              </button>
             </div>
           )}
           <div className="bg-grit-card border border-grit p-4">
@@ -857,162 +979,90 @@ function TrainPage() {
         </div>
       )}
 
-      {/* Exercises */}
-      <div className="deadset-section flex flex-col gap-3">
-        <div className="deadset-section-title">
-          <div>
-            <p className="label-cap text-accent-red text-[10px]">Workout plan</p>
-            <h2 className="display text-2xl font-black uppercase text-grit leading-none">
-              {selectedDay === todayKey() ? "Today" : DAY_FULL[selectedDay]}
-            </h2>
-          </div>
-          <button
-            onClick={() => setEditMode((v) => !v)}
-            className="label-cap text-[10px]"
-            style={{ color: editMode ? "#e63222" : "#8a8a8a" }}
-          >
-            {editMode ? "Done" : "Edit my week"}
-          </button>
+      <div className="deadset-section-title mt-2">
+        <div>
+          <p className="label-cap text-accent-red text-[10px]">Everything else</p>
+          <h2 className="display text-2xl font-black uppercase text-grit leading-none">
+            Your week at a glance
+          </h2>
         </div>
-        {activeProgram ? (
-          <>
-            {(programDay?.items.length || 0) === 0 && (
-              <div className="bg-grit-card border border-grit p-8 text-center">
-                <p className="display text-2xl uppercase text-grit font-extrabold">Rest Day</p>
-                <p className="text-sm text-[#8a8a8a] mt-2 mb-4">Recover. Eat. Sleep.</p>
-                <Link to="/workout/live" className="btn-ghost inline-block">
-                  Train another day
-                </Link>
-              </div>
-            )}
-            {programDay?.items.map((it) => {
-              const pr = bestSet(state.logs, it.id);
-              return (
-                <div key={it.id} className="bg-grit-card border border-grit overflow-hidden press">
-                  <button
-                    className="w-full p-3 text-left"
-                    onClick={() =>
-                      setVideoState({ query: it.youtube_query || it.name, title: it.name })
-                    }
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="display uppercase font-extrabold text-grit text-lg leading-tight">
-                        {it.name}
-                      </div>
-                      <Play size={18} className="text-accent-red flex-shrink-0" />
-                    </div>
-                    <div className="text-xs text-[#8a8a8a] mt-1">
-                      {it.sets} × {it.reps}
-                    </div>
-                    <div className="flex gap-2 mt-2 flex-wrap">
-                      <span className="text-[10px] px-2 py-0.5 border border-grit uppercase font-bold tracking-wider">
-                        {it.equipment}
-                      </span>
-                      {it.primary_muscles.slice(0, 2).map((m) => (
-                        <span
-                          key={m}
-                          className="text-[10px] px-2 py-0.5 border border-grit uppercase font-bold tracking-wider text-grit-dim"
-                        >
-                          {m}
-                        </span>
-                      ))}
-                      {pr && (
-                        <span className="text-[10px] px-2 py-0.5 bg-accent-red text-white uppercase font-bold tracking-wider">
-                          PR {pr}KG
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                </div>
-              );
-            })}
-            {(programDay?.items.length || 0) > 0 && (
-              <button onClick={completeWorkout} className="btn-grit mt-4 mb-2 rounded-2xl">
-                {state.completedDates.includes(isoDay())
-                  ? "Workout Complete ✓"
-                  : "Complete Workout"}
-              </button>
-            )}
-          </>
-        ) : (
-          <>
-            {(day?.exerciseIds || []).length === 0 && (
-              <div className="bg-grit-card border border-grit p-8 text-center">
-                <p className="display text-2xl uppercase text-grit font-extrabold">Rest Day</p>
-                <p className="text-sm text-grit-dim mt-2 mb-4">Recover. Eat. Sleep.</p>
-                <div className="flex flex-col gap-2 max-w-xs mx-auto">
-                  <Link to="/workout/live" className="btn-grit inline-block rounded-2xl">
-                    Train anyway
-                  </Link>
-                  {/* This used to link to Programs — a separate system that
-                      overrides the schedule rather than editing it. Open the
-                      real editor instead, which is what the label promises. */}
-                  <button onClick={() => setEditMode(true)} className="btn-ghost">
-                    Edit my week
-                  </button>
-                </div>
-              </div>
-            )}
-            {(day?.exerciseIds || []).map((id) => {
-              const ex = getExercise(id);
-              if (!ex) return null;
-              const pr = bestSet(state.logs, id);
-              return (
-                <div key={id} className="bg-grit-card border border-grit overflow-hidden press">
-                  <button
-                    className="w-full grid grid-cols-[96px_1fr] gap-0 text-left"
-                    onClick={() =>
-                      setVideoState({
-                        videoId: ex.videoId,
-                        title: ex.name,
-                        clipStart: ex.clipStart,
-                        clipEnd: ex.clipEnd,
-                        cue: ex.instruction,
-                      })
-                    }
-                  >
-                    <div className="relative bg-black" style={{ aspectRatio: "1 / 1" }}>
-                      <img
-                        src={`https://img.youtube.com/vi/${ex.videoId}/mqdefault.jpg`}
-                        alt={ex.name}
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                        <Play size={26} className="text-white" />
-                      </div>
-                    </div>
-                    <div className="p-3">
-                      <div className="display uppercase font-extrabold text-grit text-lg leading-tight">
-                        {ex.name}
-                      </div>
-                      <div className="text-xs text-[#8a8a8a] mt-1">
-                        {day?.sets ?? ex.sets} × {day?.reps ?? ex.reps}
-                      </div>
-                      <div className="flex gap-2 mt-2">
-                        <span className="text-[10px] px-2 py-0.5 border border-grit uppercase font-bold tracking-wider">
-                          {ex.skill}
-                        </span>
-                        {pr && (
-                          <span className="text-[10px] px-2 py-0.5 bg-accent-red text-white uppercase font-bold tracking-wider">
-                            PR {pr}KG
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              );
-            })}
-            {(day?.exerciseIds?.length || 0) > 0 && (
-              <button onClick={completeWorkout} className="btn-grit mt-4 mb-2 rounded-2xl">
-                {state.completedDates.includes(isoDay())
-                  ? "Workout Complete ✓"
-                  : "Complete Workout"}
-              </button>
-            )}
-          </>
-        )}
       </div>
+      <TodayReadiness state={state} schedule={schedule} />
+      <div className="px-5">
+        <TrainingInsight />
+        <WeeklyMission state={state} />
+      </div>
+      <WeeklyReportCard />
+      <ProBanner />
+      <Reminders />
+
+      {/* Progress has no bottom-nav entry, so this row is how it gets found at
+          all. Each link says what it does rather than relying on a one-word
+          codename. */}
+      <div className="deadset-section">
+        <div className="grid grid-cols-2 gap-2">
+          <Link
+            to="/progress"
+            className="btn-ghost rounded-2xl px-3 py-3 flex items-start gap-2.5 text-left"
+          >
+            <LineChart size={16} className="mt-0.5 flex-shrink-0 text-accent-red" />
+            <span>
+              <span className="block text-xs font-bold text-grit">Progress</span>
+              <span className="block text-[10px] text-grit-dim leading-tight">
+                Weight &amp; photos
+              </span>
+            </span>
+          </Link>
+          <Link
+            to="/programs"
+            className="btn-ghost rounded-2xl px-3 py-3 flex items-start gap-2.5 text-left"
+          >
+            <ListPlus size={16} className="mt-0.5 flex-shrink-0 text-accent-red" />
+            <span>
+              <span className="block text-xs font-bold text-grit">Programs</span>
+              <span className="block text-[10px] text-grit-dim leading-tight">
+                Ready-made splits
+              </span>
+            </span>
+          </Link>
+          <Link
+            to="/challenges"
+            className="btn-ghost rounded-2xl px-3 py-3 flex items-start gap-2.5 text-left"
+          >
+            <Trophy size={16} className="mt-0.5 flex-shrink-0 text-accent-red" />
+            <span>
+              <span className="block text-xs font-bold text-grit">Compete</span>
+              <span className="block text-[10px] text-grit-dim leading-tight">
+                Challenge friends
+              </span>
+            </span>
+          </Link>
+          <Link
+            to="/recovery"
+            className="btn-ghost rounded-2xl px-3 py-3 flex items-start gap-2.5 text-left"
+          >
+            <Heart size={16} className="mt-0.5 flex-shrink-0 text-accent-red" />
+            <span>
+              <span className="block text-xs font-bold text-grit">Recovery</span>
+              <span className="block text-[10px] text-grit-dim leading-tight">
+                Rest &amp; soreness
+              </span>
+            </span>
+          </Link>
+        </div>
+      </div>
+
+      <section className="deadset-section">
+        <RankedArena state={state} compact />
+      </section>
+      <div className="deadset-section">
+        <Big3Card state={state} />
+      </div>
+      <div className="deadset-section">
+        <WeeklyRecap state={state} />
+      </div>
+
+      <DailyQuests />
 
       {videoState && (
         <VideoModal
