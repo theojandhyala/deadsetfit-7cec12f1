@@ -1,7 +1,8 @@
 import rpcHandler from "../api/rpc";
 import { createClient } from "@supabase/supabase-js";
+import { handleOAuthRequest, providerConfigured, type OAuthBrokerEnv } from "./lib/oauth.server";
 
-interface Env {
+interface Env extends OAuthBrokerEnv {
   ASSETS?: { fetch(request: Request): Promise<Response> };
   SUPABASE_URL?: string;
   SUPABASE_PUBLISHABLE_KEY?: string;
@@ -34,7 +35,8 @@ function configured(value: unknown): boolean {
 }
 
 function installRuntimeEnv(env: Env) {
-  const runtimeEnv = (globalThis as unknown as Record<string, Record<string, string>>)[RUNTIME_ENV_GLOBAL] ?? {};
+  const runtimeEnv =
+    (globalThis as unknown as Record<string, Record<string, string>>)[RUNTIME_ENV_GLOBAL] ?? {};
   for (const key of RUNTIME_ENV_KEYS) {
     const value = env[key];
     if (typeof value === "string" && value.length > 0) {
@@ -42,7 +44,8 @@ function installRuntimeEnv(env: Env) {
       if (typeof process !== "undefined" && process.env) process.env[key] = value;
     }
   }
-  (globalThis as unknown as Record<string, Record<string, string>>)[RUNTIME_ENV_GLOBAL] = runtimeEnv;
+  (globalThis as unknown as Record<string, Record<string, string>>)[RUNTIME_ENV_GLOBAL] =
+    runtimeEnv;
 }
 
 function requestHeaders(headers: Headers): Record<string, string> {
@@ -51,7 +54,7 @@ function requestHeaders(headers: Headers): Record<string, string> {
   );
 }
 
-async function handleRpc(request: Request): Promise<Response> {
+async function handleRpc(request: Request, env: Env): Promise<Response> {
   let status = 200;
   let body = "";
   const headers = new Headers();
@@ -90,6 +93,7 @@ async function handleRpc(request: Request): Promise<Response> {
       method: request.method,
       headers: requestHeaders(request.headers),
       body: parsedBody,
+      env,
     },
     response,
   );
@@ -98,26 +102,30 @@ async function handleRpc(request: Request): Promise<Response> {
 }
 
 function handleHealth(env: Env): Response {
-  return Response.json({
-    ok: true,
-    app: "deadset",
-    runtime: "cloudflare-worker",
-    time: new Date().toISOString(),
-    services: {
-      supabase:
-        configured(env.SUPABASE_URL) &&
-        configured(env.SUPABASE_PUBLISHABLE_KEY) &&
-        configured(env.SUPABASE_SERVICE_ROLE_KEY),
-      stripeLive:
-        configured(env.STRIPE_LIVE_API_KEY) &&
-        configured(env.VITE_PAYMENTS_CLIENT_TOKEN),
-      stripeWebhook: configured(env.PAYMENTS_LIVE_WEBHOOK_SECRET),
+  return Response.json(
+    {
+      ok: true,
+      app: "deadset",
+      runtime: "cloudflare-worker",
+      time: new Date().toISOString(),
+      services: {
+        supabase:
+          configured(env.SUPABASE_URL) &&
+          configured(env.SUPABASE_PUBLISHABLE_KEY) &&
+          configured(env.SUPABASE_SERVICE_ROLE_KEY),
+        googleAuth: providerConfigured("google", env),
+        appleAuth: providerConfigured("apple", env),
+        stripeLive:
+          configured(env.STRIPE_LIVE_API_KEY) && configured(env.VITE_PAYMENTS_CLIENT_TOKEN),
+        stripeWebhook: configured(env.PAYMENTS_LIVE_WEBHOOK_SECRET),
+      },
     },
-  }, {
-    headers: {
-      "Cache-Control": "no-store",
+    {
+      headers: {
+        "Cache-Control": "no-store",
+      },
     },
-  });
+  );
 }
 
 function required(value: string | undefined, name: string): string {
@@ -228,9 +236,14 @@ function subscriptionPayload(subscription: any, stripeEnv: StripeEnv) {
   };
 }
 
-function subscriptionStillUnlocksPro(status: string | null | undefined, periodEnd: string | null): boolean {
-  return ["active", "trialing", "past_due"].includes(status ?? "")
-    || (status === "canceled" && !!periodEnd && new Date(periodEnd) > new Date());
+function subscriptionStillUnlocksPro(
+  status: string | null | undefined,
+  periodEnd: string | null,
+): boolean {
+  return (
+    ["active", "trialing", "past_due"].includes(status ?? "") ||
+    (status === "canceled" && !!periodEnd && new Date(periodEnd) > new Date())
+  );
 }
 
 async function syncWebhookProfileEntitlement(
@@ -255,7 +268,12 @@ async function handleSubscriptionCreated(subscription: any, stripeEnv: StripeEnv
     .from("subscriptions")
     .upsert(payload, { onConflict: "stripe_subscription_id" });
   if (error) throw error;
-  await syncWebhookProfileEntitlement(env, payload.user_id, payload.status, payload.current_period_end);
+  await syncWebhookProfileEntitlement(
+    env,
+    payload.user_id,
+    payload.status,
+    payload.current_period_end,
+  );
 }
 
 async function handleSubscriptionUpdated(subscription: any, stripeEnv: StripeEnv, env: Env) {
@@ -272,7 +290,12 @@ async function handleSubscriptionUpdated(subscription: any, stripeEnv: StripeEnv
     .from("subscriptions")
     .upsert(mergedPayload, { onConflict: "stripe_subscription_id" });
   if (error) throw error;
-  await syncWebhookProfileEntitlement(env, mergedPayload.user_id, mergedPayload.status, mergedPayload.current_period_end);
+  await syncWebhookProfileEntitlement(
+    env,
+    mergedPayload.user_id,
+    mergedPayload.status,
+    mergedPayload.current_period_end,
+  );
 }
 
 async function handleSubscriptionDeleted(subscription: any, stripeEnv: StripeEnv, env: Env) {
@@ -357,7 +380,11 @@ export default {
     if (url.pathname === "/api/health") return handleHealth(env);
     if (url.pathname === "/api/health/stripe") return handleStripeHealth(env);
     if (url.pathname === "/api/public/payments/webhook") return handleStripeWebhook(request, env);
-    if (url.pathname === "/api/rpc") return handleRpc(request);
+    if (url.pathname === "/api/rpc") return handleRpc(request, env);
+    if (url.pathname.startsWith("/api/auth/")) {
+      const response = await handleOAuthRequest(request, env);
+      if (response) return response;
+    }
     if (url.pathname.startsWith("/api/")) {
       return Response.json({ error: "Not found" }, { status: 404 });
     }

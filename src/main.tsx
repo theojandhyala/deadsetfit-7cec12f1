@@ -5,6 +5,10 @@ import { restoreSupabaseSession } from "./integrations/supabase/client";
 import { capturePendingRef } from "./lib/referral";
 import "./styles.css";
 
+// Exposes the bundled release in diagnostics and forces a fresh entry asset
+// when a Cloudflare edge has cached an invalid response for an older hash.
+document.documentElement.dataset.deadsetRelease = "2026-07-26-fitness2";
+
 // Grab any ?ref= invite code before the router rewrites the URL.
 capturePendingRef();
 

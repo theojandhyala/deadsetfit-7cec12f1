@@ -75,12 +75,20 @@ export function StripeEmbeddedCheckout({ priceId, returnUrl }: Props) {
           { error: "Stripe checkout took too long. Please try again." },
           15000,
         );
-        if ("error" in fallback) throw new Error(fallback.error);
-        if (!fallback.url) throw new Error("Stripe checkout did not return a payment link");
+        if ("error" in fallback) throw new Error(fallback.error, { cause: e });
+        if (!fallback.url) {
+          throw new Error("Stripe checkout did not return a payment link", { cause: e });
+        }
         setHostedUrl(fallback.url);
         setError("Embedded checkout could not load. Use secure Stripe checkout instead.");
       } catch (fallbackError) {
-        setError(fallbackError instanceof Error ? fallbackError.message : e instanceof Error ? e.message : "Checkout failed to load");
+        setError(
+          fallbackError instanceof Error
+            ? fallbackError.message
+            : e instanceof Error
+              ? e.message
+              : "Checkout failed to load",
+        );
       }
     }
   }, [priceId, returnUrl]);
@@ -141,9 +149,15 @@ export function StripeEmbeddedCheckout({ priceId, returnUrl }: Props) {
   }
 
   return (
-    <div id="checkout" className="deadset-3d-panel border border-grit bg-[#080808] p-2 animate-slide-up">
+    <div
+      id="checkout"
+      className="deadset-3d-panel border border-grit bg-[#080808] p-2 animate-slide-up"
+    >
       {hostedUrl && (
-        <a href={hostedUrl} className="mb-2 flex items-center justify-center border border-accent-red/40 bg-accent-red/10 px-3 py-2 text-[10px] font-extrabold uppercase tracking-widest text-accent-red">
+        <a
+          href={hostedUrl}
+          className="mb-2 flex items-center justify-center border border-accent-red/40 bg-accent-red/10 px-3 py-2 text-[10px] font-extrabold uppercase tracking-widest text-accent-red"
+        >
           Checkout not showing? Open Stripe checkout
         </a>
       )}

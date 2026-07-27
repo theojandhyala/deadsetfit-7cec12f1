@@ -5,7 +5,6 @@ import { Camera, Trophy, Flame, Trash2, Lock, Image as ImageIcon } from "lucide-
 import { useAppState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
 import { isoDay, calculateStreak } from "@/lib/calc";
-import { QuickLogFAB } from "@/components/QuickLogFAB";
 import { PRList } from "@/components/PRList";
 import { groupForMuscle } from "@/lib/pr-groups";
 import { usePro } from "@/hooks/usePro";
@@ -17,6 +16,8 @@ import { openPaywall } from "@/lib/paywall-events";
 import { askConfirm } from "@/lib/confirm";
 import { PR_CATALOG, getPRValue } from "@/lib/fifa-stats";
 import { strengthStandard, repMaxTable, TIER_COLORS } from "@/lib/strength-standards";
+import { AppleFitnessCard } from "@/components/AppleFitnessCard";
+import { TrainingAutopilot } from "@/components/TrainingAutopilot";
 
 export const Route = createFileRoute("/_tabs/progress")({
   head: () => ({ meta: [{ title: "DEADSET — Progress" }] }),
@@ -127,7 +128,11 @@ function ProgressPage() {
     set((s) => ({ ...s, measurements: s.measurements.filter((m) => m.date !== date) }));
   }
   async function deleteCheckIn(date: string) {
-    const ok = await askConfirm({ title: "Delete this photo?", confirmLabel: "Delete", danger: true });
+    const ok = await askConfirm({
+      title: "Delete this photo?",
+      confirmLabel: "Delete",
+      danger: true,
+    });
     if (!ok) return;
     set((s) => ({ ...s, checkIns: s.checkIns.filter((c) => c.date !== date) }));
     setCompare((c) => c.filter((d) => d !== date));
@@ -151,7 +156,7 @@ function ProgressPage() {
       else acc.history.push({ date: day, weight: w });
     };
     state.logs.forEach((l) => {
-      const ex = getExercise(l.exerciseId);
+      const ex = getExercise(l.exerciseId, state.savedExercises);
       const name = ex?.name ?? l.exerciseId;
       const day = l.date.slice(0, 10);
       let acc = byId.get(l.exerciseId);
@@ -177,7 +182,7 @@ function ProgressPage() {
     state.sessions.forEach((s) =>
       s.exercises.forEach((e) =>
         e.sets.forEach((set) => {
-          const ex = getExercise(e.exerciseId);
+          const ex = getExercise(e.exerciseId, state.savedExercises);
           let acc = byId.get(e.exerciseId);
           if (!acc) {
             acc = {
@@ -211,7 +216,7 @@ function ProgressPage() {
         group: groupForMuscle(p.muscleGroup, p.exerciseId),
         history: p.history.sort((a, b) => a.date.localeCompare(b.date)),
       }));
-  }, [state.logs, state.sessions]);
+  }, [state.logs, state.savedExercises, state.sessions]);
 
   // Body part volume split (last 30 days from sessions)
   const bodyParts = useMemo(() => {
@@ -238,7 +243,7 @@ function ProgressPage() {
     [...state.logs]
       .sort((a, b) => a.date.localeCompare(b.date))
       .forEach((l) => {
-        const ex = getExercise(l.exerciseId);
+        const ex = getExercise(l.exerciseId, state.savedExercises);
         const name = ex?.name ?? l.exerciseId;
         if (!map.has(l.exerciseId)) map.set(l.exerciseId, { name, points: [] });
         const e = map.get(l.exerciseId)!;
@@ -264,7 +269,7 @@ function ProgressPage() {
       .filter((e) => e.points.length >= 2)
       .sort((a, b) => b.points.length - a.points.length)
       .slice(0, 3);
-  }, [state.logs, state.sessions]);
+  }, [state.logs, state.savedExercises, state.sessions]);
 
   // Weekly tonnage: last 8 ISO weeks from sessions, legacy logs as per-week fallback
   const weeklyTonnage = useMemo(() => {
@@ -315,7 +320,15 @@ function ProgressPage() {
         id: def.id,
         label: def.label,
         oneRm,
-        standard: bw > 0 ? strengthStandard(oneRm, bw, def.id as "bench-press" | "squat" | "deadlift", state.profile?.gender) : null,
+        standard:
+          bw > 0
+            ? strengthStandard(
+                oneRm,
+                bw,
+                def.id as "bench-press" | "squat" | "deadlift",
+                state.profile?.gender,
+              )
+            : null,
       };
     });
   }, [state]);
@@ -347,12 +360,18 @@ function ProgressPage() {
         <Stat label="PRS" value={`${totalPRs}`} sub="HIT" accent={totalPRs > 0} />
       </section>
 
+      <AppleFitnessCard />
+      <TrainingAutopilot />
+
       {/* The Catalogue — visual journey (photos, PR wall, before/after) */}
       <section className="px-5 mb-6 animate-slide-up delay-50">
         <Link
           to="/catalogue"
           className="deadset-3d-panel deadset-lift block w-full p-4 press"
-          style={{ background: "linear-gradient(135deg, rgba(230,50,34,0.14), #141414)", border: "1.5px solid rgba(230,50,34,0.4)" }}
+          style={{
+            background: "linear-gradient(135deg, rgba(230,50,34,0.14), #141414)",
+            border: "1.5px solid rgba(230,50,34,0.4)",
+          }}
         >
           <div className="flex items-center justify-between">
             <div>
@@ -360,7 +379,9 @@ function ProgressPage() {
               <p className="display text-xl font-extrabold uppercase text-white leading-none mt-0.5">
                 See your journey
               </p>
-              <p className="text-[11px] text-grit-dim mt-1">Before → now, your PR wall, every photo.</p>
+              <p className="text-[11px] text-grit-dim mt-1">
+                Before → now, your PR wall, every photo.
+              </p>
             </div>
             <ImageIcon size={26} style={{ color: "#e63222" }} />
           </div>
@@ -418,34 +439,36 @@ function ProgressPage() {
                     <p className="text-sm text-grit-dim">
                       Log a session to start tracking your weekly tonnage.
                     </p>
-                    <Link to="/workout/live" className="btn-ghost inline-block mt-3">
+                    <Link to="/workout/live" search={{}} className="btn-ghost inline-block mt-3">
                       Start a workout
                     </Link>
                   </div>
-                ) : (() => {
-                  const max = Math.max(...weeklyTonnage.map((w) => w.volume), 1);
-                  return weeklyTonnage.map((wk) => (
-                    <div key={wk.label}>
-                      <div className="flex justify-between text-xs uppercase font-bold tracking-wider mb-1">
-                        <span className={wk.isCurrent ? "text-accent-red" : "text-white"}>
-                          {wk.label}
-                        </span>
-                        <span className="text-[#8A8A8A]">
-                          {Math.round(wk.volume).toLocaleString()}kg
-                        </span>
+                ) : (
+                  (() => {
+                    const max = Math.max(...weeklyTonnage.map((w) => w.volume), 1);
+                    return weeklyTonnage.map((wk) => (
+                      <div key={wk.label}>
+                        <div className="flex justify-between text-xs uppercase font-bold tracking-wider mb-1">
+                          <span className={wk.isCurrent ? "text-accent-red" : "text-white"}>
+                            {wk.label}
+                          </span>
+                          <span className="text-[#8A8A8A]">
+                            {Math.round(wk.volume).toLocaleString()}kg
+                          </span>
+                        </div>
+                        <div className="h-2 bg-[#0a0a0a]">
+                          <div
+                            className="h-full"
+                            style={{
+                              width: `${(wk.volume / max) * 100}%`,
+                              background: wk.isCurrent ? "#e63222" : "#7a1410",
+                            }}
+                          />
+                        </div>
                       </div>
-                      <div className="h-2 bg-[#0a0a0a]">
-                        <div
-                          className="h-full"
-                          style={{
-                            width: `${(wk.volume / max) * 100}%`,
-                            background: wk.isCurrent ? "#e63222" : "#7a1410",
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ));
-                })()}
+                    ));
+                  })()
+                )}
               </div>
             </div>
 
@@ -496,9 +519,14 @@ function ProgressPage() {
                         </div>
                         <div className="grid grid-cols-5 gap-1.5 mt-3">
                           {repMaxTable(b.oneRm).map((rm) => (
-                            <div key={rm.reps} className="text-center border border-grit rounded-lg py-1.5">
+                            <div
+                              key={rm.reps}
+                              className="text-center border border-grit rounded-lg py-1.5"
+                            >
                               <p className="label-cap text-[8px] text-grit-dim">{rm.reps}RM</p>
-                              <p className="display text-xs font-extrabold text-grit">{rm.weightKg}</p>
+                              <p className="display text-xs font-extrabold text-grit">
+                                {rm.weightKg}
+                              </p>
                             </div>
                           ))}
                         </div>
@@ -564,7 +592,12 @@ function ProgressPage() {
           </div>
           {analyticsLocked && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="border p-5 max-w-[280px] text-center rounded-2xl border-pro pro-glow" style={{ background: "linear-gradient(135deg, #201a0c 0%, #2b2108 55%, #0d0a04 100%)" }}>
+              <div
+                className="border p-5 max-w-[280px] text-center rounded-2xl border-pro pro-glow"
+                style={{
+                  background: "linear-gradient(135deg, #201a0c 0%, #2b2108 55%, #0d0a04 100%)",
+                }}
+              >
                 <Lock size={20} className="text-pro mx-auto mb-2" />
                 <p className="display text-lg font-extrabold uppercase text-pro-gradient leading-none">
                   DEADSET Intelligence
@@ -609,13 +642,15 @@ function ProgressPage() {
           {(() => {
             const bw = bodyweightTrend(state.weights, state.profile?.targetWeightKg);
             if (!bw) return null;
-            const color = bw.trend === "down" ? "#3b9eff" : bw.trend === "up" ? "#22c55e" : "#8a8a8a";
+            const color =
+              bw.trend === "down" ? "#3b9eff" : bw.trend === "up" ? "#22c55e" : "#8a8a8a";
             return (
               <div className="mt-3 border-t border-grit pt-3 flex items-center justify-between">
                 <div>
                   <p className="label-cap text-[10px] text-grit-dim">Trend</p>
                   <p className="display text-lg font-extrabold leading-none" style={{ color }}>
-                    {bw.perWeek > 0 ? "+" : ""}{bw.perWeek}
+                    {bw.perWeek > 0 ? "+" : ""}
+                    {bw.perWeek}
                     <span className="text-[10px] text-grit-dim ml-1">kg/wk</span>
                   </p>
                 </div>
@@ -748,7 +783,11 @@ function ProgressPage() {
                   const w = weightNear(d);
                   return (
                     <div key={d} className="rounded-2xl">
-                      <img src={p?.photoDataUrl} alt="" className="w-full aspect-[3/4] object-cover" />
+                      <img
+                        src={p?.photoDataUrl}
+                        alt=""
+                        className="w-full aspect-[3/4] object-cover"
+                      />
                       <div className="text-[10px] p-1 label-cap text-center">
                         {p?.date.slice(0, 10)}
                         {w !== null && <span className="text-grit-dim"> · {w}kg</span>}
@@ -837,8 +876,6 @@ function ProgressPage() {
         </p>
         <PRList prs={prs} />
       </section>
-
-      <QuickLogFAB />
     </div>
   );
 }

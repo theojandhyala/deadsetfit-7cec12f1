@@ -73,7 +73,11 @@ export function WeeklyRecapNudge() {
         style={{ animation: "pro-pop 0.4s cubic-bezier(.2,.9,.3,1.2) both" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <button onClick={() => setOpen(false)} aria-label="Close" className="absolute top-3 right-3 text-grit-dim press">
+        <button
+          onClick={() => setOpen(false)}
+          aria-label="Close"
+          className="absolute top-3 right-3 text-grit-dim press"
+        >
           <X size={18} />
         </button>
         <p className="label-cap text-[10px] flex items-center gap-1.5 text-accent-red">
@@ -103,7 +107,17 @@ export function WeeklyRecapNudge() {
   );
 }
 
-function Stat({ icon: Icon, label, value, accent }: { icon: typeof Dumbbell; label: string; value: string; accent?: boolean }) {
+function Stat({
+  icon: Icon,
+  label,
+  value,
+  accent,
+}: {
+  icon: typeof Dumbbell;
+  label: string;
+  value: string;
+  accent?: boolean;
+}) {
   return (
     <div className="rounded-xl border border-grit bg-[#141414] p-3">
       <Icon size={14} className={accent ? "text-accent-red" : "text-grit-dim"} />

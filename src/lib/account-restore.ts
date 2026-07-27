@@ -17,6 +17,7 @@ type AccountProfile = {
     prefs?: {
       focusMuscles?: string[];
       sessionMinutes?: number;
+      exercisesPerSession?: number;
       targetWeightKg?: number;
     };
   } | null;
@@ -92,6 +93,9 @@ function restorePrefs(row: AccountProfile): Partial<Profile> {
   if (muscles.length) out.focusMuscles = muscles;
   if (prefs.sessionMinutes && SESSION_SET.has(prefs.sessionMinutes)) {
     out.sessionMinutes = prefs.sessionMinutes as 30 | 45 | 60 | 90;
+  }
+  if (prefs.exercisesPerSession && [3, 4, 5, 6, 7, 8].includes(prefs.exercisesPerSession)) {
+    out.exercisesPerSession = prefs.exercisesPerSession as 3 | 4 | 5 | 6 | 7 | 8;
   }
   if (typeof prefs.targetWeightKg === "number" && prefs.targetWeightKg > 0) {
     out.targetWeightKg = prefs.targetWeightKg;

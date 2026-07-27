@@ -29,8 +29,14 @@ export default defineConfig({
         main: fileURLToPath(new URL("index.html", import.meta.url)),
         authRoot: fileURLToPath(new URL("auth.html", import.meta.url)),
         auth: fileURLToPath(new URL("auth/index.html", import.meta.url)),
+        nativeAuthCallback: fileURLToPath(new URL("auth/native-callback.html", import.meta.url)),
       },
       output: {
+        // Keep every JS file in a release-specific namespace. If a CDN race
+        // ever serves fallback HTML under a hashed module URL, the next
+        // release bypasses that immutable browser entry as one coherent graph.
+        entryFileNames: "assets/[name]-r20260726-fitness2-[hash].js",
+        chunkFileNames: "assets/[name]-r20260726-fitness2-[hash].js",
         manualChunks(id) {
           if (!id.includes("/node_modules/")) return;
           if (id.includes("/@tanstack/")) return "vendor-tanstack";

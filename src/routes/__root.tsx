@@ -11,7 +11,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
+import { reportAppError } from "../lib/error-reporting";
 import { StateSync } from "../components/StateSync";
 import { UsernameGate } from "../components/UsernameGate";
 import { PaywallSheet } from "../components/PaywallSheet";
@@ -25,7 +25,7 @@ import { ReferralRedeemer } from "../components/ReferralRedeemer";
 import { StreakMilestoneWatcher } from "../components/StreakMilestoneWatcher";
 import { captureAttribution } from "../lib/attribution";
 import { WeeklyRecapNudge } from "../components/WeeklyRecapNudge";
-import { FeatureTour } from "../components/FeatureTour";
+import { DeviceReminderSync } from "../components/DeviceReminderSync";
 
 function NotFoundComponent() {
   return (
@@ -53,7 +53,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    reportAppError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
 
   return (
@@ -126,7 +126,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           url: "https://deadsetfit.org",
           logo: "https://deadsetfit.org/favicon.ico",
           description:
-            "DEADSET. Train. Build. Become. A no-nonsense gym companion for tracking PRs, programs, and progress.",
+            "DEADSET is a gym app for planning workouts, logging sets, tracking nutrition, and understanding progress.",
         }),
       },
     ],
@@ -189,7 +189,7 @@ function RootComponent() {
         {!isAuthRoute && <UpgradeNudge />}
         {!isAuthRoute && <StreakMilestoneWatcher />}
         {!isAuthRoute && <WeeklyRecapNudge />}
-        {!isAuthRoute && <FeatureTour />}
+        {!isAuthRoute && <DeviceReminderSync />}
         <ReferralRedeemer />
         <ConfirmSheet />
         <Toaster />

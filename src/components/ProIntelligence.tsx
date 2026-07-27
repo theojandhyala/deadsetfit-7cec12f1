@@ -33,7 +33,15 @@ function fmtDate(iso: string): string {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-function SectionTitle({ icon: Icon, title, sub }: { icon: typeof Activity; title: string; sub: string }) {
+function SectionTitle({
+  icon: Icon,
+  title,
+  sub,
+}: {
+  icon: typeof Activity;
+  title: string;
+  sub: string;
+}) {
   return (
     <div className="flex items-start gap-2 mb-3">
       <Icon size={16} className="text-pro mt-0.5 shrink-0" />
@@ -97,9 +105,16 @@ export function ProIntelligence({ state }: { state: AppState }) {
                   {/* optimal band (MAV→MRV) marker */}
                   <div
                     className="absolute inset-y-0 opacity-25"
-                    style={{ left: pct(v.landmark.mav), right: `calc(100% - ${pct(v.landmark.mrv)})`, background: "#22c55e" }}
+                    style={{
+                      left: pct(v.landmark.mav),
+                      right: `calc(100% - ${pct(v.landmark.mrv)})`,
+                      background: "#22c55e",
+                    }}
                   />
-                  <div className="absolute inset-y-0 rounded-full" style={{ width: pct(v.sets), background: meta.color }} />
+                  <div
+                    className="absolute inset-y-0 rounded-full"
+                    style={{ width: pct(v.sets), background: meta.color }}
+                  />
                 </div>
                 <p className="text-[11px] text-grit-dim mt-1">{v.advice}</p>
               </div>
@@ -123,9 +138,14 @@ export function ProIntelligence({ state }: { state: AppState }) {
         ) : (
           <div className="flex flex-col gap-3 mt-1">
             {stalls.slice(0, 4).map((p) => (
-              <div key={p.exerciseId} className="rounded-xl border border-[#3a1a10] bg-[#180d0a] p-3">
+              <div
+                key={p.exerciseId}
+                className="rounded-xl border border-[#3a1a10] bg-[#180d0a] p-3"
+              >
                 <div className="flex items-center justify-between">
-                  <span className="display font-extrabold uppercase text-grit text-sm">{p.name}</span>
+                  <span className="display font-extrabold uppercase text-grit text-sm">
+                    {p.name}
+                  </span>
                   <span className="text-[10px] font-bold text-accent-red uppercase">
                     Stalled {p.stalledSessions} sessions
                   </span>
@@ -145,12 +165,16 @@ export function ProIntelligence({ state }: { state: AppState }) {
           sub="Estimated-1RM trend and your projected milestone dates"
         />
         {traj.length === 0 ? (
-          <p className="text-sm text-grit-dim mt-1">Log 3+ sessions of a lift to project its trajectory.</p>
+          <p className="text-sm text-grit-dim mt-1">
+            Log 3+ sessions of a lift to project its trajectory.
+          </p>
         ) : (
           <div className="flex flex-col gap-2.5 mt-1">
             {traj.slice(0, 6).map((t) => {
-              const TrendIcon = t.trend === "up" ? TrendingUp : t.trend === "down" ? TrendingDown : Minus;
-              const color = t.trend === "up" ? "#22c55e" : t.trend === "down" ? "#e63222" : "#8a8a8a";
+              const TrendIcon =
+                t.trend === "up" ? TrendingUp : t.trend === "down" ? TrendingDown : Minus;
+              const color =
+                t.trend === "up" ? "#22c55e" : t.trend === "down" ? "#e63222" : "#8a8a8a";
               return (
                 <div key={t.exerciseId} className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
@@ -170,7 +194,10 @@ export function ProIntelligence({ state }: { state: AppState }) {
                       {t.currentE1rm}
                       <span className="text-[10px] text-grit-dim ml-0.5">kg e1RM</span>
                     </p>
-                    <p className="text-[11px] font-bold inline-flex items-center gap-0.5 justify-end" style={{ color }}>
+                    <p
+                      className="text-[11px] font-bold inline-flex items-center gap-0.5 justify-end"
+                      style={{ color }}
+                    >
                       <TrendIcon size={11} />
                       {t.perWeek > 0 ? "+" : ""}
                       {t.perWeek}kg/wk
@@ -195,13 +222,23 @@ export function ProIntelligence({ state }: { state: AppState }) {
         ) : (
           <>
             <div className="flex items-center gap-3 mb-3">
-              <div className="display text-3xl font-extrabold tabular-nums" style={{ color: balance.score >= 80 ? "#22c55e" : balance.score >= 55 ? "#f59e0b" : "#e63222" }}>
+              <div
+                className="display text-3xl font-extrabold tabular-nums"
+                style={{
+                  color:
+                    balance.score >= 80 ? "#22c55e" : balance.score >= 55 ? "#f59e0b" : "#e63222",
+                }}
+              >
                 {balance.score}
               </div>
               <div>
                 <p className="text-xs font-bold uppercase text-grit">Balance score</p>
                 <p className="text-[11px] text-grit-dim">
-                  {balance.score >= 80 ? "Well balanced — low imbalance risk." : balance.score >= 55 ? "Minor imbalances to address." : "Notable imbalance — injury risk."}
+                  {balance.score >= 80
+                    ? "Well balanced — low imbalance risk."
+                    : balance.score >= 55
+                      ? "Minor imbalances to address."
+                      : "Notable imbalance — injury risk."}
                 </p>
               </div>
             </div>

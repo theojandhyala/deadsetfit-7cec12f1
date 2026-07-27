@@ -81,20 +81,22 @@ export function StreakMilestoneWatcher() {
         <div className="text-5xl mb-1">{hit.emoji}</div>
         <div
           className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-full"
-          style={{ background: "radial-gradient(circle at 50% 35%, #ff6a3d, #e63222 70%)", boxShadow: "0 0 30px rgba(230,50,34,.6)" }}
+          style={{
+            background: "radial-gradient(circle at 50% 35%, #ff6a3d, #e63222 70%)",
+            boxShadow: "0 0 30px rgba(230,50,34,.6)",
+          }}
         >
           <Flame size={26} strokeWidth={2.5} className="text-white" />
         </div>
         <p className="label-cap text-[10px] tracking-[0.28em] text-accent-red">Streak milestone</p>
-        <h2 className="display text-4xl font-extrabold uppercase text-grit leading-none mt-1">{hit.days} days</h2>
+        <h2 className="display text-4xl font-extrabold uppercase text-grit leading-none mt-1">
+          {hit.days} days
+        </h2>
         <p className="display text-lg font-extrabold uppercase text-accent-red mt-1">{hit.label}</p>
         <p className="text-xs text-[#b7a9a4] mt-3 mb-5">
           {hit.days} straight days on the grind. Keep the fire lit.
         </p>
-        <button
-          onClick={() => setHit(null)}
-          className="btn-grit w-full rounded-xl"
-        >
+        <button onClick={() => setHit(null)} className="btn-grit w-full rounded-xl">
           Keep Going
         </button>
       </div>

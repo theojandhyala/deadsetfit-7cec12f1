@@ -1,14 +1,48 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Crown, X, Check, Shield, BarChart3, ClipboardList, Hammer, Trophy, Swords, Bell, HeartPulse, Apple, Camera, Medal, TrendingUp, FileBarChart } from "lucide-react";
+import {
+  Crown,
+  X,
+  Check,
+  Shield,
+  BarChart3,
+  ClipboardList,
+  Hammer,
+  Trophy,
+  Swords,
+  Bell,
+  HeartPulse,
+  Apple,
+  Camera,
+  Medal,
+  TrendingUp,
+  FileBarChart,
+  SlidersHorizontal,
+  Gauge,
+} from "lucide-react";
 import { onPaywall, type PaywallFeature } from "@/lib/paywall-events";
-import { detectCountry, currencyForCountry, CURRENCY_META, type SupportedCurrency } from "@/lib/currency";
+import {
+  detectCountry,
+  currencyForCountry,
+  CURRENCY_META,
+  type SupportedCurrency,
+} from "@/lib/currency";
 import { isNativeIos } from "@/lib/platform";
 
 const FEATURE_PITCH: Record<
   PaywallFeature,
   { title: string; tagline: string; bullets: string[]; icon: typeof Shield }
 > = {
+  autopilot: {
+    title: "Training Autopilot",
+    tagline: "Your programme updates itself.",
+    bullets: [
+      "Prescribes every next-session load from completed reps and effort",
+      "Detects stalls and repeated misses, then applies the correct reset",
+      "Calls recovery deloads and updates weights and sets across your plan",
+    ],
+    icon: Gauge,
+  },
   "streak-armor": {
     title: "Streak Armor",
     tagline: "Miss a day. Keep the fire.",
@@ -50,10 +84,10 @@ const FEATURE_PITCH: Record<
     icon: Hammer,
   },
   leagues: {
-    title: "Full Weekly Leagues",
-    tagline: "Climb every division.",
+    title: "League Competition",
+    tagline: "Turn training into a season.",
     bullets: [
-      "Full ranked ladder access, all divisions",
+      "Weekly competitive scoring and season placement",
       "Grit-ranked leaderboard placement",
       "Season standing on your profile card",
     ],
@@ -139,6 +173,36 @@ const FEATURE_PITCH: Record<
     ],
     icon: FileBarChart,
   },
+  "plan-audit": {
+    title: "Plan Intelligence",
+    tagline: "Fix the week before it costs you progress.",
+    bullets: [
+      "Weekly muscle-volume and recovery audit",
+      "A clear plan score that updates as you edit",
+      "One-tap rebalancing around your goal, equipment and available days",
+    ],
+    icon: ClipboardList,
+  },
+  "advanced-programming": {
+    title: "Advanced Programming",
+    tagline: "Make every movement run exactly your way.",
+    bullets: [
+      "Per-exercise progression rules and rest timers",
+      "RIR and tempo targets inside the live workout",
+      "Private technique cues and coach notes",
+    ],
+    icon: SlidersHorizontal,
+  },
+  "smart-swaps": {
+    title: "Smart Exercise Swaps",
+    tagline: "Busy equipment never ruins the session.",
+    bullets: [
+      "Instant alternatives for the same target muscle",
+      "Filtered to equipment you actually have",
+      "Sets, reps, load, rest and coaching cues stay intact",
+    ],
+    icon: Hammer,
+  },
 };
 
 export function PaywallSheet() {
@@ -164,35 +228,50 @@ export function PaywallSheet() {
   const close = () => setFeature(null);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-black/80" onClick={close} />
+    <div
+      className="fixed inset-0 z-[100] flex items-end justify-center"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="absolute inset-0 bg-black/90" onClick={close} />
       <div
-        className="relative w-full max-w-md bg-grit-card border rounded-t-3xl rounded-b-none p-6 animate-slide-up"
-        style={{ paddingBottom: "calc(2.25rem + env(safe-area-inset-bottom))" }}
+        className="relative w-full max-w-md animate-slide-up overflow-hidden border border-pro/40 bg-[#101113] p-6"
+        style={{
+          paddingBottom: "calc(2.25rem + env(safe-area-inset-bottom))",
+          borderRadius: "8px 8px 0 0",
+          boxShadow: "0 -28px 72px rgba(0,0,0,.62), inset 0 1px 0 rgba(255,255,255,.06)",
+        }}
       >
-        <button onClick={close} className="absolute top-4 right-4 text-grit-dim press" aria-label="Close">
+        <div className="absolute inset-x-0 top-0 h-[2px] bg-pro" />
+        <button
+          onClick={close}
+          className="absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-md border border-white/10 text-grit-dim press"
+          aria-label="Close"
+        >
           <X size={20} />
         </button>
 
-        <div className="flex items-center gap-2 mb-3">
-          <Crown size={16} className="text-accent-red" />
-          <span className="label-cap text-accent-red">DEADSET Pro</span>
+        <div className="mb-4 flex items-center gap-2">
+          <Crown size={16} className="text-pro" />
+          <span className="label-cap text-pro">DEADSET Pro</span>
         </div>
 
-        <div className="flex items-start gap-3 mb-1">
-          <div className="mt-1 shrink-0 w-10 h-10 rounded-xl border border-grit bg-[#0f0f0f] flex items-center justify-center">
-            <Icon size={20} className="text-accent-red" />
+        <div className="mb-1 flex items-start gap-3">
+          <div className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-pro/30 bg-pro/10">
+            <Icon size={20} className="text-pro" />
           </div>
           <div>
-            <h2 className="text-2xl uppercase leading-tight text-grit">{pitch.title}</h2>
+            <h2 className="display text-3xl font-black uppercase leading-none text-grit">
+              {pitch.title}
+            </h2>
             <p className="text-sm text-grit-dim mt-0.5">{pitch.tagline}</p>
           </div>
         </div>
 
-        <ul className="mt-5 space-y-2.5">
+        <ul className="mt-6 space-y-1 border-y border-white/10 py-3">
           {pitch.bullets.map((b) => (
-            <li key={b} className="flex items-start gap-2.5 text-sm text-grit">
-              <Check size={15} className="text-accent-red mt-0.5 shrink-0" />
+            <li key={b} className="flex items-start gap-2.5 py-2 text-sm text-grit">
+              <Check size={15} className="mt-0.5 shrink-0 text-pro" />
               <span>{b}</span>
             </li>
           ))}
@@ -210,8 +289,8 @@ export function PaywallSheet() {
           </>
         ) : (
           <>
-            <div className="mt-6 flex items-baseline gap-2">
-              <span className="display text-3xl text-grit">{money.monthly}</span>
+            <div className="mt-6 flex items-baseline gap-2 border-l-2 border-pro pl-3">
+              <span className="display text-4xl font-black text-grit">{money.monthly}</span>
               <span className="label-cap text-[10px]">/ month</span>
               <span className="ml-auto label-cap text-[10px]">or {money.yearly}/yr</span>
             </div>
@@ -225,7 +304,10 @@ export function PaywallSheet() {
             >
               Go Pro
             </button>
-            <button onClick={close} className="w-full mt-2 py-2 label-cap text-[10px] text-grit-dim press">
+            <button
+              onClick={close}
+              className="w-full mt-2 py-2 label-cap text-[10px] text-grit-dim press"
+            >
               Not now
             </button>
           </>

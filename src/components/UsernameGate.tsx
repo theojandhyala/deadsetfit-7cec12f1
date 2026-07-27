@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
+import { AtSign } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { getMyProfile, saveProfile } from "@/lib/profile.functions";
@@ -77,45 +78,55 @@ export function UsernameGate() {
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 px-6">
-      <div className="w-full max-w-sm rounded-2xl border-2 border-accent-red bg-grit-card p-6 shadow-2xl">
-        <h2 className="display text-2xl font-extrabold uppercase text-grit mb-1">
-          Pick a username
-        </h2>
-        <p className="text-sm text-[#8a8a8a] mb-5">
-          Public. Shown on leaderboards and your profile.
-        </p>
-        <div className="flex items-center gap-2 mb-2 border-b-2 border-grit focus-within:border-accent-red">
-          <span className="text-2xl font-display font-extrabold text-grit-dim pb-2">@</span>
-          <input
-            ref={inputRef}
-            autoFocus
-            defaultValue=""
-            onChange={(e) => {
-              const c = e.target.value
-                .toLowerCase()
-                .replace(/[^a-z0-9_]/g, "")
-                .slice(0, 20);
-              e.target.value = c;
-              setClean(c);
-            }}
-            onKeyDown={(e) => e.key === "Enter" && submit()}
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            className="bg-transparent outline-none text-2xl font-display font-extrabold text-grit flex-1 pb-2 min-w-0"
-            placeholder="ironwolf"
-          />
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 px-6">
+      <div className="deadset-panel w-full max-w-sm p-6">
+        <div className="relative">
+          <div className="mb-5 flex items-start gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-accent-red/40 bg-accent-red/10 text-accent-red">
+              <AtSign size={18} />
+            </span>
+            <div>
+              <p className="deadset-kicker">Athlete identity</p>
+              <h2 className="display mt-2 text-3xl font-black uppercase leading-none text-grit">
+                Claim your name
+              </h2>
+            </div>
+          </div>
+          <p className="mb-5 text-sm leading-relaxed text-grit-dim">
+            This is how you appear on leaderboards, rival cards and your public profile.
+          </p>
+          <div className="flex items-center gap-2 mb-2 border-b-2 border-grit focus-within:border-accent-red">
+            <span className="text-2xl font-display font-extrabold text-grit-dim pb-2">@</span>
+            <input
+              ref={inputRef}
+              autoFocus
+              defaultValue=""
+              onChange={(e) => {
+                const c = e.target.value
+                  .toLowerCase()
+                  .replace(/[^a-z0-9_]/g, "")
+                  .slice(0, 20);
+                e.target.value = c;
+                setClean(c);
+              }}
+              onKeyDown={(e) => e.key === "Enter" && submit()}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              className="bg-transparent outline-none text-2xl font-display font-extrabold text-grit flex-1 pb-2 min-w-0"
+              placeholder="ironwolf"
+            />
+          </div>
+          <p className="text-xs text-grit-dim mb-4">3–20 chars · a–z, 0–9, _</p>
+          {error && <p className="text-xs text-accent-red mb-3">{error}</p>}
+          <button
+            disabled={!valid || saving}
+            onClick={submit}
+            className="btn-grit w-full disabled:opacity-50"
+          >
+            {saving ? "Saving…" : "Lock it in"}
+          </button>
         </div>
-        <p className="text-xs text-grit-dim mb-4">3–20 chars · a–z, 0–9, _</p>
-        {error && <p className="text-xs text-accent-red mb-3">{error}</p>}
-        <button
-          disabled={!valid || saving}
-          onClick={submit}
-          className="btn-grit w-full disabled:opacity-50"
-        >
-          {saving ? "Saving…" : "Lock it in"}
-        </button>
       </div>
     </div>
   );

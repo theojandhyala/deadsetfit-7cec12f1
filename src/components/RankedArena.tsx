@@ -1,15 +1,14 @@
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { Lock, Share2, Sparkles, Target, Trophy, Zap } from "lucide-react";
+import { Share2, Sparkles, Target, Trophy, Zap } from "lucide-react";
 
-import { RankEmblem } from "@/components/RankEmblem";
+import { RankEmblem, RankTierGlyph } from "@/components/RankEmblem";
 import { RankShareCard } from "@/components/RankShareCard";
-import { usePro } from "@/hooks/usePro";
 import { calculateGritScore, calculateStreak, isoDay } from "@/lib/calc";
+import { getSeasonInfo, getWeeklyCompetitionStats } from "@/lib/competition";
 import { buildHeadlinePRs, computeFifaStats } from "@/lib/fifa-stats";
-import { openPaywall } from "@/lib/paywall-events";
-import { getRank, pointsToNextTier, rankProgress } from "@/lib/rank";
+import { getRank, getRankLadder, pointsToNextRank, rankProgress, rankStepBounds } from "@/lib/rank";
 import type { Rank } from "@/lib/rank";
 import type { AppState } from "@/lib/types";
 
@@ -18,44 +17,22 @@ type RankedArenaProps = {
   compact?: boolean;
 };
 
-// One representative point value per tier, top of the ladder first (see src/lib/rank.ts).
-const LADDER_TIER_MINS = [990, 940, 850, 760, 600, 420, 250, 120, 0];
-const LADDER: Rank[] = LADDER_TIER_MINS.map((points) => getRank(points));
-
-type LadderSegment = { key: number; hidden: boolean; ranks: Rank[] };
+const LADDER = getRankLadder();
 
 export function RankedArena({ state, compact = false }: RankedArenaProps) {
   const [shareOpen, setShareOpen] = useState(false);
   const [ladderOpen, setLadderOpen] = useState(false);
-  const { isPro, loading: proLoading } = usePro();
   const score = calculateGritScore(state);
   const rank = getRank(score.total);
   const progress = rankProgress(score.total);
-  const toNext = pointsToNextTier(score.total);
+  const toNext = pointsToNextRank(score.total);
   const streak = calculateStreak(state.completedDates);
   const fifa = computeFifaStats(state);
+  const weekly = getWeeklyCompetitionStats(state);
+  const season = getSeasonInfo();
   const today = isoDay();
 
-  // Free users only see their current tier and its immediate neighbours;
-  // Pro (or while entitlement is still loading) sees the whole ladder.
-  const showFullLadder = proLoading || isPro;
-  const tierIdx = LADDER.findIndex((t) => t.tier === rank.tier);
-
-  const ladderSegments = useMemo(() => {
-    const segments: LadderSegment[] = [];
-    LADDER.forEach((tier, i) => {
-      const hidden = !showFullLadder && Math.abs(i - tierIdx) > 1;
-      const last = segments[segments.length - 1];
-      if (last && last.hidden === hidden) last.ranks.push(tier);
-      else segments.push({ key: i, hidden, ranks: [tier] });
-    });
-    return segments;
-  }, [showFullLadder, tierIdx]);
-
-  const hiddenSegments = ladderSegments.filter((s) => s.hidden);
-  const overlaySegment = hiddenSegments.length
-    ? hiddenSegments.reduce((a, b) => (b.ranks.length > a.ranks.length ? b : a))
-    : null;
+  const tierIdx = LADDER.findIndex((item) => item.label === rank.label);
 
   const quests = useMemo(() => {
     const workoutDone = state.completedDates.includes(today);
@@ -71,20 +48,20 @@ export function RankedArena({ state, compact = false }: RankedArenaProps) {
 
     return [
       {
-        label: workoutDone ? "Daily ranked game complete" : "Complete today's workout",
-        reward: "+50 GRIT",
+        label: workoutDone ? "Today's session complete" : "Complete today's workout",
+        progress: workoutDone ? "DONE" : "0/1",
         done: workoutDone,
         to: "/train",
       },
       {
         label: sessionThisWeek >= 3 ? "Weekly consistency locked" : "Hit 3 workouts in 7 days",
-        reward: "+90 GRIT",
+        progress: `${Math.min(sessionThisWeek, 3)}/3`,
         done: sessionThisWeek >= 3,
         to: "/train",
       },
       {
         label: prThisWeek > 0 ? "PR pressure applied" : "Set one PR in 7 days",
-        reward: "+25 GRIT",
+        progress: `${Math.min(prThisWeek, 1)}/1`,
         done: prThisWeek > 0,
         to: "/profile",
       },
@@ -95,28 +72,46 @@ export function RankedArena({ state, compact = false }: RankedArenaProps) {
     <>
       <section className={compact ? "" : "px-5 mb-5"}>
         <div
-          className={"relative overflow-hidden border " + (compact ? "rounded-2xl p-3" : "rounded-[22px] p-4")}
+          className={
+            "relative overflow-hidden border " +
+            (compact ? "rounded-2xl p-3" : "rounded-[22px] p-4")
+          }
           style={{
             borderColor: `${rank.color}2f`,
             boxShadow: `0 18px 46px rgba(0,0,0,.26), inset 0 1px 0 rgba(255,255,255,.07)`,
-            background:
-              `radial-gradient(circle at 86% -10%, ${rank.glowColor}24, transparent 36%), linear-gradient(145deg, rgba(31,33,39,.96), rgba(7,7,9,.98) 58%, rgba(0,0,0,.98))`,
+            background: `radial-gradient(circle at 86% -10%, ${rank.glowColor}24, transparent 36%), linear-gradient(145deg, rgba(31,33,39,.96), rgba(7,7,9,.98) 58%, rgba(0,0,0,.98))`,
           }}
         >
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/18 to-transparent" />
           <div className="absolute right-4 top-4 h-24 w-24 rounded-full border border-white/5" />
           <div className="absolute right-10 top-10 h-12 w-12 rounded-full border border-white/5" />
           <div className="relative flex items-start gap-3">
-            <RankEmblem gritPoints={score.total} size={compact ? "sm" : "md"} showProgress={false} showLabel={false} />
+            <RankEmblem
+              gritPoints={score.total}
+              size={compact ? "sm" : "md"}
+              showProgress={false}
+              showLabel={false}
+            />
             <div className="min-w-0 flex-1">
-              <p className="label-cap text-[10px] flex items-center gap-1.5" style={{ color: rank.color }}>
+              <p
+                className="label-cap text-[10px] flex items-center gap-1.5"
+                style={{ color: rank.color }}
+              >
                 <Trophy size={12} /> RANKED DIVISION
               </p>
-              <h2 className={"display font-black uppercase leading-none mt-1 text-grit " + (compact ? "text-2xl" : "text-[1.7rem]")}>
+              <h2
+                className={
+                  "display font-black uppercase leading-none mt-1 text-grit " +
+                  (compact ? "text-2xl" : "text-[1.7rem]")
+                }
+              >
                 {rank.label}
               </h2>
               <p className="text-[11px] text-grit-dim mt-1 font-semibold">
-                Season 1 · {score.total}/1000 grit · {rank.tier === "DEADSET" ? "top of the ladder" : `${toNext} to ${rank.nextTier}`}
+                {season.label} · {season.daysLeft}d left ·{" "}
+                {rank.tier === "DEADSET"
+                  ? "top of the ladder"
+                  : `${toNext} to ${getRank(score.total + toNext).label}`}
               </p>
               <div className="mt-2.5 h-1.5 rounded-full bg-black/60 border border-white/10 overflow-hidden">
                 <div
@@ -140,64 +135,36 @@ export function RankedArena({ state, compact = false }: RankedArenaProps) {
           </div>
 
           <div className="relative grid grid-cols-3 gap-2 mt-3">
-            <MiniStat label="STREAK" value={`${streak}d`} icon={<Zap size={12} />} />
+            <MiniStat label="WEEKLY" value={String(weekly.score)} icon={<Zap size={12} />} />
             <MiniStat label="OVR" value={String(fifa.overall)} icon={<Sparkles size={12} />} />
-            <MiniStat label="SESSIONS" value={String(state.sessions.filter((s) => s.endedAt).length)} icon={<Target size={12} />} />
+            <MiniStat
+              label="SESSIONS"
+              value={String(weekly.sessions)}
+              icon={<Target size={12} />}
+            />
           </div>
 
           <div className="relative mt-4 border-t border-white/10 pt-3">
             <div className="flex items-center justify-between mb-2">
               <p className="label-cap text-[10px] text-grit-dim">LEAGUE LADDER</p>
-              <div className="flex items-center gap-2">
-                {!showFullLadder && (
-                  <span className="label-cap text-[9px] text-accent-red border border-accent-red/40 rounded px-1.5">
-                    PRO
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setLadderOpen((v) => !v)}
-                  className="label-cap text-[10px] text-grit-dim press"
-                >
-                  {ladderOpen ? "Collapse" : "Full ladder"}
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setLadderOpen((v) => !v)}
+                className="label-cap text-[10px] text-grit-dim press"
+              >
+                {ladderOpen ? "Collapse" : "Full ladder"}
+              </button>
             </div>
             {!ladderOpen ? (
               <div className="space-y-1.5">
-                {LADDER.filter((_, i) => Math.abs(i - tierIdx) <= 1).map((tier) => (
-                  <LadderRow key={tier.tier} tier={tier} isCurrent={tier.tier === rank.tier} />
+                {LADDER.filter((_, i) => Math.abs(i - tierIdx) <= 2).map((tier) => (
+                  <LadderRow key={tier.label} tier={tier} isCurrent={tier.label === rank.label} />
                 ))}
               </div>
             ) : (
               <div className="space-y-1.5">
-                {ladderSegments.map((seg) => (
-                  <div key={seg.key} className="relative">
-                    <div
-                      className={
-                        "space-y-1.5" +
-                        (seg.hidden ? " blur-[4px] opacity-50 pointer-events-none select-none" : "")
-                      }
-                      aria-hidden={seg.hidden || undefined}
-                    >
-                      {seg.ranks.map((tier) => (
-                        <LadderRow key={tier.tier} tier={tier} isCurrent={tier.tier === rank.tier} />
-                      ))}
-                    </div>
-                    {seg === overlaySegment && (
-                      <div className="absolute inset-0 z-10 flex items-center justify-center gap-2">
-                        <Lock size={13} className="text-accent-red" />
-                        <span className="label-cap text-[10px] text-grit">FULL LEAGUES — PRO</span>
-                        <button
-                          type="button"
-                          onClick={() => openPaywall("leagues")}
-                          className="btn-ghost text-xs"
-                        >
-                          Unlock
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                {LADDER.map((tier) => (
+                  <LadderRow key={tier.label} tier={tier} isCurrent={tier.label === rank.label} />
                 ))}
               </div>
             )}
@@ -220,11 +187,14 @@ export function RankedArena({ state, compact = false }: RankedArenaProps) {
                   >
                     <span
                       className="h-3 w-3 shrink-0 rounded-full"
-                      style={{ background: q.done ? rank.color : "transparent", border: `1px solid ${rank.color}` }}
+                      style={{
+                        background: q.done ? rank.color : "transparent",
+                        border: `1px solid ${rank.color}`,
+                      }}
                     />
                     <span className="text-xs text-grit flex-1 truncate">{q.label}</span>
                     <span className="label-cap text-[9px]" style={{ color: rank.color }}>
-                      {q.reward}
+                      {q.progress}
                     </span>
                   </Link>
                 ))}
@@ -252,6 +222,7 @@ export function RankedArena({ state, compact = false }: RankedArenaProps) {
 }
 
 function LadderRow({ tier, isCurrent }: { tier: Rank; isCurrent: boolean }) {
+  const bounds = rankStepBounds(tier);
   return (
     <div
       className="flex items-center gap-2 rounded-xl border px-3 py-1.5"
@@ -262,12 +233,17 @@ function LadderRow({ tier, isCurrent }: { tier: Rank; isCurrent: boolean }) {
           : "rgba(0,0,0,.3)",
       }}
     >
-      <span className="text-sm leading-none">{tier.icon}</span>
+      <span
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border bg-black/40"
+        style={{ color: tier.color, borderColor: `${tier.color}40` }}
+      >
+        <RankTierGlyph tier={tier.tier} size={13} color={tier.color} />
+      </span>
       <span
         className="label-cap text-[10px] flex-1 truncate"
         style={isCurrent ? { color: tier.color } : undefined}
       >
-        {tier.tier}
+        {tier.label}
       </span>
       {isCurrent && (
         <span className="label-cap text-[8px]" style={{ color: tier.color }}>
@@ -275,7 +251,7 @@ function LadderRow({ tier, isCurrent }: { tier: Rank; isCurrent: boolean }) {
         </span>
       )}
       <span className="text-[9px] font-semibold text-grit-dim">
-        {tier.minPoints}–{tier.maxPoints}
+        {bounds.min}–{bounds.max}
       </span>
     </div>
   );

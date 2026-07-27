@@ -48,7 +48,10 @@ function CheckoutReturn() {
         clearInterval(id);
         return;
       }
-      if (i > 8) { clearInterval(id); setTimedOut(true); }
+      if (i > 8) {
+        clearInterval(id);
+        setTimedOut(true);
+      }
     }, 1500);
     return () => clearInterval(id);
   }, [isPro, refresh, sessionId, verifiedPro]);
@@ -57,9 +60,16 @@ function CheckoutReturn() {
     return (
       <div className="min-h-screen bg-grit-bg flex flex-col items-center justify-center px-6 text-center">
         <TriangleAlert size={44} className="text-accent-red mb-4" />
-        <h1 className="font-display text-3xl uppercase tracking-wider text-grit-text">No checkout found</h1>
+        <h1 className="font-display text-3xl uppercase tracking-wider text-grit-text">
+          No checkout found
+        </h1>
         <p className="mt-2 text-sm text-grit">Start from the Pro page to choose a plan.</p>
-        <Link to="/upgrade" className="mt-7 rounded bg-accent-red px-7 py-3 font-display text-sm uppercase tracking-widest text-white">View plans</Link>
+        <Link
+          to="/upgrade"
+          className="mt-7 rounded bg-accent-red px-7 py-3 font-display text-sm uppercase tracking-widest text-white"
+        >
+          View plans
+        </Link>
       </div>
     );
   }
@@ -69,27 +79,45 @@ function CheckoutReturn() {
       {isPro || verifiedPro ? (
         <>
           <Crown size={56} className="text-accent-red mb-4" />
-          <h1 className="font-display text-4xl uppercase tracking-wider text-grit-text">You're Pro</h1>
+          <h1 className="font-display text-4xl uppercase tracking-wider text-grit-text">
+            You're Pro
+          </h1>
           <p className="mt-2 text-sm text-grit">All features unlocked. Now go lift.</p>
-          <Link to="/train" className="mt-8 rounded bg-accent-red px-8 py-3 font-display text-sm uppercase tracking-widest text-white">
+          <Link
+            to="/train"
+            className="mt-8 rounded bg-accent-red px-8 py-3 font-display text-sm uppercase tracking-widest text-white"
+          >
             Start training
           </Link>
         </>
       ) : timedOut ? (
         <>
           <TriangleAlert size={44} className="text-accent-red mb-4" />
-          <h1 className="font-display text-3xl uppercase tracking-wider text-grit-text">Payment processing</h1>
+          <h1 className="font-display text-3xl uppercase tracking-wider text-grit-text">
+            Payment processing
+          </h1>
           <p className="mt-2 text-sm text-grit">
             {verifyError || "Your payment may still be confirming. Check again shortly."}
           </p>
-          <button onClick={() => window.location.reload()} className="mt-7 rounded bg-accent-red px-7 py-3 font-display text-sm uppercase tracking-widest text-white">Check again</button>
-          <Link to="/train" className="mt-4 text-xs uppercase tracking-widest text-grit">Back to training</Link>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-7 rounded bg-accent-red px-7 py-3 font-display text-sm uppercase tracking-widest text-white"
+          >
+            Check again
+          </button>
+          <Link to="/train" className="mt-4 text-xs uppercase tracking-widest text-grit">
+            Back to training
+          </Link>
         </>
       ) : (
         <>
           <Loader2 className="animate-spin text-accent-red mb-4" size={32} />
-          <h1 className="font-display text-2xl uppercase tracking-wider text-grit-text">Activating Pro…</h1>
-          <p className="mt-2 text-xs text-grit uppercase tracking-widest">Confirming your subscription</p>
+          <h1 className="font-display text-2xl uppercase tracking-wider text-grit-text">
+            Activating Pro…
+          </h1>
+          <p className="mt-2 text-xs text-grit uppercase tracking-widest">
+            Confirming your subscription
+          </p>
         </>
       )}
     </div>

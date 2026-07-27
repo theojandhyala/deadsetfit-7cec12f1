@@ -17,8 +17,17 @@ export interface LibraryExercise {
   is_compound: boolean;
 }
 
-export const listExercises = ({ data }: { data: { category?: string; equipment?: string; muscle?: string; difficulty?: number; search?: string; limit?: number } }) =>
-  callRpc<{ exercises: LibraryExercise[] }>("listExercises", data);
+export const listExercises = ({
+  data,
+}: {
+  data: {
+    category?: string;
+    equipment?: string;
+    muscle?: string;
+    difficulty?: number;
+    search?: string;
+    limit?: number;
+  };
+}) => callRpc<{ exercises: LibraryExercise[] }>("listExercises", data);
 
-export const countExercises = () =>
-  callRpc<{ count: number }>("countExercises");
+export const countExercises = () => callRpc<{ count: number }>("countExercises");

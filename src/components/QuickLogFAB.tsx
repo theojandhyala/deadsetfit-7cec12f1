@@ -9,11 +9,12 @@ export function QuickLogFAB() {
       <div aria-hidden className="h-24 w-full shrink-0" />
       <Link
         to="/workout/live"
+        search={{}}
         aria-label="Start workout"
-        className="inline-flex fixed right-4 z-30 items-center gap-2 rounded-full px-4 py-3 bg-accent-red text-white font-extrabold uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-transform"
+        className="fixed right-4 z-30 inline-flex items-center gap-2 rounded-md border border-white/20 bg-accent-red px-4 py-3 text-xs font-extrabold uppercase tracking-widest text-white shadow-lg transition-transform active:scale-95"
         style={{
           bottom: "calc(78px + env(safe-area-inset-bottom))",
-          boxShadow: "0 10px 28px rgba(230,50,34,0.32)",
+          boxShadow: "0 10px 28px rgba(230,50,34,0.26), inset 0 1px 0 rgba(255,255,255,0.2)",
         }}
       >
         <Zap size={16} strokeWidth={3} />

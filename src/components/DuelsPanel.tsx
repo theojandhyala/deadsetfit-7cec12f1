@@ -108,7 +108,8 @@ function DuelCard({
   const metric = METRICS.find((m) => m.key === d.metric);
   const name = d.opponent.display_name || d.opponent.username || "Athlete";
   const youLead = d.myScore > d.theirScore;
-  const fmt = (n: number) => (d.metric === "volume" ? `${Math.round(n / 1000 * 10) / 10}t` : String(n));
+  const fmt = (n: number) =>
+    d.metric === "volume" ? `${Math.round((n / 1000) * 10) / 10}t` : String(n);
 
   return (
     <div className="bg-grit-card border border-grit rounded-2xl p-4">
@@ -135,19 +136,36 @@ function DuelCard({
           <div className="flex items-center gap-3 py-1">
             <div className="flex-1 text-center">
               <p className="label-cap text-[9px] text-grit-dim">You</p>
-              <p className="display text-2xl font-extrabold tabular-nums" style={{ color: youLead ? "#22c55e" : "#f5f5f0" }}>
+              <p
+                className="display text-2xl font-extrabold tabular-nums"
+                style={{ color: youLead ? "#22c55e" : "#f5f5f0" }}
+              >
                 {fmt(d.myScore)}
               </p>
             </div>
             <span className="display font-extrabold text-grit-dim">vs</span>
             <div className="flex-1 text-center">
               <p className="label-cap text-[9px] text-grit-dim truncate">{name}</p>
-              <p className="display text-2xl font-extrabold tabular-nums" style={{ color: !youLead && d.theirScore > d.myScore ? "#e63222" : "#f5f5f0" }}>
+              <p
+                className="display text-2xl font-extrabold tabular-nums"
+                style={{ color: !youLead && d.theirScore > d.myScore ? "#e63222" : "#f5f5f0" }}
+              >
                 {fmt(d.theirScore)}
               </p>
             </div>
           </div>
-          <p className="text-center text-[11px] mt-1" style={{ color: d.ended ? (d.winner === "me" ? "#22c55e" : d.winner === "them" ? "#e63222" : "#8a8a8a") : "#8a8a8a" }}>
+          <p
+            className="text-center text-[11px] mt-1"
+            style={{
+              color: d.ended
+                ? d.winner === "me"
+                  ? "#22c55e"
+                  : d.winner === "them"
+                    ? "#e63222"
+                    : "#8a8a8a"
+                : "#8a8a8a",
+            }}
+          >
             {d.ended
               ? d.winner === "me"
                 ? "🏆 You won"
@@ -194,7 +212,14 @@ function DuelCard({
 
 function NewDuelModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [q, setQ] = useState("");
-  const [results, setResults] = useState<Array<{ id: string; username: string | null; display_name: string | null; avatar_url: string | null }>>([]);
+  const [results, setResults] = useState<
+    Array<{
+      id: string;
+      username: string | null;
+      display_name: string | null;
+      avatar_url: string | null;
+    }>
+  >([]);
   const [selected, setSelected] = useState<{ id: string; name: string } | null>(null);
   const [metric, setMetric] = useState<DuelMetric>("volume");
   const [sending, setSending] = useState(false);
@@ -234,9 +259,20 @@ function NewDuelModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
   }
 
   return (
-    <div className="fixed inset-0 z-[115] flex items-end sm:items-center justify-center px-4 pb-4 sm:pb-0" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
-      <div className="relative w-full max-w-sm bg-grit-card border border-grit rounded-2xl p-5" onClick={(e) => e.stopPropagation()}>
-        <button onClick={onClose} aria-label="Close" className="absolute top-3 right-3 text-grit-dim press">
+    <div
+      className="fixed inset-0 z-[115] flex items-end sm:items-center justify-center px-4 pb-4 sm:pb-0"
+      style={{ background: "rgba(0,0,0,0.7)" }}
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-sm bg-grit-card border border-grit rounded-2xl p-5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute top-3 right-3 text-grit-dim press"
+        >
           <X size={18} />
         </button>
         <p className="display font-extrabold uppercase text-grit text-lg flex items-center gap-2 mb-3">
@@ -247,7 +283,12 @@ function NewDuelModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
           <div className="flex items-center gap-2 mb-4 bg-[#141414] border border-grit rounded-xl px-3 py-2">
             <Crown size={14} className="text-accent-red" />
             <span className="text-sm font-bold text-grit flex-1 truncate">{selected.name}</span>
-            <button onClick={() => setSelected(null)} className="label-cap text-[10px] text-grit-dim press">Change</button>
+            <button
+              onClick={() => setSelected(null)}
+              className="label-cap text-[10px] text-grit-dim press"
+            >
+              Change
+            </button>
           </div>
         ) : (
           <div className="mb-3">
@@ -265,13 +306,23 @@ function NewDuelModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
                 {results.map((r) => (
                   <button
                     key={r.id}
-                    onClick={() => setSelected({ id: r.id, name: r.display_name || r.username || "Athlete" })}
+                    onClick={() =>
+                      setSelected({ id: r.id, name: r.display_name || r.username || "Athlete" })
+                    }
                     className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-[#141414] text-left press"
                   >
                     <div className="w-7 h-7 rounded-full overflow-hidden bg-[#1a1a1a] flex items-center justify-center shrink-0 border border-grit">
-                      {r.avatar_url ? <img src={r.avatar_url} alt="" className="w-full h-full object-cover" /> : <span className="text-[11px] text-grit">{(r.display_name || r.username || "A")[0]?.toUpperCase()}</span>}
+                      {r.avatar_url ? (
+                        <img src={r.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-[11px] text-grit">
+                          {(r.display_name || r.username || "A")[0]?.toUpperCase()}
+                        </span>
+                      )}
                     </div>
-                    <span className="text-sm text-grit truncate">{r.display_name || r.username || "Athlete"}</span>
+                    <span className="text-sm text-grit truncate">
+                      {r.display_name || r.username || "Athlete"}
+                    </span>
                   </button>
                 ))}
               </div>

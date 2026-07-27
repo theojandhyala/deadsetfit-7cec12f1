@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -17,7 +17,10 @@
       name="description"
       content="DEADSET — the training system for lifters. Live set logging, automatic PR detection, streak armor, ranked leagues, strength standards and recovery tracking. Start free."
     />
-    <meta property="og:title" content="DEADSET — Train Smarter. Track Everything. Forge Your Body." />
+    <meta
+      property="og:title"
+      content="DEADSET — Train Smarter. Track Everything. Forge Your Body."
+    />
     <meta
       property="og:description"
       content="Live set logging, automatic PR detection, streak armor, ranked leagues and strength analytics. Built for the lift, not the feed."
@@ -32,16 +35,58 @@
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Inter:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      window.addEventListener(
+        "error",
+        function (event) {
+          document.documentElement.dataset.deadsetModuleError =
+            [event.message, event.filename, event.lineno].filter(Boolean).join(" · ") ||
+            "Unknown module error";
+        },
+        true,
+      );
+    </script>
   </head>
   <body>
     <div id="root">
-      <main style="min-height:100vh;display:grid;place-items:center;background:#0a0a0a;color:#f5f5f0;font-family:Inter,system-ui,sans-serif;padding:24px;text-align:center">
+      <main
+        style="
+          min-height: 100vh;
+          display: grid;
+          place-items: center;
+          background: #0a0a0a;
+          color: #f5f5f0;
+          font-family: Inter, system-ui, sans-serif;
+          padding: 24px;
+          text-align: center;
+        "
+      >
         <div>
-          <h1 style="margin:0;font-family:Impact,'Arial Black',sans-serif;font-size:48px;font-style:italic;letter-spacing:-.04em">
-            DEAD<span style="color:#E10600">SET</span>
+          <h1
+            style="
+              margin: 0;
+              font-family: Impact, &quot;Arial Black&quot;, sans-serif;
+              font-size: 48px;
+              font-style: italic;
+              letter-spacing: -0.04em;
+            "
+          >
+            DEAD<span style="color: #e10600">SET</span>
           </h1>
-          <p style="margin:14px 0 0;color:#8a8a8a;font-size:12px;font-weight:800;letter-spacing:.28em;text-transform:uppercase">
+          <p
+            style="
+              margin: 14px 0 0;
+              color: #8a8a8a;
+              font-size: 12px;
+              font-weight: 800;
+              letter-spacing: 0.28em;
+              text-transform: uppercase;
+            "
+          >
             Loading your training
           </p>
         </div>
@@ -53,9 +98,18 @@
       // with a cache-busting query so the browser gets a fresh copy. Without
       // this, one bad response mid-deploy leaves a device broken for a year.
       (function () {
-        var RETRY_KEY = "deadset_boot_retry_v2";
+        var RETRY_KEY = "deadset_boot_retry_v5";
         var CSS_KEY = "deadset_css_retry_v1";
-        function showBootFailure() {
+        function showBootFailure(error) {
+          try {
+            document.documentElement.dataset.deadsetBootError =
+              error && error.message
+                ? error.message
+                : String(error || "entry module did not execute");
+            console.error("DEADSET boot watchdog", error);
+          } catch (e) {
+            /* diagnostic only */
+          }
           var root = document.getElementById("root");
           if (!root) return;
           root.innerHTML =
@@ -98,7 +152,7 @@
             if (window.__DEADSET_BOOT_OK) return;
             var entry = document.querySelector('script[type="module"][src]');
             if (!entry || sessionStorage.getItem(RETRY_KEY)) {
-              showBootFailure();
+              showBootFailure(new Error("Entry module did not execute after retry"));
               return;
             }
             sessionStorage.setItem(RETRY_KEY, "1");

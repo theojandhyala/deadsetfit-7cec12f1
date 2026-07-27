@@ -13,7 +13,11 @@ export type PaywallFeature =
   | "photos"
   | "challenges"
   | "progression"
-  | "report";
+  | "report"
+  | "plan-audit"
+  | "advanced-programming"
+  | "smart-swaps"
+  | "autopilot";
 
 export type PaywallEvent = {
   id: string;

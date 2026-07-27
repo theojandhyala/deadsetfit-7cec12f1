@@ -1,5 +1,6 @@
 import type { AppState, SetLog } from "./types";
 import { bestSetFor, maxRepsFor, calculateStreak, calculateGritScore } from "./calc";
+import { getWeeklyCompetitionStats, type WeeklyCompetitionStats } from "./competition";
 
 // === PR Catalog — used for the "Personal Records" editor + FIFA stat math ===
 export type PRKind = "1RM" | "REPS" | "TIME";
@@ -243,6 +244,9 @@ export interface PublicStats {
   /** Current consecutive-day training streak (for the streak leaderboard) */
   streak: number;
   topPRs: HeadlinePR[];
+  weekly: WeeklyCompetitionStats;
+  /** Big Three total divided by body weight. */
+  strengthToWeight: number;
   goal?: string;
   experience?: string;
   weightKg?: number;
@@ -251,12 +255,16 @@ export interface PublicStats {
   prefs?: {
     focusMuscles?: string[];
     sessionMinutes?: number;
+    exercisesPerSession?: number;
     targetWeightKg?: number;
   };
 }
 
 export function buildPublicStats(state: AppState): PublicStats {
   const stats = computeFifaStats(state);
+  const topPRs = buildHeadlinePRs(state);
+  const total = topPRs.reduce((sum, lift) => sum + lift.value, 0);
+  const bodyWeight = state.profile?.weightKg ?? 0;
   return {
     overall: stats.overall,
     STR: stats.STR,
@@ -266,7 +274,9 @@ export function buildPublicStats(state: AppState): PublicStats {
     CON: stats.CON,
     DIE: stats.DIE,
     streak: calculateStreak(state.completedDates),
-    topPRs: buildHeadlinePRs(state),
+    topPRs,
+    weekly: getWeeklyCompetitionStats(state),
+    strengthToWeight: bodyWeight > 0 ? Math.round((total / bodyWeight) * 100) / 100 : 0,
     goal: state.profile?.goal,
     experience: state.profile?.experience,
     weightKg: state.profile?.weightKg,
@@ -276,6 +286,7 @@ export function buildPublicStats(state: AppState): PublicStats {
     prefs: {
       focusMuscles: state.profile?.focusMuscles,
       sessionMinutes: state.profile?.sessionMinutes,
+      exercisesPerSession: state.profile?.exercisesPerSession,
       targetWeightKg: state.profile?.targetWeightKg,
     },
   };

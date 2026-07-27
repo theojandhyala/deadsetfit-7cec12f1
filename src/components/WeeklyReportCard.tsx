@@ -52,7 +52,11 @@ export function WeeklyReportCard() {
             </div>
           </div>
           <div className="grid grid-cols-4 gap-2 mt-3">
-            <ReportStat label="SESSIONS" value={String(report.sessions)} delta={report.sessionsDelta} />
+            <ReportStat
+              label="SESSIONS"
+              value={String(report.sessions)}
+              delta={report.sessionsDelta}
+            />
             <ReportStat
               label="VOLUME"
               value={`${(report.volumeKg / 1000).toFixed(1)}t`}

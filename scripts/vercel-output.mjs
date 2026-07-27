@@ -59,13 +59,13 @@ export default async function handler(req, res) {
   const buf = await response.arrayBuffer();
   res.end(Buffer.from(buf));
 }
-`.trimStart()
+`.trimStart(),
 );
 
 // Serverless function config — points to the adapter
 writeFileSync(
   resolve(fnDir, ".vc-config.json"),
-  JSON.stringify({ runtime: "nodejs20.x", handler: "handler.js", maxDuration: 30 })
+  JSON.stringify({ runtime: "nodejs20.x", handler: "handler.js", maxDuration: 30 }),
 );
 
 // Routing: static files pass through, everything else → SSR handler
@@ -78,7 +78,7 @@ writeFileSync(
       { src: "^/(robots\\.txt|sitemap\\.xml|manifest\\.json|llms\\.txt)$", dest: "/$1" },
       { src: "/(.*)", dest: "/index" },
     ],
-  })
+  }),
 );
 
 console.log("✓ Vercel output written to .vercel/output/");

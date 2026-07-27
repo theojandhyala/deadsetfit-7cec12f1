@@ -11,6 +11,7 @@ The iOS app pairs with Apple Watch through Apple Health:
   workout to Apple Health, closing rings and appearing in Apple Fitness.
 
 Pieces:
+
 - `ios/App/App/HealthKitPlugin.swift` — Capacitor plugin (authorization,
   queryWorkouts, todayActiveEnergy, saveWorkout)
 - `ios/App/App/MyViewController.swift` — registers the app-local plugin

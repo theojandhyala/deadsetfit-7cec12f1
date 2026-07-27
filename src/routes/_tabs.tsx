@@ -16,11 +16,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { restoreSupabaseSession } from "@/integrations/supabase/client";
 import { getMyProfile } from "@/lib/profile.functions";
 import { profileFromAccount, profileQuestionsComplete, withTimeout } from "@/lib/account-restore";
-import { calculateGritScore, calculateStreak, defaultSchedule, gritBadge } from "@/lib/calc";
+import { calculateGritScore, calculateStreak, defaultSchedule } from "@/lib/calc";
 import { emitGritEarned } from "@/lib/grit-events";
+import { getRank } from "@/lib/rank";
 import { runStreakArmor } from "@/lib/streak-armor";
 import { importHealthWorkouts, healthSupported } from "@/lib/health";
 import { usePro } from "@/hooks/usePro";
+import { FeatureTour } from "@/components/FeatureTour";
 
 export const Route = createFileRoute("/_tabs")({
   component: TabsLayout,
@@ -37,7 +39,7 @@ function TabsLayout() {
   const navRef = useRef(navigate);
   const getProfileRef = useRef(getProfile);
   const lastScoreRef = useRef<number | null>(null);
-  const lastBadgeRef = useRef<string | null>(null);
+  const lastRankRef = useRef<string | null>(null);
   navRef.current = navigate;
   getProfileRef.current = getProfile;
 
@@ -129,21 +131,23 @@ function TabsLayout() {
   useEffect(() => {
     if (!ready || !state.profile) return;
     const score = calculateGritScore(state).total;
-    const badge = gritBadge(score);
+    const rank = getRank(score);
     const previous = lastScoreRef.current;
-    const previousBadge = lastBadgeRef.current;
+    const previousRank = lastRankRef.current;
     lastScoreRef.current = score;
-    lastBadgeRef.current = badge;
+    lastRankRef.current = rank.label;
     if (previous == null) return;
     const gain = score - previous;
     if (gain <= 0) return;
     // A jump this size is a remote hydrate landing, not something the user
     // just did — re-baseline silently instead of celebrating phantom grit.
     if (gain > 100) return;
+    const promoted = !!previousRank && previousRank !== rank.label;
     emitGritEarned(
       gain,
-      previousBadge && previousBadge !== badge ? "RANK UP" : "GRIT EARNED",
-      previousBadge && previousBadge !== badge ? "rank" : "grit",
+      promoted ? rank.label : "GRIT EARNED",
+      promoted ? "rank" : "grit",
+      promoted ? { rankPoints: score, previousRankLabel: previousRank } : undefined,
     );
   }, [ready, state]);
 
@@ -186,6 +190,7 @@ function TabsLayout() {
     >
       <TopBar />
       <Outlet />
+      <FeatureTour />
       <GritEarnedLayer />
       <BottomNav />
     </div>

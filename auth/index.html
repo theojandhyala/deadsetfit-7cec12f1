@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#090609" />
     <meta name="robots" content="noindex, nofollow" />
-    <title>DEADSET — Sign In</title>
+    <title>Join DEADSET</title>
     <style>
       :root {
         color-scheme: dark;
@@ -27,6 +27,10 @@
       * {
         box-sizing: border-box;
         -webkit-tap-highlight-color: transparent;
+      }
+
+      [hidden] {
+        display: none !important;
       }
 
       html,
@@ -231,6 +235,10 @@
         line-height: 1;
       }
 
+      .rank-token .mini-label {
+        letter-spacing: 0.12em;
+      }
+
       .hype-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -316,29 +324,105 @@
           0 0 42px rgba(230, 50, 34, 0.1);
       }
 
-      .tabs {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        height: 54px;
-        margin-bottom: 24px;
-        padding: 4px;
-        border-radius: 18px;
-        background: #050505;
+      .auth-heading {
+        margin-bottom: 22px;
+        text-align: center;
       }
 
-      .tab {
-        border: 0;
-        border-radius: 15px;
-        background: transparent;
-        color: #858490;
-        font-size: 17px;
-        font-weight: 800;
-      }
-
-      .tab.active {
-        background: var(--red);
+      .auth-title {
+        margin: 0;
         color: #fff;
-        box-shadow: 0 8px 20px rgba(230, 50, 34, 0.32);
+        font-family: Oswald, Impact, "Arial Black", sans-serif;
+        font-size: 31px;
+        font-style: italic;
+        font-weight: 800;
+        line-height: 1;
+        text-transform: uppercase;
+      }
+
+      .auth-subtitle {
+        margin: 9px 0 0;
+        color: #92919b;
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.45;
+      }
+
+      .social-stack {
+        display: grid;
+        gap: 10px;
+      }
+
+      .social-button {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        min-height: 54px;
+        padding: 0 48px;
+        border: 1px solid rgba(255, 255, 255, 0.13);
+        border-radius: 17px;
+        background: #f5f5f0;
+        color: #080507;
+        font-size: 15px;
+        font-weight: 850;
+        cursor: pointer;
+        transition:
+          transform 0.15s ease,
+          background 0.15s ease,
+          border-color 0.15s ease;
+      }
+
+      .social-button.apple {
+        background: #050505;
+        color: #fff;
+      }
+
+      .social-button:hover {
+        transform: translateY(-1px);
+      }
+
+      .social-button:focus-visible,
+      .mode-switch:focus-visible,
+      .forgot:focus-visible,
+      .pw-toggle:focus-visible,
+      .close:focus-visible {
+        outline: 2px solid var(--red);
+        outline-offset: 3px;
+      }
+
+      .social-button:disabled {
+        cursor: wait;
+        opacity: 0.58;
+        transform: none;
+      }
+
+      .social-icon {
+        position: absolute;
+        left: 18px;
+        width: 20px;
+        height: 20px;
+      }
+
+      .divider {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 20px 0;
+        color: #777680;
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+      }
+
+      .divider::before,
+      .divider::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: rgba(255, 255, 255, 0.09);
       }
 
       label {
@@ -403,8 +487,8 @@
         z-index: 11;
         display: grid;
         place-items: center;
-        width: 40px;
-        height: 40px;
+        width: 44px;
+        height: 44px;
         border: 0;
         border-radius: 12px;
         background: transparent;
@@ -452,6 +536,8 @@
       .forgot {
         display: block;
         margin: 24px 0 0 auto;
+        min-height: 44px;
+        padding: 0 2px;
         border: 0;
         background: transparent;
         color: #92919b;
@@ -506,8 +592,32 @@
       }
 
       .terms a {
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+        padding: 0 6px;
         color: #bdbcc5;
         text-underline-offset: 4px;
+      }
+
+      .mode-row {
+        margin: 22px 0 0;
+        color: #92919b;
+        font-size: 14px;
+        font-weight: 750;
+        text-align: center;
+      }
+
+      .mode-switch {
+        margin-left: 4px;
+        min-height: 44px;
+        padding: 4px 6px;
+        border: 0;
+        border-bottom: 1px solid rgba(240, 6, 6, 0.58);
+        background: transparent;
+        color: #fff;
+        font-weight: 900;
+        cursor: pointer;
       }
 
       @media (max-width: 380px) {
@@ -528,8 +638,8 @@
         .auth-hype {
           padding: 15px;
         }
-        .tab {
-          font-size: 14px;
+        .auth-title {
+          font-size: 27px;
         }
         label {
           font-size: 14px;
@@ -543,6 +653,37 @@
           height: 56px;
           font-size: 17px;
           border-radius: 16px;
+        }
+        .social-button {
+          min-height: 52px;
+          padding-right: 42px;
+          padding-left: 42px;
+          font-size: 14px;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .page {
+          padding-top: max(64px, calc(env(safe-area-inset-top) + 52px));
+        }
+        .brand-wrap {
+          margin-bottom: 18px;
+        }
+        .auth-hype {
+          display: none;
+        }
+        .card {
+          padding-top: 26px;
+          padding-bottom: 24px;
+        }
+        .auth-heading {
+          margin-bottom: 18px;
+        }
+        .terms {
+          margin-top: 12px;
+        }
+        .mode-row {
+          margin-top: 12px;
         }
       }
     </style>
@@ -590,10 +731,46 @@
         </section>
 
         <section class="card" aria-label="Authentication">
-          <div class="tabs" role="tablist">
-            <button class="tab active" id="signin-tab" type="button">Sign In</button>
-            <button class="tab" id="signup-tab" type="button">Create Account</button>
+          <div class="auth-heading">
+            <h2 class="auth-title" id="auth-title">Create your account</h2>
+            <p class="auth-subtitle" id="auth-subtitle">
+              Build your training plan and start logging in minutes.
+            </p>
           </div>
+
+          <div class="social-stack" id="social-options">
+            <button class="social-button" id="google-auth" type="button">
+              <svg class="social-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  fill="#4285F4"
+                  d="M21.6 12.23c0-.71-.06-1.4-.18-2.07H12v3.91h5.38a4.6 4.6 0 0 1-2 3.02v2.54h3.24c1.9-1.75 2.98-4.32 2.98-7.4Z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 22c2.7 0 4.97-.9 6.62-2.43l-3.24-2.54c-.9.6-2.05.96-3.38.96-2.61 0-4.82-1.76-5.61-4.13H3.04v2.62A10 10 0 0 0 12 22Z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M6.39 13.86A6 6 0 0 1 6.08 12c0-.65.11-1.28.31-1.86V7.52H3.04A10 10 0 0 0 2 12c0 1.61.39 3.14 1.04 4.48l3.35-2.62Z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 6.01c1.47 0 2.78.5 3.81 1.49l2.87-2.87A9.62 9.62 0 0 0 12 2a10 10 0 0 0-8.96 5.52l3.35 2.62C7.18 7.77 9.39 6.01 12 6.01Z"
+                />
+              </svg>
+              Continue with Google
+            </button>
+            <button class="social-button apple" id="apple-auth" type="button">
+              <svg class="social-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path
+                  d="M16.7 12.98c.02 2.25 1.98 3 2 3.01-.02.05-.31 1.07-1.03 2.13-.62.92-1.27 1.83-2.29 1.85-.99.02-1.32-.59-2.46-.59-1.14 0-1.5.57-2.44.61-.98.04-1.73-.98-2.36-1.89-1.28-1.86-2.26-5.25-.94-7.54a3.67 3.67 0 0 1 3.12-1.89c.97-.02 1.89.66 2.46.66.57 0 1.65-.81 2.78-.69.47.02 1.8.19 2.65 1.44-.07.04-1.59.93-1.57 2.9ZM14.8 7.45c.52-.63.87-1.51.77-2.39-.75.03-1.66.5-2.2 1.13-.48.56-.9 1.45-.79 2.31.84.06 1.7-.42 2.22-1.05Z"
+                />
+              </svg>
+              Continue with Apple
+            </button>
+          </div>
+
+          <div class="divider" id="email-divider">or continue with email</div>
 
           <form id="auth-form" autocomplete="on">
             <div class="field">
@@ -619,7 +796,7 @@
                   id="password"
                   name="password"
                   type="password"
-                  autocomplete="current-password"
+                  autocomplete="new-password"
                   placeholder="Password"
                   minlength="6"
                   required
@@ -653,8 +830,12 @@
                     stroke-linejoin="round"
                     aria-hidden="true"
                   >
-                    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c6.5 0 10 8 10 8a13.16 13.16 0 0 1-1.67 2.68" />
-                    <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3.5 8 10 8a9.74 9.74 0 0 0 5.39-1.61" />
+                    <path
+                      d="M9.9 4.24A9.12 9.12 0 0 1 12 4c6.5 0 10 8 10 8a13.16 13.16 0 0 1-1.67 2.68"
+                    />
+                    <path
+                      d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3.5 8 10 8a9.74 9.74 0 0 0 5.39-1.61"
+                    />
                     <line x1="2" x2="22" y1="2" y2="22" />
                   </svg>
                 </button>
@@ -662,11 +843,16 @@
               <p class="pw-hint" id="password-hint" hidden>At least 6 characters</p>
             </div>
 
-            <button class="forgot" id="forgot" type="button">Forgot password?</button>
-            <button class="submit" id="submit" type="submit">Sign In</button>
-            <p class="free-note" id="free-note" hidden>Free to join — no card required.</p>
+            <button class="forgot" id="forgot" type="button" hidden>Forgot password?</button>
+            <button class="submit" id="submit" type="submit">Create Account</button>
+            <p class="free-note" id="free-note">Free to join. No card required.</p>
             <div class="message" id="message" role="status" aria-live="polite"></div>
           </form>
+
+          <p class="mode-row" id="mode-row">
+            <span id="mode-question">Already have an account?</span>
+            <button class="mode-switch" id="mode-switch" type="button">Log in</button>
+          </p>
         </section>
 
         <p class="terms">

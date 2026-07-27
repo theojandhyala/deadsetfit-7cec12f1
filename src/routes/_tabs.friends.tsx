@@ -481,7 +481,10 @@ function Feed({ userId }: { userId: string }) {
         );
         if (prs.length === 0) return null;
         const top = prs.reduce((a, b) =>
-          Number((b.metadata as { weight?: number }).weight) > Number((a.metadata as { weight?: number }).weight) ? b : a,
+          Number((b.metadata as { weight?: number }).weight) >
+          Number((a.metadata as { weight?: number }).weight)
+            ? b
+            : a,
         );
         const m = top.metadata as { lift?: string; weight?: number };
         const name = top.author?.display_name || top.author?.username || "Athlete";
@@ -609,11 +612,14 @@ function Feed({ userId }: { userId: string }) {
                   )}
                 </div>
                 <div className="flex gap-4">
-                  <FeedStat label="Exercises" v={Number((p.metadata as { exercises?: number }).exercises) || 0} />
+                  <FeedStat
+                    label="Exercises"
+                    v={Number((p.metadata as { exercises?: number }).exercises) || 0}
+                  />
                   <FeedStat label="Sets" v={Number((p.metadata as { sets?: number }).sets) || 0} />
                   <FeedStat
                     label="Volume"
-                    v={`${Math.round((Number((p.metadata as { volume?: number }).volume) || 0) / 1000 * 10) / 10}t`}
+                    v={`${Math.round(((Number((p.metadata as { volume?: number }).volume) || 0) / 1000) * 10) / 10}t`}
                   />
                 </div>
               </div>
@@ -719,7 +725,11 @@ function CommentsPanel({ postId, onPosted }: { postId: string; onPosted: () => v
           <div key={c.id} className="mb-2 text-xs">
             {c.author?.id ? (
               // Tappable so a commenter can be reported/blocked from their profile (UGC 1.2).
-              <Link to="/athlete/$id" params={{ id: c.author.id }} className="font-bold text-grit press">
+              <Link
+                to="/athlete/$id"
+                params={{ id: c.author.id }}
+                className="font-bold text-grit press"
+              >
                 {c.author?.display_name || "User"}
               </Link>
             ) : (
@@ -918,18 +928,23 @@ function ArenaTile({ icon, title, sub }: { icon: ReactNode; title: string; sub: 
 }
 
 function leagueColor(l: string) {
-  switch (l) {
-    case "ELITE":
-      return "#a78bfa";
-    case "DIAMOND":
-      return "#67e8f9";
-    case "GOLD":
-      return "#fbbf24";
-    case "SILVER":
-      return "#cbd5e1";
-    default:
-      return "#b45309";
+  if (l.startsWith("DEADSET")) return "#e63222";
+  if (l.startsWith("UNREAL")) return "#22d3ee";
+  if (l.startsWith("CHAMPION")) return "#f43f5e";
+  if (l.startsWith("ELITE")) {
+    return "#a78bfa";
   }
+  if (l.startsWith("DIAMOND")) {
+    return "#67e8f9";
+  }
+  if (l.startsWith("PLATINUM")) return "#67e8f9";
+  if (l.startsWith("GOLD")) {
+    return "#fbbf24";
+  }
+  if (l.startsWith("SILVER")) {
+    return "#cbd5e1";
+  }
+  return "#b45309";
 }
 
 // ============ INVITE ============
@@ -1052,7 +1067,9 @@ function Invite() {
         <div className="flex items-center gap-2 mb-2">
           <Gift size={14} className="text-accent-red" />
           <p className="label-cap text-accent-red">
-            {isNativeIos() ? "Invite a mate to train with you" : "Invite a mate, both get 30 days Pro"}
+            {isNativeIos()
+              ? "Invite a mate to train with you"
+              : "Invite a mate, both get 30 days Pro"}
           </p>
         </div>
         <div className="display font-extrabold text-grit text-4xl leading-none my-3 tracking-wider">
@@ -1067,7 +1084,13 @@ function Invite() {
         </button>
         {(() => {
           const tiers = [1, 3, 5, 10, 25];
-          const labels: Record<number, string> = { 1: "First Recruit", 3: "Squad Builder", 5: "Recruiter", 10: "Ambassador", 25: "Legend" };
+          const labels: Record<number, string> = {
+            1: "First Recruit",
+            3: "Squad Builder",
+            5: "Recruiter",
+            10: "Ambassador",
+            25: "Legend",
+          };
           const count = info.count ?? 0;
           const next = tiers.find((t) => count < t) ?? null;
           const cur = [...tiers].reverse().find((t) => count >= t) ?? null;
@@ -1080,7 +1103,8 @@ function Invite() {
                   Invited <span className="text-grit font-bold">{count}</span>
                   {!isNativeIos() && (
                     <>
-                      {" "}· earned <span className="text-grit font-bold">{count * 30}</span> Pro days
+                      {" "}
+                      · earned <span className="text-grit font-bold">{count * 30}</span> Pro days
                     </>
                   )}
                 </span>
@@ -1089,7 +1113,10 @@ function Invite() {
               {next && (
                 <>
                   <div className="h-1.5 rounded-full bg-[#0a0a0a] overflow-hidden">
-                    <div className="h-full bg-accent-red rounded-full" style={{ width: `${Math.round(prog * 100)}%` }} />
+                    <div
+                      className="h-full bg-accent-red rounded-full"
+                      style={{ width: `${Math.round(prog * 100)}%` }}
+                    />
                   </div>
                   <p className="text-[10px] text-[#8a8a8a] mt-1">
                     {next - count} more to {labels[next]}
@@ -1143,8 +1170,8 @@ const COUNTRY_ALIASES: Record<string, string> = {
   "iran, islamic republic of": "Iran",
   "syrian arab republic": "Syria",
   "viet nam": "Vietnam",
-  "czechia": "Czech Republic",
-  "türkiye": "Turkey",
+  czechia: "Czech Republic",
+  türkiye: "Turkey",
   "tanzania, united republic of": "Tanzania",
   "bolivia (plurinational state of)": "Bolivia",
   "venezuela (bolivarian republic of)": "Venezuela",

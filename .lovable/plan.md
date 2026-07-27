@@ -3,6 +3,7 @@
 You picked **everything**, AI-generated 500+ library, and full social + payments. That cannot land in one pass — it's roughly 8 focused passes. Here's the order I'll ship them in. Each pass leaves the app fully working; nothing half-built.
 
 ## Pass 1 (this turn) — Foundation
+
 - Enable Lovable Cloud + auth (email + Google) — required for social, leagues, payments, photos, AI history.
 - Migrate existing local-storage profile to a `profiles` row (keep local cache as fallback).
 - Generate the **500+ exercise library** via AI on first run, cache to Cloud + local.
@@ -11,12 +12,14 @@ You picked **everything**, AI-generated 500+ library, and full social + payments
 - New `/library` browser screen with filters (muscle, equipment, difficulty).
 
 ## Pass 2 — Schedule Builder v2
+
 - Split presets: PPL, Upper/Lower, Bro Split, Full Body, Custom.
 - Drag-and-drop exercise picker per day (dnd-kit).
 - Save multiple **named programs** (Bulk / Cut / Holiday) and switch active program.
 - **Smart Suggest** server fn: scans the active week, flags missing muscle groups, proposes additions.
 
 ## Pass 3 — Live Workout Mode
+
 - Full-screen session UI, swipeable exercise cards.
 - Per-set log (weight + reps, 1-tap), rest timer with haptic vibration.
 - Mid-workout **PR detection** → gold flash + confetti.
@@ -24,6 +27,7 @@ You picked **everything**, AI-generated 500+ library, and full social + payments
 - End screen: **Pump Score** (AI 0-100), shareable summary card (html-to-image → download/share-sheet).
 
 ## Pass 4 — Gamification
+
 - GRIT Points engine + level ladder (Rookie → GRIT Legend).
 - Streaks: workout, diet, check-in (independent counters).
 - Badge wall (First PR, 100 Sets, 30-Day Streak, 1000kg Week, …).
@@ -31,6 +35,7 @@ You picked **everything**, AI-generated 500+ library, and full social + payments
 - Theme unlocks per level (extra accent palettes).
 
 ## Pass 5 — Progress / Physique Tracker v2
+
 - Photo check-in with **pose-guide overlay** (front/side/back silhouettes on camera view).
 - **Physique Timeline** scroller, side-by-side W1 vs Now.
 - Body measurements (chest/arms/waist/legs/weight) with trend graphs.
@@ -38,6 +43,7 @@ You picked **everything**, AI-generated 500+ library, and full social + payments
 - Storage bucket `physique-photos`, private RLS.
 
 ## Pass 6 — AI Coach Chat + Warm-up/Recovery
+
 - Persistent chat thread per user, AI Elements UI.
 - Context fed in: last sessions, PRs, today's plan, mood, sleep.
 - Modes: Pre-workout, Post-workout, Injury, Nutrition, Mood.
@@ -47,6 +53,7 @@ You picked **everything**, AI-generated 500+ library, and full social + payments
 - Auto-deload week every 4-6 weeks (flagged in schedule).
 
 ## Pass 7 — Social + Viral
+
 - Follow graph, community feed (PRs, transformations).
 - Reactions + comments (RLS-scoped, light moderation flags).
 - Branded share cards (workout summary + transformation before/after, GRIT watermark).
@@ -55,6 +62,7 @@ You picked **everything**, AI-generated 500+ library, and full social + payments
 - Athlete-profile flag (manual for now).
 
 ## Pass 8 — Monetisation (Stripe)
+
 - Plans: Free / Pro £7.99 / Elite £14.99 via Lovable's built-in Stripe.
 - Gate: AI coach, full library videos, physique AI, leagues, custom themes, advanced analytics → Pro. Human form review queue → Elite.
 - Billing portal, plan switch, cancel.

@@ -46,7 +46,9 @@ export function FifaCard({
   const edge = isPro ? PRO_GOLD : badgeC;
   return (
     <div
-      className={"relative overflow-hidden border " + (compact ? "rounded-2xl p-3" : "rounded-[22px] p-4")}
+      className={
+        "relative overflow-hidden border " + (compact ? "rounded-2xl p-3" : "rounded-[22px] p-4")
+      }
       style={{
         borderColor: isPro ? `${PRO_GOLD}99` : `${badgeC}66`,
         background: isPro
@@ -66,7 +68,10 @@ export function FifaCard({
       <div className="flex items-start gap-3">
         <div className="flex flex-col items-center" style={{ minWidth: compact ? 48 : 56 }}>
           <RankEmblem gritPoints={gritPoints ?? overall ?? 0} size="sm" showLabel={false} />
-          <span className="label-cap text-[8px] mt-1.5 text-center leading-tight" style={{ color: rank.color }}>
+          <span
+            className="label-cap text-[8px] mt-1.5 text-center leading-tight"
+            style={{ color: rank.color }}
+          >
             {rank.label}
           </span>
         </div>

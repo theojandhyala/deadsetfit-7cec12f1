@@ -23,7 +23,8 @@ export function StreakShareCard({
   useEffect(() => {
     const c = canvasRef.current;
     if (!c) return;
-    const W = 1080, H = 1920;
+    const W = 1080,
+      H = 1920;
     c.width = W;
     c.height = H;
     const ctx = c.getContext("2d")!;
@@ -153,7 +154,10 @@ export function StreakShareCard({
         </button>
       </div>
 
-      <div className="flex-1 overflow-auto px-5 pb-6 flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="flex-1 overflow-auto px-5 pb-6 flex flex-col items-center"
+        onClick={(e) => e.stopPropagation()}
+      >
         {dataUrl ? (
           <img
             src={dataUrl}
@@ -171,7 +175,8 @@ export function StreakShareCard({
 
         <p className="text-[11px] text-grit-dim text-center mt-4 max-w-xs">
           Save it → post to TikTok / Reels and tag{" "}
-          <span className="text-white font-bold">#deadset</span> — dare your followers to outlast your streak.
+          <span className="text-white font-bold">#deadset</span> — dare your followers to outlast
+          your streak.
         </p>
 
         <div className="grid grid-cols-2 gap-3 mt-5 w-full max-w-xs">

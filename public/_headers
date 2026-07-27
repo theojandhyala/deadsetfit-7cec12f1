@@ -17,18 +17,18 @@
 # heals any client that caches a bad response). The EDGE must not: a request
 # racing a deploy can get the SPA-fallback HTML served under an asset URL,
 # and with a year-long edge TTL that poisons the CDN for every visitor
-# (observed live 2026-07-14). A short CDN TTL makes that self-heal in ≤5 min.
+# (observed live 2026-07-14). A short CDN TTL makes that self-heal in <=1 min.
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
-  CDN-Cache-Control: max-age=300
+  CDN-Cache-Control: max-age=60
 
 /*.js
   Cache-Control: public, max-age=31536000, immutable
-  CDN-Cache-Control: max-age=300
+  CDN-Cache-Control: max-age=60
 
 /*.css
   Cache-Control: public, max-age=31536000, immutable
-  CDN-Cache-Control: max-age=300
+  CDN-Cache-Control: max-age=60
 
 /*
   X-Content-Type-Options: nosniff

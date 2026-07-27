@@ -5,7 +5,17 @@ import { isoDay, todayKey } from "@/lib/calc";
 import { muscleRecovery, recoveryLabel } from "@/lib/recovery";
 import { usePro } from "@/hooks/usePro";
 import { openPaywall } from "@/lib/paywall-events";
-import { Heart, Flame, Timer, RotateCcw, Play, Pause, ChevronRight, Activity, Lock } from "lucide-react";
+import {
+  Heart,
+  Flame,
+  Timer,
+  RotateCcw,
+  Play,
+  Pause,
+  ChevronRight,
+  Activity,
+  Lock,
+} from "lucide-react";
 
 export const Route = createFileRoute("/recovery")({
   head: () => ({ meta: [{ title: "DEADSET — Recovery" }] }),

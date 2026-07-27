@@ -1,24 +1,37 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ChevronLeft,
   Download,
   Upload,
   Bell,
+  BellRing,
+  Clock3,
   Droplets,
   Scale,
   ClipboardList,
+  Cloud,
+  CloudOff,
   FileSpreadsheet,
+  PlayCircle,
+  UserRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import { askConfirm } from "@/lib/confirm";
 import { exportJsonBackup, exportWorkoutCsv } from "@/lib/export";
-import { useAppState } from "@/lib/storage";
+import { isRemoteStateReady, useAppState, waitForRemoteState } from "@/lib/storage";
 import { DEFAULT_STATE } from "@/lib/default-state";
 import type { AppState } from "@/lib/types";
 import { clearSessionDiagnostics, readSessionLogs } from "@/lib/session-diagnostics";
 import { connectHealth, healthSupported } from "@/lib/health";
 import { Watch } from "lucide-react";
+import { isNativeIos } from "@/lib/platform";
+import {
+  disableWorkoutNotifications,
+  requestWorkoutNotificationPermission,
+} from "@/lib/device-reminders";
+import { supabase } from "@/integrations/supabase/client";
+import { resetFeatureTour } from "@/lib/feature-tour";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "DEADSET — Settings" }] }),
@@ -30,9 +43,38 @@ function SettingsPage() {
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
   const [sessionLogs, setSessionLogs] = useState(() => readSessionLogs());
+  const [account, setAccount] = useState<{
+    email: string | null;
+    status: "loading" | "signed-out" | "syncing" | "ready" | "offline";
+  }>({ email: null, status: "loading" });
 
   const reminders = state.remindersEnabled ?? true;
+  const deviceReminders = state.deviceRemindersEnabled ?? false;
+  const reminderHour = state.workoutReminderHour ?? 18;
+  const reminderMinute = state.workoutReminderMinute ?? 0;
   const health = state.healthSync ?? { enabled: false, importWorkouts: true, exportWorkouts: true };
+
+  useEffect(() => {
+    let active = true;
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!active) return;
+      const session = data.session;
+      if (!session) {
+        setAccount({ email: null, status: "signed-out" });
+        return;
+      }
+      setAccount({ email: session.user.email ?? null, status: "syncing" });
+      await waitForRemoteState(session.user.id, 4500);
+      if (!active) return;
+      setAccount({
+        email: session.user.email ?? null,
+        status: isRemoteStateReady(session.user.id) ? "ready" : "offline",
+      });
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function pairHealth() {
     const granted = await connectHealth();
@@ -48,6 +90,27 @@ function SettingsPage() {
   }
   const hydration = state.hydrationAlertsEnabled ?? true;
   const waterTarget = state.waterTargetMl ?? 3000;
+
+  async function toggleDeviceReminders(enabled: boolean) {
+    if (!enabled) {
+      set((s) => ({ ...s, deviceRemindersEnabled: false }));
+      await disableWorkoutNotifications().catch(() => {});
+      toast.success("Device workout reminders turned off");
+      return;
+    }
+
+    try {
+      const granted = await requestWorkoutNotificationPermission();
+      if (!granted) {
+        toast.error("Notifications are blocked. Allow them in iPhone Settings to turn this on.");
+        return;
+      }
+      set((s) => ({ ...s, deviceRemindersEnabled: true }));
+      toast.success("Workout reminders scheduled for your training days");
+    } catch {
+      toast.error("Workout reminders could not be enabled");
+    }
+  }
 
   async function handleExportJson() {
     try {
@@ -120,19 +183,88 @@ function SettingsPage() {
         <p className="label-cap">Settings</p>
       </header>
 
-      {/* Units — kg only until lb conversion covers every surface honestly */}
+      <section className="px-5 mb-6">
+        <p className="label-cap mb-2 flex items-center gap-1.5">
+          <UserRound size={12} className="text-accent-red" /> Account & Sync
+        </p>
+        <div className="rounded-lg border border-grit bg-grit-card p-4">
+          {account.status === "signed-out" ? (
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-bold text-grit">Saved on this device</p>
+                <p className="mt-1 text-[11px] leading-relaxed text-grit-dim">
+                  Sign in to back up your training and use it on another device.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate({ to: "/auth" as never })}
+                className="btn-grit shrink-0 px-4 py-2 text-xs"
+              >
+                Sign in
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-grit bg-black">
+                {account.status === "ready" ? (
+                  <Cloud size={18} className="text-[#22c55e]" />
+                ) : account.status === "syncing" ? (
+                  <Cloud size={18} className="animate-pulse text-accent-red" />
+                ) : (
+                  <CloudOff size={18} className="text-grit-dim" />
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-grit">
+                  {account.email ?? "Checking your account"}
+                </p>
+                <p className="mt-0.5 text-[11px] text-grit-dim">
+                  {account.status === "ready"
+                    ? "Cloud backup is ready"
+                    : account.status === "offline"
+                      ? "Saved locally · cloud backup will retry"
+                      : "Checking cloud backup status…"}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="px-5 mb-6">
+        <p className="label-cap mb-2 flex items-center gap-1.5">
+          <PlayCircle size={12} className="text-accent-red" /> Help
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            resetFeatureTour();
+            navigate({ to: "/train" as never });
+          }}
+          className="flex w-full items-center justify-between rounded-lg border border-grit bg-grit-card px-4 py-4 text-left"
+        >
+          <span>
+            <span className="block text-sm font-bold text-grit">Replay app tutorial</span>
+            <span className="mt-1 block text-[11px] text-grit-dim">
+              A one-minute guide to every main feature.
+            </span>
+          </span>
+          <ChevronLeft size={18} className="rotate-180 text-grit-dim" />
+        </button>
+      </section>
+
+      {/* Weight calculations use one canonical unit across training and rankings. */}
       <section className="px-5 mb-6">
         <p className="label-cap mb-2 flex items-center gap-1.5">
           <Scale size={12} className="text-accent-red" /> Units
         </p>
         <div className="bg-grit-card border border-grit px-4 py-3 flex items-center justify-between">
-          <span className="label-cap text-sm text-grit">Kilograms (kg)</span>
-          <span className="label-cap text-[9px] text-grit-dim border border-grit rounded px-1.5 py-0.5">
-            LB SOON
-          </span>
+          <span className="label-cap text-sm text-grit">Metric</span>
+          <span className="label-cap text-[10px] text-grit-dim">Kilograms (kg)</span>
         </div>
         <p className="text-[10px] text-grit-dim mt-2">
-          All weights are logged and displayed in kg. Pounds support is coming.
+          Workout weights and strength rankings use kilograms consistently.
         </p>
       </section>
 
@@ -143,11 +275,11 @@ function SettingsPage() {
             <Watch size={12} className="text-accent-red" /> Apple Watch & Health
           </p>
           {!health.enabled ? (
-            <div className="bg-grit-card border border-grit p-4">
+            <div className="bg-grit-card border border-grit p-4" style={{ borderRadius: 8 }}>
               <p className="text-sm text-grit font-bold">Pair with Apple Health</p>
               <p className="text-[11px] text-grit-dim mt-1 leading-relaxed">
-                Workouts recorded on your Apple Watch count toward your streak and grit, and
-                finished DEADSET sessions close your rings.
+                Bring in steps, activity rings, distance, heart rate and workouts from iPhone and
+                Apple Watch. Finished DEADSET sessions can close your rings.
               </p>
               <button onClick={pairHealth} className="btn-grit w-full mt-3 py-2.5 text-xs">
                 Connect Apple Health
@@ -155,28 +287,98 @@ function SettingsPage() {
             </div>
           ) : (
             <>
-              <div className="bg-grit-card border border-grit divide-y divide-[#262626]">
+              <div
+                className="bg-grit-card border border-grit divide-y divide-[#262626]"
+                style={{ borderRadius: 8, overflow: "hidden" }}
+              >
                 <Toggle
                   label="Import watch workouts"
                   on={health.importWorkouts}
                   onChange={(v) =>
-                    set((s) => ({ ...s, healthSync: { ...health, ...s.healthSync, importWorkouts: v } }))
+                    set((s) => ({
+                      ...s,
+                      healthSync: { ...health, ...s.healthSync, importWorkouts: v },
+                    }))
                   }
                 />
                 <Toggle
                   label="Send sessions to rings"
                   on={health.exportWorkouts}
                   onChange={(v) =>
-                    set((s) => ({ ...s, healthSync: { ...health, ...s.healthSync, exportWorkouts: v } }))
+                    set((s) => ({
+                      ...s,
+                      healthSync: { ...health, ...s.healthSync, exportWorkouts: v },
+                    }))
                   }
                 />
               </div>
               <p className="text-[10px] text-grit-dim mt-2">
-                Connected. Watch workouts appear as training days; DEADSET sessions appear in
-                Apple Fitness.
+                Connected. Your Fitness dashboard includes steps, Move, Exercise, Stand, distance
+                and resting heart rate. Watch workouts become training days; DEADSET sessions appear
+                in Apple Fitness.
               </p>
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={() => void pairHealth()}
+                  className="btn-secondary flex-1 py-2 text-[10px]"
+                >
+                  Refresh permissions
+                </button>
+                <button
+                  onClick={() =>
+                    set((s) => ({
+                      ...s,
+                      healthSync: { ...health, ...s.healthSync, enabled: false },
+                    }))
+                  }
+                  className="btn-secondary flex-1 py-2 text-[10px]"
+                >
+                  Disconnect
+                </button>
+              </div>
             </>
           )}
+        </section>
+      )}
+
+      {isNativeIos() && (
+        <section className="px-5 mb-6">
+          <p className="label-cap mb-2 flex items-center gap-1.5">
+            <BellRing size={12} className="text-accent-red" /> iPhone Workout Reminders
+          </p>
+          <div className="bg-grit-card border border-grit divide-y divide-[#262626]">
+            <Toggle
+              label="Scheduled-day notifications"
+              on={deviceReminders}
+              onChange={(enabled) => void toggleDeviceReminders(enabled)}
+            />
+            {deviceReminders && (
+              <label className="flex min-h-14 items-center justify-between gap-3 px-4 py-3">
+                <span className="label-cap flex items-center gap-2">
+                  <Clock3 size={14} className="text-grit-dim" /> Reminder time
+                </span>
+                <input
+                  type="time"
+                  value={`${String(reminderHour).padStart(2, "0")}:${String(reminderMinute).padStart(2, "0")}`}
+                  onChange={(event) => {
+                    const [hour, minute] = event.target.value.split(":").map(Number);
+                    if (!Number.isFinite(hour) || !Number.isFinite(minute)) return;
+                    set((s) => ({
+                      ...s,
+                      workoutReminderHour: hour,
+                      workoutReminderMinute: minute,
+                    }));
+                  }}
+                  aria-label="Workout reminder time"
+                  className="min-h-11 rounded-md border border-grit bg-black px-3 text-sm font-bold text-grit"
+                />
+              </label>
+            )}
+          </div>
+          <p className="text-[10px] text-grit-dim mt-2 leading-relaxed">
+            One reminder on each scheduled training day. Changing your weekly plan updates the next
+            four weeks automatically.
+          </p>
         </section>
       )}
 
@@ -198,12 +400,12 @@ function SettingsPage() {
           />
           <Toggle
             label="Auto-share workouts to feed"
-            on={state.autoShareWorkouts ?? true}
+            on={state.autoShareWorkouts ?? false}
             onChange={(v) => set((s) => ({ ...s, autoShareWorkouts: v }))}
           />
         </div>
         <p className="text-[10px] text-grit-dim mt-2">
-          Shown inside the app while you use it — not device push notifications.
+          These cards appear quietly inside DEADSET while you use it.
         </p>
       </section>
 
@@ -276,11 +478,14 @@ function SettingsPage() {
         </div>
       </section>
 
-      <section className="px-5 mb-6">
-        <p className="label-cap mb-2 flex items-center gap-1.5">
-          <ClipboardList size={12} className="text-accent-red" /> Session Logs
-        </p>
-        <div className="bg-grit-card border border-grit p-4">
+      <details className="mx-5 mb-6 rounded-lg border border-grit bg-grit-card">
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-4 label-cap">
+          <ClipboardList size={12} className="text-accent-red" /> Troubleshooting
+        </summary>
+        <div className="border-t border-grit p-4">
+          <p className="mb-3 text-[11px] leading-relaxed text-grit-dim">
+            Support may ask for these session logs when diagnosing an account problem.
+          </p>
           <div className="flex gap-2 mb-3">
             <button onClick={copySessionLogs} className="btn-grit flex-1 text-xs py-2">
               Copy Logs
@@ -293,16 +498,24 @@ function SettingsPage() {
             {sessionLogs.length === 0 ? (
               <p>No session events recorded on this device yet.</p>
             ) : (
-              sessionLogs.slice(-10).reverse().map((log) => (
-                <div key={`${log.at}-${log.event}`} className="border-b border-[#262626] pb-2 last:border-0">
-                  <p className="font-bold text-grit">{log.event}</p>
-                  <p>{new Date(log.at).toLocaleString()} · {JSON.stringify(log.details ?? {})}</p>
-                </div>
-              ))
+              sessionLogs
+                .slice(-10)
+                .reverse()
+                .map((log) => (
+                  <div
+                    key={`${log.at}-${log.event}`}
+                    className="border-b border-[#262626] pb-2 last:border-0"
+                  >
+                    <p className="font-bold text-grit">{log.event}</p>
+                    <p>
+                      {new Date(log.at).toLocaleString()} · {JSON.stringify(log.details ?? {})}
+                    </p>
+                  </div>
+                ))
             )}
           </div>
         </div>
-      </section>
+      </details>
     </div>
   );
 }
@@ -319,6 +532,8 @@ function Toggle({
   return (
     <button
       onClick={() => onChange(!on)}
+      aria-pressed={on}
+      aria-label={`${label}: ${on ? "on" : "off"}`}
       className="w-full flex items-center justify-between px-4 py-3"
     >
       <span className="label-cap">{label}</span>

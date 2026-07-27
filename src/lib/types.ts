@@ -26,6 +26,8 @@ export interface Profile {
   focusMuscles?: FocusMuscle[];
   /** Preferred session length — shapes how many exercises per day */
   sessionMinutes?: 30 | 45 | 60 | 90;
+  /** Preferred number of movements in each scheduled workout. */
+  exercisesPerSession?: 3 | 4 | 5 | 6 | 7 | 8;
   /** Bodyweight goal, used for journey framing */
   targetWeightKg?: number;
   /** Onboarding depth — the "why" that drives them (motivation) */
@@ -63,6 +65,14 @@ export interface Exercise {
   sets: number;
   reps: string;
   videoId: string;
+  /** Search query used when a fixed demonstration video is not bundled. */
+  youtubeQuery?: string;
+  /** Specific equipment label used by the full exercise database. */
+  equipmentLabel?: string;
+  secondaryMuscles?: string[];
+  proTip?: string;
+  isCompound?: boolean;
+  isCustom?: boolean;
   /** Start time in seconds for action clip (defaults to 5) */
   clipStart?: number;
   /** End time in seconds for action clip (defaults to clipStart + 6) */
@@ -76,6 +86,16 @@ export interface ExercisePlan {
   sets?: number;
   reps?: string;
   weightKg?: number;
+  /** Exercise-specific rest interval used by the live workout timer. */
+  restSeconds?: number;
+  /** Target reps in reserve for working sets. */
+  targetRir?: number;
+  /** Progression rule shown during training and used to frame load decisions. */
+  progression?: "DOUBLE" | "LINEAR" | "HOLD";
+  /** Optional lifting tempo, for example 3-1-1. */
+  tempo?: string;
+  /** Private coaching cue shown during the live workout. */
+  note?: string;
 }
 
 export interface DaySchedule {
@@ -146,7 +166,9 @@ export interface FoodLogItem {
   protein: number;
   carbs: number;
   fats: number;
-  source?: "manual" | "barcode";
+  meal?: "BREAKFAST" | "LUNCH" | "DINNER" | "SNACK";
+  serving?: string;
+  source?: "manual" | "barcode" | "search" | "quick";
 }
 
 export interface WaterEntry {
@@ -173,6 +195,11 @@ export interface WorkoutSessionExercise {
   targetReps: string;
   /** Working weight allocated in the schedule, if any */
   plannedWeightKg?: number;
+  restSeconds?: number;
+  targetRir?: number;
+  progression?: ExercisePlan["progression"];
+  tempo?: string;
+  note?: string;
   sets: CompletedSet[];
 }
 
@@ -217,6 +244,8 @@ export interface StreakArmor {
 export interface AppState {
   profile: Profile | null;
   schedule: Schedule | null;
+  /** Full-library and custom exercises saved for plans and offline workouts. */
+  savedExercises: Exercise[];
   logs: SetLog[];
   checkIns: CheckIn[];
   weights: WeightEntry[];
@@ -234,12 +263,21 @@ export interface AppState {
   manualPRs?: Record<string, { value: number; reps?: number; date: string }>;
   units?: "kg" | "lb";
   remindersEnabled?: boolean;
+  /** Opt-in iOS notifications sent on scheduled training days. */
+  deviceRemindersEnabled?: boolean;
+  workoutReminderHour?: number;
+  workoutReminderMinute?: number;
   /** Auto rest-timer duration after each logged set (seconds); 0 = off. Default 90. */
   restTimerSeconds?: number;
-  /** Auto-post finished workouts to the social feed. Default on (undefined = on). */
+  /** Auto-post finished workouts to the social feed. Explicit opt-in only. */
   autoShareWorkouts?: boolean;
   streakArmor?: StreakArmor;
   healthSync?: HealthSync;
+  trainingAutopilot?: {
+    enabled: boolean;
+    strategy: "BALANCED" | "STRENGTH" | "HYPERTROPHY";
+    lastAppliedAt?: string;
+  };
   /** Where this user came from, captured on their first visit (referrer/UTM). */
   signupSource?: {
     source: string;

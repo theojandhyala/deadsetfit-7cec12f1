@@ -66,7 +66,7 @@ Rewritten: `upgrade.tsx`, `ProBanner.tsx`, `Landing.tsx`, `_tabs.profile.tsx`.
 
 ## Two things to verify yourself
 
-1. **`src/components/PaywallSheet.tsx` + `src/hooks/useAiUsageGate.ts` were deleted.** The reasoning: the paywall sheet was only ever opened by the AI usage gate, so with AI gone it was unreachable. Probably correct — but a paywall component vanishing inside an "AI removal" deserves a human eye. If you still want a paywall on any *non-AI* Pro feature, restore `PaywallSheet.tsx` and wire it to a new gate.
+1. **`src/components/PaywallSheet.tsx` + `src/hooks/useAiUsageGate.ts` were deleted.** The reasoning: the paywall sheet was only ever opened by the AI usage gate, so with AI gone it was unreachable. Probably correct — but a paywall component vanishing inside an "AI removal" deserves a human eye. If you still want a paywall on any _non-AI_ Pro feature, restore `PaywallSheet.tsx` and wire it to a new gate.
 
 2. **`src/routes/api/public/payments/webhook.ts` shows as deleted.** Believed to be pre-existing — part of your migration to handling the Stripe webhook in the Cloudflare worker (`handleStripeWebhook` is there). **Confirm this. If it wasn't you, that's your payments.**
 

@@ -38,7 +38,12 @@ export function PhoneFrame({
           style={{ background: "#0A0A0A", aspectRatio: "9 / 19.3" }}
         >
           {image ? (
-            <img src={image} alt={alt} loading="lazy" className="h-full w-full object-cover object-top" />
+            <img
+              src={image}
+              alt={alt}
+              loading="lazy"
+              className="h-full w-full object-cover object-top"
+            />
           ) : (
             <>
               <div className="pointer-events-none absolute left-1/2 top-2 z-20 h-5 w-24 -translate-x-1/2 rounded-full bg-black" />
@@ -71,7 +76,9 @@ export function TrainScreen() {
       <StatusBar label="Train" />
       <div className="px-4 pt-2">
         <p className="label-cap text-[8px] text-accent-red">Wednesday · Push day</p>
-        <h3 className="display text-2xl font-extrabold uppercase leading-none text-white">Today&apos;s Mission</h3>
+        <h3 className="display text-2xl font-extrabold uppercase leading-none text-white">
+          Today&apos;s Mission
+        </h3>
         <div className="mt-3 flex gap-1.5">
           {days.map((d, i) => (
             <div
@@ -85,7 +92,9 @@ export function TrainScreen() {
               }`}
             >
               {d}
-              {i < 3 && <Check size={9} className={i === 2 ? "text-accent-red" : "text-grit-dim"} />}
+              {i < 3 && (
+                <Check size={9} className={i === 2 ? "text-accent-red" : "text-grit-dim"} />
+              )}
             </div>
           ))}
         </div>
@@ -94,7 +103,9 @@ export function TrainScreen() {
           {["Bench Press", "Incline DB Press", "Overhead Press", "Cable Fly"].map((ex, i) => (
             <div key={ex} className="mt-2 flex items-center justify-between">
               <span className="text-[11px] font-bold text-grit">{ex}</span>
-              <span className="text-[9px] text-grit-dim">{[4, 3, 3, 3][i]} × {[6, 10, 8, 12][i]}</span>
+              <span className="text-[9px] text-grit-dim">
+                {[4, 3, 3, 3][i]} × {[6, 10, 8, 12][i]}
+              </span>
             </div>
           ))}
         </div>
@@ -116,7 +127,9 @@ export function LoggerScreen() {
       <div className="flex items-center justify-between px-4 pt-2">
         <div>
           <p className="label-cap text-[8px] text-accent-red">Push day · Exercise 1/4</p>
-          <h3 className="display text-2xl font-extrabold uppercase leading-none text-white">Bench Press</h3>
+          <h3 className="display text-2xl font-extrabold uppercase leading-none text-white">
+            Bench Press
+          </h3>
         </div>
       </div>
       <div className="mt-3 space-y-2 px-4">
@@ -149,8 +162,12 @@ export function LoggerScreen() {
         </div>
       </div>
       <div className="mt-auto grid grid-cols-2 gap-2 p-4">
-        <div className="rounded-xl border border-grit/20 py-2.5 text-center text-[10px] font-bold uppercase text-grit-dim">Next</div>
-        <div className="rounded-xl bg-accent-red py-2.5 text-center text-[10px] font-extrabold uppercase text-white">Log set</div>
+        <div className="rounded-xl border border-grit/20 py-2.5 text-center text-[10px] font-bold uppercase text-grit-dim">
+          Next
+        </div>
+        <div className="rounded-xl bg-accent-red py-2.5 text-center text-[10px] font-extrabold uppercase text-white">
+          Log set
+        </div>
       </div>
     </div>
   );
@@ -163,30 +180,52 @@ export function CatalogueScreen() {
       <StatusBar label="Journey" />
       <div className="px-4 pt-2">
         <p className="label-cap text-[8px] text-accent-red">The catalogue</p>
-        <h3 className="display text-2xl font-extrabold uppercase leading-none text-white">Your Journey</h3>
+        <h3 className="display text-2xl font-extrabold uppercase leading-none text-white">
+          Your Journey
+        </h3>
         <div className="mt-3 grid grid-cols-2 gap-2">
           {[
             { tag: "BEFORE", from: "#3a2a2a", to: "#1a1414" },
             { tag: "NOW", from: "#4a2020", to: "#241010" },
           ].map((p) => (
-            <div key={p.tag} className="relative overflow-hidden rounded-lg" style={{ aspectRatio: "3/4", background: `linear-gradient(160deg, ${p.from}, ${p.to})` }}>
-              <span className="absolute left-1.5 top-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[7px] font-bold text-white">{p.tag}</span>
+            <div
+              key={p.tag}
+              className="relative overflow-hidden rounded-lg"
+              style={{
+                aspectRatio: "3/4",
+                background: `linear-gradient(160deg, ${p.from}, ${p.to})`,
+              }}
+            >
+              <span className="absolute left-1.5 top-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[7px] font-bold text-white">
+                {p.tag}
+              </span>
               <Dumbbell size={22} className="absolute inset-0 m-auto text-white/10" />
             </div>
           ))}
         </div>
-        <p className="mt-2 text-center text-[8px] font-bold uppercase tracking-widest text-accent-red">12 weeks of forging</p>
+        <p className="mt-2 text-center text-[8px] font-bold uppercase tracking-widest text-accent-red">
+          12 weeks of forging
+        </p>
         <div className="mt-3 space-y-2">
           {[
             { n: "Bench Press", v: 82.5 },
             { n: "Squat", v: 140 },
             { n: "Deadlift", v: 180 },
           ].map((l) => (
-            <div key={l.n} className="flex items-center justify-between rounded-xl border border-grit/15 bg-grit-card px-3 py-2.5">
+            <div
+              key={l.n}
+              className="flex items-center justify-between rounded-xl border border-grit/15 bg-grit-card px-3 py-2.5"
+            >
               <span className="text-[11px] font-extrabold uppercase text-white">{l.n}</span>
               <div className="flex items-center gap-2">
                 <svg width="40" height="16" aria-hidden>
-                  <polyline points="2,13 12,10 22,7 38,3" fill="none" stroke="#e63222" strokeWidth="2" strokeLinecap="round" />
+                  <polyline
+                    points="2,13 12,10 22,7 38,3"
+                    fill="none"
+                    stroke="#e63222"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
                 </svg>
                 <span className="text-base font-extrabold text-accent-red">{l.v}</span>
               </div>
@@ -212,7 +251,9 @@ export function RankScreen() {
       <StatusBar label="Leagues" />
       <div className="px-4 pt-2">
         <p className="label-cap text-[8px] text-accent-red">Gold division · Week 3</p>
-        <h3 className="display text-2xl font-extrabold uppercase leading-none text-white">Rank Up</h3>
+        <h3 className="display text-2xl font-extrabold uppercase leading-none text-white">
+          Rank Up
+        </h3>
         <div className="mt-3 rounded-2xl border border-accent-red/40 bg-accent-red/10 p-3 text-center">
           <Crown size={18} className="mx-auto text-accent-red" />
           <p className="mt-1 text-[10px] text-grit">
@@ -227,8 +268,16 @@ export function RankScreen() {
                 row.me ? "border-accent-red/50 bg-accent-red/10" : "border-grit/12 bg-grit-card"
               }`}
             >
-              <span className={`display text-sm font-extrabold ${row.me ? "text-accent-red" : "text-grit-dim"}`}>{row.r}</span>
-              <span className={`flex-1 text-[11px] font-bold ${row.me ? "text-white" : "text-grit"}`}>{row.name}</span>
+              <span
+                className={`display text-sm font-extrabold ${row.me ? "text-accent-red" : "text-grit-dim"}`}
+              >
+                {row.r}
+              </span>
+              <span
+                className={`flex-1 text-[11px] font-bold ${row.me ? "text-white" : "text-grit"}`}
+              >
+                {row.name}
+              </span>
               <span className="label-cap text-[7px] text-grit-dim">{row.tier}</span>
               <span className="text-[11px] font-extrabold text-grit">{row.pts}</span>
             </div>

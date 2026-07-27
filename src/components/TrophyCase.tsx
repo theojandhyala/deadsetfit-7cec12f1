@@ -133,7 +133,8 @@ export function TrophyCase({ state }: { state: AppState }) {
         desc: "Beat an ELITE challenge",
         icon: "🏅",
         unlocked: (state.challengeRecords ?? []).some(
-          (r) => ELITE_TARGETS[r.challengeId] !== undefined && r.value >= ELITE_TARGETS[r.challengeId],
+          (r) =>
+            ELITE_TARGETS[r.challengeId] !== undefined && r.value >= ELITE_TARGETS[r.challengeId],
         ),
         pro: true,
       },

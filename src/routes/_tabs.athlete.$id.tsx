@@ -350,7 +350,8 @@ function VersusPanel({
     );
   };
 
-  const overallLead = myWins + (myOverall > themOverall ? 1 : 0) >= themWins + (themOverall > myOverall ? 1 : 0);
+  const overallLead =
+    myWins + (myOverall > themOverall ? 1 : 0) >= themWins + (themOverall > myOverall ? 1 : 0);
 
   return (
     <section className="px-5 mb-5">

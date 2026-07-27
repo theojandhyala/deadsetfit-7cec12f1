@@ -26,7 +26,9 @@ const EVENT_NAME = "deadset:confirm";
 function dispatch(request: ConfirmRequest): Promise<boolean | string | null> {
   if (typeof window === "undefined") return Promise.resolve(false);
   return new Promise((resolve) => {
-    window.dispatchEvent(new CustomEvent<ConfirmDetail>(EVENT_NAME, { detail: { request, resolve } }));
+    window.dispatchEvent(
+      new CustomEvent<ConfirmDetail>(EVENT_NAME, { detail: { request, resolve } }),
+    );
   });
 }
 

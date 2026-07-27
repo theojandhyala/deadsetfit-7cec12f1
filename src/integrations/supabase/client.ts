@@ -144,7 +144,9 @@ function createSupabaseClient() {
     // backup is what made users appear logged out repeatedly. Explicit logout
     // calls clearSessionBackup() before signOut().
     else if (event === "SIGNED_OUT") {
-      console.info("[DEADSET auth] signed-out event received; keeping backup unless user explicitly logged out");
+      console.info(
+        "[DEADSET auth] signed-out event received; keeping backup unless user explicitly logged out",
+      );
     }
   });
 
@@ -177,9 +179,7 @@ export async function restoreSupabaseSession() {
     refresh_token: getCookie(SESSION_COOKIE_REFRESH),
   };
   try {
-    const saved = raw
-      ? (JSON.parse(raw) as Partial<SessionBackup>)
-      : cookieBackup;
+    const saved = raw ? (JSON.parse(raw) as Partial<SessionBackup>) : cookieBackup;
     if (!saved.access_token || !saved.refresh_token) throw new Error("Invalid session backup");
     const { error } = await supabase.auth.setSession({
       access_token: saved.access_token,

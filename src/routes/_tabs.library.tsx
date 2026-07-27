@@ -1,8 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 
-import { useState } from "react";
-import { listExercises, countExercises, type LibraryExercise } from "@/lib/library.functions";
+import { useMemo, useState } from "react";
+import { Check, Plus } from "lucide-react";
+import { toast } from "sonner";
+import { listExercises, type LibraryExercise } from "@/lib/library.functions";
+import { libraryExerciseToExercise } from "@/lib/exercise-library";
+import { defaultSchedule } from "@/lib/calc";
+import { useAppState } from "@/lib/storage";
+import type { DayKey } from "@/lib/types";
 import { MuscleDiagram } from "@/components/MuscleDiagram";
 import { VideoModal } from "@/components/VideoModal";
 
@@ -22,10 +28,11 @@ const EQUIPMENT = [
   "BANDS",
   "KETTLEBELL",
 ] as const;
+const DAYS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
 function LibraryPage() {
+  const [state, set] = useAppState();
   const list = listExercises;
-  const count = countExercises;
 
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("ALL");
   const [equipment, setEquipment] = useState<(typeof EQUIPMENT)[number]>("ALL");
@@ -41,18 +48,55 @@ function LibraryPage() {
           category: category === "ALL" ? undefined : category,
           equipment: equipment === "ALL" ? undefined : equipment,
           search: search || undefined,
-          limit: 300,
+          limit: 2000,
         },
       }),
   });
 
-  const totalQ = useQuery({ queryKey: ["exercises-count"], queryFn: () => count() });
+  const exercises = useMemo(() => {
+    const unique = new Map<string, LibraryExercise>();
+    for (const exercise of data?.exercises ?? []) {
+      const key = `${exercise.name.trim().toLocaleLowerCase()}::${exercise.equipment
+        .trim()
+        .toLocaleLowerCase()}`;
+      if (!unique.has(key)) unique.set(key, exercise);
+    }
+    return [...unique.values()];
+  }, [data?.exercises]);
+
+  function addToDay(exercise: LibraryExercise, dayKey: DayKey) {
+    const saved = libraryExerciseToExercise(exercise);
+    set((current) => {
+      const schedule =
+        current.schedule ?? (current.profile ? defaultSchedule(current.profile) : null);
+      if (!schedule) return current;
+      const day = schedule[dayKey];
+      if (day.exerciseIds.includes(saved.id)) return current;
+      return {
+        ...current,
+        savedExercises: current.savedExercises.some((item) => item.id === saved.id)
+          ? current.savedExercises
+          : [...current.savedExercises, saved],
+        schedule: {
+          ...schedule,
+          [dayKey]: {
+            ...day,
+            label: day.label === "REST" ? saved.muscleGroup : day.label,
+            exerciseIds: [...day.exerciseIds, saved.id],
+          },
+        },
+      };
+    });
+    toast.success(`${exercise.name} added to ${dayKey}`);
+  }
 
   return (
     <div className="px-4 pt-6">
       <div className="flex items-end justify-between mb-1">
         <h1 className="label-cap text-grit text-2xl">Library</h1>
-        <span className="label-cap text-grit-dim text-xs">{totalQ.data?.count ?? "—"} moves</span>
+        <span className="label-cap text-grit-dim text-xs">
+          {isLoading ? "—" : exercises.length} moves
+        </span>
       </div>
       <p className="text-grit-dim text-xs label-cap mb-4">Tap to view details</p>
 
@@ -101,7 +145,7 @@ function LibraryPage() {
         <p className="text-grit-dim text-sm label-cap">Loading…</p>
       ) : (
         <ul className="space-y-2 pb-6">
-          {data?.exercises.map((ex) => (
+          {exercises.map((ex) => (
             <li key={ex.id}>
               <button
                 onClick={() => setOpen(ex)}
@@ -129,7 +173,7 @@ function LibraryPage() {
               </button>
             </li>
           ))}
-          {data?.exercises.length === 0 && (
+          {exercises.length === 0 && (
             <li className="text-grit-dim text-sm label-cap text-center py-8">No matches.</li>
           )}
         </ul>
@@ -198,6 +242,28 @@ function LibraryPage() {
               >
                 Watch Form Video
               </button>
+
+              {state.profile && (
+                <div className="mt-5 border-t border-grit pt-4">
+                  <div className="label-cap text-xs text-grit-dim mb-2">ADD TO YOUR WEEK</div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {DAYS.map((dayKey) => {
+                      const added = state.schedule?.[dayKey]?.exerciseIds.includes(open.id);
+                      return (
+                        <button
+                          key={dayKey}
+                          onClick={() => addToDay(open, dayKey)}
+                          disabled={added}
+                          className="flex min-h-11 items-center justify-center gap-1 border border-grit text-[10px] font-black uppercase text-grit disabled:text-emerald-400"
+                        >
+                          {added ? <Check size={12} /> : <Plus size={12} />}
+                          {dayKey}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

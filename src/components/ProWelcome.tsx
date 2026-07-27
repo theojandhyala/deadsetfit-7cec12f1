@@ -100,7 +100,7 @@ export function ProWelcome() {
           DEADSET Pro
         </h2>
         <p className="text-xs text-[#b7ac8e] mt-3 mb-4">
-          You just unlocked the full arsenal. Here's everything that's now yours:
+          Your Pro training tools are ready. Here's everything now included:
         </p>
         <div className="grid grid-cols-1 gap-1.5 text-left mb-5">
           {UNLOCKED.map((item) => (

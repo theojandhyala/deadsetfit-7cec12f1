@@ -2,13 +2,16 @@
 // Inspired by the familiar competitive game ladder feel: clear tiers,
 // divisions, glow colours, and a clean "one more session" progression loop.
 export type RankTier =
+  | "IRON"
   | "BRONZE"
   | "SILVER"
   | "GOLD"
   | "PLATINUM"
   | "DIAMOND"
   | "ELITE"
+  | "MASTER"
   | "CHAMPION"
+  | "LEGEND"
   | "UNREAL"
   | "DEADSET";
 
@@ -24,7 +27,7 @@ export interface Rank {
   icon: string; // emoji emblem
   minPoints: number;
   maxPoints: number;
-      nextTier: RankTier | null;
+  nextTier: RankTier | null;
 }
 
 const TIERS: Array<{
@@ -37,8 +40,17 @@ const TIERS: Array<{
   icon: string;
 }> = [
   {
-    tier: "BRONZE",
+    tier: "IRON",
     min: 0,
+    max: 59,
+    color: "#9ca3af",
+    glowColor: "#6b7280",
+    gradient: ["#111827", "#9ca3af"],
+    icon: "I",
+  },
+  {
+    tier: "BRONZE",
+    min: 60,
     max: 119,
     color: "#cd7f32",
     glowColor: "#92400e",
@@ -84,20 +96,38 @@ const TIERS: Array<{
   {
     tier: "ELITE",
     min: 760,
-    max: 849,
+    max: 804,
     color: "#f97316",
     glowColor: "#ea580c",
     gradient: ["#431407", "#fb923c"],
     icon: "⚡",
   },
   {
+    tier: "MASTER",
+    min: 805,
+    max: 849,
+    color: "#f472b6",
+    glowColor: "#db2777",
+    gradient: ["#500724", "#f472b6"],
+    icon: "M",
+  },
+  {
     tier: "CHAMPION",
     min: 850,
-    max: 939,
+    max: 909,
     color: "#f43f5e",
     glowColor: "#e11d48",
     gradient: ["#4c0519", "#fb7185"],
     icon: "🏆",
+  },
+  {
+    tier: "LEGEND",
+    min: 910,
+    max: 939,
+    color: "#fb923c",
+    glowColor: "#ea580c",
+    gradient: ["#431407", "#fdba74"],
+    icon: "L",
   },
   {
     tier: "UNREAL",
@@ -120,11 +150,29 @@ const TIERS: Array<{
 ];
 
 function divisionForPoints(min: number, max: number, points: number): RankDivision {
-  const range = max - min;
-  const progress = points - min;
-  if (progress >= range * 0.67) return "III";
-  if (progress >= range * 0.34) return "II";
-  return "I";
+  const size = max - min + 1;
+  const offset = points - min;
+  if (offset >= Math.ceil((size * 2) / 3)) return "I";
+  if (offset >= Math.ceil(size / 3)) return "II";
+  return "III";
+}
+
+function tierHasDivisions(tier: RankTier): boolean {
+  return tier !== "DEADSET";
+}
+
+function divisionBounds(rank: Rank): { min: number; max: number } {
+  if (!rank.division) return { min: rank.minPoints, max: rank.maxPoints };
+  const size = rank.maxPoints - rank.minPoints + 1;
+  const second = rank.minPoints + Math.ceil(size / 3);
+  const first = rank.minPoints + Math.ceil((size * 2) / 3);
+  if (rank.division === "III") return { min: rank.minPoints, max: second - 1 };
+  if (rank.division === "II") return { min: second, max: first - 1 };
+  return { min: first, max: rank.maxPoints };
+}
+
+export function rankStepBounds(rank: Rank): { min: number; max: number } {
+  return divisionBounds(rank);
 }
 
 export function getRank(gritPoints: number): Rank {
@@ -133,7 +181,7 @@ export function getRank(gritPoints: number): Rank {
   for (let i = TIERS.length - 1; i >= 0; i--) {
     const t = TIERS[i];
     if (clamped >= t.min) {
-      const hasDivision = !["ELITE", "CHAMPION", "UNREAL", "DEADSET"].includes(t.tier);
+      const hasDivision = tierHasDivisions(t.tier);
       const division = hasDivision ? divisionForPoints(t.min, t.max, clamped) : null;
       const nextTierDef = i < TIERS.length - 1 ? TIERS[i + 1] : null;
       return {
@@ -153,29 +201,56 @@ export function getRank(gritPoints: number): Rank {
 
   // Fallback (shouldn't happen)
   return {
-    tier: "BRONZE",
-    division: "I",
-    label: "BRONZE I",
-    color: "#cd7f32",
-    glowColor: "#92400e",
-    gradient: ["#451a03", "#cd7f32"],
-    icon: "🥉",
+    tier: "IRON",
+    division: "III",
+    label: "IRON III",
+    color: "#9ca3af",
+    glowColor: "#6b7280",
+    gradient: ["#111827", "#9ca3af"],
+    icon: "I",
     minPoints: 0,
-    maxPoints: 119,
-    nextTier: "SILVER",
+    maxPoints: 59,
+    nextTier: "BRONZE",
   };
 }
 
 export function rankProgress(gritPoints: number): number {
   const rank = getRank(gritPoints);
   if (rank.tier === "DEADSET") return 1;
-  const range = rank.maxPoints - rank.minPoints;
+  const bounds = divisionBounds(rank);
+  const range = bounds.max - bounds.min + 1;
   if (range === 0) return 1;
-  return Math.min(1, (gritPoints - rank.minPoints) / range);
+  return Math.max(0, Math.min(1, (gritPoints - bounds.min + 1) / range));
 }
 
 export function pointsToNextTier(gritPoints: number): number {
   const rank = getRank(gritPoints);
   if (rank.tier === "DEADSET") return 0;
   return rank.maxPoints + 1 - gritPoints;
+}
+
+export function pointsToNextRank(gritPoints: number): number {
+  const rank = getRank(gritPoints);
+  if (rank.tier === "DEADSET") return 0;
+  const bounds = divisionBounds(rank);
+  return Math.max(0, bounds.max + 1 - gritPoints);
+}
+
+export function getRankLadder(): Rank[] {
+  const ladder: Rank[] = [];
+  for (const tier of TIERS) {
+    const hasDivision = tierHasDivisions(tier.tier);
+    if (!hasDivision) {
+      ladder.push(getRank(tier.min));
+      continue;
+    }
+    const size = tier.max - tier.min + 1;
+    const divisionStarts = [
+      tier.min,
+      tier.min + Math.ceil(size / 3),
+      tier.min + Math.ceil((size * 2) / 3),
+    ];
+    for (const points of divisionStarts) ladder.push(getRank(points));
+  }
+  return ladder.reverse();
 }

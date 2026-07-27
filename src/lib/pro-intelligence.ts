@@ -20,7 +20,11 @@ function roundToPlate(kg: number): number {
 // ————————————————————————————————————————————————————————
 // Shared: working sets per muscle over a trailing window
 // ————————————————————————————————————————————————————————
-function volumeByMuscle(state: AppState, windowDays: number, now: number): Map<MuscleGroup, number> {
+function volumeByMuscle(
+  state: AppState,
+  windowDays: number,
+  now: number,
+): Map<MuscleGroup, number> {
   const since = now - windowDays * DAY_MS;
   const counts = new Map<MuscleGroup, number>();
   for (const s of state.sessions ?? []) {
@@ -143,7 +147,8 @@ export function liftSeriesAll(state: AppState, minPoints = 3): LiftSeries[] {
         if (set.kind === "warmup" || set.weight <= 0 || set.reps <= 0) continue;
         // Cap reps for the estimate — Epley is only reliable up to ~12 reps.
         const e = estimate1RM(set.weight, Math.min(set.reps, 12));
-        if (!best || e > best.e1rm) best = { date: s.date, e1rm: e, weight: set.weight, reps: set.reps };
+        if (!best || e > best.e1rm)
+          best = { date: s.date, e1rm: e, weight: set.weight, reps: set.reps };
       }
       if (!best) continue;
       const entry = byId.get(ex.exerciseId) ?? { name: ex.name, points: [] };
@@ -251,7 +256,16 @@ export function trajectories(state: AppState, now = Date.now()): Trajectory[] {
         etaDate = new Date(now + days * DAY_MS).toISOString();
       }
     }
-    out.push({ exerciseId: series.exerciseId, name: series.name, currentE1rm, perWeek, trend, nextMilestone, etaDays, etaDate });
+    out.push({
+      exerciseId: series.exerciseId,
+      name: series.name,
+      currentE1rm,
+      perWeek,
+      trend,
+      nextMilestone,
+      etaDays,
+      etaDate,
+    });
   }
   return out.sort((a, b) => b.currentE1rm - a.currentE1rm);
 }
@@ -293,8 +307,10 @@ export function muscleBalance(state: AppState, now = Date.now()): MuscleBalance 
     highAdvice: string,
   ): BalanceRatio => {
     const ratio = b > 0 ? a / b : a > 0 ? 99 : 1;
-    const status: "balanced" | "warn" = ratio >= ideal[0] && ratio <= ideal[1] ? "balanced" : "warn";
-    const advice = status === "balanced" ? "Well balanced." : ratio < ideal[0] ? lowAdvice : highAdvice;
+    const status: "balanced" | "warn" =
+      ratio >= ideal[0] && ratio <= ideal[1] ? "balanced" : "warn";
+    const advice =
+      status === "balanced" ? "Well balanced." : ratio < ideal[0] ? lowAdvice : highAdvice;
     return { key, label, ratio: Math.round(ratio * 100) / 100, ideal, status, advice };
   };
 
@@ -393,7 +409,10 @@ export function allInsights(state: AppState, now = Date.now()): Insight[] {
   // 4. Positive momentum — a lift on track to a milestone.
   for (const t of trajectories(state, now)) {
     if (t.trend === "up" && t.nextMilestone && t.etaDate) {
-      const d = new Date(t.etaDate).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      const d = new Date(t.etaDate).toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+      });
       out.push({
         tone: "good",
         title: `${t.name} is climbing`,

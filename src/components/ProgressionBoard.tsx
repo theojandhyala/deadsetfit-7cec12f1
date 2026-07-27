@@ -48,13 +48,20 @@ export function ProgressionBoard() {
               >
                 <div className="min-w-0">
                   <p className="text-xs font-bold uppercase text-grit truncate">{e.name}</p>
-                  <p className={"text-[10px] text-grit-dim mt-0.5" + (locked ? " blur-[4px] select-none" : "")}>
+                  <p
+                    className={
+                      "text-[10px] text-grit-dim mt-0.5" + (locked ? " blur-[4px] select-none" : "")
+                    }
+                  >
                     {e.suggestion.reason}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span
-                    className={"display text-lg font-extrabold leading-none" + (locked ? " blur-[5px] select-none" : "")}
+                    className={
+                      "display text-lg font-extrabold leading-none" +
+                      (locked ? " blur-[5px] select-none" : "")
+                    }
                     style={{ color: up ? "#e63222" : "#8A8A8A" }}
                   >
                     {e.suggestion.weightKg}kg

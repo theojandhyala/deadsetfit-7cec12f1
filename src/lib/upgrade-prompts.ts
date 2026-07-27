@@ -60,7 +60,9 @@ export function maybeNudge(trigger: NudgeTrigger, now = Date.now()): boolean {
   if (!canShow(now)) return false;
   stamp(now);
   window.dispatchEvent(
-    new CustomEvent<NudgePayload>("deadset:upgrade-nudge", { detail: { trigger, ...COPY[trigger] } }),
+    new CustomEvent<NudgePayload>("deadset:upgrade-nudge", {
+      detail: { trigger, ...COPY[trigger] },
+    }),
   );
   return true;
 }

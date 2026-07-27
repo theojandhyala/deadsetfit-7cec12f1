@@ -41,9 +41,15 @@ export function RestDayRecovery({ state }: { state: AppState }) {
             <div key={r.muscle} className="flex items-center gap-3">
               <span className="text-xs text-grit w-20 shrink-0">{NICE[r.muscle]}</span>
               <div className="flex-1 h-1.5 rounded-full bg-[#0a0a0a] overflow-hidden">
-                <div className="h-full rounded-full" style={{ width: `${r.pct}%`, background: meta.color }} />
+                <div
+                  className="h-full rounded-full"
+                  style={{ width: `${r.pct}%`, background: meta.color }}
+                />
               </div>
-              <span className="label-cap text-[9px] w-16 text-right shrink-0" style={{ color: meta.color }}>
+              <span
+                className="label-cap text-[9px] w-16 text-right shrink-0"
+                style={{ color: meta.color }}
+              >
                 {meta.label}
               </span>
             </div>

@@ -32,7 +32,9 @@ const ProContext = createContext<ProState | null>(null);
 
 function readCachedPro(): CachedProState | null {
   try {
-    const parsed = JSON.parse(localStorage.getItem(PRO_CACHE_KEY) || "null") as CachedProState | null;
+    const parsed = JSON.parse(
+      localStorage.getItem(PRO_CACHE_KEY) || "null",
+    ) as CachedProState | null;
     if (!parsed || Date.now() - parsed.checkedAt > 10 * 60_000) return null;
     if (parsed.currentPeriodEnd && new Date(parsed.currentPeriodEnd) <= new Date()) return null;
     return parsed;
@@ -57,7 +59,11 @@ function clearCachedPro() {
   }
 }
 
-async function rejectOnTimeout<T>(promise: PromiseLike<T>, timeoutMs: number, message: string): Promise<T> {
+async function rejectOnTimeout<T>(
+  promise: PromiseLike<T>,
+  timeoutMs: number,
+  message: string,
+): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
@@ -77,7 +83,9 @@ export function ProProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<string | null>(cached?.status ?? null);
   const [priceId, setPriceId] = useState<string | null>(cached?.priceId ?? null);
-  const [currentPeriodEnd, setCurrentPeriodEnd] = useState<string | null>(cached?.currentPeriodEnd ?? null);
+  const [currentPeriodEnd, setCurrentPeriodEnd] = useState<string | null>(
+    cached?.currentPeriodEnd ?? null,
+  );
   const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(cached?.cancelAtPeriodEnd ?? false);
 
   const refresh = useCallback(async () => {
@@ -90,7 +98,9 @@ export function ProProvider({ children }: { children: ReactNode }) {
       return;
     }
     try {
-      const { data: { session } } = await withTimeout(
+      const {
+        data: { session },
+      } = await withTimeout(
         supabase.auth.getSession(),
         { data: { session: null }, error: null },
         3500,
@@ -207,4 +217,3 @@ export function usePro(): ProState {
     };
   return ctx;
 }
-

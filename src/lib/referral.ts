@@ -57,12 +57,13 @@ let inFlight = false;
  */
 export async function redeemPendingRef() {
   if (inFlight) return;
-  let code: string | null = null;
-  try {
-    code = localStorage.getItem(PENDING_KEY);
-  } catch {
-    return;
-  }
+  const code = (() => {
+    try {
+      return localStorage.getItem(PENDING_KEY);
+    } catch {
+      return null;
+    }
+  })();
   if (!code) return;
   inFlight = true;
   try {

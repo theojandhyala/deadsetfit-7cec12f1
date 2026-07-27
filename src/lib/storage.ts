@@ -76,9 +76,7 @@ function write(state: AppState) {
   } catch (e) {
     // Quota exceeded — don't let it throw out of a React event handler and
     // lose the in-progress interaction; the in-memory cache still updates.
-    reportSyncIssue(
-      "This device's storage is full — remove some progress photos to keep saving.",
-    );
+    reportSyncIssue("This device's storage is full — remove some progress photos to keep saving.");
     console.warn("localStorage write failed", e);
   }
   // We already hold the parsed object — seed the cache directly.

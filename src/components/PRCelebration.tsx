@@ -20,7 +20,11 @@ export function PRCelebration({
   const delta = prevBest > 0 ? Math.round((weight - prevBest) * 10) / 10 : 0;
 
   useEffect(() => {
-    try { navigator.vibrate?.([100, 50, 100, 50, 200]); } catch { /* noop */ }
+    try {
+      navigator.vibrate?.([100, 50, 100, 50, 200]);
+    } catch {
+      /* noop */
+    }
     const t = setTimeout(onClose, 6500);
     return () => clearTimeout(t);
   }, [onClose]);
@@ -105,12 +109,17 @@ export function PRCelebration({
         </h1>
 
         <div className="mb-2">
-          <span className="display font-extrabold leading-none text-white" style={{ fontSize: "clamp(64px,18vw,96px)" }}>
+          <span
+            className="display font-extrabold leading-none text-white"
+            style={{ fontSize: "clamp(64px,18vw,96px)" }}
+          >
             {weight}
           </span>
           <span className="text-2xl text-grit-dim ml-2">kg</span>
         </div>
-        <p className="label-cap text-grit-dim mb-6">× {reps} {reps === 1 ? "REP" : "REPS"}</p>
+        <p className="label-cap text-grit-dim mb-6">
+          × {reps} {reps === 1 ? "REP" : "REPS"}
+        </p>
 
         {delta > 0 && (
           <div

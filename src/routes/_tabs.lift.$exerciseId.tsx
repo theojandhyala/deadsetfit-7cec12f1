@@ -62,7 +62,7 @@ function LiftDetailPage() {
   const [rangeIdx, setRangeIdx] = useState(1);
   const range = RANGES[rangeIdx];
 
-  const ex = getExercise(exerciseId);
+  const ex = getExercise(exerciseId, state.savedExercises);
   const name = ex?.name ?? exerciseId.replace(/-/g, " ");
 
   const all = useMemo(() => gatherLogs(state, exerciseId), [state, exerciseId]);

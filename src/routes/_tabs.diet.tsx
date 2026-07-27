@@ -1,11 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, Plus, ScanBarcode, Droplets, Bell, BellOff, Trash2, Target, Utensils, ShieldCheck, CalendarDays } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Droplets, Bell, BellOff, Target, Utensils, ShieldCheck, CalendarDays } from "lucide-react";
 
 import { useAppState, getState } from "@/lib/storage";
 import { toast } from "sonner";
 import { calculateCalories, calculateMacros, isoDay } from "@/lib/calc";
-import { lookupBarcode } from "@/lib/diet.functions";
 import { usePro } from "@/hooks/usePro";
 import { ProBanner } from "@/components/ProBanner";
 import { NutritionIntelligence } from "@/components/NutritionIntelligence";
@@ -13,6 +12,7 @@ import { todayActiveBurn, healthSupported } from "@/lib/health";
 import { openPaywall } from "@/lib/paywall-events";
 import { Lock } from "lucide-react";
 import type { FoodLogItem } from "@/lib/types";
+import { NutritionLogger } from "@/components/NutritionLogger";
 
 export const Route = createFileRoute("/_tabs/diet")({
   head: () => ({ meta: [{ title: "DEADSET — Diet" }] }),
@@ -21,30 +21,27 @@ export const Route = createFileRoute("/_tabs/diet")({
 
 function DietPage() {
   const [state, set] = useAppState();
-  const barcode = lookupBarcode;
-
-  const [error, setError] = useState<string | null>(null);
-  const [retryAction, setRetryAction] = useState<(() => void) | null>(null);
-  // Manual-add fields are DOM-owned (defaultValue + ref, read on submit).
-  // Controlled value/onChange freezes typing in the iOS WKWebView.
-  const nameRef = useRef<HTMLInputElement>(null);
-  const calsRef = useRef<HTMLInputElement>(null);
-  const proteinRef = useRef<HTMLInputElement>(null);
-  const carbsRef = useRef<HTMLInputElement>(null);
-  const fatsRef = useRef<HTMLInputElement>(null);
-  const barcodeRef = useRef<HTMLInputElement>(null);
-  const [barcodeOpen, setBarcodeOpen] = useState(false);
-  const [barcodeVal, setBarcodeVal] = useState("");
-  const [barcodeLoad, setBarcodeLoad] = useState(false);
+  const [view, setView] = useState<"diary" | "insights">("diary");
 
   const profile = state.profile;
-  const calories = useMemo(() => profile ? calculateCalories(profile) : 0, [profile]);
-  const macros = useMemo(() => profile ? calculateMacros(profile, calories) : { protein: 0, carbs: 0, fats: 0 }, [profile, calories]);
+  const calories = useMemo(() => (profile ? calculateCalories(profile) : 0), [profile]);
+  const macros = useMemo(
+    () => (profile ? calculateMacros(profile, calories) : { protein: 0, carbs: 0, fats: 0 }),
+    [profile, calories],
+  );
 
   const today = isoDay();
   const eaten = state.foodLog.filter((f) => f.date === today);
-  const totals = eaten.reduce((a, f) => ({ c: a.c + (f.calories ?? 0), p: a.p + (f.protein ?? 0), ca: a.ca + (f.carbs ?? 0), fa: a.fa + (f.fats ?? 0) }), { c:0, p:0, ca:0, fa:0 });
-  const waterToday = state.water.filter(w => w.date === today).reduce((s, w) => s + w.ml, 0);
+  const totals = eaten.reduce(
+    (a, f) => ({
+      c: a.c + (f.calories ?? 0),
+      p: a.p + (f.protein ?? 0),
+      ca: a.ca + (f.carbs ?? 0),
+      fa: a.fa + (f.fats ?? 0),
+    }),
+    { c: 0, p: 0, ca: 0, fa: 0 },
+  );
+  const waterToday = state.water.filter((w) => w.date === today).reduce((s, w) => s + w.ml, 0);
 
   const { isPro, loading: proLoading } = usePro();
   const nutritionLocked = proLoading || !isPro;
@@ -72,7 +69,13 @@ function DietPage() {
     const perDay = days.map((day) => {
       const items = state.foodLog.filter((f) => f.date === day);
       return items.reduce(
-        (a, f) => ({ c: a.c + (f.calories ?? 0), p: a.p + (f.protein ?? 0), ca: a.ca + (f.carbs ?? 0), fa: a.fa + (f.fats ?? 0), logged: true }),
+        (a, f) => ({
+          c: a.c + (f.calories ?? 0),
+          p: a.p + (f.protein ?? 0),
+          ca: a.ca + (f.carbs ?? 0),
+          fa: a.fa + (f.fats ?? 0),
+          logged: true,
+        }),
         { c: 0, p: 0, ca: 0, fa: 0, logged: items.length > 0 },
       );
     });
@@ -84,17 +87,22 @@ function DietPage() {
       ca: Math.round(loggedDays.reduce((s, d) => s + d.ca, 0) / n),
       fa: Math.round(loggedDays.reduce((s, d) => s + d.fa, 0) / n),
     };
-    const calHits = perDay.filter((d) => d.logged && d.c >= calories * 0.9 && d.c <= calories * 1.12).length;
+    const calHits = perDay.filter(
+      (d) => d.logged && d.c >= calories * 0.9 && d.c <= calories * 1.12,
+    ).length;
     const proteinHits = perDay.filter((d) => d.logged && d.p >= macros.protein * 0.9).length;
     const macroKcal = avg.p * 4 + avg.ca * 4 + avg.fa * 9;
-    const split = macroKcal > 0
-      ? {
-          p: Math.round(((avg.p * 4) / macroKcal) * 100),
-          ca: Math.round(((avg.ca * 4) / macroKcal) * 100),
-          fa: Math.round(((avg.fa * 9) / macroKcal) * 100),
-        }
+    const split =
+      macroKcal > 0
+        ? {
+            p: Math.round(((avg.p * 4) / macroKcal) * 100),
+            ca: Math.round(((avg.ca * 4) / macroKcal) * 100),
+            fa: Math.round(((avg.fa * 9) / macroKcal) * 100),
+          }
+        : null;
+    const proteinPerKg = profile?.weightKg
+      ? Math.round((avg.p / profile.weightKg) * 100) / 100
       : null;
-    const proteinPerKg = profile?.weightKg ? Math.round((avg.p / profile.weightKg) * 100) / 100 : null;
     return { avg, calHits, proteinHits, split, proteinPerKg, loggedDays: loggedDays.length };
   }, [state.foodLog, calories, macros.protein, profile?.weightKg]);
 
@@ -106,87 +114,53 @@ function DietPage() {
   useEffect(() => {
     if (!hydrationOn) return;
     const NUDGE_KEY = "deadset_hydration_nudge_at";
-    const id = setInterval(() => {
-      const now = new Date();
-      const hour = now.getHours();
-      if (hour < 8 || hour > 22) return;
-      const last = Number(localStorage.getItem(NUDGE_KEY) || 0);
-      if (Date.now() - last < 90 * 60 * 1000) return;
-      const fresh = getState();
-      const elapsed = (hour - 8) / 14;
-      const target = (fresh.waterTargetMl ?? 3000) * elapsed;
-      const day = isoDay();
-      const wt = fresh.water.filter((w) => w.date === day).reduce((s, w) => s + w.ml, 0);
-      if (wt < target - 300) {
-        localStorage.setItem(NUDGE_KEY, String(Date.now()));
-        toast("Hydration check", {
-          description: `${Math.round((target - wt) / 100) * 100}ml behind pace — grab some water.`,
-        });
-        const el = document.getElementById("water-ring");
-        if (el) {
-          el.classList.add("animate-pulse");
-          setTimeout(() => el.classList.remove("animate-pulse"), 4000);
+    const id = setInterval(
+      () => {
+        const now = new Date();
+        const hour = now.getHours();
+        if (hour < 8 || hour > 22) return;
+        const last = Number(localStorage.getItem(NUDGE_KEY) || 0);
+        if (Date.now() - last < 90 * 60 * 1000) return;
+        const fresh = getState();
+        const elapsed = (hour - 8) / 14;
+        const target = (fresh.waterTargetMl ?? 3000) * elapsed;
+        const day = isoDay();
+        const wt = fresh.water.filter((w) => w.date === day).reduce((s, w) => s + w.ml, 0);
+        if (wt < target - 300) {
+          localStorage.setItem(NUDGE_KEY, String(Date.now()));
+          toast("Hydration check", {
+            description: `${Math.round((target - wt) / 100) * 100}ml behind pace — grab some water.`,
+          });
+          const el = document.getElementById("water-ring");
+          if (el) {
+            el.classList.add("animate-pulse");
+            setTimeout(() => el.classList.remove("animate-pulse"), 4000);
+          }
         }
-      }
-    }, 5 * 60 * 1000);
+      },
+      5 * 60 * 1000,
+    );
     return () => clearInterval(id);
   }, [hydrationOn]);
 
-  function addFood() {
-    const name = (nameRef.current?.value ?? "").trim();
-    if (!name) return;
-    const item: FoodLogItem = {
-      date: today,
-      name,
-      calories: Number(calsRef.current?.value) || 0,
-      protein: Number(proteinRef.current?.value) || 0,
-      carbs: Number(carbsRef.current?.value) || 0,
-      fats: Number(fatsRef.current?.value) || 0,
-      source: "manual",
-    };
-    set((s) => ({ ...s, foodLog: [...s.foodLog, item] }));
-    for (const r of [nameRef, calsRef, proteinRef, carbsRef, fatsRef]) {
-      if (r.current) r.current.value = "";
-    }
-    nameRef.current?.focus();
-  }
-
-  function addPresetFood(item: Omit<FoodLogItem, "date" | "source">) {
-    set((s) => ({ ...s, foodLog: [...s.foodLog, { ...item, date: today, source: "manual" }] }));
+  function addFoods(items: Array<Omit<FoodLogItem, "date">>) {
+    set((current) => ({
+      ...current,
+      foodLog: [...current.foodLog, ...items.map((item) => ({ ...item, date: today }))],
+    }));
   }
 
   function removeFood(idx: number) {
     const day = isoDay();
     set((s) => {
-      const todayIndices = s.foodLog.reduce<number[]>((acc, f, i) => { if (f.date === day) acc.push(i); return acc; }, []);
+      const todayIndices = s.foodLog.reduce<number[]>((acc, f, i) => {
+        if (f.date === day) acc.push(i);
+        return acc;
+      }, []);
       const targetIndex = todayIndices[idx];
       if (targetIndex === undefined) return s;
       return { ...s, foodLog: s.foodLog.filter((_, i) => i !== targetIndex) };
     });
-  }
-
-  async function doBarcode() {
-    const barcodeVal = (barcodeRef.current?.value ?? "").replace(/[^0-9]/g, "");
-    if (!barcodeVal) return;
-    setBarcodeLoad(true); setError(null); setRetryAction(null);
-    try {
-      const r = await barcode({ data: { barcode: barcodeVal } });
-      const item: FoodLogItem = {
-        date: today, name: `${r.name} (${r.serving})`,
-        calories: r.calories, protein: r.protein, carbs: r.carbs, fats: r.fats,
-        source: "barcode",
-      };
-      set((s) => ({ ...s, foodLog: [...s.foodLog, item] }));
-      setBarcodeVal(""); setBarcodeOpen(false);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Lookup failed";
-      setError(msg);
-      setRetryAction(() => doBarcode);
-      // The banner lives at the top of the page; the barcode input is at the
-      // bottom — surface the failure where the user actually is.
-      toast.error(`Barcode lookup failed — ${msg}`);
-    }
-    finally { setBarcodeLoad(false); }
   }
 
   function logWater(ml: number) {
@@ -194,7 +168,7 @@ function DietPage() {
   }
   function undoWater() {
     set((s) => {
-      const idx = [...s.water].reverse().findIndex(w => w.date === today);
+      const idx = [...s.water].reverse().findIndex((w) => w.date === today);
       if (idx < 0) return s;
       const realIdx = s.water.length - 1 - idx;
       return { ...s, water: s.water.filter((_, i) => i !== realIdx) };
@@ -221,41 +195,29 @@ function DietPage() {
   const isCut = profile?.goal === "CUT";
   const isBulk = profile?.goal === "BULK";
   const nextMeal = nextMealAdvice(profile?.goal, remainingCalories, remainingProtein, calories);
-  const goalPlan = goalDietPlan(profile?.goal, calories, macros.protein, remainingCalories, remainingProtein);
+  const goalPlan = goalDietPlan(
+    profile?.goal,
+    calories,
+    macros.protein,
+    remainingCalories,
+    remainingProtein,
+  );
   const presets = presetFoodsFor(profile?.goal);
   const calorieGrid = useMemo(
     () => buildCalorieGoalGrid(state.foodLog, calories, profile?.goal),
     [state.foodLog, calories, profile?.goal],
   );
-  const recentFoods = useMemo(() => buildRecentFoods(state.foodLog), [state.foodLog]);
-
-  function addRecentFood(item: FoodLogItem) {
-    // Users can log by name alone — coerce missing macros to 0 so the
-    // totals reducers never see undefined.
-    set((s) => ({
-      ...s,
-      foodLog: [...s.foodLog, {
-        ...item,
-        date: today,
-        calories: item.calories ?? 0,
-        protein: item.protein ?? 0,
-        carbs: item.carbs ?? 0,
-        fats: item.fats ?? 0,
-      }],
-    }));
-  }
-
   // BMI + per-meal breakdown
   const bmi = profile ? profile.weightKg / Math.pow(profile.heightCm / 100, 2) : 0;
-  const bmiBand =
-    bmi < 18.5 ? "UNDER" :
-    bmi < 25 ? "HEALTHY" :
-    bmi < 30 ? "OVER" : "OBESE";
+  const bmiBand = bmi < 18.5 ? "UNDER" : bmi < 25 ? "HEALTHY" : bmi < 30 ? "OVER" : "OBESE";
   const goalCue =
-    profile?.goal === "CUT" ? "Calorie deficit — lean out" :
-    profile?.goal === "BULK" ? "Calorie surplus — build mass" :
-    profile?.goal === "ATHLETIC" ? "Slight surplus — fuel performance" :
-    "Maintenance — hold weight";
+    profile?.goal === "CUT"
+      ? "Calorie deficit — lean out"
+      : profile?.goal === "BULK"
+        ? "Calorie surplus — build mass"
+        : profile?.goal === "ATHLETIC"
+          ? "Slight surplus — fuel performance"
+          : "Maintenance — hold weight";
   const perMeal = {
     cal: Math.round(calories / 4),
     p: Math.round(macros.protein / 4),
@@ -272,7 +234,9 @@ function DietPage() {
             {calories === 0 ? (
               <div className="text-center py-4">
                 <p className="label-cap text-accent-red">Fuel dashboard</p>
-                <p className="display text-2xl font-extrabold text-grit mt-3 uppercase">Set your nutrition goal</p>
+                <p className="display text-2xl font-extrabold text-grit mt-3 uppercase">
+                  Set your nutrition goal
+                </p>
                 <p className="text-sm text-grit-dim mt-1 mb-4">
                   Tell us your target and we'll build your daily calories and macros.
                 </p>
@@ -281,42 +245,88 @@ function DietPage() {
                 </Link>
               </div>
             ) : (
-            <>
-            <p className="label-cap text-accent-red">Fuel dashboard</p>
-            <div className="flex items-end justify-between gap-4 mt-2">
-              <div>
-                <div className="display text-[4rem] font-black text-grit leading-none">
-                  {remainingCalories}
-                  <span className="text-xl text-[#8a8a8a] ml-2">KCAL</span>
+              <>
+                <p className="label-cap text-accent-red">Fuel dashboard</p>
+                <div className="flex items-end justify-between gap-4 mt-2">
+                  <div>
+                    <div className="display text-[4rem] font-black text-grit leading-none">
+                      {remainingCalories}
+                      <span className="text-xl text-[#8a8a8a] ml-2">KCAL</span>
+                    </div>
+                    <p className="text-sm text-[#8a8a8a] mt-2">
+                      left today · {totals.c} eaten from {calories}
+                    </p>
+                    {activeBurn !== null && (
+                      <p className="label-cap text-[10px] text-accent-red mt-1.5">
+                        🔥 {activeBurn} kcal active burn — Apple Watch
+                      </p>
+                    )}
+                  </div>
+                  <div className="deadset-glass-strip rounded-2xl px-3 py-2 text-right shrink-0">
+                    <p className="label-cap text-[8px]">Score</p>
+                    <p className="display text-3xl font-black text-grit leading-none">
+                      {Math.min(100, dietScore)}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-sm text-[#8a8a8a] mt-2">
-                  left today · {totals.c} eaten from {calories}
-                </p>
-                {activeBurn !== null && (
-                  <p className="label-cap text-[10px] text-accent-red mt-1.5">
-                    🔥 {activeBurn} kcal active burn — Apple Watch
-                  </p>
-                )}
-              </div>
-              <div className="deadset-glass-strip rounded-2xl px-3 py-2 text-right shrink-0">
-                <p className="label-cap text-[8px]">Score</p>
-                <p className="display text-3xl font-black text-grit leading-none">
-                  {Math.min(100, dietScore)}
-                </p>
-              </div>
-            </div>
-            <div className="mt-5 space-y-2">
-              <ProgressLine label="Calories" value={totals.c} target={calories} color="#f5f5f0" unit="kcal" />
-              <ProgressLine label="Protein" value={Math.round(totals.p)} target={macros.protein} color="#e63222" unit="g" />
-              <ProgressLine label="Water" value={waterToday} target={state.waterTargetMl} color="#3b9eff" unit="ml" />
-            </div>
-            </>
+                <div className="mt-5 space-y-2">
+                  <ProgressLine
+                    label="Calories"
+                    value={totals.c}
+                    target={calories}
+                    color="#f5f5f0"
+                    unit="kcal"
+                  />
+                  <ProgressLine
+                    label="Protein"
+                    value={Math.round(totals.p)}
+                    target={macros.protein}
+                    color="#e63222"
+                    unit="g"
+                  />
+                  <ProgressLine
+                    label="Water"
+                    value={waterToday}
+                    target={state.waterTargetMl}
+                    color="#3b9eff"
+                    unit="ml"
+                  />
+                </div>
+              </>
             )}
           </div>
         </div>
       </header>
 
-      {calories > 0 && (
+      <section className="deadset-section" aria-label="Nutrition view">
+        <div className="grid grid-cols-2 rounded-xl border border-grit bg-[#080808] p-1">
+          {(["diary", "insights"] as const).map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => setView(option)}
+              aria-pressed={view === option}
+              className={`rounded-lg px-4 py-3 text-xs font-bold uppercase transition-colors ${
+                view === option ? "bg-grit text-black" : "text-grit-dim hover:text-grit"
+              }`}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {view === "diary" && (
+        <NutritionLogger
+          today={today}
+          foodLog={state.foodLog}
+          presets={presets}
+          onAdd={addFoods}
+          onRemove={removeFood}
+        />
+      )}
+
+      {view === "insights" && calories > 0 && (
         <section className="deadset-section">
           <CalorieGoalGrid
             days={calorieGrid.days}
@@ -329,100 +339,104 @@ function DietPage() {
       )}
 
       {/* Advanced Nutrition (Pro) — needs real targets to grade against */}
-      {calories > 0 && macros.protein > 0 && (
-      <section className="deadset-section">
-        <div className="bg-grit-card border border-grit rounded-2xl p-4 relative">
-          <div className="flex items-center justify-between mb-3">
-            <p className="label-cap text-[10px] text-accent-red">ADVANCED NUTRITION · 7 DAYS</p>
-            <span className="label-cap text-[9px] text-accent-red border border-accent-red/40 rounded px-1.5">
-              PRO
-            </span>
-          </div>
-          <div
-            className={
-              nutritionLocked ? "pointer-events-none select-none blur-[6px] opacity-60" : undefined
-            }
-            aria-hidden={nutritionLocked || undefined}
-          >
-            {week.loggedDays === 0 ? (
-              <p className="text-xs text-grit-dim">
-                Log food for a few days and your weekly averages appear here.
-              </p>
-            ) : (
-              <>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="border border-grit rounded-xl p-3">
-                    <p className="label-cap text-[9px] text-grit-dim">AVG CALORIES</p>
-                    <p className="display text-xl font-extrabold text-grit">
-                      {week.avg.c}
-                      <span className="text-[10px] text-grit-dim ml-1">/ {calories}</span>
-                    </p>
+      {view === "insights" && calories > 0 && macros.protein > 0 && (
+        <section className="deadset-section">
+          <div className="bg-grit-card border border-grit rounded-2xl p-4 relative">
+            <div className="flex items-center justify-between mb-3">
+              <p className="label-cap text-[10px] text-accent-red">ADVANCED NUTRITION · 7 DAYS</p>
+              <span className="label-cap text-[9px] text-accent-red border border-accent-red/40 rounded px-1.5">
+                PRO
+              </span>
+            </div>
+            <div
+              className={
+                nutritionLocked
+                  ? "pointer-events-none select-none blur-[6px] opacity-60"
+                  : undefined
+              }
+              aria-hidden={nutritionLocked || undefined}
+            >
+              {week.loggedDays === 0 ? (
+                <p className="text-xs text-grit-dim">
+                  Log food for a few days and your weekly averages appear here.
+                </p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="border border-grit rounded-xl p-3">
+                      <p className="label-cap text-[9px] text-grit-dim">AVG CALORIES</p>
+                      <p className="display text-xl font-extrabold text-grit">
+                        {week.avg.c}
+                        <span className="text-[10px] text-grit-dim ml-1">/ {calories}</span>
+                      </p>
+                    </div>
+                    <div className="border border-grit rounded-xl p-3">
+                      <p className="label-cap text-[9px] text-grit-dim">AVG PROTEIN</p>
+                      <p className="display text-xl font-extrabold text-grit">
+                        {week.avg.p}g
+                        {week.proteinPerKg !== null && (
+                          <span className="text-[10px] text-grit-dim ml-1">
+                            {week.proteinPerKg}g/kg
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="border border-grit rounded-xl p-3">
+                      <p className="label-cap text-[9px] text-grit-dim">CALORIE TARGET HIT</p>
+                      <p className="display text-xl font-extrabold text-grit">{week.calHits}/7</p>
+                    </div>
+                    <div className="border border-grit rounded-xl p-3">
+                      <p className="label-cap text-[9px] text-grit-dim">PROTEIN TARGET HIT</p>
+                      <p className="display text-xl font-extrabold text-grit">
+                        {week.proteinHits}/7
+                      </p>
+                    </div>
                   </div>
-                  <div className="border border-grit rounded-xl p-3">
-                    <p className="label-cap text-[9px] text-grit-dim">AVG PROTEIN</p>
-                    <p className="display text-xl font-extrabold text-grit">
-                      {week.avg.p}g
-                      {week.proteinPerKg !== null && (
-                        <span className="text-[10px] text-grit-dim ml-1">
-                          {week.proteinPerKg}g/kg
+                  {week.split && (
+                    <div className="mt-3">
+                      <p className="label-cap text-[9px] text-grit-dim mb-1.5">MACRO SPLIT</p>
+                      <div className="flex h-2 rounded-full overflow-hidden">
+                        <div style={{ width: `${week.split.p}%`, background: "#e63222" }} />
+                        <div style={{ width: `${week.split.ca}%`, background: "#f5f5f0" }} />
+                        <div style={{ width: `${week.split.fa}%`, background: "#8a8a8a" }} />
+                      </div>
+                      <div className="flex justify-between mt-1.5 text-[9px] label-cap text-grit-dim">
+                        <span>
+                          <span className="text-accent-red">●</span> Protein {week.split.p}%
                         </span>
-                      )}
-                    </p>
-                  </div>
-                  <div className="border border-grit rounded-xl p-3">
-                    <p className="label-cap text-[9px] text-grit-dim">CALORIE TARGET HIT</p>
-                    <p className="display text-xl font-extrabold text-grit">{week.calHits}/7</p>
-                  </div>
-                  <div className="border border-grit rounded-xl p-3">
-                    <p className="label-cap text-[9px] text-grit-dim">PROTEIN TARGET HIT</p>
-                    <p className="display text-xl font-extrabold text-grit">{week.proteinHits}/7</p>
-                  </div>
+                        <span>
+                          <span className="text-grit">●</span> Carbs {week.split.ca}%
+                        </span>
+                        <span>● Fats {week.split.fa}%</span>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            {nutritionLocked && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center">
+                <div className="bg-grit-card border p-4 max-w-[260px] text-center">
+                  <Lock size={16} className="text-accent-red mx-auto mb-2" />
+                  <p className="label-cap text-[10px] mb-1">ADVANCED NUTRITION</p>
+                  <p className="text-xs text-grit-dim mb-3">
+                    Weekly averages, macro split and protein per kg.
+                  </p>
+                  <button
+                    onClick={() => openPaywall("nutrition")}
+                    className="btn-grit px-4 py-2 text-xs"
+                  >
+                    UNLOCK WITH PRO
+                  </button>
                 </div>
-                {week.split && (
-                  <div className="mt-3">
-                    <p className="label-cap text-[9px] text-grit-dim mb-1.5">MACRO SPLIT</p>
-                    <div className="flex h-2 rounded-full overflow-hidden">
-                      <div style={{ width: `${week.split.p}%`, background: "#e63222" }} />
-                      <div style={{ width: `${week.split.ca}%`, background: "#f5f5f0" }} />
-                      <div style={{ width: `${week.split.fa}%`, background: "#8a8a8a" }} />
-                    </div>
-                    <div className="flex justify-between mt-1.5 text-[9px] label-cap text-grit-dim">
-                      <span>
-                        <span className="text-accent-red">●</span> Protein {week.split.p}%
-                      </span>
-                      <span>
-                        <span className="text-grit">●</span> Carbs {week.split.ca}%
-                      </span>
-                      <span>● Fats {week.split.fa}%</span>
-                    </div>
-                  </div>
-                )}
-              </>
+              </div>
             )}
           </div>
-          {nutritionLocked && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center">
-              <div className="bg-grit-card border p-4 max-w-[260px] text-center">
-                <Lock size={16} className="text-accent-red mx-auto mb-2" />
-                <p className="label-cap text-[10px] mb-1">ADVANCED NUTRITION</p>
-                <p className="text-xs text-grit-dim mb-3">
-                  Weekly averages, macro split and protein per kg.
-                </p>
-                <button
-                  onClick={() => openPaywall("nutrition")}
-                  className="btn-grit px-4 py-2 text-xs"
-                >
-                  UNLOCK WITH PRO
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
+        </section>
       )}
 
       {/* Nutrition Intelligence (Pro) — adherence, energy balance, goal coaching */}
-      {calories > 0 && macros.protein > 0 && week.loggedDays > 0 && (
+      {view === "insights" && calories > 0 && macros.protein > 0 && week.loggedDays > 0 && (
         <section className="deadset-section">
           <div className="bg-grit-card border border-grit rounded-2xl p-4 relative">
             <div className="flex items-center justify-between mb-3">
@@ -432,7 +446,11 @@ function DietPage() {
               </span>
             </div>
             <div
-              className={nutritionLocked ? "pointer-events-none select-none blur-[6px] opacity-60" : undefined}
+              className={
+                nutritionLocked
+                  ? "pointer-events-none select-none blur-[6px] opacity-60"
+                  : undefined
+              }
               aria-hidden={nutritionLocked || undefined}
             >
               <NutritionIntelligence
@@ -450,7 +468,10 @@ function DietPage() {
                   <p className="text-xs text-grit-dim mb-3">
                     Adherence score, energy balance and goal-aware coaching.
                   </p>
-                  <button onClick={() => openPaywall("nutrition")} className="btn-grit px-4 py-2 text-xs">
+                  <button
+                    onClick={() => openPaywall("nutrition")}
+                    className="btn-grit px-4 py-2 text-xs"
+                  >
                     UNLOCK WITH PRO
                   </button>
                 </div>
@@ -460,23 +481,7 @@ function DietPage() {
         </section>
       )}
 
-      <section className="deadset-section">
-        <div className="bg-grit-card border border-grit rounded-2xl p-4">
-          <div className="flex items-end justify-between gap-3">
-            <div>
-              <p className="label-cap text-[10px] text-accent-red">TODAY'S DIET SCORE</p>
-              <p className="display text-5xl font-extrabold text-grit leading-none mt-1">{Math.min(100, dietScore)}</p>
-            </div>
-          </div>
-          <div className="mt-4 space-y-2">
-            <ProgressLine label="Calories" value={totals.c} target={calories} color="#f5f5f0" unit="kcal" />
-            <ProgressLine label="Protein" value={Math.round(totals.p)} target={macros.protein} color="#e63222" unit="g" />
-            <ProgressLine label="Water" value={waterToday} target={state.waterTargetMl} color="#3b9eff" unit="ml" />
-          </div>
-        </div>
-      </section>
-
-      {profile && (
+      {view === "insights" && profile && (
         <section className="deadset-section">
           <div className="bg-grit-card border border-accent-red/70 rounded-2xl p-4 overflow-hidden relative">
             <div className="absolute -right-10 -top-16 h-36 w-36 rounded-full bg-accent-red/15 blur-2xl" />
@@ -484,7 +489,8 @@ function DietPage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="label-cap text-accent-red flex items-center gap-2">
-                    <Target size={13} /> {isCut ? "Cut coach" : isBulk ? "Bulk coach" : "Nutrition coach"}
+                    <Target size={13} />{" "}
+                    {isCut ? "Cut coach" : isBulk ? "Bulk coach" : "Nutrition coach"}
                   </p>
                   <h2 className="display text-3xl font-extrabold text-grit leading-none mt-2">
                     {goalPlan.title}
@@ -493,19 +499,35 @@ function DietPage() {
                 </div>
                 <div className="text-right flex-shrink-0">
                   <p className="label-cap text-[9px] text-grit-dim">Left</p>
-                  <p className="display text-2xl font-extrabold text-grit leading-none">{remainingCalories}</p>
+                  <p className="display text-2xl font-extrabold text-grit leading-none">
+                    {remainingCalories}
+                  </p>
                   <p className="label-cap text-[9px] text-grit-dim mt-1">kcal</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-2 mt-4">
-                <CoachStat label="Protein left" value={`${remainingProtein}g`} tone={remainingProtein > 40 ? "red" : "white"} />
-                <CoachStat label={calorieDelta > 0 ? "Over target" : "Cal buffer"} value={calorieDelta > 0 ? `+${calorieDelta}` : String(remainingCalories)} tone={calorieDelta > 0 && isCut ? "red" : "white"} />
-                <CoachStat label="Water left" value={`${Math.max(0, state.waterTargetMl - waterToday)}ml`} tone="blue" />
+                <CoachStat
+                  label="Protein left"
+                  value={`${remainingProtein}g`}
+                  tone={remainingProtein > 40 ? "red" : "white"}
+                />
+                <CoachStat
+                  label={calorieDelta > 0 ? "Over target" : "Cal buffer"}
+                  value={calorieDelta > 0 ? `+${calorieDelta}` : String(remainingCalories)}
+                  tone={calorieDelta > 0 && isCut ? "red" : "white"}
+                />
+                <CoachStat
+                  label="Water left"
+                  value={`${Math.max(0, state.waterTargetMl - waterToday)}ml`}
+                  tone="blue"
+                />
               </div>
 
               <div className="mt-4 border border-grit bg-[#080808] rounded-2xl p-3">
-                <p className="label-cap text-[10px] text-grit-dim flex items-center gap-2"><Utensils size={12} /> Next best move</p>
+                <p className="label-cap text-[10px] text-grit-dim flex items-center gap-2">
+                  <Utensils size={12} /> Next best move
+                </p>
                 <p className="text-sm text-grit mt-1 font-bold">{nextMeal.title}</p>
                 <p className="text-xs text-grit-dim mt-1 leading-relaxed">{nextMeal.body}</p>
               </div>
@@ -523,60 +545,8 @@ function DietPage() {
         </section>
       )}
 
-      {/* ===== QUICK ACTIONS — log a meal fast ===== */}
-      <div className="deadset-section">
-        <p className="label-cap text-[10px] text-[#8a8a8a] mb-2">Log a meal</p>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={() => { setBarcodeOpen(true); const el = document.getElementById("food-log-section"); el?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
-            className="btn-grit py-3 flex flex-col items-center justify-center gap-1 text-[10px]"
-          >
-            <ScanBarcode size={16} />
-            <span className="label-cap">Barcode</span>
-          </button>
-          <button
-            onClick={() => { const el = document.getElementById("food-log-section"); el?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
-            className="btn-ghost py-3 flex flex-col items-center justify-center gap-1 text-[10px]"
-          >
-            <Plus size={16} />
-            <span className="label-cap">Manual</span>
-          </button>
-        </div>
-        {error && (
-          <div className="mt-2 border border-accent-red bg-accent-red/10 p-3 rounded-2xl">
-            <p className="text-xs text-accent-red">{error}</p>
-            {retryAction && (
-              <button onClick={retryAction} className="btn-grit mt-2 w-full py-2 text-[11px]">
-                Retry
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Recent foods — one-tap re-log from history */}
-      {recentFoods.length > 0 && (
-        <div className="deadset-section">
-          <p className="label-cap text-[10px] text-[#8a8a8a] mb-2">Recent</p>
-          <div className="no-scrollbar overflow-x-auto flex gap-2">
-            {recentFoods.map((f) => (
-              <button
-                key={f.key}
-                onClick={() => addRecentFood(f.item)}
-                className="press rounded-full border border-grit bg-grit-card px-3 py-2 flex items-center gap-1.5 whitespace-nowrap shrink-0"
-              >
-                <span className="text-xs font-bold text-grit">{f.item.name}</span>
-                {(f.item.calories ?? 0) > 0 && (
-                  <span className="text-[10px] text-grit-dim">{f.item.calories} kcal</span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* BMI + per-meal breakdown */}
-      {profile && (
+      {view === "insights" && profile && (
         <div className="deadset-section">
           <div className="bg-grit-card border border-grit rounded-2xl p-4">
             <div className="flex items-baseline justify-between mb-3">
@@ -594,173 +564,159 @@ function DietPage() {
             <p className="label-cap text-[10px] text-[#8a8a8a] mb-2">Eat per meal (× 4 meals)</p>
             <div className="grid grid-cols-4 gap-2 text-center">
               <div className="border border-grit p-2">
-                <p className="display font-extrabold text-grit text-base leading-none">{perMeal.cal}</p>
+                <p className="display font-extrabold text-grit text-base leading-none">
+                  {perMeal.cal}
+                </p>
                 <p className="label-cap text-[9px] text-[#8a8a8a] mt-1">KCAL</p>
               </div>
               <div className="border border-grit p-2">
-                <p className="display font-extrabold leading-none" style={{ color: "#e63222" }}>{perMeal.p}g</p>
+                <p className="display font-extrabold leading-none" style={{ color: "#e63222" }}>
+                  {perMeal.p}g
+                </p>
                 <p className="label-cap text-[9px] text-[#8a8a8a] mt-1">PROTEIN</p>
               </div>
               <div className="border border-grit p-2">
-                <p className="display font-extrabold leading-none" style={{ color: "#fbbf24" }}>{perMeal.c}g</p>
+                <p className="display font-extrabold leading-none" style={{ color: "#fbbf24" }}>
+                  {perMeal.c}g
+                </p>
                 <p className="label-cap text-[9px] text-[#8a8a8a] mt-1">CARBS</p>
               </div>
               <div className="border border-grit p-2">
-                <p className="display font-extrabold leading-none" style={{ color: "#22c55e" }}>{perMeal.f}g</p>
+                <p className="display font-extrabold leading-none" style={{ color: "#22c55e" }}>
+                  {perMeal.f}g
+                </p>
                 <p className="label-cap text-[9px] text-[#8a8a8a] mt-1">FATS</p>
               </div>
             </div>
             <p className="text-[10px] text-[#8a8a8a] mt-2 leading-snug">
-              Aim for ~<span className="text-grit">{Math.round(profile.weightKg * (profile.goal === "CUT" ? 2.4 : profile.goal === "ATHLETIC" ? 2.2 : 2.0))}g protein/day</span> ({(profile.goal === "CUT" ? 2.4 : profile.goal === "ATHLETIC" ? 2.2 : 2.0).toFixed(1)}g per kg bodyweight) and <span className="text-grit">{state.waterTargetMl}ml water</span>.
+              Aim for ~
+              <span className="text-grit">
+                {Math.round(
+                  profile.weightKg *
+                    (profile.goal === "CUT" ? 2.4 : profile.goal === "ATHLETIC" ? 2.2 : 2.0),
+                )}
+                g protein/day
+              </span>{" "}
+              ({(profile.goal === "CUT" ? 2.4 : profile.goal === "ATHLETIC" ? 2.2 : 2.0).toFixed(1)}
+              g per kg bodyweight) and{" "}
+              <span className="text-grit">{state.waterTargetMl}ml water</span>.
             </p>
           </div>
         </div>
       )}
 
       {/* Macro ring */}
-      <div className="deadset-section">
-        <MacroRing protein={macros.protein} carbs={macros.carbs} fats={macros.fats}
-          pEaten={totals.p} cEaten={totals.ca} fEaten={totals.fa} />
-      </div>
+      {view === "insights" && (
+        <div className="deadset-section">
+          <MacroRing
+            protein={macros.protein}
+            carbs={macros.carbs}
+            fats={macros.fats}
+            pEaten={totals.p}
+            cEaten={totals.ca}
+            fEaten={totals.fa}
+          />
+        </div>
+      )}
 
       {/* Hydration */}
-      <section className="deadset-section">
-        <div className="flex items-center justify-between mb-2">
-          <p className="label-cap flex items-center gap-2"><Droplets size={12} /> Hydration</p>
-          <button
-            onClick={() => set(s => ({ ...s, hydrationAlertsEnabled: !s.hydrationAlertsEnabled }))}
-            className="label-cap text-[#8a8a8a] flex items-center gap-1"
-            title={state.hydrationAlertsEnabled ? "Alerts on" : "Alerts off"}
-          >
-            {state.hydrationAlertsEnabled ? <Bell size={12} /> : <BellOff size={12} />}
-            {state.hydrationAlertsEnabled ? "Alerts on" : "Off"}
-          </button>
-        </div>
-        <div className="bg-grit-card border border-grit p-4 flex items-center gap-4">
-          <div id="water-ring" className="relative w-20 h-20 flex-shrink-0">
-            <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="#262626" strokeWidth="8" />
-              <circle cx="50" cy="50" r="42" fill="none" stroke="#3b9eff" strokeWidth="8"
-                strokeDasharray={2 * Math.PI * 42}
-                strokeDashoffset={2 * Math.PI * 42 * (1 - waterPct)}
-                strokeLinecap="round" />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center display font-extrabold text-grit text-sm">
-              {Math.round(waterPct * 100)}%
-            </div>
+      {view === "diary" && (
+        <section className="deadset-section">
+          <div className="flex items-center justify-between mb-2">
+            <p className="label-cap flex items-center gap-2">
+              <Droplets size={12} /> Hydration
+            </p>
+            <button
+              onClick={() =>
+                set((s) => ({ ...s, hydrationAlertsEnabled: !s.hydrationAlertsEnabled }))
+              }
+              className="label-cap text-[#8a8a8a] flex items-center gap-1"
+              title={state.hydrationAlertsEnabled ? "Alerts on" : "Alerts off"}
+            >
+              {state.hydrationAlertsEnabled ? <Bell size={12} /> : <BellOff size={12} />}
+              {state.hydrationAlertsEnabled ? "Alerts on" : "Off"}
+            </button>
           </div>
-          <div className="flex-1">
-            <p className="display font-extrabold text-grit text-xl leading-none">{waterToday}<span className="text-sm text-[#8a8a8a] ml-1">/ {state.waterTargetMl} ML</span></p>
-            <div className="flex gap-2 mt-2 flex-wrap">
-              <button onClick={() => logWater(250)} className="btn-ghost text-xs px-3 py-1.5">+250</button>
-              <button onClick={() => logWater(500)} className="btn-ghost text-xs px-3 py-1.5">+500</button>
-              <button onClick={() => logWater(750)} className="btn-ghost text-xs px-3 py-1.5">+750</button>
-              <button onClick={undoWater} className="btn-ghost text-xs px-3 py-1.5 text-[#8a8a8a]">Undo</button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Food log */}
-      <section id="food-log-section" className="deadset-section">
-        <p className="label-cap mb-2">Food Log</p>
-        <div className="bg-grit-card border border-grit p-4">
-          <p className="label-cap text-[10px] text-grit-dim mb-2">Fast add</p>
-          <div className="grid grid-cols-2 gap-2 mb-3">
-            {[
-              ...presets,
-            ].map((p) => (
-              <button
-                key={p.name}
-                onClick={() => addPresetFood(p)}
-                className="border border-grit bg-[#080808] p-2 text-left"
-              >
-                <p className="text-xs font-bold text-grit truncate">{p.name}</p>
-                <p className="text-[10px] text-grit-dim mt-0.5">{p.calories} kcal · P{p.protein}</p>
-              </button>
-            ))}
-          </div>
-
-          {/* Quick input row */}
-          <div className="grid grid-cols-2 gap-2 mb-2">
-            <input ref={nameRef} defaultValue="" placeholder="Food" className="input-grit col-span-2" autoCapitalize="words" />
-            <input ref={calsRef} inputMode="numeric" defaultValue="" onChange={(e) => { e.target.value = e.target.value.replace(/[^0-9]/g, ""); }} placeholder="kcal (optional)" className="input-grit" />
-            {/* Macros allow decimals (12.5g) — sanitize keeps a single dot. */}
-            <input ref={proteinRef} inputMode="decimal" defaultValue="" onChange={(e) => { e.target.value = e.target.value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1"); }} placeholder="protein g" className="input-grit" />
-            <input ref={carbsRef} inputMode="decimal" defaultValue="" onChange={(e) => { e.target.value = e.target.value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1"); }} placeholder="carbs g" className="input-grit" />
-            <input ref={fatsRef} inputMode="decimal" defaultValue="" onChange={(e) => { e.target.value = e.target.value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1"); }} placeholder="fats g" className="input-grit" />
-          </div>
-          <button onClick={addFood} className="btn-grit w-full mb-3 gap-2"><Plus size={16} /> Add food</button>
-
-          {isCut && (
-            <div className="mb-3 rounded-2xl border border-grit bg-[#080808] p-3 text-xs text-grit-dim leading-relaxed">
-              <span className="text-grit font-bold">Cut tip:</span> if you’re unsure, log the meal slightly higher and protect protein. Fat loss works best when tracking is simple and honest, not perfect.
-            </div>
-          )}
-
-          {/* Barcode lookup */}
-          <button
-            onClick={() => setBarcodeOpen(v => !v)}
-            className="btn-ghost w-full py-2.5 mb-3 flex items-center justify-center gap-2 text-xs"
-          >
-            <ScanBarcode size={14} /> {barcodeOpen ? "Hide barcode lookup" : "Barcode lookup"}
-          </button>
-
-          {barcodeOpen && (
-            <div className="flex gap-2 mb-3">
-              <input
-                ref={barcodeRef}
-                defaultValue=""
-                onChange={(e) => setBarcodeVal(e.target.value.replace(/[^0-9]/g, ""))}
-                placeholder="Enter barcode digits"
-                inputMode="numeric"
-                className="input-grit flex-1"
-              />
-              <button onClick={doBarcode} disabled={barcodeLoad || !barcodeVal} className="btn-grit px-3">
-                {barcodeLoad ? <Loader2 size={14} className="animate-spin" /> : "Find"}
-              </button>
-            </div>
-          )}
-
-          {eaten.length === 0 && <p className="text-xs text-[#8a8a8a]">Nothing logged yet today.</p>}
-          {eaten.map((f, i) => (
-            <div key={i} className="flex items-center gap-2 py-2 border-t border-grit first:border-t-0">
-              <div className="w-9 h-9 bg-[#1a1a1a] border border-grit flex items-center justify-center flex-shrink-0">
-                {f.source === "barcode" ? <ScanBarcode size={12} className="text-[#8a8a8a]" /> :
-                 <span className="label-cap text-[8px] text-[#8a8a8a]">M</span>}
+          <div className="bg-grit-card border border-grit p-4 flex items-center gap-4">
+            <div id="water-ring" className="relative w-20 h-20 flex-shrink-0">
+              <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="#262626" strokeWidth="8" />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="42"
+                  fill="none"
+                  stroke="#3b9eff"
+                  strokeWidth="8"
+                  strokeDasharray={2 * Math.PI * 42}
+                  strokeDashoffset={2 * Math.PI * 42 * (1 - waterPct)}
+                  strokeLinecap="round"
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center display font-extrabold text-grit text-sm">
+                {Math.round(waterPct * 100)}%
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-grit truncate">{f.name}</p>
-                <p className="text-[10px] text-[#8a8a8a]">P{f.protein} · C{f.carbs} · F{f.fats}</p>
-              </div>
-              <span className="text-sm text-[#8a8a8a] font-bold">{f.calories}</span>
-              <button onClick={() => removeFood(i)} className="text-[#8a8a8a] p-1"><Trash2 size={12} /></button>
             </div>
-          ))}
-        </div>
-      </section>
+            <div className="flex-1">
+              <p className="display font-extrabold text-grit text-xl leading-none">
+                {waterToday}
+                <span className="text-sm text-[#8a8a8a] ml-1">/ {state.waterTargetMl} ML</span>
+              </p>
+              <div className="flex gap-2 mt-2 flex-wrap">
+                <button onClick={() => logWater(250)} className="btn-ghost text-xs px-3 py-1.5">
+                  +250
+                </button>
+                <button onClick={() => logWater(500)} className="btn-ghost text-xs px-3 py-1.5">
+                  +500
+                </button>
+                <button onClick={() => logWater(750)} className="btn-ghost text-xs px-3 py-1.5">
+                  +750
+                </button>
+                <button
+                  onClick={undoWater}
+                  className="btn-ghost text-xs px-3 py-1.5 text-[#8a8a8a]"
+                >
+                  Undo
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Supplements */}
-      <section className="deadset-section mb-8">
-        <p className="label-cap mb-2">Supplements</p>
-        <div className="bg-grit-card border border-grit">
-          {supps.map((s) => (
-            <div key={s.name} className="px-4 py-3 border-b border-grit last:border-b-0">
-              <div className="font-bold uppercase text-sm text-grit">{s.name}</div>
-              <div className="text-xs text-[#8a8a8a]">{s.note}</div>
-            </div>
-          ))}
-        </div>
-      </section>
+      {view === "insights" && (
+        <section className="deadset-section mb-8">
+          <p className="label-cap mb-2">Supplements</p>
+          <div className="bg-grit-card border border-grit">
+            {supps.map((s) => (
+              <div key={s.name} className="px-4 py-3 border-b border-grit last:border-b-0">
+                <div className="font-bold uppercase text-sm text-grit">{s.name}</div>
+                <div className="text-xs text-[#8a8a8a]">{s.note}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
 
-function CoachStat({ label, value, tone }: { label: string; value: string; tone: "red" | "white" | "blue" }) {
+function CoachStat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: "red" | "white" | "blue";
+}) {
   const color = tone === "red" ? "#e63222" : tone === "blue" ? "#3b9eff" : "#f5f5f0";
   return (
     <div className="border border-grit bg-[#080808] rounded-xl px-2 py-3 text-center">
-      <p className="display font-extrabold text-xl leading-none" style={{ color }}>{value}</p>
+      <p className="display font-extrabold text-xl leading-none" style={{ color }}>
+        {value}
+      </p>
       <p className="label-cap text-[8px] text-grit-dim mt-1 leading-tight">{label}</p>
     </div>
   );
@@ -789,11 +745,7 @@ function CalorieGoalGrid({
   goal?: string;
 }) {
   const rule =
-    goal === "CUT"
-      ? "85–100% target"
-      : goal === "BULK"
-        ? "95–115% target"
-        : "90–110% target";
+    goal === "CUT" ? "85–100% target" : goal === "BULK" ? "95–115% target" : "90–110% target";
   return (
     <div className="deadset-card-soft p-4">
       <div className="flex items-start justify-between gap-4 mb-4">
@@ -810,9 +762,7 @@ function CalorieGoalGrid({
         </div>
         <div className="deadset-glass-strip rounded-2xl px-3 py-2 text-right shrink-0">
           <p className="label-cap text-[8px]">28 days</p>
-          <p className="display text-2xl font-black text-grit leading-none">
-            {hitCount}
-          </p>
+          <p className="display text-2xl font-black text-grit leading-none">{hitCount}</p>
         </div>
       </div>
 
@@ -861,7 +811,9 @@ function buildCalorieGoalGrid(
     const items = foodLog.filter((item) => item.date === date);
     const calories = items.reduce((sum, item) => sum + (item.calories ?? 0), 0);
     const hit = caloriesHitGoal(calories, targetCalories, goal);
-    const label = new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { weekday: "short" }).slice(0, 1);
+    const label = new Date(`${date}T12:00:00`)
+      .toLocaleDateString(undefined, { weekday: "short" })
+      .slice(0, 1);
     return {
       date,
       dayLabel: label,
@@ -903,7 +855,10 @@ function buildRecentFoods(foodLog: FoodLogItem[]): Array<{ key: string; item: Fo
     } else {
       g.count += 1;
       // >= so the later array entry wins on same-day ties (log is append-only).
-      if (f.date >= g.lastDate) { g.item = f; g.lastDate = f.date; }
+      if (f.date >= g.lastDate) {
+        g.item = f;
+        g.lastDate = f.date;
+      }
     }
   }
   const todayMs = new Date(`${isoDay()}T12:00:00`).getTime();
@@ -926,7 +881,13 @@ function caloriesHitGoal(calories: number, targetCalories: number, goal?: string
   return ratio >= 0.9 && ratio <= 1.1;
 }
 
-function goalDietPlan(goal: string | undefined, calories: number, protein: number, remainingCalories: number, remainingProtein: number) {
+function goalDietPlan(
+  goal: string | undefined,
+  calories: number,
+  protein: number,
+  remainingCalories: number,
+  remainingProtein: number,
+) {
   if (goal === "CUT") {
     return {
       title: "Lose fat without guessing.",
@@ -955,7 +916,12 @@ function goalDietPlan(goal: string | undefined, calories: number, protein: numbe
   };
 }
 
-function nextMealAdvice(goal: string | undefined, remainingCalories: number, remainingProtein: number, targetCalories: number) {
+function nextMealAdvice(
+  goal: string | undefined,
+  remainingCalories: number,
+  remainingProtein: number,
+  targetCalories: number,
+) {
   const lowCalories = remainingCalories < targetCalories * 0.22;
   if (remainingProtein > 45 && lowCalories) {
     return {
@@ -966,9 +932,10 @@ function nextMealAdvice(goal: string | undefined, remainingCalories: number, rem
   if (goal === "CUT") {
     return {
       title: remainingCalories > 650 ? "Build a filling cut meal." : "Keep the next meal tight.",
-      body: remainingCalories > 650
-        ? "Aim for lean protein + veg/salad + one controlled carb. Example: chicken, potatoes and veg."
-        : "Use a lighter protein option now. Example: yoghurt bowl, shake, tuna salad, omelette or chicken salad.",
+      body:
+        remainingCalories > 650
+          ? "Aim for lean protein + veg/salad + one controlled carb. Example: chicken, potatoes and veg."
+          : "Use a lighter protein option now. Example: yoghurt bowl, shake, tuna salad, omelette or chicken salad.",
     };
   }
   if (goal === "BULK") {
@@ -1008,13 +975,27 @@ function presetFoodsFor(goal?: string): Array<Omit<FoodLogItem, "date" | "source
   ];
 }
 
-function ProgressLine({ label, value, target, color, unit }: { label: string; value: number; target: number; color: string; unit: string }) {
+function ProgressLine({
+  label,
+  value,
+  target,
+  color,
+  unit,
+}: {
+  label: string;
+  value: number;
+  target: number;
+  color: string;
+  unit: string;
+}) {
   const pct = Math.min(1, value / Math.max(target, 1));
   return (
     <div>
       <div className="flex items-center justify-between text-[10px] label-cap mb-1">
         <span className="text-grit-dim">{label}</span>
-        <span className="text-grit">{value} / {target} {unit}</span>
+        <span className="text-grit">
+          {value} / {target} {unit}
+        </span>
       </div>
       <div className="h-2 bg-[#050505] border border-grit overflow-hidden">
         <div className="h-full" style={{ width: `${pct * 100}%`, background: color }} />
@@ -1026,7 +1007,8 @@ function ProgressLine({ label, value, target, color, unit }: { label: string; va
 function lastNDays(n: number): string[] {
   const out: string[] = [];
   for (let i = n - 1; i >= 0; i--) {
-    const d = new Date(); d.setDate(d.getDate() - i);
+    const d = new Date();
+    d.setDate(d.getDate() - i);
     out.push(isoDay(d));
   }
   return out;
@@ -1038,14 +1020,33 @@ function supplementsFor(goal?: string) {
     { name: "Creatine Monohydrate", note: "5g daily, any time." },
     { name: "Vitamin D3", note: "2000 IU daily with food." },
   ];
-  if (goal === "BULK") base.push({ name: "Mass Gainer (optional)", note: "If struggling to hit calories." });
-  if (goal === "CUT") base.push({ name: "Caffeine", note: "200mg pre-workout for output during deficit." });
-  if (goal === "ATHLETIC") base.push({ name: "Beta-Alanine", note: "3-5g daily for anaerobic capacity." });
+  if (goal === "BULK")
+    base.push({ name: "Mass Gainer (optional)", note: "If struggling to hit calories." });
+  if (goal === "CUT")
+    base.push({ name: "Caffeine", note: "200mg pre-workout for output during deficit." });
+  if (goal === "ATHLETIC")
+    base.push({ name: "Beta-Alanine", note: "3-5g daily for anaerobic capacity." });
   return base;
 }
 
-function MacroRing({ protein, carbs, fats, pEaten, cEaten, fEaten }: { protein: number; carbs: number; fats: number; pEaten: number; cEaten: number; fEaten: number }) {
-  const size = 200, cx = size/2, cy = size/2;
+function MacroRing({
+  protein,
+  carbs,
+  fats,
+  pEaten,
+  cEaten,
+  fEaten,
+}: {
+  protein: number;
+  carbs: number;
+  fats: number;
+  pEaten: number;
+  cEaten: number;
+  fEaten: number;
+}) {
+  const size = 200,
+    cx = size / 2,
+    cy = size / 2;
   const items = [
     { color: "#e63222", target: protein, eaten: pEaten, label: "P", radius: 80 },
     { color: "#f5f5f0", target: carbs, eaten: cEaten, label: "C", radius: 64 },
@@ -1060,8 +1061,17 @@ function MacroRing({ protein, carbs, fats, pEaten, cEaten, fEaten }: { protein: 
           return (
             <g key={it.label} transform={`rotate(-90 ${cx} ${cy})`}>
               <circle cx={cx} cy={cy} r={it.radius} fill="none" stroke="#262626" strokeWidth="8" />
-              <circle cx={cx} cy={cy} r={it.radius} fill="none" stroke={it.color} strokeWidth="8"
-                strokeDasharray={c} strokeDashoffset={c * (1 - pct)} strokeLinecap="butt" />
+              <circle
+                cx={cx}
+                cy={cy}
+                r={it.radius}
+                fill="none"
+                stroke={it.color}
+                strokeWidth="8"
+                strokeDasharray={c}
+                strokeDashoffset={c * (1 - pct)}
+                strokeLinecap="butt"
+              />
             </g>
           );
         })}
@@ -1075,14 +1085,29 @@ function MacroRing({ protein, carbs, fats, pEaten, cEaten, fEaten }: { protein: 
   );
 }
 
-function Row({ color, label, eaten, target }: { color: string; label: string; eaten: number; target: number }) {
+function Row({
+  color,
+  label,
+  eaten,
+  target,
+}: {
+  color: string;
+  label: string;
+  eaten: number;
+  target: number;
+}) {
   return (
     <div>
       <div className="flex items-center gap-2">
         <span className="w-2 h-2" style={{ background: color }} />
-        <span className="label-cap" style={{ color }}>{label}</span>
+        <span className="label-cap" style={{ color }}>
+          {label}
+        </span>
       </div>
-      <div className="font-bold text-grit">{eaten}<span className="text-[#8a8a8a] font-normal"> / {target}g</span></div>
+      <div className="font-bold text-grit">
+        {eaten}
+        <span className="text-[#8a8a8a] font-normal"> / {target}g</span>
+      </div>
     </div>
   );
 }

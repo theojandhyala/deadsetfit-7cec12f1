@@ -24,17 +24,23 @@ export function InsightsWidget() {
   const thisWeek = getWeekBounds(0);
   const lastWeek = getWeekBounds(-1);
 
-  const thisWeekDone = (state.completedDates ?? []).filter(d => {
+  const thisWeekDone = (state.completedDates ?? []).filter((d) => {
     const dt = new Date(d);
     return dt >= thisWeek.start && dt <= thisWeek.end;
   }).length;
 
   const thisVol = (state.sessions ?? [])
-    .filter(s => { const dt = new Date(s.date); return dt >= thisWeek.start && dt <= thisWeek.end; })
+    .filter((s) => {
+      const dt = new Date(s.date);
+      return dt >= thisWeek.start && dt <= thisWeek.end;
+    })
     .reduce((sum, s) => sum + (s.totalVolume ?? 0), 0);
 
   const lastVol = (state.sessions ?? [])
-    .filter(s => { const dt = new Date(s.date); return dt >= lastWeek.start && dt <= lastWeek.end; })
+    .filter((s) => {
+      const dt = new Date(s.date);
+      return dt >= lastWeek.start && dt <= lastWeek.end;
+    })
     .reduce((sum, s) => sum + (s.totalVolume ?? 0), 0);
 
   const volTrend = lastVol > 0 ? Math.round(((thisVol - lastVol) / lastVol) * 100) : null;
@@ -44,12 +50,17 @@ export function InsightsWidget() {
   const prCount = Object.keys(state.manualPRs ?? {}).length;
 
   const msg =
-    thisWeekDone === 0 ? "Fresh week. Let's get after it." :
-    thisWeekDone >= target ? "Full week smashed. Legendary. 🔥" :
-    thisWeekDone === target - 1 ? "One session away. Finish strong." :
-    streak >= 14 ? `${streak}-day streak — you're unstoppable.` :
-    streak >= 7 ? `${streak} days straight. Don't stop now.` :
-    `${target - thisWeekDone} sessions left to hit your weekly goal.`;
+    thisWeekDone === 0
+      ? "Fresh week. Let's get after it."
+      : thisWeekDone >= target
+        ? "Full week smashed. Legendary. 🔥"
+        : thisWeekDone === target - 1
+          ? "One session away. Finish strong."
+          : streak >= 14
+            ? `${streak}-day streak — you're unstoppable.`
+            : streak >= 7
+              ? `${streak} days straight. Don't stop now.`
+              : `${target - thisWeekDone} sessions left to hit your weekly goal.`;
 
   const size = 56;
   const sw = 4.5;
@@ -60,19 +71,42 @@ export function InsightsWidget() {
   return (
     <div
       className="mx-4 mb-4 rounded-2xl overflow-hidden"
-      style={{ background: "linear-gradient(135deg, rgba(230,50,34,0.1) 0%, #141414 100%)", border: "1.5px solid rgba(230,50,34,0.3)" }}
+      style={{
+        background: "linear-gradient(135deg, rgba(230,50,34,0.1) 0%, #141414 100%)",
+        border: "1.5px solid rgba(230,50,34,0.3)",
+      }}
     >
       <div className="p-4">
         <div className="flex items-center gap-4">
           <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
             <svg width={size} height={size} className="-rotate-90 absolute inset-0">
-              <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#262626" strokeWidth={sw} />
-              <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#e63222" strokeWidth={sw}
-                strokeDasharray={`${circ * pct} ${circ}`} strokeLinecap="round"
-                style={{ transition: "stroke-dasharray 700ms ease" }} />
+              <circle
+                cx={size / 2}
+                cy={size / 2}
+                r={r}
+                fill="none"
+                stroke="#262626"
+                strokeWidth={sw}
+              />
+              <circle
+                cx={size / 2}
+                cy={size / 2}
+                r={r}
+                fill="none"
+                stroke="#e63222"
+                strokeWidth={sw}
+                strokeDasharray={`${circ * pct} ${circ}`}
+                strokeLinecap="round"
+                style={{ transition: "stroke-dasharray 700ms ease" }}
+              />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="display font-extrabold text-white" style={{ fontSize: 17, lineHeight: 1 }}>{thisWeekDone}</span>
+              <span
+                className="display font-extrabold text-white"
+                style={{ fontSize: 17, lineHeight: 1 }}
+              >
+                {thisWeekDone}
+              </span>
               <span style={{ fontSize: 9, color: "#8A8A8A", fontWeight: 700 }}>/{target}</span>
             </div>
           </div>
@@ -81,14 +115,26 @@ export function InsightsWidget() {
             <p className="text-sm font-bold text-white leading-snug">{msg}</p>
             <div className="flex items-center gap-3 mt-1.5 flex-wrap">
               {volTrend !== null && (
-                <span className="flex items-center gap-1 text-[10px] font-bold"
-                  style={{ color: volTrend > 0 ? "#FAFAFA" : volTrend < 0 ? "#FF5252" : "#8A8A8A" }}>
-                  {volTrend > 0 ? <TrendingUp size={10} /> : volTrend < 0 ? <TrendingDown size={10} /> : <Minus size={10} />}
-                  {volTrend > 0 ? "+" : ""}{volTrend}% vol vs last week
+                <span
+                  className="flex items-center gap-1 text-[10px] font-bold"
+                  style={{ color: volTrend > 0 ? "#FAFAFA" : volTrend < 0 ? "#FF5252" : "#8A8A8A" }}
+                >
+                  {volTrend > 0 ? (
+                    <TrendingUp size={10} />
+                  ) : volTrend < 0 ? (
+                    <TrendingDown size={10} />
+                  ) : (
+                    <Minus size={10} />
+                  )}
+                  {volTrend > 0 ? "+" : ""}
+                  {volTrend}% vol vs last week
                 </span>
               )}
               {streak > 0 && (
-                <span className="flex items-center gap-1 text-[10px] font-bold" style={{ color: "#e63222" }}>
+                <span
+                  className="flex items-center gap-1 text-[10px] font-bold"
+                  style={{ color: "#e63222" }}
+                >
                   <Zap size={10} /> {streak}d streak
                 </span>
               )}
@@ -106,9 +152,20 @@ export function InsightsWidget() {
             { label: "This Week", value: thisWeekDone },
             { label: "PRs Set", value: prCount },
           ].map((s, i) => (
-            <div key={i} className="flex-1 text-center py-2 rounded-xl" style={{ background: "#141414" }}>
-              <p className="display font-extrabold text-white" style={{ fontSize: 16 }}>{s.value}</p>
-              <p className="text-[9px] font-bold uppercase tracking-wider mt-0.5" style={{ color: "#8A8A8A" }}>{s.label}</p>
+            <div
+              key={i}
+              className="flex-1 text-center py-2 rounded-xl"
+              style={{ background: "#141414" }}
+            >
+              <p className="display font-extrabold text-white" style={{ fontSize: 16 }}>
+                {s.value}
+              </p>
+              <p
+                className="text-[9px] font-bold uppercase tracking-wider mt-0.5"
+                style={{ color: "#8A8A8A" }}
+              >
+                {s.label}
+              </p>
             </div>
           ))}
         </div>

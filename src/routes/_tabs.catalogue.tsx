@@ -27,11 +27,20 @@ function Sparkline({ values }: { values: number[] }) {
   const color = up ? "#e63222" : "#8A8A8A";
   return (
     <svg width={w} height={h} className="overflow-visible" aria-hidden>
-      <polyline points={pts} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <polyline
+        points={pts}
+        fill="none"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
       {values.map((v, i) => {
         const x = (i / (values.length - 1)) * (w - 4) + 2;
         const y = h - 2 - ((v - min) / span) * (h - 6);
-        return <circle key={i} cx={x} cy={y} r={i === values.length - 1 ? 2.5 : 1.5} fill={color} />;
+        return (
+          <circle key={i} cx={x} cy={y} r={i === values.length - 1 ? 2.5 : 1.5} fill={color} />
+        );
       })}
     </svg>
   );
@@ -49,7 +58,11 @@ function daysBetween(aIso: string, bIso: string) {
 }
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  return new Date(iso).toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function CataloguePage() {
@@ -63,16 +76,17 @@ function CataloguePage() {
   );
   const first = photos[0];
   const latest = photos[photos.length - 1];
-  const weeksApart = first && latest && first !== latest
-    ? Math.max(1, Math.round(daysBetween(first.date, latest.date) / 7))
-    : 0;
+  const weeksApart =
+    first && latest && first !== latest
+      ? Math.max(1, Math.round(daysBetween(first.date, latest.date) / 7))
+      : 0;
 
   const prs = useMemo(() => {
     const m = state.manualPRs ?? {};
     return Object.entries(m)
       .map(([id, pr]) => ({
         id,
-        name: getExercise(id)?.name ?? id,
+        name: getExercise(id, state.savedExercises)?.name ?? id,
         ...pr,
         // Top-set weight per session over time — powers the climb sparkline.
         history: topSetHistory(state, id, 8)
@@ -99,7 +113,10 @@ function CataloguePage() {
         for (const set of e.sets) {
           if (set.weight > best) {
             best = set.weight;
-            topLift = { name: getExercise(e.exerciseId)?.name ?? e.name, value: set.weight };
+            topLift = {
+              name: getExercise(e.exerciseId, state.savedExercises)?.name ?? e.name,
+              value: set.weight,
+            };
           }
         }
       }
@@ -118,7 +135,9 @@ function CataloguePage() {
   const journeyStart = useMemo(() => {
     const dates: string[] = [];
     if (photos[0]) dates.push(photos[0].date);
-    const firstSession = [...state.sessions].sort((a, b) => (a.startedAt || "").localeCompare(b.startedAt || ""))[0];
+    const firstSession = [...state.sessions].sort((a, b) =>
+      (a.startedAt || "").localeCompare(b.startedAt || ""),
+    )[0];
     if (firstSession?.startedAt) dates.push(firstSession.startedAt);
     const firstWeight = [...state.weights].sort((a, b) => a.date.localeCompare(b.date))[0];
     if (firstWeight) dates.push(firstWeight.date);
@@ -126,14 +145,17 @@ function CataloguePage() {
   }, [photos, state.sessions, state.weights]);
   const daysTraining = journeyStart ? daysBetween(journeyStart, new Date().toISOString()) : 0;
 
-  const weightNow = [...state.weights].sort((a, b) => b.date.localeCompare(a.date))[0]?.weight
-    ?? state.profile?.weightKg;
-  const weightStart = state.profile?.startingWeightKg
-    ?? [...state.weights].sort((a, b) => a.date.localeCompare(b.date))[0]?.weight
-    ?? weightNow;
-  const weightDelta = weightNow != null && weightStart != null
-    ? Math.round((weightNow - weightStart) * 10) / 10
-    : null;
+  const weightNow =
+    [...state.weights].sort((a, b) => b.date.localeCompare(a.date))[0]?.weight ??
+    state.profile?.weightKg;
+  const weightStart =
+    state.profile?.startingWeightKg ??
+    [...state.weights].sort((a, b) => a.date.localeCompare(b.date))[0]?.weight ??
+    weightNow;
+  const weightDelta =
+    weightNow != null && weightStart != null
+      ? Math.round((weightNow - weightStart) * 10) / 10
+      : null;
 
   function addPhoto(file: File) {
     const url = URL.createObjectURL(file);
@@ -188,7 +210,9 @@ function CataloguePage() {
         </Link>
         <div>
           <p className="label-cap text-accent-red text-[10px]">The Catalogue</p>
-          <h1 className="display text-3xl font-extrabold uppercase text-white leading-none">Your Journey</h1>
+          <h1 className="display text-3xl font-extrabold uppercase text-white leading-none">
+            Your Journey
+          </h1>
         </div>
       </header>
 
@@ -209,7 +233,10 @@ function CataloguePage() {
       {/* Journey stats */}
       <section className="px-5 mb-6 grid grid-cols-4 gap-2 animate-slide-up">
         {stats.map((s) => (
-          <div key={s.label} className="deadset-3d-panel bg-grit-card border border-grit p-3 text-center">
+          <div
+            key={s.label}
+            className="deadset-3d-panel bg-grit-card border border-grit p-3 text-center"
+          >
             <s.icon size={16} className="mx-auto mb-1" style={{ color: "#e63222" }} />
             <p className="display text-xl font-extrabold text-white leading-none">{s.value}</p>
             <p className="label-cap text-[8px] text-grit-dim mt-1">{s.label}</p>
@@ -220,15 +247,25 @@ function CataloguePage() {
       {/* Before / after hero */}
       <section className="px-5 mb-8 animate-slide-up delay-50">
         <div className="deadset-section-title mb-2">
-          <h2 className="display text-xl font-extrabold uppercase text-grit leading-none">Before → Now</h2>
+          <h2 className="display text-xl font-extrabold uppercase text-grit leading-none">
+            Before → Now
+          </h2>
         </div>
         {photos.length >= 2 ? (
           <div className="deadset-3d-panel border border-grit bg-[#080808] p-3">
             <div className="grid grid-cols-2 gap-2">
               {[first, latest].map((p, i) => (
-                <button key={p.date} onClick={() => setLightbox(p.photoDataUrl)} className="text-left press">
+                <button
+                  key={p.date}
+                  onClick={() => setLightbox(p.photoDataUrl)}
+                  className="text-left press"
+                >
                   <div className="relative">
-                    <img src={p.photoDataUrl} alt="" className="w-full aspect-[3/4] object-cover rounded-lg" />
+                    <img
+                      src={p.photoDataUrl}
+                      alt=""
+                      className="w-full aspect-[3/4] object-cover rounded-lg"
+                    />
                     <span className="absolute top-2 left-2 label-cap text-[9px] px-1.5 py-0.5 rounded bg-black/70 text-white">
                       {i === 0 ? "BEFORE" : "NOW"}
                     </span>
@@ -245,8 +282,15 @@ function CataloguePage() {
           </div>
         ) : photos.length === 1 ? (
           <div className="deadset-3d-panel border border-grit bg-[#080808] p-3">
-            <button onClick={() => setLightbox(first.photoDataUrl)} className="w-1/2 mx-auto block press">
-              <img src={first.photoDataUrl} alt="" className="w-full aspect-[3/4] object-cover rounded-lg" />
+            <button
+              onClick={() => setLightbox(first.photoDataUrl)}
+              className="w-1/2 mx-auto block press"
+            >
+              <img
+                src={first.photoDataUrl}
+                alt=""
+                className="w-full aspect-[3/4] object-cover rounded-lg"
+              />
               <p className="text-[10px] text-grit-dim mt-1.5 text-center">{fmtDate(first.date)}</p>
             </button>
             <p className="text-center text-xs text-grit-dim mt-3">
@@ -259,7 +303,9 @@ function CataloguePage() {
             className="deadset-3d-panel border border-dashed border-grit bg-grit-card w-full p-8 text-center press"
           >
             <Camera size={28} className="mx-auto mb-3" style={{ color: "#e63222" }} />
-            <p className="display text-lg font-extrabold uppercase text-grit">Start your before shot</p>
+            <p className="display text-lg font-extrabold uppercase text-grit">
+              Start your before shot
+            </p>
             <p className="text-xs text-grit-dim mt-1">The photo you'll be glad you took.</p>
           </button>
         )}
@@ -272,13 +318,19 @@ function CataloguePage() {
       {photos.length > 0 && (
         <section className="px-5 mb-8 animate-slide-up delay-100">
           <div className="deadset-section-title mb-2">
-            <h2 className="display text-xl font-extrabold uppercase text-grit leading-none">Timeline</h2>
+            <h2 className="display text-xl font-extrabold uppercase text-grit leading-none">
+              Timeline
+            </h2>
             <span className="label-cap text-grit-dim">{photos.length}</span>
           </div>
           <div className="grid grid-cols-3 gap-2">
             {[...photos].reverse().map((p) => (
               <button key={p.date} onClick={() => setLightbox(p.photoDataUrl)} className="press">
-                <img src={p.photoDataUrl} alt="" className="w-full aspect-[3/4] object-cover rounded-lg" />
+                <img
+                  src={p.photoDataUrl}
+                  alt=""
+                  className="w-full aspect-[3/4] object-cover rounded-lg"
+                />
                 <p className="text-[9px] text-grit-dim mt-1 text-center">{fmtDate(p.date)}</p>
               </button>
             ))}
@@ -289,7 +341,9 @@ function CataloguePage() {
       {/* PR wall */}
       <section className="px-5 mb-6 animate-slide-up delay-150">
         <div className="deadset-section-title mb-2">
-          <h2 className="display text-xl font-extrabold uppercase text-grit leading-none">PR Wall</h2>
+          <h2 className="display text-xl font-extrabold uppercase text-grit leading-none">
+            PR Wall
+          </h2>
           <span className="label-cap text-grit-dim">{prs.length}</span>
         </div>
         {prs.length > 0 ? (
@@ -300,7 +354,9 @@ function CataloguePage() {
                 className="deadset-3d-panel bg-grit-card border border-grit p-4 flex items-center justify-between gap-3"
               >
                 <div className="min-w-0">
-                  <p className="display text-base font-extrabold uppercase text-white leading-none truncate">{pr.name}</p>
+                  <p className="display text-base font-extrabold uppercase text-white leading-none truncate">
+                    {pr.name}
+                  </p>
                   <p className="text-[10px] text-grit-dim mt-1">
                     {pr.date ? fmtDate(pr.date) : "—"}
                     {pr.reps ? ` · ${pr.reps} reps` : ""}
@@ -309,7 +365,9 @@ function CataloguePage() {
                 <div className="flex items-center gap-3 shrink-0">
                   {pr.history.length >= 2 && <Sparkline values={pr.history} />}
                   <div className="text-right">
-                    <p className="display text-2xl font-extrabold text-accent-red leading-none">{pr.value}</p>
+                    <p className="display text-2xl font-extrabold text-accent-red leading-none">
+                      {pr.value}
+                    </p>
                     <p className="label-cap text-[8px] text-grit-dim">kg</p>
                   </div>
                 </div>
@@ -322,7 +380,9 @@ function CataloguePage() {
             <p className="text-sm text-grit-dim">
               No PRs yet. Log a workout and hit a lift you've never done — it lands here.
             </p>
-            <Link to="/train" className="btn-ghost mt-4 inline-block px-6">Go train</Link>
+            <Link to="/train" className="btn-ghost mt-4 inline-block px-6">
+              Go train
+            </Link>
           </div>
         )}
       </section>
@@ -339,7 +399,11 @@ function CataloguePage() {
           >
             <X size={18} />
           </button>
-          <img src={lightbox} alt="" className="max-h-[85vh] max-w-full rounded-xl object-contain" />
+          <img
+            src={lightbox}
+            alt=""
+            className="max-h-[85vh] max-w-full rounded-xl object-contain"
+          />
         </div>
       )}
 
