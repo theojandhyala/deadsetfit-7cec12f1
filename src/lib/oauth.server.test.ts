@@ -184,6 +184,43 @@ describe("OAuth broker", () => {
     expect(authorize.searchParams.get("scope")).toBe("name email");
   });
 
+  it("uses the managed session path when a legacy service key belongs to another project", async () => {
+    const mismatchedKey = `${encodeSegment({ alg: "HS256" })}.${encodeSegment({
+      role: "service_role",
+      ref: "different-project",
+    })}.signature`;
+    const fallbackEnv: OAuthBrokerEnv = {
+      ...env,
+      SUPABASE_SERVICE_ROLE_KEY: mismatchedKey,
+      APPLE_OAUTH_CLIENT_ID: "",
+    };
+    const providerUrl = new URL("https://appleid.apple.com/auth/authorize");
+    providerUrl.searchParams.set("redirect_uri", "https://oauth.lovable.app/callback");
+    const fetchMock = vi.fn(async (_input: unknown) => {
+      return new Response(null, {
+        status: 302,
+        headers: { Location: providerUrl.toString() },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await handleOAuthRequest(
+      new Request("https://deadsetfit.org/api/auth/apple/start?state=client-state&flow=native"),
+      fallbackEnv,
+    );
+
+    expect(response?.status).toBe(302);
+    expect(response?.headers.get("location")).toBe(providerUrl.toString());
+    const managedUrl = new URL(String(fetchMock.mock.calls[0][0]));
+    expect(managedUrl.origin).toBe("https://oauth.lovable.app");
+    expect(managedUrl.searchParams.get("project_id")).toBe("de41f7e5-5faf-4590-b8e8-72f7acefa0d6");
+    expect(managedUrl.searchParams.get("provider")).toBe("apple");
+    expect(managedUrl.searchParams.get("redirect_uri")).toBe(
+      "https://deadsetfit.org/auth/native-callback",
+    );
+    expect(managedUrl.searchParams.get("state")).toBe("client-state");
+  });
+
   it("mints a session with the service-role key, never the provider grant", async () => {
     const { response, calls } = await completeFlow("apple");
 
@@ -339,12 +376,12 @@ describe("OAuth broker", () => {
       { ...env, APPLE_OAUTH_CLIENT_ID: "" },
     );
 
-    await expect(response!.json()).resolves.toEqual({ google: true, apple: false });
-    expect(providerConfigured("google", { ...env, GOOGLE_OAUTH_CLIENT_SECRET: "" })).toBe(false);
+    await expect(response!.json()).resolves.toEqual({ google: true, apple: true });
+    expect(providerConfigured("google", { ...env, GOOGLE_OAUTH_CLIENT_SECRET: "" })).toBe(true);
   });
 
-  it("is not ready without the service-role key it now needs", () => {
-    expect(providerConfigured("apple", { ...env, SUPABASE_SERVICE_ROLE_KEY: "" })).toBe(false);
+  it("keeps managed sign-in ready without a service-role key", () => {
+    expect(providerConfigured("apple", { ...env, SUPABASE_SERVICE_ROLE_KEY: "" })).toBe(true);
   });
 
   it("answers a HEAD readiness check with the same redirect", async () => {
@@ -357,15 +394,18 @@ describe("OAuth broker", () => {
     expect(new URL(response!.headers.get("location")!).origin).toBe("https://accounts.google.com");
   });
 
-  it("also reports a provider missing its own client id", async () => {
+  it("falls back when a provider is missing its first-party client id", async () => {
+    const providerUrl = "https://appleid.apple.com/auth/authorize";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(null, { status: 302, headers: { Location: providerUrl } })),
+    );
     const response = await handleOAuthRequest(
       new Request("https://deadsetfit.org/api/auth/apple/start?state=test"),
       { ...env, APPLE_OAUTH_CLIENT_ID: "" },
     );
 
-    const fragment = fragmentOf(response);
-    expect(fragment.get("error_description")).toContain("temporarily unavailable");
-    expect(fragment.get("state")).toBe("test");
+    expect(response?.headers.get("location")).toBe(providerUrl);
   });
 
   it("leaves unknown /api/auth paths to the worker", async () => {

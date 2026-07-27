@@ -1,11 +1,10 @@
 /**
  * First-party OAuth broker for Google and Apple sign-in.
  *
- * Every hop the user sees belongs to deadsetfit.org: the consent screen is
- * issued for our own Google OAuth client / Apple Services ID and returns to
- * https://deadsetfit.org/api/auth/<provider>/callback. No third-party broker
- * and no Supabase-hosted callback host appears in the flow — Supabase's own
- * /authorize redirect would show <project-ref>.supabase.co on the Google screen.
+ * DEADSET owns the public start endpoint and sends the browser directly to the
+ * selected provider. The direct path uses our Google OAuth client / Apple
+ * Services ID and returns to
+ * https://deadsetfit.org/api/auth/<provider>/callback.
  *
  * The session is minted here rather than through Supabase's `grant_type=id_token`
  * endpoint: that grant only accepts client ids allowlisted in the Supabase
@@ -15,10 +14,17 @@
  * id-token.server.ts) and uses the service-role key to create/lock onto the user
  * and redeem an admin magic link, which never leaves the server.
  *
- * The browser round trip is stateless: everything the callback needs (client
- * state, flow, nonce, return origin) rides in an HMAC-signed `state` value.
- * Apple posts its callback cross-site, where a SameSite cookie would not be
- * sent, so a signed state is the only workable carrier.
+ * Lovable-managed Supabase projects do not expose their service-role key. When
+ * the configured legacy key belongs to another project (or first-party provider
+ * credentials are unavailable), the start endpoint hands the attempt to the
+ * project's managed OAuth broker instead. The public entry point remains
+ * deadsetfit.org and the broker returns the finished Supabase session to our
+ * normal web/native callbacks.
+ *
+ * The first-party browser round trip is stateless: everything the callback
+ * needs (client state, flow, nonce, return origin) rides in an HMAC-signed
+ * `state` value. Apple posts its callback cross-site, where a SameSite cookie
+ * would not be sent, so a signed state is the only workable carrier.
  */
 
 import { verifyIdToken, type VerifiedIdentity } from "./id-token.server";
@@ -33,6 +39,7 @@ export interface OAuthBrokerEnv {
   GOOGLE_OAUTH_CLIENT_SECRET?: string;
   APPLE_OAUTH_CLIENT_ID?: string;
   OAUTH_STATE_SECRET?: string;
+  LOVABLE_OAUTH_PROJECT_ID?: string;
 }
 
 /** The provider-registered redirect host. Must match the Google "Authorized
@@ -45,6 +52,8 @@ const ALLOWED_RETURN_ORIGINS = [BROKER_ORIGIN, "https://www.deadsetfit.org"];
 const GOOGLE_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const APPLE_AUTHORIZE_URL = "https://appleid.apple.com/auth/authorize";
+const MANAGED_OAUTH_URL = "https://oauth.lovable.app/initiate";
+const DEFAULT_LOVABLE_PROJECT_ID = "de41f7e5-5faf-4590-b8e8-72f7acefa0d6";
 
 type OAuthFlow = "web" | "native";
 
@@ -184,13 +193,45 @@ function clientId(provider: OAuthProvider, env: OAuthBrokerEnv) {
   return id.trim();
 }
 
-export function providerConfigured(provider: OAuthProvider, env: OAuthBrokerEnv) {
-  // The service-role key is required now that the broker mints the session
-  // itself rather than going through Supabase's provider grant.
+function decodeJwtPayload(value: string) {
+  try {
+    const payload = value.split(".")[1];
+    if (!payload) return null;
+    return JSON.parse(new TextDecoder().decode(fromBase64Url(payload))) as {
+      ref?: string;
+      role?: string;
+    };
+  } catch {
+    return null;
+  }
+}
+
+function configuredProjectRef(env: OAuthBrokerEnv) {
+  try {
+    return new URL(env.SUPABASE_URL ?? "").hostname.split(".")[0] || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Legacy service-role JWTs include the project ref. Reject a key that can
+ * never authenticate against the configured project before a user enters the
+ * provider flow. Modern sb_secret_ keys are opaque and are validated by
+ * Supabase when used. */
+function serviceRoleCanBelongToProject(env: OAuthBrokerEnv) {
+  const key = env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!key) return false;
+  if (!key.startsWith("eyJ")) return true;
+  const payload = decodeJwtPayload(key);
+  const projectRef = configuredProjectRef(env);
+  return payload?.role === "service_role" && !!projectRef && payload.ref === projectRef;
+}
+
+function firstPartyProviderConfigured(provider: OAuthProvider, env: OAuthBrokerEnv) {
   const supabaseReady = Boolean(
     env.SUPABASE_URL?.trim() &&
     env.SUPABASE_PUBLISHABLE_KEY?.trim() &&
-    env.SUPABASE_SERVICE_ROLE_KEY?.trim(),
+    serviceRoleCanBelongToProject(env),
   );
   const stateReady = Boolean(
     env.OAUTH_STATE_SECRET?.trim() || env.SUPABASE_SERVICE_ROLE_KEY?.trim(),
@@ -200,6 +241,14 @@ export function providerConfigured(provider: OAuthProvider, env: OAuthBrokerEnv)
     return Boolean(env.GOOGLE_OAUTH_CLIENT_ID?.trim() && env.GOOGLE_OAUTH_CLIENT_SECRET?.trim());
   }
   return Boolean(env.APPLE_OAUTH_CLIENT_ID?.trim());
+}
+
+function managedProjectId(env: OAuthBrokerEnv) {
+  return env.LOVABLE_OAUTH_PROJECT_ID?.trim() || DEFAULT_LOVABLE_PROJECT_ID;
+}
+
+export function providerConfigured(provider: OAuthProvider, env: OAuthBrokerEnv) {
+  return firstPartyProviderConfigured(provider, env) || Boolean(managedProjectId(env));
 }
 
 function callbackUri(provider: OAuthProvider) {
@@ -426,6 +475,40 @@ function redirect(url: string) {
   });
 }
 
+async function managedAuthorizationUrl(
+  provider: OAuthProvider,
+  clientState: string,
+  flow: OAuthFlow,
+  env: OAuthBrokerEnv,
+) {
+  const callback =
+    flow === "native" ? `${BROKER_ORIGIN}/auth/native-callback` : `${BROKER_ORIGIN}/auth/`;
+  const url = new URL(MANAGED_OAUTH_URL);
+  url.searchParams.set("project_id", managedProjectId(env));
+  url.searchParams.set("provider", provider);
+  url.searchParams.set("redirect_uri", callback);
+  url.searchParams.set("state", clientState);
+  if (provider === "google") url.searchParams.set("prompt", "select_account");
+
+  const response = await fetch(url, { redirect: "manual" });
+  const location = response.headers.get("location");
+  const expectedHost = provider === "google" ? "accounts.google.com" : "appleid.apple.com";
+  const providerUrl = (() => {
+    try {
+      return location ? new URL(location) : null;
+    } catch {
+      return null;
+    }
+  })();
+  if (response.status < 300 || response.status >= 400 || providerUrl?.hostname !== expectedHost) {
+    throw new OAuthFailure(
+      `${providerLabel(provider)} sign-in is temporarily unavailable. Use email for now.`,
+      `managed broker returned HTTP ${response.status}`,
+    );
+  }
+  return providerUrl.toString();
+}
+
 function successRedirect(state: SignedState, provider: OAuthProvider, session: SupabaseSession) {
   const fragment = new URLSearchParams({
     access_token: session.access_token,
@@ -463,6 +546,9 @@ async function handleStart(provider: OAuthProvider, url: URL, env: OAuthBrokerEn
   };
 
   try {
+    if (!firstPartyProviderConfigured(provider, env)) {
+      return redirect(await managedAuthorizationUrl(provider, state.cs, state.flow, env));
+    }
     const id = clientId(provider, env);
     return redirect(authorizationUrl(provider, await signState(state, env), state.nonce, id));
   } catch (error) {

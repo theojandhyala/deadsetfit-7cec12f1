@@ -11,9 +11,8 @@ function check(name, pass, detail, level = "error") {
   checks.push({ name, pass, detail, level });
 }
 
-/** Probes the first-party broker on deadsetfit.org: a healthy provider hands
- *  the browser straight to the provider's own consent screen, with our client
- *  id and a deadsetfit.org callback — no third-party host in between. */
+/** Probes DEADSET's broker entry point. Both the direct session path and the
+ *  managed-session fallback must hand the browser straight to the provider. */
 async function probeOAuthProvider(provider) {
   const expectedHost = provider === "google" ? "accounts.google.com" : "appleid.apple.com";
   const brokerOrigin = "https://deadsetfit.org";
@@ -37,8 +36,10 @@ async function probeOAuthProvider(provider) {
             response.status >= 300 &&
             response.status < 400 &&
             location.hostname === expectedHost &&
-            location.searchParams.get("redirect_uri") ===
+            [
               `${brokerOrigin}/api/auth/${provider}/callback`,
+              "https://oauth.lovable.app/callback",
+            ].includes(location.searchParams.get("redirect_uri")),
         };
       }),
     );
@@ -229,15 +230,17 @@ check(
   "The signup-first auth screen offers Google and Apple OAuth.",
 );
 check(
-  "first-party sign-in brokering",
+  "resilient sign-in brokering",
   oauthClient.includes('OAUTH_BROKER_ORIGIN = "https://deadsetfit.org"') &&
     oauthClient.includes("/api/auth/") &&
     !/lovable/i.test(oauthClient) &&
     !/lovable/i.test(authClient) &&
     oauthServer.includes('BROKER_ORIGIN = "https://deadsetfit.org"') &&
     oauthServer.includes("verifyIdToken") &&
+    oauthServer.includes("serviceRoleCanBelongToProject") &&
+    oauthServer.includes("managedAuthorizationUrl") &&
     worker.includes("handleOAuthRequest"),
-  "Google and Apple sign-in run through deadsetfit.org — no third-party broker appears on the consent screens.",
+  "Google and Apple start on deadsetfit.org, with verified first-party sessions and a managed fallback for Lovable-owned Supabase projects.",
 );
 check(
   "native OAuth callback",

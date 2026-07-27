@@ -1,14 +1,22 @@
-# Google + Apple sign-in on deadsetfit.org
+# Google + Apple sign-in
 
-DEADSET brokers social sign-in itself. Nothing in the flow mentions a third
-party: the user taps **Continue with Google / Apple**, the provider's own
-consent screen says **deadsetfit.org**, and the provider returns to
-`https://deadsetfit.org/api/auth/<provider>/callback`.
+DEADSET owns the public social-login entry point:
+`https://deadsetfit.org/api/auth/<provider>/start`. The worker supports two
+session paths:
+
+1. **First-party session minting** verifies the provider `id_token`, creates or
+   links the Supabase user with a valid service-role key, and redeems an admin
+   magic link.
+2. **Managed session fallback** is used for the current Lovable-managed
+   Supabase project because Lovable does not expose that project's service-role
+   key. The worker validates that a stored legacy key belongs to the configured
+   project before selecting the first-party path. A mismatched key can therefore
+   never send a user into a flow that fails after provider consent.
 
 ```
-/auth/  →  deadsetfit.org/api/auth/google/start   (worker mints a signed state + nonce)
-        →  accounts.google.com/…                  ("Sign in to deadsetfit.org")
-        →  deadsetfit.org/api/auth/google/callback (code → id_token → Supabase session)
+/auth/  →  deadsetfit.org/api/auth/google/start
+        →  accounts.google.com/…
+        →  verified first-party session OR managed Supabase session
         →  /auth/#access_token=…                  (web)
            /auth/native-callback#access_token=…   (iPhone → org.deadsetfit.app://auth/callback)
 ```
@@ -17,15 +25,15 @@ Code: [`src/lib/oauth.server.ts`](../src/lib/oauth.server.ts) (worker broker),
 [`src/auth/oauth.ts`](../src/auth/oauth.ts) +
 [`src/auth/plain.ts`](../src/auth/plain.ts) (client).
 
-The broker converts the provider's `id_token` into a Supabase session with the
-`grant_type=id_token` endpoint. Supabase's own `/authorize` redirect is
-deliberately unused — it would put `<project-ref>.supabase.co` on the Google
-screen.
+The direct path does not use Supabase's `grant_type=id_token` endpoint. It
+verifies RS256 signatures, issuer, audience, expiry, email verification, and
+nonce inside the worker before using Supabase admin APIs.
 
 ## One-time setup
 
-Everything below happens in consoles you own. The code is already deployed and
-reports `{"google":false}` on `/api/auth/providers` until the credentials exist.
+The managed fallback requires no additional credential for this project.
+Everything below is optional setup for moving fully to the first-party path
+after DEADSET controls its own Supabase project and service-role key.
 
 ### 1. Google (≈10 min)
 
@@ -58,10 +66,15 @@ reports `{"google":false}` on `/api/auth/providers` until the credentials exist.
    npx wrangler secret put GOOGLE_OAUTH_CLIENT_SECRET --name deadset
    ```
 
-5. Supabase → **Authentication → Providers → Google** (already enabled): paste
-   the same client ID into **Client IDs** (the id_token/native field, comma
-   separated). That list is what Supabase checks when the broker redeems the
-   token. Leave "Skip nonce check" **off** — the broker always sends a nonce.
+5. Store the valid service-role credential for the same project as
+   `SUPABASE_URL`:
+
+   ```bash
+   npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY --name deadset
+   ```
+
+   A legacy JWT with a different project `ref` is rejected before sign-in
+   starts. Do not copy a key from another Supabase project.
 
 ### 2. Apple (≈15 min, needs the paid Apple Developer account)
 
@@ -89,11 +102,6 @@ reports `{"google":false}` on `/api/auth/providers` until the credentials exist.
 
    (value: `org.deadsetfit.web`)
 
-4. Supabase → **Authentication → Providers → Apple** (already enabled): set
-   **Client IDs** to `org.deadsetfit.web,org.deadsetfit.app` — the Services ID
-   for web/iPhone-browser sign-in, the bundle ID for a future native Sign in
-   with Apple sheet.
-
 No Apple client-secret JWT is needed: the broker asks for
 `response_type=code id_token` with `response_mode=form_post`, so Apple hands
 back a verifiable identity token directly. Nothing to rotate every six months.
@@ -111,10 +119,9 @@ the provider:
 curl -sI "https://deadsetfit.org/api/auth/google/start?state=test&flow=web&origin=https://deadsetfit.org" | grep -i location
 ```
 
-Expect a `302` to `accounts.google.com` with
-`redirect_uri=https://deadsetfit.org/api/auth/google/callback`. A redirect back
-to `/auth/#error=…` means a credential is missing — the worker logs the reason
-(`wrangler tail --name deadset`).
+Expect a `302` to `accounts.google.com`. Its `redirect_uri` is the DEADSET
+callback on the direct path and the managed broker callback on the fallback
+path. A redirect back to `/auth/#error=…` means both paths are unavailable.
 
 Full readiness sweep, including both providers live:
 
@@ -124,24 +131,25 @@ npm run appstore:strict
 
 ## Worker configuration
 
-| Name                                       | Kind             | Purpose                                                                  |
-| ------------------------------------------ | ---------------- | ------------------------------------------------------------------------ |
-| `GOOGLE_OAUTH_CLIENT_ID`                   | secret           | Google web client                                                        |
-| `GOOGLE_OAUTH_CLIENT_SECRET`               | secret           | Google code→id_token exchange                                            |
-| `APPLE_OAUTH_CLIENT_ID`                    | secret           | Apple Services ID (`org.deadsetfit.web`)                                 |
-| `OAUTH_STATE_SECRET`                       | secret, optional | HMAC key for the signed state; falls back to `SUPABASE_SERVICE_ROLE_KEY` |
-| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | existing         | id_token → session exchange                                              |
+| Name                                       | Kind             | Purpose                                                                   |
+| ------------------------------------------ | ---------------- | ------------------------------------------------------------------------- |
+| `GOOGLE_OAUTH_CLIENT_ID`                   | secret           | Google web client                                                         |
+| `GOOGLE_OAUTH_CLIENT_SECRET`               | secret           | Google code→id_token exchange                                             |
+| `APPLE_OAUTH_CLIENT_ID`                    | secret           | Apple Services ID (`org.deadsetfit.web`)                                  |
+| `OAUTH_STATE_SECRET`                       | secret, optional | HMAC key for direct-path signed state                                     |
+| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | existing         | Active Supabase project and public client key                             |
+| `SUPABASE_SERVICE_ROLE_KEY`                | secret, optional | Direct session minting; must belong to the same project as `SUPABASE_URL` |
+| `LOVABLE_OAUTH_PROJECT_ID`                 | secret, optional | Override for the public managed project ID                                |
 
 ## Notes
 
-- **Local development** against the deployed broker works: the client sends
-  `origin=http://localhost:5173` and the broker returns the session there.
-  Only origins we own (plus localhost) are accepted — the fragment carries
-  tokens, so an unchecked origin would be a token-leaking open redirect.
+- **Local development** can start authentication through the deployed broker.
+  The direct path may return to localhost; the managed fallback returns to the
+  canonical production auth page because its callback allowlist rejects local
+  addresses.
 - **iPhone** uses the same broker inside `SFSafariViewController` (Google blocks
   embedded webviews) and comes home through
   `https://deadsetfit.org/auth/native-callback`, which deep links to
   `org.deadsetfit.app://auth/callback`.
-- **Deleting a provider** is a one-liner: clear its client ID secret and
-  `/api/auth/providers` reports it as unavailable, which makes the button say
-  "use email for now" instead of failing mid-redirect.
+- Removing a first-party provider credential automatically selects the managed
+  fallback. Provider availability is checked at the DEADSET start endpoint.
