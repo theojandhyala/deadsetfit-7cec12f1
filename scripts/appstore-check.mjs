@@ -235,7 +235,7 @@ check(
     !/lovable/i.test(oauthClient) &&
     !/lovable/i.test(authClient) &&
     oauthServer.includes('BROKER_ORIGIN = "https://deadsetfit.org"') &&
-    oauthServer.includes("grant_type=id_token") &&
+    oauthServer.includes("verifyIdToken") &&
     worker.includes("handleOAuthRequest"),
   "Google and Apple sign-in run through deadsetfit.org — no third-party broker appears on the consent screens.",
 );

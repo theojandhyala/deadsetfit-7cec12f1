@@ -3,17 +3,25 @@
  *
  * Every hop the user sees belongs to deadsetfit.org: the consent screen is
  * issued for our own Google OAuth client / Apple Services ID and returns to
- * https://deadsetfit.org/api/auth/<provider>/callback. The broker then trades
- * the provider's id_token for a Supabase session using the id_token grant, so
- * neither a third-party broker nor the Supabase-hosted callback host ever
- * appears in the flow (Supabase's own /authorize redirect would show
- * <project-ref>.supabase.co on the Google screen).
+ * https://deadsetfit.org/api/auth/<provider>/callback. No third-party broker
+ * and no Supabase-hosted callback host appears in the flow — Supabase's own
+ * /authorize redirect would show <project-ref>.supabase.co on the Google screen.
+ *
+ * The session is minted here rather than through Supabase's `grant_type=id_token`
+ * endpoint: that grant only accepts client ids allowlisted in the Supabase
+ * project's provider config, and this project is Lovable-managed, so that config
+ * is not ours to change (it rejected our own client with "Unacceptable audience
+ * in id_token"). Instead the worker verifies the provider's id_token itself (see
+ * id-token.server.ts) and uses the service-role key to create/lock onto the user
+ * and redeem an admin magic link, which never leaves the server.
  *
  * The browser round trip is stateless: everything the callback needs (client
  * state, flow, nonce, return origin) rides in an HMAC-signed `state` value.
  * Apple posts its callback cross-site, where a SameSite cookie would not be
  * sent, so a signed state is the only workable carrier.
  */
+
+import { verifyIdToken, type VerifiedIdentity } from "./id-token.server";
 
 export type OAuthProvider = "google" | "apple";
 
@@ -177,7 +185,13 @@ function clientId(provider: OAuthProvider, env: OAuthBrokerEnv) {
 }
 
 export function providerConfigured(provider: OAuthProvider, env: OAuthBrokerEnv) {
-  const supabaseReady = Boolean(env.SUPABASE_URL?.trim() && env.SUPABASE_PUBLISHABLE_KEY?.trim());
+  // The service-role key is required now that the broker mints the session
+  // itself rather than going through Supabase's provider grant.
+  const supabaseReady = Boolean(
+    env.SUPABASE_URL?.trim() &&
+    env.SUPABASE_PUBLISHABLE_KEY?.trim() &&
+    env.SUPABASE_SERVICE_ROLE_KEY?.trim(),
+  );
   const stateReady = Boolean(
     env.OAUTH_STATE_SECRET?.trim() || env.SUPABASE_SERVICE_ROLE_KEY?.trim(),
   );
@@ -262,43 +276,142 @@ type SupabaseSession = {
   token_type?: string;
 };
 
-async function supabaseSession(
-  provider: OAuthProvider,
-  idToken: string,
-  nonce: string,
-  env: OAuthBrokerEnv,
-): Promise<SupabaseSession> {
-  const supabaseUrl = env.SUPABASE_URL?.trim();
+function supabaseEnv(env: OAuthBrokerEnv) {
+  const url = env.SUPABASE_URL?.trim();
   const publishableKey = env.SUPABASE_PUBLISHABLE_KEY?.trim();
-  if (!supabaseUrl || !publishableKey) {
+  const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!url || !publishableKey || !serviceRoleKey) {
     throw new OAuthFailure("Sign in is not configured.", "Supabase env is missing");
   }
+  return { url, publishableKey, serviceRoleKey };
+}
 
-  const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=id_token`, {
+async function readError(response: Response) {
+  const payload = (await response.json().catch(() => ({}))) as {
+    msg?: string;
+    message?: string;
+    error_description?: string;
+    error?: string;
+    error_code?: string;
+  };
+  return (
+    payload.msg ||
+    payload.message ||
+    payload.error_description ||
+    payload.error_code ||
+    payload.error ||
+    `HTTP ${response.status}`
+  );
+}
+
+/** Creates the account on first sign-in. An existing address is not an error:
+ *  the identity is matched to it, which is why the id_token's email must be
+ *  provider-verified before we get here. */
+async function ensureUser(identity: VerifiedIdentity, env: OAuthBrokerEnv) {
+  const { url, serviceRoleKey } = supabaseEnv(env);
+  const response = await fetch(`${url}/auth/v1/admin/users`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+    },
+    body: JSON.stringify({
+      email: identity.email,
+      email_confirm: true,
+      user_metadata: {
+        full_name: identity.name,
+        avatar_url: identity.picture,
+        [`${identity.provider}_sub`]: identity.subject,
+      },
+      app_metadata: { provider: identity.provider, providers: [identity.provider] },
+    }),
+  });
+  if (response.ok) return;
+
+  const detail = await readError(response);
+  if (/already|registered|exists/i.test(detail)) return;
+  throw new OAuthFailure(
+    `${providerLabel(identity.provider)} sign-in could not be completed. Please try again or use email.`,
+    `admin create user: ${detail}`,
+  );
+}
+
+/** Mints a real Supabase session without the provider's own grant: an admin
+ *  magic link is generated (never emailed) and immediately redeemed here. */
+async function sessionForEmail(
+  provider: OAuthProvider,
+  email: string,
+  env: OAuthBrokerEnv,
+): Promise<SupabaseSession> {
+  const { url, publishableKey, serviceRoleKey } = supabaseEnv(env);
+
+  const linkResponse = await fetch(`${url}/auth/v1/admin/generate_link`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+    },
+    body: JSON.stringify({ type: "magiclink", email }),
+  });
+  if (!linkResponse.ok) {
+    throw new OAuthFailure(
+      `${providerLabel(provider)} sign-in could not be completed. Please try again or use email.`,
+      `generate_link: ${await readError(linkResponse)}`,
+    );
+  }
+  const { hashed_token: hashedToken } = (await linkResponse.json()) as { hashed_token?: string };
+  if (!hashedToken) {
+    throw new OAuthFailure(
+      `${providerLabel(provider)} sign-in could not be completed. Please try again or use email.`,
+      "generate_link returned no hashed_token",
+    );
+  }
+
+  const verifyResponse = await fetch(`${url}/auth/v1/verify`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       apikey: publishableKey,
       Authorization: `Bearer ${publishableKey}`,
     },
-    body: JSON.stringify({ provider, id_token: idToken, nonce }),
+    body: JSON.stringify({ type: "magiclink", token_hash: hashedToken }),
   });
-
-  const payload = (await response.json().catch(() => ({}))) as Partial<SupabaseSession> & {
-    msg?: string;
-    error_description?: string;
-    error?: string;
-  };
-  if (!response.ok || !payload.access_token || !payload.refresh_token) {
+  const session = (await verifyResponse.json().catch(() => ({}))) as Partial<SupabaseSession>;
+  if (!verifyResponse.ok || !session.access_token || !session.refresh_token) {
     throw new OAuthFailure(
       `${providerLabel(provider)} sign-in could not be completed. Please try again or use email.`,
-      payload.msg ||
-        payload.error_description ||
-        payload.error ||
-        `supabase id_token HTTP ${response.status}`,
+      `verify magiclink: HTTP ${verifyResponse.status}`,
     );
   }
-  return payload as SupabaseSession;
+  return session as SupabaseSession;
+}
+
+async function supabaseSession(
+  provider: OAuthProvider,
+  idToken: string,
+  nonce: string,
+  env: OAuthBrokerEnv,
+): Promise<SupabaseSession> {
+  let identity: VerifiedIdentity;
+  try {
+    identity = await verifyIdToken({
+      provider,
+      idToken,
+      audience: clientId(provider, env),
+      nonce,
+    });
+  } catch (error) {
+    if (error instanceof OAuthFailure) throw error;
+    throw new OAuthFailure(
+      `${providerLabel(provider)} sign-in could not be verified. Please try again.`,
+      error instanceof Error ? error.message : "id_token verification failed",
+    );
+  }
+
+  await ensureUser(identity, env);
+  return sessionForEmail(provider, identity.email, env);
 }
 
 function returnUrl(state: SignedState, fragment: URLSearchParams) {
