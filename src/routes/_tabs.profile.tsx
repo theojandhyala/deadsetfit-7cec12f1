@@ -594,6 +594,7 @@ function ProfilePage() {
                 <p className="label-cap text-[10px] text-pro/90 mt-0.5">Membership active</p>
                 <div className="grid grid-cols-1 gap-1.5 mt-3 mb-4">
                   {[
+                    "Weekly Review + PR Roadmap",
                     "Streak Armor — never lose your streak",
                     "Progression intelligence + Ghost Mode",
                     "Full Weekly Leagues + H2H challenges",

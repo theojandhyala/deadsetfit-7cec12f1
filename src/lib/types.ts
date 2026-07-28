@@ -241,6 +241,13 @@ export interface StreakArmor {
   usedDates: string[];
 }
 
+export interface StrengthGoal {
+  exerciseId: string;
+  /** Target estimated one-rep max in kilograms. */
+  targetKg: number;
+  createdAt: string;
+}
+
 export interface AppState {
   profile: Profile | null;
   schedule: Schedule | null;
@@ -278,6 +285,8 @@ export interface AppState {
     strategy: "BALANCED" | "STRENGTH" | "HYPERTROPHY";
     lastAppliedAt?: string;
   };
+  /** Pro PR Roadmap targets, derived from the athlete's logged lift history. */
+  strengthGoals?: StrengthGoal[];
   /** Where this user came from, captured on their first visit (referrer/UTM). */
   signupSource?: {
     source: string;

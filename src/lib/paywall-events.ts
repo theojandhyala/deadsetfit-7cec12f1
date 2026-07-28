@@ -17,7 +17,9 @@ export type PaywallFeature =
   | "plan-audit"
   | "advanced-programming"
   | "smart-swaps"
-  | "autopilot";
+  | "autopilot"
+  | "weekly-review"
+  | "pr-roadmap";
 
 export type PaywallEvent = {
   id: string;

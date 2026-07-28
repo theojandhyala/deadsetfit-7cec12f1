@@ -19,6 +19,8 @@ import {
   Settings2,
   RefreshCw,
   Gauge,
+  ClipboardCheck,
+  Flag,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
@@ -44,6 +46,18 @@ export const Route = createFileRoute("/upgrade")({
 });
 
 const PRO_FEATURES = [
+  {
+    icon: ClipboardCheck,
+    color: "#f4c33a",
+    title: "Pro Weekly Review",
+    desc: "One weekly decision screen combines progression, plateaus, volume, balance and PR targets into the next three moves.",
+  },
+  {
+    icon: Flag,
+    color: "#f4c33a",
+    title: "PR Roadmap",
+    desc: "Set target estimated maxes for your lifts, track the exact gap and project a milestone date from your real training trend.",
+  },
   {
     icon: Gauge,
     color: "#f4c33a",
@@ -72,7 +86,7 @@ const PRO_FEATURES = [
     icon: Activity,
     color: "#f4c33a",
     title: "DEADSET Intelligence",
-    desc: "Volume Optimizer (MEV/MAV/MRV), Plateau Breaker, strength-trajectory projections and a muscle-balance score — the science-based coaching other apps lock behind a subscription, built in.",
+    desc: "Volume Optimizer, Plateau Breaker, strength-trajectory projections and a training-balance score, all computed from your own logs.",
   },
   {
     icon: Shield,
@@ -246,8 +260,8 @@ function UpgradePage() {
             <span style={{ color: "#e63222" }}>PRO</span>
           </h1>
           <p className="mt-3 text-sm max-w-xs mx-auto leading-relaxed" style={{ color: "#8A8A8A" }}>
-            Everything core is free forever. Pro is for the ones chasing rank — deeper competition,
-            sharper insight, real status.
+            Everything needed to log and train stays free. Pro turns your history into clear weekly
+            decisions, automatic progression and measurable targets.
           </p>
         </div>
 
@@ -285,57 +299,7 @@ function UpgradePage() {
           </div>
         </div>
 
-        {/* Free vs Pro — the full table */}
-        <div className="px-5 mt-6">
-          <div className="deadset-3d-panel bg-grit-card border border-grit rounded-2xl overflow-hidden">
-            <div className="grid grid-cols-[1fr_52px_52px] items-center px-4 py-3 border-b border-grit bg-[#101010]">
-              <span className="label-cap text-[9px] text-grit-dim">What you get</span>
-              <span className="label-cap text-[9px] text-grit-dim text-center">Free</span>
-              <span className="label-cap text-[9px] text-center" style={{ color: "#e63222" }}>
-                Pro
-              </span>
-            </div>
-            {COMPARE_ROWS.map((r) => (
-              <div
-                key={r.label}
-                className="grid grid-cols-[1fr_52px_52px] items-center px-4 py-2.5 border-b border-grit/50 last:border-b-0"
-              >
-                <span className="text-xs text-grit font-medium">{r.label}</span>
-                <span className="text-center text-[10px] leading-tight text-grit-dim px-0.5">
-                  {typeof r.free === "string" ? (
-                    r.free
-                  ) : r.free ? (
-                    <Check size={14} className="inline text-grit" />
-                  ) : (
-                    "—"
-                  )}
-                </span>
-                <span className="text-center px-0.5">
-                  {typeof r.pro === "string" ? (
-                    <span
-                      className="text-[10px] leading-tight font-bold"
-                      style={{ color: "#e63222" }}
-                    >
-                      {r.pro}
-                    </span>
-                  ) : (
-                    <Check size={14} className="inline" style={{ color: "#e63222" }} />
-                  )}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Trust strip */}
-        <p
-          className="mt-4 px-8 text-center label-cap text-[9px] leading-relaxed"
-          style={{ color: "#8a8a8a" }}
-        >
-          Secure payment by Stripe · Promo codes enabled · Cancel anytime
-        </p>
-
-        {/* CTA */}
+        {/* CTA stays above the detailed comparison so the next step is immediate. */}
         <div className="px-5 mt-5">
           {sessionError && (
             <p className="mb-3 text-center text-xs" style={{ color: "#e63222" }}>
@@ -352,6 +316,65 @@ function UpgradePage() {
           <p className="mt-2.5 text-center text-[10px]" style={{ color: "#8a8a8a" }}>
             Takes under a minute — then checkout loads right here.
           </p>
+          <p
+            className="mt-3 text-center label-cap text-[9px] leading-relaxed"
+            style={{ color: "#8a8a8a" }}
+          >
+            Secure payment by Stripe · Promo codes enabled · Cancel anytime
+          </p>
+        </div>
+
+        <div className="px-5 mt-5">
+          <button
+            type="button"
+            onClick={() => setShowCompare((current) => !current)}
+            className="btn-ghost w-full py-3 text-xs rounded-2xl"
+          >
+            {showCompare ? "Hide detailed comparison" : "Compare Free and Pro"}
+          </button>
+          {showCompare && (
+            <div className="deadset-3d-panel bg-grit-card border border-grit rounded-2xl overflow-hidden mt-3">
+              <div className="grid grid-cols-[1fr_52px_52px] items-center px-4 py-3 border-b border-grit bg-[#101010]">
+                <span className="label-cap text-[9px] text-grit-dim">What you get</span>
+                <span className="label-cap text-[9px] text-grit-dim text-center">Free</span>
+                <span className="label-cap text-[9px] text-center" style={{ color: "#e63222" }}>
+                  Pro
+                </span>
+              </div>
+              {COMPARE_ROWS.map((r) => (
+                <div
+                  key={r.label}
+                  className="grid grid-cols-[1fr_52px_52px] items-center px-4 py-2.5 border-b border-grit/50 last:border-b-0"
+                >
+                  <span className="text-xs text-grit font-medium">{r.label}</span>
+                  <span className="text-center text-[10px] leading-tight text-grit-dim px-0.5">
+                    {typeof r.free === "string" ? (
+                      r.free
+                    ) : r.free ? (
+                      <Check size={14} className="inline text-grit" />
+                    ) : (
+                      "—"
+                    )}
+                  </span>
+                  <span className="text-center px-0.5">
+                    {typeof r.pro === "string" ? (
+                      <span
+                        className="text-[10px] leading-tight font-bold"
+                        style={{ color: "#e63222" }}
+                      >
+                        {r.pro}
+                      </span>
+                    ) : (
+                      <Check size={14} className="inline" style={{ color: "#e63222" }} />
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="px-5">
           <Link
             to="/"
             className="mt-4 block text-center label-cap text-[10px] text-grit-dim press py-2"
@@ -379,13 +402,20 @@ function UpgradePage() {
           <Crown size={36} color="#fff" />
         </div>
         <h1 className="display text-3xl font-extrabold text-white uppercase tracking-wider">
-          You're Pro
+          DEADSET Pro is active
         </h1>
-        <p className="mt-2 text-sm" style={{ color: "#8A8A8A" }}>
-          All features unlocked. Train harder.
+        <p className="mt-2 max-w-sm text-sm leading-relaxed" style={{ color: "#8A8A8A" }}>
+          Your Weekly Review, PR Roadmap, Training Autopilot and every advanced training tool are
+          ready.
         </p>
-        <Link to="/train" className="btn-grit mt-6 px-8">
-          Back to training
+        <Link
+          to="/progress"
+          className="btn-grit mt-6 flex min-h-12 items-center justify-center gap-2 px-8"
+        >
+          <ClipboardCheck size={16} /> Open Weekly Review
+        </Link>
+        <Link to="/train" className="btn-ghost mt-3 px-8">
+          Go to training
         </Link>
         {!iosNative && (
           <button
@@ -460,23 +490,21 @@ function UpgradePage() {
               Fully dialled in.
             </h1>
             <p className="mt-3 text-sm" style={{ color: "#8A8A8A" }}>
-              Keep logging free, forever. Pro adds automatic progression, deeper analytics, advanced
-              programming and head-to-head competition.
+              Keep logging free, forever. Pro reviews the week, updates the plan, projects your next
+              PR and shows exactly what to change.
             </p>
             <div className="flex items-center justify-center gap-4 mt-4">
               <div className="flex items-center gap-1.5 animate-pop-in delay-50">
                 <Users size={13} style={{ color: "#e63222" }} />
-                <span className="text-xs font-bold text-white">
-                  {COMPARE_ROWS.filter((row) => row.free !== true).length} Pro features
-                </span>
+                <span className="text-xs font-bold text-white">Weekly decisions</span>
               </div>
               <div className="flex items-center gap-1.5 animate-pop-in delay-150">
                 <Gauge size={13} style={{ color: "#FAFAFA" }} />
-                <span className="text-xs font-bold text-white">1-tap Autopilot</span>
+                <span className="text-xs font-bold text-white">1-tap progression</span>
               </div>
               <div className="flex items-center gap-1.5 animate-pop-in delay-250">
                 <Flame size={13} style={{ color: "#e63222" }} />
-                <span className="text-xs font-bold text-white">Cancel any time</span>
+                <span className="text-xs font-bold text-white">PR roadmaps</span>
               </div>
             </div>
           </div>

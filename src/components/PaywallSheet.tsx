@@ -19,6 +19,8 @@ import {
   FileBarChart,
   SlidersHorizontal,
   Gauge,
+  ClipboardCheck,
+  Flag,
 } from "lucide-react";
 import { onPaywall, type PaywallFeature } from "@/lib/paywall-events";
 import {
@@ -42,6 +44,26 @@ const FEATURE_PITCH: Record<
       "Calls recovery deloads and updates weights and sets across your plan",
     ],
     icon: Gauge,
+  },
+  "weekly-review": {
+    title: "Pro Weekly Review",
+    tagline: "Open the app. Know the next three moves.",
+    bullets: [
+      "Combines progression, plateaus, volume, balance and PR targets",
+      "Turns your logged data into a short, prioritized action queue",
+      "A clear week score shows whether training is actually moving",
+    ],
+    icon: ClipboardCheck,
+  },
+  "pr-roadmap": {
+    title: "PR Roadmap",
+    tagline: "Put a number and a date on the next milestone.",
+    bullets: [
+      "Set target estimated maxes for every tracked lift",
+      "See the exact gap and progress percentage",
+      "Project milestone dates from your real strength trend",
+    ],
+    icon: Flag,
   },
   "streak-armor": {
     title: "Streak Armor",
@@ -281,7 +303,7 @@ export function PaywallSheet() {
           // App Store Guideline 3.1.1: no price, no external-purchase CTA on iOS.
           <>
             <p className="mt-6 text-sm text-grit-dim leading-relaxed">
-              This is a DEADSET Pro feature. Pro isn’t available on iPhone yet.
+              This is a DEADSET Pro feature. Pro isn't available on iPhone yet.
             </p>
             <button onClick={close} className="btn-grit w-full mt-4 py-3.5">
               Got it

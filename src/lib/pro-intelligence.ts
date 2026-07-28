@@ -5,7 +5,7 @@
 //   1. Volume Optimizer  — weekly sets per muscle vs science-based landmarks (MEV/MAV/MRV)
 //   2. Plateau Breaker   — stall detection + a concrete deload prescription
 //   3. Strength Trajectory — estimated-1RM trend + a projected milestone date
-//   4. Muscle Balance    — push/pull + legs/upper ratios and an injury-risk score
+//   4. Muscle Balance    — push/pull + legs/upper training-volume ratios
 import type { AppState } from "./types";
 import { estimate1RM } from "./calc";
 import { toMuscleGroup, MUSCLE_GROUPS, type MuscleGroup } from "./recovery";
@@ -271,7 +271,7 @@ export function trajectories(state: AppState, now = Date.now()): Trajectory[] {
 }
 
 // ————————————————————————————————————————————————————————
-// 4. Muscle Balance + injury-risk score
+// 4. Muscle Balance
 // ————————————————————————————————————————————————————————
 export interface BalanceRatio {
   key: string;
@@ -337,8 +337,8 @@ export function muscleBalance(state: AppState, now = Date.now()): MuscleBalance 
     ),
   );
 
-  // Injury-risk-ish score: start at 100, penalise each ratio by how far it sits
-  // outside its ideal band (as a fraction of the band centre).
+  // Training-balance score: start at 100, then penalise each ratio by how far
+  // it sits outside its ideal band (as a fraction of the band centre).
   let score = 100;
   for (const r of ratios) {
     if (r.status === "balanced") continue;
@@ -427,6 +427,57 @@ export function allInsights(state: AppState, now = Date.now()): Insight[] {
 
 export function topInsight(state: AppState, now = Date.now()): Insight | null {
   return allInsights(state, now)[0] ?? null;
+}
+
+// ————————————————————————————————————————————————————————
+// PR Roadmap — user-defined e1RM targets with progress and trend-based ETA
+// ————————————————————————————————————————————————————————
+export interface StrengthGoalRoadmap {
+  exerciseId: string;
+  name: string;
+  targetKg: number;
+  currentKg: number;
+  remainingKg: number;
+  progress: number;
+  perWeek: number | null;
+  etaDate: string | null;
+  reached: boolean;
+}
+
+export function strengthGoalRoadmaps(
+  state: AppState,
+  now = Date.now(),
+): StrengthGoalRoadmap[] {
+  const series = new Map(liftSeriesAll(state, 1).map((lift) => [lift.exerciseId, lift]));
+  const trends = new Map(trajectories(state, now).map((trend) => [trend.exerciseId, trend]));
+
+  return (state.strengthGoals ?? [])
+    .map((goal) => {
+      const lift = series.get(goal.exerciseId);
+      if (!lift) return null;
+      const currentKg = Math.max(...lift.points.map((point) => point.e1rm));
+      const trend = trends.get(goal.exerciseId);
+      const remainingKg = Math.max(0, Math.round((goal.targetKg - currentKg) * 10) / 10);
+      const reached = currentKg >= goal.targetKg;
+      const progress = Math.max(0, Math.min(100, Math.round((currentKg / goal.targetKg) * 100)));
+      let etaDate: string | null = null;
+      if (!reached && trend && trend.perWeek > 0) {
+        const days = Math.ceil((remainingKg / trend.perWeek) * 7);
+        if (days > 0 && days <= 730) etaDate = new Date(now + days * DAY_MS).toISOString();
+      }
+      return {
+        exerciseId: goal.exerciseId,
+        name: lift.name,
+        targetKg: goal.targetKg,
+        currentKg,
+        remainingKg,
+        progress,
+        perWeek: trend?.perWeek ?? null,
+        etaDate,
+        reached,
+      };
+    })
+    .filter((goal): goal is StrengthGoalRoadmap => goal !== null);
 }
 
 // ————————————————————————————————————————————————————————

@@ -215,7 +215,7 @@ export function ProIntelligence({ state }: { state: AppState }) {
         <SectionTitle
           icon={Scale}
           title="Muscle Balance"
-          sub="Training symmetry and injury-risk from your last 4 weeks"
+          sub="Push, pull and lower-body volume balance from your last 4 weeks"
         />
         {!balance.hasData ? (
           <p className="text-sm text-grit-dim mt-1">Train a bit more to assess your balance.</p>
@@ -235,10 +235,10 @@ export function ProIntelligence({ state }: { state: AppState }) {
                 <p className="text-xs font-bold uppercase text-grit">Balance score</p>
                 <p className="text-[11px] text-grit-dim">
                   {balance.score >= 80
-                    ? "Well balanced — low imbalance risk."
+                    ? "Your recent training volume is well balanced."
                     : balance.score >= 55
-                      ? "Minor imbalances to address."
-                      : "Notable imbalance — injury risk."}
+                      ? "A small volume imbalance is worth addressing."
+                      : "Your recent volume is notably uneven."}
                 </p>
               </div>
             </div>

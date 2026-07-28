@@ -18,6 +18,8 @@ import { PR_CATALOG, getPRValue } from "@/lib/fifa-stats";
 import { strengthStandard, repMaxTable, TIER_COLORS } from "@/lib/strength-standards";
 import { AppleFitnessCard } from "@/components/AppleFitnessCard";
 import { TrainingAutopilot } from "@/components/TrainingAutopilot";
+import { ProWeeklyReview } from "@/components/ProWeeklyReview";
+import { PRRoadmap } from "@/components/PRRoadmap";
 
 export const Route = createFileRoute("/_tabs/progress")({
   head: () => ({ meta: [{ title: "DEADSET — Progress" }] }),
@@ -360,8 +362,10 @@ function ProgressPage() {
         <Stat label="PRS" value={`${totalPRs}`} sub="HIT" accent={totalPRs > 0} />
       </section>
 
+      <ProWeeklyReview />
       <AppleFitnessCard />
       <TrainingAutopilot />
+      <PRRoadmap />
 
       {/* The Catalogue — visual journey (photos, PR wall, before/after) */}
       <section className="px-5 mb-6 animate-slide-up delay-50">
@@ -603,8 +607,8 @@ function ProgressPage() {
                   DEADSET Intelligence
                 </p>
                 <p className="text-xs text-[#b7ac8e] mt-2 mb-3 leading-relaxed">
-                  Volume Optimizer, Plateau Breaker, strength projections and your muscle-balance
-                  score — the science-based coaching other apps lock behind a subscription.
+                  Volume Optimizer, Plateau Breaker, strength projections and your training-balance
+                  score, all calculated from the sets you log.
                 </p>
                 <button
                   onClick={() => openPaywall("advanced-analytics")}

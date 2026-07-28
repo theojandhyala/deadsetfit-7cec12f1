@@ -24,7 +24,7 @@ const COPY: Record<NudgeTrigger, { title: string; message: string }> = {
   weekly: {
     title: "Train smarter this week",
     message:
-      "Your Volume Optimizer, plateau alerts and muscle-balance score are one tap away — the science-based coaching other apps lock behind a subscription.",
+      "Your Weekly Review, Volume Optimizer, plateau alerts and training-balance score are one tap away.",
   },
   feature: {
     title: "That's a Pro feature",

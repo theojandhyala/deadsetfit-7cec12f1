@@ -5,6 +5,8 @@ import { usePro } from "@/hooks/usePro";
 const WELCOME_FLAG = "deadset_pro_welcomed_v1";
 
 const UNLOCKED = [
+  "Weekly Review — your next three moves, prioritized",
+  "PR Roadmap — targets, gaps and projected dates",
   "Streak Armor — your streak is now protected",
   "Progression intelligence + Ghost Mode",
   "Full Weekly Leagues + Head-to-Head",
