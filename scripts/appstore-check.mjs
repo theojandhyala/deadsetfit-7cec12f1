@@ -11,8 +11,7 @@ function check(name, pass, detail, level = "error") {
   checks.push({ name, pass, detail, level });
 }
 
-/** Probes DEADSET's broker entry point. Both the direct session path and the
- *  managed-session fallback must hand the browser straight to the provider. */
+/** Probes DEADSET's broker entry point and requires DEADSET's callback. */
 async function probeOAuthProvider(provider) {
   const expectedHost = provider === "google" ? "accounts.google.com" : "appleid.apple.com";
   const brokerOrigin = "https://deadsetfit.org";
@@ -36,10 +35,8 @@ async function probeOAuthProvider(provider) {
             response.status >= 300 &&
             response.status < 400 &&
             location.hostname === expectedHost &&
-            [
+            location.searchParams.get("redirect_uri") ===
               `${brokerOrigin}/api/auth/${provider}/callback`,
-              "https://oauth.lovable.app/callback",
-            ].includes(location.searchParams.get("redirect_uri")),
         };
       }),
     );
@@ -269,9 +266,9 @@ check(
     oauthServer.includes('BROKER_ORIGIN = "https://deadsetfit.org"') &&
     oauthServer.includes("verifyIdToken") &&
     oauthServer.includes("serviceRoleCanBelongToProject") &&
-    oauthServer.includes("managedAuthorizationUrl") &&
+    !/lovable/i.test(oauthServer) &&
     worker.includes("handleOAuthRequest"),
-  "Google and Apple start on deadsetfit.org, with verified first-party sessions and a managed fallback for Lovable-owned Supabase projects.",
+  "Google and Apple use DEADSET-owned clients, callbacks, token verification, and Supabase sessions without a third-party OAuth broker.",
 );
 check(
   "native OAuth callback",

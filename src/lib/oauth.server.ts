@@ -7,15 +7,9 @@
  * https://deadsetfit.org/api/auth/<provider>/callback.
  *
  * The worker verifies the provider's id_token itself (see id-token.server.ts),
- * then exchanges it for a Supabase session through the project's configured
- * provider. DEADSET's Google client is registered in Lovable Cloud, so this
- * public grant accepts the same audience and does not require an unavailable
- * service-role key.
- *
- * The admin magic-link path remains as a compatibility fallback for deployments
- * with a valid service-role key. Apple continues to use Lovable's managed broker
- * until its first-party provider configuration can mint a session without that
- * key.
+ * then exchanges it for a session in DEADSET's Supabase project. If the
+ * provider grant is unavailable, a matching service-role key mints the session
+ * through the admin API. No third-party OAuth broker participates in the flow.
  *
  * The first-party browser round trip is stateless: everything the callback
  * needs (client state, flow, nonce, return origin) rides in an HMAC-signed
@@ -35,7 +29,6 @@ export interface OAuthBrokerEnv {
   GOOGLE_OAUTH_CLIENT_SECRET?: string;
   APPLE_OAUTH_CLIENT_ID?: string;
   OAUTH_STATE_SECRET?: string;
-  LOVABLE_OAUTH_PROJECT_ID?: string;
 }
 
 /** The provider-registered redirect host. Must match the Google "Authorized
@@ -48,8 +41,6 @@ const ALLOWED_RETURN_ORIGINS = [BROKER_ORIGIN, "https://www.deadsetfit.org"];
 const GOOGLE_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const APPLE_AUTHORIZE_URL = "https://appleid.apple.com/auth/authorize";
-const MANAGED_OAUTH_URL = "https://oauth.lovable.app/initiate";
-const DEFAULT_LOVABLE_PROJECT_ID = "de41f7e5-5faf-4590-b8e8-72f7acefa0d6";
 
 type OAuthFlow = "web" | "native";
 
@@ -240,12 +231,8 @@ function firstPartyProviderConfigured(provider: OAuthProvider, env: OAuthBrokerE
   return Boolean(env.APPLE_OAUTH_CLIENT_ID?.trim() && serviceRoleCanBelongToProject(env));
 }
 
-function managedProjectId(env: OAuthBrokerEnv) {
-  return env.LOVABLE_OAUTH_PROJECT_ID?.trim() || DEFAULT_LOVABLE_PROJECT_ID;
-}
-
 export function providerConfigured(provider: OAuthProvider, env: OAuthBrokerEnv) {
-  return firstPartyProviderConfigured(provider, env) || Boolean(managedProjectId(env));
+  return firstPartyProviderConfigured(provider, env);
 }
 
 function callbackUri(provider: OAuthProvider) {
@@ -532,40 +519,6 @@ function redirect(url: string) {
   });
 }
 
-async function managedAuthorizationUrl(
-  provider: OAuthProvider,
-  clientState: string,
-  flow: OAuthFlow,
-  env: OAuthBrokerEnv,
-) {
-  const callback =
-    flow === "native" ? `${BROKER_ORIGIN}/auth/native-callback` : `${BROKER_ORIGIN}/auth/`;
-  const url = new URL(MANAGED_OAUTH_URL);
-  url.searchParams.set("project_id", managedProjectId(env));
-  url.searchParams.set("provider", provider);
-  url.searchParams.set("redirect_uri", callback);
-  url.searchParams.set("state", clientState);
-  if (provider === "google") url.searchParams.set("prompt", "select_account");
-
-  const response = await fetch(url, { redirect: "manual" });
-  const location = response.headers.get("location");
-  const expectedHost = provider === "google" ? "accounts.google.com" : "appleid.apple.com";
-  const providerUrl = (() => {
-    try {
-      return location ? new URL(location) : null;
-    } catch {
-      return null;
-    }
-  })();
-  if (response.status < 300 || response.status >= 400 || providerUrl?.hostname !== expectedHost) {
-    throw new OAuthFailure(
-      `${providerLabel(provider)} sign-in is temporarily unavailable. Use email for now.`,
-      `managed broker returned HTTP ${response.status}`,
-    );
-  }
-  return providerUrl.toString();
-}
-
 function successRedirect(state: SignedState, provider: OAuthProvider, session: SupabaseSession) {
   const fragment = new URLSearchParams({
     access_token: session.access_token,
@@ -604,7 +557,10 @@ async function handleStart(provider: OAuthProvider, url: URL, env: OAuthBrokerEn
 
   try {
     if (!firstPartyProviderConfigured(provider, env)) {
-      return redirect(await managedAuthorizationUrl(provider, state.cs, state.flow, env));
+      throw new OAuthFailure(
+        `${providerLabel(provider)} sign-in is temporarily unavailable. Use email for now.`,
+        `${provider} first-party configuration is incomplete`,
+      );
     }
     const id = clientId(provider, env);
     const providerNonce = provider === "google" ? await sha256Hex(state.nonce) : state.nonce;

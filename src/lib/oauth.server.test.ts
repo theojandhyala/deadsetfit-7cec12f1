@@ -201,7 +201,7 @@ describe("OAuth broker", () => {
     expect(authorize.searchParams.get("scope")).toBe("name email");
   });
 
-  it("uses the managed session path when a legacy service key belongs to another project", async () => {
+  it("never hands Apple to another broker when the service key belongs to another project", async () => {
     const mismatchedKey = `${encodeSegment({ alg: "HS256" })}.${encodeSegment({
       role: "service_role",
       ref: "different-project",
@@ -211,14 +211,7 @@ describe("OAuth broker", () => {
       SUPABASE_SERVICE_ROLE_KEY: mismatchedKey,
       APPLE_OAUTH_CLIENT_ID: "",
     };
-    const providerUrl = new URL("https://appleid.apple.com/auth/authorize");
-    providerUrl.searchParams.set("redirect_uri", "https://oauth.lovable.app/callback");
-    const fetchMock = vi.fn(async (_input: unknown) => {
-      return new Response(null, {
-        status: 302,
-        headers: { Location: providerUrl.toString() },
-      });
-    });
+    const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
     const response = await handleOAuthRequest(
@@ -227,15 +220,10 @@ describe("OAuth broker", () => {
     );
 
     expect(response?.status).toBe(302);
-    expect(response?.headers.get("location")).toBe(providerUrl.toString());
-    const managedUrl = new URL(String(fetchMock.mock.calls[0][0]));
-    expect(managedUrl.origin).toBe("https://oauth.lovable.app");
-    expect(managedUrl.searchParams.get("project_id")).toBe("de41f7e5-5faf-4590-b8e8-72f7acefa0d6");
-    expect(managedUrl.searchParams.get("provider")).toBe("apple");
-    expect(managedUrl.searchParams.get("redirect_uri")).toBe(
-      "https://deadsetfit.org/auth/native-callback",
-    );
-    expect(managedUrl.searchParams.get("state")).toBe("client-state");
+    const location = response?.headers.get("location") ?? "";
+    expect(location).toContain("https://deadsetfit.org/auth/native-callback#error=");
+    expect(location).not.toContain("lovable");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("mints a session from the verified provider token without an admin key", async () => {
@@ -399,12 +387,12 @@ describe("OAuth broker", () => {
       { ...env, APPLE_OAUTH_CLIENT_ID: "" },
     );
 
-    await expect(response!.json()).resolves.toEqual({ google: true, apple: true });
-    expect(providerConfigured("google", { ...env, GOOGLE_OAUTH_CLIENT_SECRET: "" })).toBe(true);
+    await expect(response!.json()).resolves.toEqual({ google: true, apple: false });
+    expect(providerConfigured("google", { ...env, GOOGLE_OAUTH_CLIENT_SECRET: "" })).toBe(false);
   });
 
-  it("keeps managed sign-in ready without a service-role key", () => {
-    expect(providerConfigured("apple", { ...env, SUPABASE_SERVICE_ROLE_KEY: "" })).toBe(true);
+  it("requires DEADSET's service-role key for Apple", () => {
+    expect(providerConfigured("apple", { ...env, SUPABASE_SERVICE_ROLE_KEY: "" })).toBe(false);
   });
 
   it("answers a HEAD readiness check with the same redirect", async () => {
@@ -417,18 +405,18 @@ describe("OAuth broker", () => {
     expect(new URL(response!.headers.get("location")!).origin).toBe("https://accounts.google.com");
   });
 
-  it("falls back when a provider is missing its first-party client id", async () => {
-    const providerUrl = "https://appleid.apple.com/auth/authorize";
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => new Response(null, { status: 302, headers: { Location: providerUrl } })),
-    );
+  it("fails locally when a provider is missing its first-party client id", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
     const response = await handleOAuthRequest(
       new Request("https://deadsetfit.org/api/auth/apple/start?state=test"),
       { ...env, APPLE_OAUTH_CLIENT_ID: "" },
     );
 
-    expect(response?.headers.get("location")).toBe(providerUrl);
+    const location = response?.headers.get("location") ?? "";
+    expect(location).toContain("https://deadsetfit.org/auth/#error=");
+    expect(location).not.toContain("lovable");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("leaves unknown /api/auth paths to the worker", async () => {

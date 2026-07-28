@@ -2,21 +2,18 @@
 
 DEADSET owns the public social-login entry point:
 `https://deadsetfit.org/api/auth/<provider>/start`. The worker supports two
-session paths:
+first-party session paths:
 
-1. **First-party session minting** verifies the provider `id_token`, creates or
-   links the Supabase user with a valid service-role key, and redeems an admin
-   magic link.
-2. **Managed session fallback** is used for the current Lovable-managed
-   Supabase project because Lovable does not expose that project's service-role
-   key. The worker validates that a stored legacy key belongs to the configured
-   project before selecting the first-party path. A mismatched key can therefore
-   never send a user into a flow that fails after provider consent.
+1. **Provider grant** verifies the provider `id_token`, then exchanges it
+   directly with DEADSET's Supabase project.
+2. **Admin session minting** verifies the same token, creates or links the
+   Supabase user with DEADSET's matching service-role key, and redeems an admin
+   magic link if the provider grant is unavailable.
 
 ```
 /auth/  →  deadsetfit.org/api/auth/google/start
         →  accounts.google.com/…
-        →  verified first-party session OR managed Supabase session
+        →  verified DEADSET Supabase session
         →  /auth/#access_token=…                  (web)
            /auth/native-callback#access_token=…   (iPhone → org.deadsetfit.app://auth/callback)
 ```
@@ -25,14 +22,12 @@ Code: [`src/lib/oauth.server.ts`](../src/lib/oauth.server.ts) (worker broker),
 [`src/auth/oauth.ts`](../src/auth/oauth.ts) +
 [`src/auth/plain.ts`](../src/auth/plain.ts) (client).
 
-The direct path does not use Supabase's `grant_type=id_token` endpoint. It
-verifies RS256 signatures, issuer, audience, expiry, email verification, and
-nonce inside the worker before using Supabase admin APIs.
+Both paths verify RS256 signatures, issuer, audience, expiry, email
+verification, and nonce inside the worker before accepting the identity.
 
 ## One-time setup
 
-The managed fallback requires no additional credential for this project.
-Everything below is optional setup for moving fully to the first-party path
+The credentials below are required for the first-party path.
 after DEADSET controls its own Supabase project and service-role key.
 
 ### 1. Google (≈10 min)
@@ -119,9 +114,8 @@ the provider:
 curl -sI "https://deadsetfit.org/api/auth/google/start?state=test&flow=web&origin=https://deadsetfit.org" | grep -i location
 ```
 
-Expect a `302` to `accounts.google.com`. Its `redirect_uri` is the DEADSET
-callback on the direct path and the managed broker callback on the fallback
-path. A redirect back to `/auth/#error=…` means both paths are unavailable.
+Expect a `302` to `accounts.google.com` with the DEADSET callback. A redirect
+back to `/auth/#error=…` means the first-party configuration is unavailable.
 
 Full readiness sweep, including both providers live:
 
@@ -131,25 +125,22 @@ npm run appstore:strict
 
 ## Worker configuration
 
-| Name                                       | Kind             | Purpose                                                                   |
-| ------------------------------------------ | ---------------- | ------------------------------------------------------------------------- |
-| `GOOGLE_OAUTH_CLIENT_ID`                   | secret           | Google web client                                                         |
-| `GOOGLE_OAUTH_CLIENT_SECRET`               | secret           | Google code→id_token exchange                                             |
-| `APPLE_OAUTH_CLIENT_ID`                    | secret           | Apple Services ID (`org.deadsetfit.web`)                                  |
-| `OAUTH_STATE_SECRET`                       | secret, optional | HMAC key for direct-path signed state                                     |
-| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | existing         | Active Supabase project and public client key                             |
-| `SUPABASE_SERVICE_ROLE_KEY`                | secret, optional | Direct session minting; must belong to the same project as `SUPABASE_URL` |
-| `LOVABLE_OAUTH_PROJECT_ID`                 | secret, optional | Override for the public managed project ID                                |
+| Name                                       | Kind             | Purpose                                                                  |
+| ------------------------------------------ | ---------------- | ------------------------------------------------------------------------ |
+| `GOOGLE_OAUTH_CLIENT_ID`                   | secret           | Google web client                                                        |
+| `GOOGLE_OAUTH_CLIENT_SECRET`               | secret           | Google code→id_token exchange                                            |
+| `APPLE_OAUTH_CLIENT_ID`                    | secret           | Apple Services ID (`org.deadsetfit.web`)                                 |
+| `OAUTH_STATE_SECRET`                       | secret, optional | HMAC key for direct-path signed state                                    |
+| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | existing         | Active Supabase project and public client key                            |
+| `SUPABASE_SERVICE_ROLE_KEY`                | secret           | Admin session minting; must belong to the same project as `SUPABASE_URL` |
 
 ## Notes
 
-- **Local development** can start authentication through the deployed broker.
-  The direct path may return to localhost; the managed fallback returns to the
-  canonical production auth page because its callback allowlist rejects local
-  addresses.
+- **Local development** can start authentication through the deployed broker
+  and return to an allowed localhost callback.
 - **iPhone** uses the same broker inside `SFSafariViewController` (Google blocks
   embedded webviews) and comes home through
   `https://deadsetfit.org/auth/native-callback`, which deep links to
   `org.deadsetfit.app://auth/callback`.
-- Removing a first-party provider credential automatically selects the managed
-  fallback. Provider availability is checked at the DEADSET start endpoint.
+- Missing provider credentials disable that provider. The broker never routes
+  authentication through another brand or project.
