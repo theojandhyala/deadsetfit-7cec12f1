@@ -6,20 +6,16 @@
  * Services ID and returns to
  * https://deadsetfit.org/api/auth/<provider>/callback.
  *
- * The session is minted here rather than through Supabase's `grant_type=id_token`
- * endpoint: that grant only accepts client ids allowlisted in the Supabase
- * project's provider config, and this project is Lovable-managed, so that config
- * is not ours to change (it rejected our own client with "Unacceptable audience
- * in id_token"). Instead the worker verifies the provider's id_token itself (see
- * id-token.server.ts) and uses the service-role key to create/lock onto the user
- * and redeem an admin magic link, which never leaves the server.
+ * The worker verifies the provider's id_token itself (see id-token.server.ts),
+ * then exchanges it for a Supabase session through the project's configured
+ * provider. DEADSET's Google client is registered in Lovable Cloud, so this
+ * public grant accepts the same audience and does not require an unavailable
+ * service-role key.
  *
- * Lovable-managed Supabase projects do not expose their service-role key. When
- * the configured legacy key belongs to another project (or first-party provider
- * credentials are unavailable), the start endpoint hands the attempt to the
- * project's managed OAuth broker instead. The public entry point remains
- * deadsetfit.org and the broker returns the finished Supabase session to our
- * normal web/native callbacks.
+ * The admin magic-link path remains as a compatibility fallback for deployments
+ * with a valid service-role key. Apple continues to use Lovable's managed broker
+ * until its first-party provider configuration can mint a session without that
+ * key.
  *
  * The first-party browser round trip is stateless: everything the callback
  * needs (client state, flow, nonce, return origin) rides in an HMAC-signed
@@ -84,6 +80,11 @@ function randomHex(bytes: number) {
   const buffer = new Uint8Array(bytes);
   crypto.getRandomValues(buffer);
   return Array.from(buffer, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function sha256Hex(value: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 function toBase64Url(bytes: Uint8Array) {
@@ -228,11 +229,7 @@ function serviceRoleCanBelongToProject(env: OAuthBrokerEnv) {
 }
 
 function firstPartyProviderConfigured(provider: OAuthProvider, env: OAuthBrokerEnv) {
-  const supabaseReady = Boolean(
-    env.SUPABASE_URL?.trim() &&
-    env.SUPABASE_PUBLISHABLE_KEY?.trim() &&
-    serviceRoleCanBelongToProject(env),
-  );
+  const supabaseReady = Boolean(env.SUPABASE_URL?.trim() && env.SUPABASE_PUBLISHABLE_KEY?.trim());
   const stateReady = Boolean(
     env.OAUTH_STATE_SECRET?.trim() || env.SUPABASE_SERVICE_ROLE_KEY?.trim(),
   );
@@ -240,7 +237,7 @@ function firstPartyProviderConfigured(provider: OAuthProvider, env: OAuthBrokerE
   if (provider === "google") {
     return Boolean(env.GOOGLE_OAUTH_CLIENT_ID?.trim() && env.GOOGLE_OAUTH_CLIENT_SECRET?.trim());
   }
-  return Boolean(env.APPLE_OAUTH_CLIENT_ID?.trim());
+  return Boolean(env.APPLE_OAUTH_CLIENT_ID?.trim() && serviceRoleCanBelongToProject(env));
 }
 
 function managedProjectId(env: OAuthBrokerEnv) {
@@ -325,12 +322,20 @@ type SupabaseSession = {
   token_type?: string;
 };
 
-function supabaseEnv(env: OAuthBrokerEnv) {
+function supabasePublicEnv(env: OAuthBrokerEnv) {
   const url = env.SUPABASE_URL?.trim();
   const publishableKey = env.SUPABASE_PUBLISHABLE_KEY?.trim();
-  const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-  if (!url || !publishableKey || !serviceRoleKey) {
+  if (!url || !publishableKey) {
     throw new OAuthFailure("Sign in is not configured.", "Supabase env is missing");
+  }
+  return { url, publishableKey };
+}
+
+function supabaseAdminEnv(env: OAuthBrokerEnv) {
+  const { url, publishableKey } = supabasePublicEnv(env);
+  const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!serviceRoleKey || !serviceRoleCanBelongToProject(env)) {
+    throw new OAuthFailure("Sign in is not configured.", "Supabase service role is unavailable");
   }
   return { url, publishableKey, serviceRoleKey };
 }
@@ -357,7 +362,7 @@ async function readError(response: Response) {
  *  the identity is matched to it, which is why the id_token's email must be
  *  provider-verified before we get here. */
 async function ensureUser(identity: VerifiedIdentity, env: OAuthBrokerEnv) {
-  const { url, serviceRoleKey } = supabaseEnv(env);
+  const { url, serviceRoleKey } = supabaseAdminEnv(env);
   const response = await fetch(`${url}/auth/v1/admin/users`, {
     method: "POST",
     headers: {
@@ -393,7 +398,7 @@ async function sessionForEmail(
   email: string,
   env: OAuthBrokerEnv,
 ): Promise<SupabaseSession> {
-  const { url, publishableKey, serviceRoleKey } = supabaseEnv(env);
+  const { url, publishableKey, serviceRoleKey } = supabaseAdminEnv(env);
 
   const linkResponse = await fetch(`${url}/auth/v1/admin/generate_link`, {
     method: "POST",
@@ -437,6 +442,45 @@ async function sessionForEmail(
   return session as SupabaseSession;
 }
 
+async function sessionFromProviderToken(
+  provider: OAuthProvider,
+  idToken: string,
+  nonce: string,
+  env: OAuthBrokerEnv,
+): Promise<{ session?: SupabaseSession; detail?: string }> {
+  const { url, publishableKey } = supabasePublicEnv(env);
+  const response = await fetch(`${url}/auth/v1/token?grant_type=id_token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: publishableKey,
+      Authorization: `Bearer ${publishableKey}`,
+    },
+    // Supabase requires the nonce whenever the provider token carries one. It
+    // has already been checked against our signed state above.
+    body: JSON.stringify({ provider, id_token: idToken, nonce }),
+  });
+  const session = (await response.json().catch(() => ({}))) as Partial<SupabaseSession> & {
+    msg?: string;
+    message?: string;
+    error_description?: string;
+    error?: string;
+    error_code?: string;
+  };
+  if (response.ok && session.access_token && session.refresh_token) {
+    return { session: session as SupabaseSession };
+  }
+  return {
+    detail:
+      session.msg ||
+      session.message ||
+      session.error_description ||
+      session.error_code ||
+      session.error ||
+      `HTTP ${response.status}`,
+  };
+}
+
 async function supabaseSession(
   provider: OAuthProvider,
   idToken: string,
@@ -445,17 +489,30 @@ async function supabaseSession(
 ): Promise<SupabaseSession> {
   let identity: VerifiedIdentity;
   try {
+    // Google places the SHA-256 hex digest in its id_token, while Supabase
+    // expects the corresponding raw nonce in the token exchange.
+    const tokenNonce = provider === "google" ? await sha256Hex(nonce) : nonce;
     identity = await verifyIdToken({
       provider,
       idToken,
       audience: clientId(provider, env),
-      nonce,
+      nonce: tokenNonce,
     });
   } catch (error) {
     if (error instanceof OAuthFailure) throw error;
     throw new OAuthFailure(
       `${providerLabel(provider)} sign-in could not be verified. Please try again.`,
       error instanceof Error ? error.message : "id_token verification failed",
+    );
+  }
+
+  const providerGrant = await sessionFromProviderToken(provider, idToken, nonce, env);
+  if (providerGrant.session) return providerGrant.session;
+
+  if (!serviceRoleCanBelongToProject(env)) {
+    throw new OAuthFailure(
+      `${providerLabel(provider)} sign-in could not be completed. Please try again or use email.`,
+      `provider id_token grant: ${providerGrant.detail}`,
     );
   }
 
@@ -550,7 +607,8 @@ async function handleStart(provider: OAuthProvider, url: URL, env: OAuthBrokerEn
       return redirect(await managedAuthorizationUrl(provider, state.cs, state.flow, env));
     }
     const id = clientId(provider, env);
-    return redirect(authorizationUrl(provider, await signState(state, env), state.nonce, id));
+    const providerNonce = provider === "google" ? await sha256Hex(state.nonce) : state.nonce;
+    return redirect(authorizationUrl(provider, await signState(state, env), providerNonce, id));
   } catch (error) {
     return failureRedirect(state, error, `${provider} start`);
   }

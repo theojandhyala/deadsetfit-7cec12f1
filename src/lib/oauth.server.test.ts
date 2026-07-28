@@ -47,9 +47,15 @@ function idTokenClaims(provider: "google" | "apple", nonce: string) {
   };
 }
 
-/** Routes each hop of the flow: provider JWKS, Google's token endpoint, and the
- *  three Supabase calls that mint the session. */
-function stubBackends(overrides: { verifyStatus?: number; createUserResponse?: Response } = {}) {
+/** Routes each hop of the flow: provider JWKS, Google's token endpoint, and
+ * Supabase session creation. */
+function stubBackends(
+  overrides: {
+    providerGrantResponse?: Response;
+    verifyStatus?: number;
+    createUserResponse?: Response;
+  } = {},
+) {
   const calls: { url: string; body?: string; headers?: Record<string, string> }[] = [];
   const fetchMock = vi.fn(async (input: unknown, init?: RequestInit) => {
     const url = String(input);
@@ -75,6 +81,17 @@ function stubBackends(overrides: { verifyStatus?: number; createUserResponse?: R
     if (url.includes("oauth2.googleapis.com/token")) {
       // The code exchange must return a token whose nonce matches this attempt.
       return Response.json({ id_token: googleIdToken });
+    }
+    if (url.includes("grant_type=id_token")) {
+      return (
+        overrides.providerGrantResponse ??
+        Response.json({
+          access_token: "access",
+          refresh_token: "refresh",
+          expires_in: 3600,
+          token_type: "bearer",
+        })
+      );
     }
     if (url.includes("/auth/v1/admin/users")) {
       return overrides.createUserResponse ?? Response.json({ id: "user-1" });
@@ -133,7 +150,7 @@ async function completeFlow(
     }),
     env,
   );
-  return { response, ...backends };
+  return { response, authorize, ...backends };
 }
 
 function fragmentOf(response: Response | null) {
@@ -221,26 +238,19 @@ describe("OAuth broker", () => {
     expect(managedUrl.searchParams.get("state")).toBe("client-state");
   });
 
-  it("mints a session with the service-role key, never the provider grant", async () => {
+  it("mints a session from the verified provider token without an admin key", async () => {
     const { response, calls } = await completeFlow("apple");
 
     const urls = calls.map((call) => call.url);
-    expect(urls.some((url) => url.includes("grant_type=id_token"))).toBe(false);
-    expect(urls).toContain("https://project.supabase.co/auth/v1/admin/users");
-    expect(urls).toContain("https://project.supabase.co/auth/v1/admin/generate_link");
-    expect(urls).toContain("https://project.supabase.co/auth/v1/verify");
+    expect(urls).toContain("https://project.supabase.co/auth/v1/token?grant_type=id_token");
+    expect(urls.some((url) => url.includes("/auth/v1/admin/"))).toBe(false);
 
-    const adminCall = calls.find((call) => call.url.endsWith("/admin/users"))!;
-    expect(adminCall.headers?.apikey).toBe("service-role-key");
-    expect(JSON.parse(adminCall.body!)).toMatchObject({
-      email: "lifter@example.com",
-      email_confirm: true,
-    });
-
-    const verifyCall = calls.find((call) => call.url.endsWith("/auth/v1/verify"))!;
-    expect(JSON.parse(verifyCall.body!)).toEqual({
-      type: "magiclink",
-      token_hash: "hashed-token-1",
+    const grantCall = calls.find((call) => call.url.includes("grant_type=id_token"))!;
+    expect(grantCall.headers?.apikey).toBe("publishable-key");
+    expect(JSON.parse(grantCall.body!)).toEqual({
+      provider: "apple",
+      id_token: expect.any(String),
+      nonce: expect.any(String),
     });
 
     const fragment = fragmentOf(response);
@@ -250,13 +260,21 @@ describe("OAuth broker", () => {
   });
 
   it("exchanges a Google code for an id_token before verifying it", async () => {
-    const { response, calls } = await completeFlow("google");
+    const { response, calls, authorize } = await completeFlow("google");
 
     const tokenCall = calls.find((call) => call.url.includes("oauth2.googleapis.com/token"))!;
     const form = new URLSearchParams(tokenCall.body!);
     expect(form.get("code")).toBe("auth-code");
     expect(form.get("client_secret")).toBe("google-client-secret");
     expect(form.get("redirect_uri")).toBe("https://deadsetfit.org/api/auth/google/callback");
+
+    const grantCall = calls.find((call) => call.url.includes("grant_type=id_token"))!;
+    const rawNonce = JSON.parse(grantCall.body!).nonce as string;
+    const nonceDigest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(rawNonce));
+    const hashedNonce = Array.from(new Uint8Array(nonceDigest), (byte) =>
+      byte.toString(16).padStart(2, "0"),
+    ).join("");
+    expect(authorize.searchParams.get("nonce")).toBe(hashedNonce);
     expect(fragmentOf(response).get("access_token")).toBe("access");
   });
 
@@ -265,6 +283,10 @@ describe("OAuth broker", () => {
       "apple",
       { state: "client-state", flow: "web" },
       {
+        providerGrantResponse: Response.json(
+          { msg: "Unacceptable audience in id_token" },
+          { status: 400 },
+        ),
         createUserResponse: Response.json(
           { msg: "A user with this email address has already been registered" },
           { status: 422 },
@@ -329,6 +351,7 @@ describe("OAuth broker", () => {
       "apple",
       { state: "client-state", flow: "web" },
       {
+        providerGrantResponse: Response.json({ msg: "provider rejected token" }, { status: 400 }),
         verifyStatus: 500,
       },
     );
