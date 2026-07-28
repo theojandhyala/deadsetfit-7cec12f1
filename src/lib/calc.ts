@@ -1,5 +1,14 @@
 import { getExercise } from "./exercises";
-import type { Profile, AppState, SetLog } from "./types";
+import type { Profile, AppState, DayKey, DaySchedule, Schedule, SetLog } from "./types";
+
+export function updateScheduleDay(
+  schedule: Schedule,
+  dayKey: DayKey,
+  updater: (day: DaySchedule) => DaySchedule,
+): Schedule {
+  const currentDay = schedule[dayKey] ?? { label: "REST", exerciseIds: [] };
+  return { ...schedule, [dayKey]: updater(currentDay) };
+}
 
 export function calculateCalories(p: Profile): number {
   // Mifflin-St Jeor

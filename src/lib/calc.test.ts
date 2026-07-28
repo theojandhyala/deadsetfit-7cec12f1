@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { calculateMacros, defaultSchedule, estimate1RM, plateBreakdown } from "./calc";
+import {
+  calculateMacros,
+  defaultSchedule,
+  estimate1RM,
+  plateBreakdown,
+  updateScheduleDay,
+} from "./calc";
 import { getExercise } from "./exercises";
 import type { Equipment, Profile } from "./types";
 
@@ -56,6 +62,39 @@ describe("defaultSchedule", () => {
       const trainingDays = Object.values(schedule).filter((day) => day.exerciseIds.length > 0);
       expect(trainingDays).toHaveLength(daysPerWeek);
     }
+  });
+
+  it("composes rapid edits to one exercise without dropping earlier targets", () => {
+    let schedule = defaultSchedule(profile({ daysPerWeek: 3 }));
+    const exerciseId = schedule.MON.exerciseIds[0];
+
+    schedule = updateScheduleDay(schedule, "MON", (day) => ({
+      ...day,
+      exerciseConfig: {
+        ...(day.exerciseConfig ?? {}),
+        [exerciseId]: { ...(day.exerciseConfig?.[exerciseId] ?? {}), sets: 4 },
+      },
+    }));
+    schedule = updateScheduleDay(schedule, "MON", (day) => ({
+      ...day,
+      exerciseConfig: {
+        ...(day.exerciseConfig ?? {}),
+        [exerciseId]: { ...(day.exerciseConfig?.[exerciseId] ?? {}), reps: "6-10" },
+      },
+    }));
+    schedule = updateScheduleDay(schedule, "MON", (day) => ({
+      ...day,
+      exerciseConfig: {
+        ...(day.exerciseConfig ?? {}),
+        [exerciseId]: { ...(day.exerciseConfig?.[exerciseId] ?? {}), weightKg: 60 },
+      },
+    }));
+
+    expect(schedule.MON.exerciseConfig?.[exerciseId]).toEqual({
+      sets: 4,
+      reps: "6-10",
+      weightKg: 60,
+    });
   });
 });
 

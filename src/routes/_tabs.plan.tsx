@@ -27,7 +27,7 @@ import { toast } from "sonner";
 
 import { usePro } from "@/hooks/usePro";
 import { askConfirm } from "@/lib/confirm";
-import { defaultSchedule, todayKey } from "@/lib/calc";
+import { defaultSchedule, todayKey, updateScheduleDay } from "@/lib/calc";
 import { currentWeekStart, getWeeklyCompetitionStats } from "@/lib/competition";
 import { allExercises, EXERCISES, getExercise } from "@/lib/exercises";
 import { libraryExerciseToExercise } from "@/lib/exercise-library";
@@ -309,8 +309,14 @@ function PlanPage() {
   }
 
   function updateSelected(updater: (day: DaySchedule) => DaySchedule) {
-    const next = { ...schedule, [selectedDay]: updater(selected) };
-    saveSchedule(next);
+    set((current) => {
+      const currentSchedule =
+        current.schedule ?? (current.profile ? defaultSchedule(current.profile) : blankSchedule());
+      return {
+        ...current,
+        schedule: updateScheduleDay(currentSchedule, selectedDay, updater),
+      };
+    });
   }
 
   function applyPreset(preset: (typeof PRESETS)[number]) {
