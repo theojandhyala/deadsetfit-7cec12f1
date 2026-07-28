@@ -84,6 +84,17 @@ const nativeAuthBridge = existsSync("auth/native-callback.html")
 const profilePage = existsSync("src/routes/_tabs.profile.tsx")
   ? read("src/routes/_tabs.profile.tsx")
   : "";
+const proProvider = existsSync("src/hooks/usePro.tsx") ? read("src/hooks/usePro.tsx") : "";
+const paywallSheet = existsSync("src/components/PaywallSheet.tsx")
+  ? read("src/components/PaywallSheet.tsx")
+  : "";
+const paywallEvents = existsSync("src/lib/paywall-events.ts")
+  ? read("src/lib/paywall-events.ts")
+  : "";
+const upgradePrompts = existsSync("src/lib/upgrade-prompts.ts")
+  ? read("src/lib/upgrade-prompts.ts")
+  : "";
+const termsPage = existsSync("src/routes/terms.tsx") ? read("src/routes/terms.tsx") : "";
 const friendsPage = existsSync("src/routes/_tabs.friends.tsx")
   ? read("src/routes/_tabs.friends.tsx")
   : "";
@@ -164,8 +175,22 @@ check(
 );
 check(
   "Stripe blocked on native iOS",
-  upgradePage.includes("iosNative ?") && upgradePage.includes("Checkout disabled on iPhone"),
-  "Upgrade page blocks Stripe checkout inside native iOS.",
+  upgradePage.includes('if (isNativeIos()) navigate({ to: "/profile", replace: true })') &&
+    upgradePage.includes("iosNative ?") &&
+    upgradePage.includes("Checkout disabled on iPhone") &&
+    profilePage.includes("!nativeIos &&") &&
+    paywallSheet.includes("isNativeIos() ?") &&
+    !paywallSheet.includes("deadsetfit.org/upgrade") &&
+    paywallEvents.includes("if (isNativeIos()) return") &&
+    upgradePrompts.includes("if (isNativeIos()) return false") &&
+    proProvider.includes("const iosFree = isNativeIos()"),
+  "Stripe checkout, upgrade prompts, and external-purchase calls to action are absent inside native iOS; Safari remains the web subscription channel.",
+);
+check(
+  "web-only subscription terms",
+  /Web subscriptions are processed by\s+Stripe/.test(termsPage) &&
+    !termsPage.includes("Subscriptions made via the Apple App Store"),
+  "Terms describe the Stripe web subscription actually offered by DEADSET and do not claim an unavailable Apple subscription.",
 );
 check(
   "camera usage string",
@@ -187,6 +212,12 @@ check(
   "HealthKit entitlement",
   entitlements.includes("com.apple.developer.healthkit"),
   "The iOS target has the HealthKit entitlement.",
+);
+check(
+  "Sign in with Apple entitlement",
+  entitlements.includes("com.apple.developer.applesignin") &&
+    entitlements.includes("<string>Default</string>"),
+  "The iOS target is entitled to use Sign in with Apple.",
 );
 for (const type of [
   "EmailAddress",

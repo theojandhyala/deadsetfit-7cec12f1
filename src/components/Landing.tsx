@@ -34,7 +34,7 @@ function Logo() {
 
 function Header() {
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#080808]/95 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#080808]/95 pt-[env(safe-area-inset-top)] backdrop-blur-md">
       <div className="mx-auto flex h-[72px] max-w-7xl items-center gap-5 px-5 sm:px-6">
         <a href="#top" className="inline-flex min-h-11 items-center">
           <Logo />
