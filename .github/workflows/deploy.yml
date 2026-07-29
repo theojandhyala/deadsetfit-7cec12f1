@@ -21,12 +21,21 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Build
-        run: bun run build
+      # Types, lint, unit tests, then the production build — in one step because
+      # `check` ends in the same `vite build` the deploy uploads. Before this,
+      # CI built without ever running a test, so a green deploy proved nothing.
+      - name: Check and build
+        run: bun run check
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           VITE_PAYMENTS_CLIENT_TOKEN: ${{ secrets.VITE_PAYMENTS_CLIENT_TOKEN }}
+
+      # Refuses to deploy a front-end wired to the wrong backend. CI's build
+      # secrets and the live Supabase project drifted apart once already; this
+      # turns that into a failed run instead of a broken production app.
+      - name: Verify bundle targets the expected backend
+        run: node scripts/check-bundle-config.mjs
 
       - name: Create Pages project if needed
         run: |

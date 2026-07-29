@@ -1,0 +1,5 @@
+{
+  "//": "Public deploy expectations, checked in on purpose. CI compares the built bundle against these so a stale build secret fails the deploy instead of silently shipping a front-end pointed at the wrong backend (this happened: the app moved Supabase projects while CI's VITE_SUPABASE_URL secret kept the old ref).",
+  "supabaseProjectRef": "fqfdygbveeztgxwkbmfi",
+  "apiOrigin": "https://deadsetfit.org"
+}
