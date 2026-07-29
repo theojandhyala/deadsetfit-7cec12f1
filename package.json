@@ -12,6 +12,7 @@
     "appstore:check": "npm run check && node scripts/appstore-check.mjs",
     "appstore:strict": "APPSTORE_STRICT=1 npm run appstore:check",
     "security:check": "npm audit",
+    "audit:entitlements": "bun scripts/reconcile-entitlements.ts",
     "assets:icon": "node scripts/generate-app-icon.mjs",
     "assets:appstore": "node scripts/generate-app-store-screenshots.mjs",
     "deploy:cloudflare": "node scripts/deploy-cloudflare.mjs",

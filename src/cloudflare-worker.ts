@@ -1,6 +1,11 @@
 import rpcHandler from "../api/rpc";
 import { createClient } from "@supabase/supabase-js";
 import { handleOAuthRequest, providerConfigured, type OAuthBrokerEnv } from "./lib/oauth.server";
+import {
+  subscriptionPayload,
+  subscriptionStillUnlocksPro,
+  type StripeEnv,
+} from "./lib/entitlements";
 
 interface Env extends OAuthBrokerEnv {
   ASSETS?: { fetch(request: Request): Promise<Response> };
@@ -14,7 +19,6 @@ interface Env extends OAuthBrokerEnv {
   VITE_PAYMENTS_CLIENT_TOKEN?: string;
 }
 
-type StripeEnv = "sandbox" | "live";
 type StripeEvent = { type: string; data: { object: any } };
 
 const RUNTIME_ENV_KEYS = [
@@ -197,52 +201,6 @@ function getSupabaseAdmin(env: Env) {
     required(env.SUPABASE_URL, "SUPABASE_URL"),
     required(env.SUPABASE_SERVICE_ROLE_KEY, "SUPABASE_SERVICE_ROLE_KEY"),
     { auth: { persistSession: false, autoRefreshToken: false } },
-  );
-}
-
-function stripeId(value: unknown): string | null {
-  if (!value) return null;
-  if (typeof value === "string") return value;
-  if (
-    typeof value === "object" &&
-    "id" in value &&
-    typeof (value as { id?: unknown }).id === "string"
-  ) {
-    return (value as { id: string }).id;
-  }
-  return null;
-}
-
-function subscriptionPayload(subscription: any, stripeEnv: StripeEnv) {
-  const item = subscription.items?.data?.[0];
-  const price = item?.price ?? {};
-  const periodStart = item?.current_period_start ?? subscription.current_period_start;
-  const periodEnd = item?.current_period_end ?? subscription.current_period_end;
-  const priceId = price.lookup_key || price.metadata?.lovable_external_id || price.id || "unknown";
-  const productId = stripeId(price.product) || "unknown";
-
-  return {
-    user_id: subscription.metadata?.userId,
-    stripe_subscription_id: subscription.id,
-    stripe_customer_id: stripeId(subscription.customer) || "unknown",
-    product_id: productId,
-    price_id: priceId,
-    status: subscription.status || "unknown",
-    current_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
-    current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
-    cancel_at_period_end: !!subscription.cancel_at_period_end,
-    environment: stripeEnv,
-    updated_at: new Date().toISOString(),
-  };
-}
-
-function subscriptionStillUnlocksPro(
-  status: string | null | undefined,
-  periodEnd: string | null,
-): boolean {
-  return (
-    ["active", "trialing", "past_due"].includes(status ?? "") ||
-    (status === "canceled" && !!periodEnd && new Date(periodEnd) > new Date())
   );
 }
 
