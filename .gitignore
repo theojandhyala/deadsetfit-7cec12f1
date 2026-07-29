@@ -37,3 +37,6 @@ appstore-screenshots/READY-*.png
 .shotwork/
 appstore-screenshots/FINAL-*.png
 appstore-screenshots/READY-*.png
+
+# Local Supabase snapshots — real user data, never committed
+backups/

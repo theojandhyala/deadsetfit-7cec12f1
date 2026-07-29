@@ -46,9 +46,15 @@ sign-in on 2026-07-29.
      subscriptions, 1 post, 1 follow, and seeded the 203-row exercise library
      the new project was missing. Referential integrity verified: no orphaned
      rows in any table.
-   - _Remaining:_ turn on backups/PITR — a training log is a personal archive,
-     and losing it is unforgivable in a way losing a to-do list is not. Then
-     retire the old project once a few real logins are confirmed.
+   - _Backups, done 2026-07-29:_ the Free plan takes no automated backups and
+     PITR is a paid add-on, so `npm run backup` writes a gzipped snapshot of
+     auth users and every table (discovered from PostgREST, not hardcoded, so a
+     new table cannot be silently skipped). `.github/workflows/backup.yml` runs
+     it nightly into a private 90-day artifact once the
+     `SUPABASE_SERVICE_ROLE_KEY` repo secret exists. Password hashes are not in
+     the snapshot — accounts and data restore, passwords would need resetting.
+     A restore has not been rehearsed; do that before trusting it.
+   - _Remaining:_ retire the old project once a few real logins are confirmed.
 4. **In-app account deletion leaves data behind.** Surfaced during the
    migration: a deleted account's `user_state` row survives the auth user, and
    the old project still held 10 such orphans from accounts deleted long ago.
