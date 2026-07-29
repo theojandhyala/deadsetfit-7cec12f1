@@ -344,6 +344,49 @@ async function handleStripeWebhook(request: Request, env: Env): Promise<Response
   }
 }
 
+/** Live-tests the stored service-role key with a read-only admin call. The key
+ *  being merely present is not enough: a key belonging to a different Supabase
+ *  project is accepted at deploy time and then fails at sign-in with "Invalid
+ *  API key". Returns ok/status only — never key material or user data. */
+async function handleSupabaseHealth(env: Env): Promise<Response> {
+  const headers = { "Cache-Control": "no-store" };
+  try {
+    const url = required(env.SUPABASE_URL, "SUPABASE_URL");
+    const key = required(env.SUPABASE_SERVICE_ROLE_KEY, "SUPABASE_SERVICE_ROLE_KEY");
+    const response = await fetch(`${url}/auth/v1/admin/users?page=1&per_page=1`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+    });
+
+    if (!response.ok) {
+      const detail = await response.text();
+      return Response.json(
+        {
+          ok: false,
+          serviceRoleKey: "REJECTED",
+          project: new URL(url).hostname,
+          status: response.status,
+          error: detail.slice(0, 200),
+        },
+        { status: 500, headers },
+      );
+    }
+
+    return Response.json(
+      { ok: true, serviceRoleKey: "valid", project: new URL(url).hostname },
+      { headers },
+    );
+  } catch (error) {
+    return Response.json(
+      {
+        ok: false,
+        serviceRoleKey: "FAILED",
+        error: error instanceof Error ? error.message.slice(0, 200) : "unknown error",
+      },
+      { status: 500, headers },
+    );
+  }
+}
+
 /** Live-tests the stored Stripe key with a read-only call. Returns only
  *  ok/error text — never key material. Lets us catch a rolled/expired key
  *  from the outside instead of discovering it via a failed checkout. */
@@ -379,6 +422,7 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === "/api/health") return handleHealth(env);
     if (url.pathname === "/api/health/stripe") return handleStripeHealth(env);
+    if (url.pathname === "/api/health/supabase") return handleSupabaseHealth(env);
     if (url.pathname === "/api/public/payments/webhook") return handleStripeWebhook(request, env);
     if (url.pathname === "/api/rpc") return handleRpc(request, env);
     if (url.pathname.startsWith("/api/auth/")) {

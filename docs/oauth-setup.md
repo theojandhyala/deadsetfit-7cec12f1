@@ -1,14 +1,19 @@
 # Google + Apple sign-in
 
 DEADSET owns the public social-login entry point:
-`https://deadsetfit.org/api/auth/<provider>/start`. The worker supports two
-first-party session paths:
+`https://deadsetfit.org/api/auth/<provider>/start`. The worker runs one
+first-party session path:
 
-1. **Provider grant** verifies the provider `id_token`, then exchanges it
-   directly with DEADSET's Supabase project.
-2. **Admin session minting** verifies the same token, creates or links the
-   Supabase user with DEADSET's matching service-role key, and redeems an admin
-   magic link if the provider grant is unavailable.
+1. **Verify** the provider `id_token` in the worker — RS256 against the
+   provider's published JWKS, plus issuer, audience, expiry, provider-verified
+   email, and the nonce minted at `/start`.
+2. **Mint** the session with the service-role key: create or link the Supabase
+   user, then generate and immediately redeem an admin magic link server-side
+   (it is never emailed).
+
+Supabase's own `grant_type=id_token` is deliberately unused — it only accepts
+client ids allowlisted in the Supabase project's provider config, which is
+brittle when that project's dashboard is not under our control.
 
 ```
 /auth/  →  deadsetfit.org/api/auth/google/start
@@ -27,8 +32,15 @@ verification, and nonce inside the worker before accepting the identity.
 
 ## One-time setup
 
-The credentials below are required for the first-party path.
-after DEADSET controls its own Supabase project and service-role key.
+The credentials below are required, and the service-role key must belong to the
+same Supabase project as `SUPABASE_URL`. Check that with:
+
+```bash
+curl -s https://deadsetfit.org/api/health/supabase
+```
+
+`{"ok":true,"serviceRoleKey":"valid","project":"…"}` means the key is live and
+the project it names is the one sign-in will write to.
 
 ### 1. Google (≈10 min)
 
