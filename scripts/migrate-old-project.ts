@@ -165,6 +165,46 @@ if (canReadNew) {
   console.log(`\nNew project: not inspected (no SUPABASE_SERVICE_ROLE_KEY in the environment).`);
 }
 
+/** An account created in the new project since the switch can hold an email that
+ *  also belongs to one of the migrating users, under a different id. Inserting
+ *  the old profile row would then violate the auth.users foreign key part-way
+ *  through, so this is checked up front rather than discovered mid-write. */
+async function emailConflicts() {
+  if (!canReadNew) return [];
+  const response = await fetch(`${newUrl}/auth/v1/admin/users?per_page=200`, {
+    headers: newHeaders,
+  });
+  if (!response.ok) fail(`Could not list new-project users: ${await response.text()}`);
+  const { users: existing } = (await response.json()) as { users: any[] };
+  const byEmail = new Map(existing.map((u) => [String(u.email).toLowerCase(), u.id]));
+  return users
+    .map((old: any) => {
+      const id = byEmail.get(String(old.email).toLowerCase());
+      return id && id !== old.id ? { email: old.email, oldId: old.id, newId: id } : null;
+    })
+    .filter(Boolean) as { email: string; oldId: string; newId: string }[];
+}
+
+const conflicts = await emailConflicts();
+if (conflicts.length > 0) {
+  console.log(`\n${conflicts.length} email conflict(s) — same person, two different ids:`);
+  for (const conflict of conflicts) {
+    console.log(`  ${conflict.email}\n    old id ${conflict.oldId}\n    new id ${conflict.newId}`);
+  }
+  console.log(
+    `\nThese must be resolved first. If the new-project account is a throwaway (created\n` +
+      `by testing since the switch, no real data), delete it so the original account can\n` +
+      `be restored with its own id and keep its history:\n` +
+      conflicts
+        .map(
+          (c) =>
+            `  curl -X DELETE "$SUPABASE_URL/auth/v1/admin/users/${c.newId}" -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY"`,
+        )
+        .join("\n"),
+  );
+  if (apply) fail("Refusing to migrate with unresolved email conflicts.");
+}
+
 if (!apply) {
   console.log(`\nDry run — nothing written. Re-run with --apply to migrate.\n`);
   process.exit(0);

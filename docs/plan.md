@@ -37,12 +37,26 @@ sign-in on 2026-07-29.
    window may have no Pro access. Needs a one-off reconciliation: list Stripe
    subscriptions, upsert into Supabase, then keep
    `/api/health/supabase` green so it cannot recur silently.
-3. **Confirm the Supabase migration is complete.** The app moved off the
-   Lovable-managed project (`upofuwryfvvtkhphtcop`) to one we own
-   (`fqfdygbveeztgxwkbmfi`). Schema is present. Confirm user rows came across,
-   then turn on backups/PITR. A training log is a personal archive; losing it is
-   unforgivable in a way losing a to-do list is not.
-4. **Serve the real Apple domain-association file.** `/.well-known/apple-developer-domain-association.txt`
+3. **The Supabase migration.** The app was repointed from the Lovable-managed
+   project (`upofuwryfvvtkhphtcop`) to one we own (`fqfdygbveeztgxwkbmfi`) with
+   the schema but **no data**, so all 18 accounts were locked out and re-signups
+   were creating empty duplicates.
+   - _Done 2026-07-29:_ `scripts/migrate-old-project.ts` moved 18 accounts
+     (passwords intact, ids preserved), 18 profiles, 14 `user_state` rows, 3
+     subscriptions, 1 post, 1 follow, and seeded the 203-row exercise library
+     the new project was missing. Referential integrity verified: no orphaned
+     rows in any table.
+   - _Remaining:_ turn on backups/PITR — a training log is a personal archive,
+     and losing it is unforgivable in a way losing a to-do list is not. Then
+     retire the old project once a few real logins are confirmed.
+4. **In-app account deletion leaves data behind.** Surfaced during the
+   migration: a deleted account's `user_state` row survives the auth user, and
+   the old project still held 10 such orphans from accounts deleted long ago.
+   `deleteMyAccount` needs to remove (or cascade to) `user_state`, `profiles`,
+   and anything else keyed by `user_id`. This is an App Store 5.1.1(v)
+   commitment, not just hygiene — the app promises deletion in its privacy
+   disclosures.
+5. **Serve the real Apple domain-association file.** `/.well-known/apple-developer-domain-association.txt`
    currently returns the SPA's HTML with a 200. Apple already accepted the
    Services ID, so this is not blocking today — it will fail a re-verification.
 
