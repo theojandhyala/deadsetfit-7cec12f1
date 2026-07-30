@@ -110,7 +110,14 @@ export function FifaCard({
       {/* PR grid — 6 headline lifts */}
       <div className="grid grid-cols-3 gap-2 mt-3">
         {prs.map((pr) => (
-          <PRTile key={pr.id} label={pr.label} value={pr.value} unit={pr.unit} color={badgeC} />
+          <PRTile
+            key={pr.id}
+            label={pr.label}
+            value={pr.value}
+            unit={pr.unit}
+            estimated={pr.estimated}
+            color={badgeC}
+          />
         ))}
       </div>
     </div>
@@ -121,14 +128,20 @@ function PRTile({
   label,
   value,
   unit,
+  estimated,
   color,
 }: {
   label: string;
   value: number;
   unit: string;
+  estimated?: boolean;
   color: string;
 }) {
   const hasValue = value > 0;
+  // "≈" is the whole fix: the number stays a comparable 1RM (which is what the
+  // leaderboard ranks on) but no longer silently contradicts the PR list, where
+  // the same lift reads as the raw weight x reps that was actually performed.
+  const isEstimate = hasValue && estimated === true;
   return (
     <div className="rounded-xl border border-white/10 bg-black/35 px-2 py-2">
       <p className="label-cap text-[9px] text-grit-dim leading-none">{label}</p>
@@ -136,6 +149,14 @@ function PRTile({
         className="display font-extrabold tabular-nums leading-none mt-1.5"
         style={{ color: hasValue ? color : "#4a4a4a", fontSize: "1.25rem" }}
       >
+        {isEstimate && (
+          <span
+            className="text-[11px] mr-0.5 text-grit-dim font-normal"
+            title="Estimated 1RM from your best multi-rep set"
+          >
+            ≈
+          </span>
+        )}
         {hasValue ? value : "—"}
         {hasValue && <span className="text-[9px] ml-0.5 text-grit-dim font-normal">{unit}</span>}
       </p>

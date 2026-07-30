@@ -54,7 +54,10 @@ sign-in on 2026-07-29.
      `SUPABASE_SERVICE_ROLE_KEY` repo secret exists. Password hashes are not in
      the snapshot — accounts and data restore, passwords would need resetting.
      A restore has not been rehearsed; do that before trusting it.
-   - _Remaining:_ retire the old project once a few real logins are confirmed.
+   - _Confirmed 2026-07-30:_ a real password login works and returns the user's
+     training history — the migration is verified end to end, not just
+     structurally. The old project can now be retired, though keeping it
+     read-only for a couple of weeks costs nothing and buys a fallback.
 4. **In-app account deletion left data behind.** Surfaced by the migration: the
    old project held 10 `user_state` rows belonging to accounts deleted long ago.
    `deleteMyAccount` did attempt to clear every table, but Supabase returns
@@ -117,8 +120,12 @@ Where "best app on the market" is actually won, and it is cheap:
 - Per-exercise history and PR timeline graphs.
 - Deterministic progression and deload: stalled-lift detection, rule-based, no
   AI, stays $0/user.
-- Fix the FifaCard 1RM vs PR-list mismatch. Two numbers for one lift reads as a
-  bug and erodes trust in every other stat on the card.
+- ~~Fix the FifaCard 1RM vs PR-list mismatch.~~ _Done 2026-07-30._ Not a maths
+  bug: the card showed an Epley-estimated 1RM (100kg x 5 → 117) while the PR list
+  showed the raw entry, so one lift read as two numbers with no explanation. The
+  value stays a comparable 1RM — that is what the leaderboard ranks on — and
+  headline PRs now carry an `estimated` flag so the tile prefixes "≈" when the
+  number came from a formula rather than a measured single.
 
 ## Phase 3 — Retention loop
 
