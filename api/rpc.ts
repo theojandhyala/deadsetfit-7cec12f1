@@ -1787,33 +1787,78 @@ const handlers: Record<string, Handler> = {
   // === Account ===
   async deleteMyAccount(_data, req) {
     const { userId } = await requireAuth(req);
-    const tables = [
-      "post_likes",
-      "post_comments",
-      "posts",
-      "follows",
-      "user_blocks",
-      "user_reports",
-      "user_state",
-      "user_roles",
-      "referrals",
-      "profiles",
-    ];
-    for (const t of tables) {
-      try {
-        const q = (supabaseAdmin as any).from(t).delete();
-        if (t === "follows") await q.or(`follower_id.eq.${userId},following_id.eq.${userId}`);
-        else if (t === "user_blocks") await q.or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`);
-        else if (t === "user_reports")
-          await q.or(`reporter_id.eq.${userId},reported_user_id.eq.${userId}`);
-        else if (t === "referrals") await q.or(`referrer_id.eq.${userId},referred_id.eq.${userId}`);
-        else if (t === "profiles") await q.eq("id", userId);
-        else if (t === "user_roles") await q.eq("user_id", userId);
-        else await q.eq("user_id", userId);
-      } catch {
-        /* best-effort */
-      }
+    const admin = supabaseAdmin as any;
+    const failures: string[] = [];
+
+    /** Supabase returns { error } rather than throwing, so a try/catch around
+     *  these calls catches nothing — every failure has to be read off the
+     *  result. A missing table means there is no data to erase, which is not a
+     *  failure. */
+    const erase = async (label: string, build: () => any) => {
+      const { error } = await build();
+      if (!error) return;
+      if (error.code === "42P01") return;
+      failures.push(`${label}: ${error.message ?? error.code ?? "unknown error"}`);
+    };
+
+    // Other people's likes and comments sit on this user's posts with a foreign
+    // key to them, so those have to go before the posts themselves — otherwise
+    // the post delete fails and, previously, failed silently.
+    const { data: ownPosts } = await admin.from("posts").select("id").eq("user_id", userId);
+    const postIds = (ownPosts ?? []).map((post: { id: string }) => post.id);
+
+    await erase("post_likes (by user)", () =>
+      admin.from("post_likes").delete().eq("user_id", userId),
+    );
+    await erase("post_comments (by user)", () =>
+      admin.from("post_comments").delete().eq("user_id", userId),
+    );
+    if (postIds.length > 0) {
+      await erase("post_likes (on user's posts)", () =>
+        admin.from("post_likes").delete().in("post_id", postIds),
+      );
+      await erase("post_comments (on user's posts)", () =>
+        admin.from("post_comments").delete().in("post_id", postIds),
+      );
     }
+    await erase("posts", () => admin.from("posts").delete().eq("user_id", userId));
+    await erase("follows", () =>
+      admin.from("follows").delete().or(`follower_id.eq.${userId},following_id.eq.${userId}`),
+    );
+    await erase("user_blocks", () =>
+      admin.from("user_blocks").delete().or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`),
+    );
+    await erase("user_reports", () =>
+      admin
+        .from("user_reports")
+        .delete()
+        .or(`reporter_id.eq.${userId},reported_user_id.eq.${userId}`),
+    );
+    await erase("duels", () =>
+      admin.from("duels").delete().or(`challenger_id.eq.${userId},opponent_id.eq.${userId}`),
+    );
+    await erase("referrals", () =>
+      admin.from("referrals").delete().or(`referrer_id.eq.${userId},referred_id.eq.${userId}`),
+    );
+    await erase("user_state", () => admin.from("user_state").delete().eq("user_id", userId));
+    await erase("user_roles", () => admin.from("user_roles").delete().eq("user_id", userId));
+    await erase("profiles", () => admin.from("profiles").delete().eq("id", userId));
+
+    // `subscriptions` is deliberately left in place. It is a billing record, and
+    // erasing it would hide a Stripe subscription that may still be charging a
+    // card — Stripe, not this table, has to be cancelled first. Deleting the row
+    // silently would turn a billing problem into an invisible one.
+
+    // Deleting the login while personal data survives is the worst outcome: the
+    // rows become orphans nobody can find, let alone erase on request. Deletion
+    // is idempotent, so surfacing the failure lets the user retry and finish.
+    if (failures.length > 0) {
+      console.error("deleteMyAccount incomplete", { userId, failures });
+      throw new Error(
+        "We could not finish deleting your data, so your account is untouched. Please try again — if it keeps failing, contact support and it will be erased manually.",
+      );
+    }
+
     const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
     if (error) throw new Error(error.message);
     return { ok: true };

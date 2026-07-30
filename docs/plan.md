@@ -55,13 +55,20 @@ sign-in on 2026-07-29.
      the snapshot — accounts and data restore, passwords would need resetting.
      A restore has not been rehearsed; do that before trusting it.
    - _Remaining:_ retire the old project once a few real logins are confirmed.
-4. **In-app account deletion leaves data behind.** Surfaced during the
-   migration: a deleted account's `user_state` row survives the auth user, and
-   the old project still held 10 such orphans from accounts deleted long ago.
-   `deleteMyAccount` needs to remove (or cascade to) `user_state`, `profiles`,
-   and anything else keyed by `user_id`. This is an App Store 5.1.1(v)
-   commitment, not just hygiene — the app promises deletion in its privacy
-   disclosures.
+4. **In-app account deletion left data behind.** Surfaced by the migration: the
+   old project held 10 `user_state` rows belonging to accounts deleted long ago.
+   `deleteMyAccount` did attempt to clear every table, but Supabase returns
+   `{ error }` instead of throwing, so its `try/catch` caught nothing and every
+   failure was ignored — then the auth user was deleted regardless, orphaning
+   personal data that nobody can find, let alone erase on request. Deleting a
+   user's own posts also failed whenever someone else had liked or commented on
+   them, since those rows hold a foreign key to the post.
+   - _Done 2026-07-29:_ errors are now read off each result, likes and comments
+     on the user's posts are removed first, `duels` was added to the sweep, and
+     if anything fails the login is left intact and the user is told to retry
+     (deletion is idempotent) rather than being silently half-deleted.
+     `subscriptions` is deliberately retained — it is a billing record, and
+     erasing it would hide a Stripe subscription that may still be charging.
 5. **Serve the real Apple domain-association file.** `/.well-known/apple-developer-domain-association.txt`
    currently returns the SPA's HTML with a 200. Apple already accepted the
    Services ID, so this is not blocking today — it will fail a re-verification.
