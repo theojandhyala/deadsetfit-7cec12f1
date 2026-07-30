@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync, rmSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { join } from "node:path";
 
 const root = process.cwd();
@@ -17,6 +18,11 @@ function run(command, args, options = {}) {
 
 async function verifyCustomDomain() {
   const expectedHtml = readFileSync(join(root, "dist/client/index.html"), "utf8");
+  // Asset paths alone are not enough: a change confined to index.html (the boot
+  // screen, meta tags, the watchdog) leaves every hashed asset name identical, so
+  // the old check passed while the custom domain still served the previous HTML.
+  // Comparing the document itself catches that.
+  const expectedFingerprint = createHash("sha256").update(expectedHtml).digest("hex");
   const assetPaths = [...expectedHtml.matchAll(/(?:src|href)="(\/assets\/[^"]+)"/g)].map(
     (match) => match[1],
   );
@@ -30,8 +36,13 @@ async function verifyCustomDomain() {
         headers: { "Cache-Control": "no-cache" },
       });
       const liveHtml = await htmlResponse.text();
+      const liveFingerprint = createHash("sha256").update(liveHtml).digest("hex");
       if (!htmlResponse.ok || !liveHtml.includes(entryPath)) {
         lastIssue = "custom-domain HTML is still on the previous release";
+      } else if (liveFingerprint !== expectedFingerprint) {
+        // Same assets, different document: an index.html-only change that has
+        // not reached the custom domain yet.
+        lastIssue = "custom-domain index.html does not match the build yet";
       } else {
         const checks = await Promise.all(
           assetPaths.map(async (path) => {
