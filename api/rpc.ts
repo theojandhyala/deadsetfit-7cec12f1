@@ -4,6 +4,11 @@ import { createStripeClient, getStripeErrorMessage } from "../src/lib/stripe.ser
 import { supabaseAdmin } from "../src/integrations/supabase/client.server";
 import { gritLevel, calculateGritScore } from "../src/lib/calc";
 import { buildPublicStats } from "../src/lib/fifa-stats";
+import {
+  assessLeaderboardStats,
+  rankable,
+  type LeaderboardStats,
+} from "../src/lib/leaderboard-integrity";
 import { currentWeekStart } from "../src/lib/competition";
 import { getRank } from "../src/lib/rank";
 import type { AppState } from "../src/lib/types";
@@ -291,6 +296,15 @@ function subscriptionStatusFromStripeSubscription(subscription: any): Subscripti
     currentPeriodEnd,
     cancelAtPeriodEnd: !!subscription.cancel_at_period_end,
   };
+}
+
+/** Whole days since an ISO timestamp, or undefined when it is missing so the
+ *  account-age rule simply does not apply rather than guessing. */
+function daysSince(iso: string | undefined): number | undefined {
+  if (!iso) return undefined;
+  const then = new Date(iso).getTime();
+  if (!Number.isFinite(then)) return undefined;
+  return Math.max(0, Math.floor((Date.now() - then) / 86_400_000));
 }
 
 async function syncProfileProUntil(userId: string, status: SubscriptionStatus) {
@@ -616,7 +630,13 @@ const handlers: Record<string, Handler> = {
       .select("id, username, display_name, avatar_url, level, grit_points, public_stats")
       .limit(500);
     if (error) throw error;
-    const rows = (allRows ?? []).filter((r: any) => !r.id || !hidden.has(r.id as string));
+    const rows = (allRows ?? [])
+      .filter((r: any) => !r.id || !hidden.has(r.id as string))
+      // Entries whose stats failed the plausibility check are kept in the table
+      // (the lifter still sees their own numbers) but never ranked against
+      // everyone else. Rows written before the check existed carry no verdict and
+      // are trusted, so this cannot silently empty the leaderboard.
+      .filter((r: any) => rankable(r.public_stats));
     type TopPR = { id?: string; value?: number; unit?: string };
     type PublicStats = {
       overall?: number;
@@ -720,9 +740,31 @@ const handlers: Record<string, Handler> = {
       const state = parsed as AppState;
       const grit = Math.max(0, Math.min(1000, Math.round(calculateGritScore(state).total)));
       const stats = buildPublicStats(state);
+
+      // The values are derived server-side, but they are derived FROM the blob the
+      // client just uploaded — which contains manually entered PRs. So they are
+      // judged against the last accepted values before they are allowed to rank.
+      const { data: previous } = await supabaseAdmin
+        .from("profiles")
+        .select("grit_points, public_stats, created_at")
+        .eq("id", userId)
+        .maybeSingle();
+      const verdict = assessLeaderboardStats({
+        grit,
+        stats: stats as unknown as LeaderboardStats,
+        previousGrit: Number((previous as { grit_points?: number } | null)?.grit_points ?? 0),
+        previousStats: ((previous as { public_stats?: unknown } | null)?.public_stats ??
+          undefined) as LeaderboardStats | undefined,
+        completedDates: state.completedDates,
+        accountAgeDays: daysSince((previous as { created_at?: string } | null)?.created_at),
+      });
+      if (!verdict.verified) {
+        console.warn("leaderboard stats not verified", { userId, flags: verdict.flags });
+      }
+
       await supabaseAdmin
         .from("profiles")
-        .update({ grit_points: grit, public_stats: stats as never })
+        .update({ grit_points: verdict.grit, public_stats: verdict.stats as never })
         .eq("id", userId);
     } catch {
       /* leaderboard derive is best-effort — never block the sync */

@@ -81,12 +81,31 @@ mid-set, and today two devices are last-write-wins. Ship the
 photos-out-of-the-sync-blob fix alongside it — crossing the 2 MB blob cap
 silently stops backing up _all_ training data for the most engaged users.
 
-**Never trust a client-reported PR.** `grit_points` and `public_stats` are
-client-writable through `saveProfile`, so the leaderboard is spoofable from
-devtools. Move rank and PR computation server-side, add plausibility rules
-(per-lift ceilings, rate-of-change limits), and split **verified vs unverified**
-standing. A competitive app without anti-cheat becomes a joke leaderboard the
-moment it gets popular — and the moat is the competition.
+**Never trust a client-reported PR.** _Done 2026-07-30._ Two separate holes:
+
+- _Direct writes_ were already closed before this pass: `saveProfile` refuses
+  ranking columns and `guard_profile_privileged_columns` reverts any authenticated
+  write to them. Verified against the live project — a `PATCH /profiles` with a
+  real user token returns 204 and changes nothing.
+- _Indirect_ was wide open. `saveUserState` derives grit and `public_stats` from
+  the blob the client uploads, and that blob holds manually entered PRs — so
+  nobody could post a grit number, but anyone could type a 600 kg squat and the
+  server would faithfully rank it. Confirmed by doing it through the live API.
+
+`src/lib/leaderboard-integrity.ts` now judges derived stats before they rank:
+per-lift ceilings (raw world records plus margin), bodyweight multiples, PR growth
+per sync, grit growth for established accounts, grit against **account age** (a
+day-old account cannot hold a year of training), and streak against days actually
+logged. Failing entries are stored and shown to their owner but excluded from
+ranked tables — never deleted, and nobody is accused of anything.
+
+Two false positives were found only by testing against the live API, not by unit
+tests: 30 honest sessions compute to ~450 grit and tripped the growth rule on a
+first sync, and `public_stats` defaults to `{}` rather than null, so every new
+account looked "established". Both fixed and pinned by tests.
+
+_Remaining:_ a verified tier (gym-verified or video-verified lifts) if the
+leaderboard ever carries prizes.
 
 ## Phase 2 — Best-in-class on the gym floor
 
