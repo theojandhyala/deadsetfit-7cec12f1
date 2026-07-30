@@ -9,8 +9,9 @@ down:
 | Local notification | banner + sound at the deadline | backgrounded, suspended, or killed |
 | Live Activity      | Dynamic Island + Lock Screen   | backgrounded or suspended          |
 
-The first two are **live now** and need no Xcode work. The Live Activity needs one
-target added in Xcode (below) — everything else for it is already written.
+All three are wired. The widget extension target was added to
+`DeadSet.xcodeproj` on 2026-07-30, and Debug and Release both compile with the
+extension embedded in the app bundle.
 
 ## Why it is built this way
 
@@ -40,35 +41,49 @@ reminders toggle in Settings, so a lifter who has never enabled reminders gets t
 in-app timer and the Live Activity, but no banner. That is the correct trade: an
 OS permission dialog appearing between sets is worse than a missing banner.
 
-## Adding the Live Activity target (Xcode, ~3 minutes)
+## How the target was added
 
-This is the one step that cannot be scripted safely: it means adding a target to
-`project.pbxproj`, and hand-editing that file risks breaking the build for a
-saving of two clicks.
+Not by hand: `project.pbxproj` is a graph of cross-referencing UUIDs across a
+dozen sections, and hand-editing it is how projects get corrupted. It was done
+with the `xcodeproj` library (the same one CocoaPods uses), scripted so it is
+repeatable and reviewable:
 
-1. Open `ios/App/App.xcworkspace` in Xcode.
-2. **File → New → Target… → Widget Extension**.
-   - Product Name: `DeadSetRestActivity`
-   - **Uncheck** "Include Configuration App Intent"
-   - **Check** "Include Live Activity"
-   - Embed in: `App`
-3. Xcode generates a folder of placeholder files. **Delete them** (move to trash) —
-   the real implementation is already in `ios/App/DeadSetRestActivity/`.
-4. Right-click the new group → **Add Files to "DeadSetRestActivity"…** and add:
-   - `RestActivityAttributes.swift`
-   - `RestLiveActivity.swift`
-5. Select `RestActivityAttributes.swift` → File Inspector → **Target Membership**:
-   tick **both** `App` and `DeadSetRestActivity`. This matters — the app requests
-   the activity and the extension renders it, so both compile the same type. If
-   only one has it, `Activity.request` fails at runtime with no visible error.
-6. Add `RestMark` to the extension's asset catalog: drag `public/icon-192.png`
-   into `DeadSetRestActivity/Assets.xcassets` and name the image set `RestMark`.
-   (The Lock Screen layout references it; the Dynamic Island does not.)
-7. Set the extension's deployment target to **iOS 16.2** or later.
-8. Build. `RestActivityPlugin.swift` is already in the `App` target and registers
-   itself with Capacitor automatically.
+```bash
+gem install xcodeproj --user-install
+ruby scripts/add-live-activity-target.rb
+```
 
-`NSSupportsLiveActivities` is already `true` in `ios/App/App/Info.plist`.
+The script is idempotent — re-running reports what already exists rather than
+adding a second target. What it configures:
+
+- target `DeadSetRestActivity`, app-extension product type, iOS 16.2 minimum
+- bundle id `org.deadsetfit.app.RestActivity`, team `89JWMU95AH`, automatic signing
+- `RestActivityAttributes.swift` compiled into **both** app and extension, since
+  the app requests the activity and the extension renders it — if only one has it,
+  `Activity.request` fails at runtime with nothing logged
+- an "Embed Foundation Extensions" phase plus a target dependency, so the `.appex`
+  ships inside `DeadSet.app/PlugIns/`
+- `Assets.xcassets` holding the `RestMark` image the Lock Screen layout draws
+
+Two bugs this caught, both invisible to a glance in Xcode:
+
+1. **`PRODUCT_NAME` was unset**, so the extension built as `.appex` with an empty
+   name and collided with itself during the universal-binary step.
+2. **`RestActivityPlugin.swift` was not in the App target.** That target lists its
+   sources explicitly — there is no file-system synchronized group — so a Swift
+   file dropped into `App/` is never compiled. The build passed while the plugin
+   did not exist, which would have left the web layer with no `RestActivity`
+   plugin and the island silently absent.
+
+Verified by compiling, not by inspection:
+
+```bash
+cd ios/App && xcodebuild -project DeadSet.xcodeproj -scheme DeadSet -destination 'generic/platform=iOS Simulator' -configuration Release CODE_SIGNING_ALLOWED=NO build
+```
+
+Both configurations succeed. `DeadSet.app/PlugIns/DeadSetRestActivity.appex` is
+present with `NSExtensionPointIdentifier = com.apple.widgetkit-extension`,
+`MinimumOSVersion 16.2`, and the shared attributes type in both binaries.
 
 ## Verifying
 
