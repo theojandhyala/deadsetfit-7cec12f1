@@ -1016,6 +1016,7 @@ function LiveWorkoutPage() {
         <RestTimer
           key={session.exercises[activeIdx]?.sets.length ?? 0}
           seconds={currentRestSeconds}
+          nextExercise={current.name}
           onDone={() => setResting(false)}
           onDisable={() => {
             set((s) => ({ ...s, restTimerSeconds: 0 }));

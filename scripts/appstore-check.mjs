@@ -72,6 +72,10 @@ const privacyManifest = existsSync("ios/App/App/PrivacyInfo.xcprivacy")
 const platformUtil = existsSync("src/lib/platform.ts") ? read("src/lib/platform.ts") : "";
 const rpcClient = existsSync("src/lib/rpc-client.ts") ? read("src/lib/rpc-client.ts") : "";
 const authClient = existsSync("src/auth/plain.ts") ? read("src/auth/plain.ts") : "";
+const restTimer = existsSync("src/components/RestTimer.tsx")
+  ? read("src/components/RestTimer.tsx")
+  : "";
+const restTimerLib = existsSync("src/lib/rest-timer.ts") ? read("src/lib/rest-timer.ts") : "";
 const oauthClient = existsSync("src/auth/oauth.ts") ? read("src/auth/oauth.ts") : "";
 const oauthServer = existsSync("src/lib/oauth.server.ts") ? read("src/lib/oauth.server.ts") : "";
 const worker = existsSync("src/cloudflare-worker.ts") ? read("src/cloudflare-worker.ts") : "";
@@ -269,6 +273,15 @@ check(
     !/lovable/i.test(oauthServer) &&
     worker.includes("handleOAuthRequest"),
   "Google and Apple use DEADSET-owned clients, callbacks, token verification, and Supabase sessions without a third-party OAuth broker.",
+);
+check(
+  "rest timer survives leaving the app",
+  restTimer.includes("restTimerState") &&
+    restTimer.includes("scheduleRestAlert") &&
+    restTimerLib.includes("allowWhileIdle") &&
+    !restTimer.includes("setLeft((s) => s - 1)") &&
+    infoPlist.includes("NSSupportsLiveActivities"),
+  "Rest counts down from a deadline (not suspendable ticks), alerts at the deadline, and the app is entitled to Live Activities.",
 );
 check(
   "native OAuth callback",
