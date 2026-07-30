@@ -20,6 +20,24 @@ public class RestActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "end", returnType: CAPPluginReturnPromise)
     ]
 
+    /// Capacitor calls this on every plugin it registers. Without it, a plugin
+    /// that failed to register is indistinguishable from one that registered and
+    /// was simply never called — which is exactly how RestActivityPlugin.swift
+    /// sat un-compiled while the build stayed green.
+    override public func load() {
+        // NSLog rather than CAPLog/print: CAPLog writes to stdout, which the
+        // unified log does not capture, so it cannot be used to prove the plugin
+        // registered. This line is visible in Console.app and `log show`.
+        if #available(iOS 16.2, *) {
+            NSLog(
+                "[DEADSET] RestActivity plugin loaded; live activities enabled: %@",
+                ActivityAuthorizationInfo().areActivitiesEnabled ? "yes" : "no"
+            )
+        } else {
+            NSLog("[DEADSET] RestActivity plugin loaded; Live Activities need iOS 16.2+")
+        }
+    }
+
     @objc func isSupported(_ call: CAPPluginCall) {
         if #available(iOS 16.2, *) {
             // Enabled is a user setting (Settings → DEADSET → Live Activities),

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 
 const strict = process.env.APPSTORE_STRICT === "1";
 const checks = [];
@@ -72,6 +72,12 @@ const privacyManifest = existsSync("ios/App/App/PrivacyInfo.xcprivacy")
 const platformUtil = existsSync("src/lib/platform.ts") ? read("src/lib/platform.ts") : "";
 const rpcClient = existsSync("src/lib/rpc-client.ts") ? read("src/lib/rpc-client.ts") : "";
 const authClient = existsSync("src/auth/plain.ts") ? read("src/auth/plain.ts") : "";
+const viewController = existsSync("ios/App/App/MyViewController.swift")
+  ? read("ios/App/App/MyViewController.swift")
+  : "";
+const localPlugins = existsSync("ios/App/App")
+  ? readdirSync("ios/App/App").filter((name) => name.endsWith("Plugin.swift"))
+  : [];
 const restTimer = existsSync("src/components/RestTimer.tsx")
   ? read("src/components/RestTimer.tsx")
   : "";
@@ -273,6 +279,20 @@ check(
     !/lovable/i.test(oauthServer) &&
     worker.includes("handleOAuthRequest"),
   "Google and Apple use DEADSET-owned clients, callbacks, token verification, and Supabase sessions without a third-party OAuth broker.",
+);
+// A plugin can compile, ship inside the binary, and still be unreachable from
+// JavaScript: this Capacitor version does not auto-discover classes living in the
+// app target, so an unregistered plugin fails silently with no error anywhere.
+// RestActivityPlugin shipped exactly that way until it was caught at runtime.
+const unregisteredPlugins = localPlugins.filter(
+  (file) => !viewController.includes(`registerPluginInstance(${file.replace(".swift", "")}()`),
+);
+check(
+  "app-local iOS plugins are registered",
+  localPlugins.length > 0 && unregisteredPlugins.length === 0,
+  unregisteredPlugins.length === 0
+    ? `All ${localPlugins.length} app-local Capacitor plugin(s) are registered in MyViewController.`
+    : `Not registered in MyViewController, so unreachable from JavaScript: ${unregisteredPlugins.join(", ")}`,
 );
 check(
   "rest timer survives leaving the app",
