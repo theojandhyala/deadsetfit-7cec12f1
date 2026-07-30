@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Crown, X, Check, Shield, BarChart3, ClipboardList, Hammer, Trophy, Swords, Bell, HeartPulse, Apple, Camera, Medal, TrendingUp, FileBarChart } from "lucide-react";
+import { Crown, X, Check, Shield, BarChart3, ClipboardList, Hammer, Bell, HeartPulse, Apple, Camera, Medal, TrendingUp, FileBarChart } from "lucide-react";
 import { onPaywall, type PaywallFeature } from "@/lib/paywall-events";
 import { detectCountry, currencyForCountry, CURRENCY_META, type SupportedCurrency } from "@/lib/currency";
 import { isNativeIos } from "@/lib/platform";
@@ -49,26 +49,9 @@ const FEATURE_PITCH: Record<
     ],
     icon: Hammer,
   },
-  leagues: {
-    title: "Full Weekly Leagues",
-    tagline: "Climb every division.",
-    bullets: [
-      "Full ranked ladder access, all divisions",
-      "Grit-ranked leaderboard placement",
-      "Season standing on your profile card",
-    ],
-    icon: Trophy,
-  },
-  h2h: {
-    title: "Head-to-Head Challenges",
-    tagline: "Call someone out.",
-    bullets: [
-      "Challenge any lifter you follow",
-      "Posted to the feed — the gym is watching",
-      "Winner takes the bragging rights",
-    ],
-    icon: Swords,
-  },
+  // The "leagues" and "h2h" pitches lived here until duels and the full ladder
+  // became free. Both are two-player features, so selling them meant the buyer
+  // still couldn't use them unless their friend had also paid.
   reminders: {
     title: "Smart Reminders",
     tagline: "Never drift for a week again.",

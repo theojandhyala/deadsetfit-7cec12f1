@@ -635,10 +635,9 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
-  const { isPro, loading: proLoading } = usePro();
-  // Creating an H2H challenge is Pro-only; viewing/accepting stays free.
-  // While entitlement is loading, treat as unlocked (never flash a lock at paying users).
-  const h2hLocked = !proLoading && !isPro;
+  // H2H challenges are free on both sides. Charging the challenger meant the
+  // feature only worked when both people happened to be Pro, which throttled
+  // the friend-invites-friend loop the app grows on.
   const _search = searchAthletes;
   const _createPost = createPost;
 
@@ -663,10 +662,6 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
 
   async function sendChallenge() {
     if (!selected || !challenge) return;
-    if (h2hLocked) {
-      openPaywall("h2h");
-      return;
-    }
     setSending(true);
     try {
       const targetName = selected.display_name || selected.username || "friend";

@@ -31,7 +31,6 @@ function daysLeft(end: string | null): string {
 }
 
 export function DuelsPanel() {
-  const { isPro, loading: proLoading } = usePro();
   const [duels, setDuels] = useState<Duel[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -65,8 +64,10 @@ export function DuelsPanel() {
         <p className="label-cap flex items-center gap-1.5 text-accent-red">
           <Swords size={12} /> Duels
         </p>
+        {/* Duels are two-player: gating them meant a Pro user could not challenge
+            a free friend, so the feature failed for the person who had paid. */}
         <button
-          onClick={() => (isPro || proLoading ? setCreating(true) : openPaywall("h2h"))}
+          onClick={() => setCreating(true)}
           className="label-cap text-[10px] inline-flex items-center gap-1 text-accent-red press"
         >
           <Plus size={12} /> New duel

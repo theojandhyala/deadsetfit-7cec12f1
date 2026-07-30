@@ -19,7 +19,7 @@ import {
   type SupportedCurrency,
 } from "@/lib/currency";
 import { isNativeIos } from "@/lib/platform";
-import { COMPARE_ROWS } from "@/lib/pro-features";
+import { COMPARE_ROWS, PRO_HERO } from "@/lib/pro-features";
 import { ProBadge } from "@/components/ProBadge";
 
 export const Route = createFileRoute("/upgrade")({
@@ -206,8 +206,8 @@ function UpgradePage() {
             <span style={{ color: "#e63222" }}>PRO</span>
           </h1>
           <p className="mt-3 text-sm max-w-xs mx-auto leading-relaxed" style={{ color: "#8A8A8A" }}>
-            Everything core is free forever. Pro is for the ones chasing rank —
-            deeper competition, sharper insight, real status.
+            Training, duels and the full ladder are free forever. Pro protects
+            your streak and shows you what the numbers actually mean.
           </p>
         </div>
 
@@ -242,6 +242,20 @@ function UpgradePage() {
             <p className="text-[10px] mt-1" style={{ color: "#8A8A8A" }}>
               per month · cancel anytime
             </p>
+          </div>
+        </div>
+
+        {/* Lead with the one feature, then let the table back it up. A 21-row
+            spec sheet is what you read after you're interested, not what makes
+            you interested. */}
+        <div className="px-5 mt-6">
+          <div className="rounded-2xl border border-accent-red bg-grit-card p-5 relative overflow-hidden">
+            <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-accent-red/20 blur-2xl" />
+            <p className="label-cap text-accent-red text-[10px]">{PRO_HERO.label}</p>
+            <h2 className="display text-2xl font-extrabold uppercase text-grit leading-tight mt-1">
+              {PRO_HERO.headline}
+            </h2>
+            <p className="text-sm text-grit-dim leading-relaxed mt-2">{PRO_HERO.detail}</p>
           </div>
         </div>
 

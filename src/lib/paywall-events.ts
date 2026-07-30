@@ -3,8 +3,7 @@ export type PaywallFeature =
   | "advanced-analytics"
   | "featured-programs"
   | "custom-programs"
-  | "leagues"
-  | "h2h"
+  // "leagues" and "h2h" were removed when duels and the full ladder became free.
   | "reminders"
   | "recovery"
   | "nutrition"

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { BottomNav } from "@/components/BottomNav";
 import { GritEarnedLayer } from "@/components/GritEarnedLayer";
+import { StreakRescuePrompt } from "@/components/StreakRescuePrompt";
 import { TopBar } from "@/components/TopBar";
 import {
   getLocalStateOwner,
@@ -187,6 +188,7 @@ function TabsLayout() {
       <TopBar />
       <Outlet />
       <GritEarnedLayer />
+      <StreakRescuePrompt />
       <BottomNav />
     </div>
   );
