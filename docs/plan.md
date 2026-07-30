@@ -112,20 +112,30 @@ leaderboard ever carries prizes.
 
 ## Phase 2 — Best-in-class on the gym floor
 
-Where "best app on the market" is actually won, and it is cheap:
+**Mostly already built.** Audited 2026-07-30 against the code rather than against
+BACKLOG.md, which had drifted badly. Shipped and wired already:
 
-- Wire up `RestTimer` — built, never mounted. Auto-start, haptics, sound.
-- Logger depth: supersets, drop sets, warm-up ramps, per-set RPE/RIR, plate math,
-  last-time values inline, one-tap "repeat last workout".
-- Per-exercise history and PR timeline graphs.
-- Deterministic progression and deload: stalled-lift detection, rule-based, no
-  AI, stays $0/user.
-- ~~Fix the FifaCard 1RM vs PR-list mismatch.~~ _Done 2026-07-30._ Not a maths
-  bug: the card showed an Epley-estimated 1RM (100kg x 5 → 117) while the PR list
-  showed the raw entry, so one lift read as two numbers with no explanation. The
-  value stays a comparable 1RM — that is what the leaderboard ranks on — and
-  headline PRs now carry an `estimated` flag so the tile prefixes "≈" when the
-  number came from a formula rather than a measured single.
+- `RestTimer` is mounted (workout.live.tsx) — the backlog still called it unmounted.
+- Plate maths: `plateBreakdown` in calc.ts, tested, shown in the logger.
+- Warm-up ramps: `warmupRamp`, rendered before the first working set.
+- Drop sets and warm-up sets: `kind` on logged sets, labelled in the set list.
+- Per-set RPE: captured and displayed after each logged set.
+- One-tap "Repeat last workout": in the live workout screen.
+- Stall detection and deload prescriptions: `plateaus()` in pro-intelligence.ts.
+- Per-exercise history: `topSetHistory()` in progression.ts, surfaced by PRList
+  and ProIntelligence.
+- ~~FifaCard 1RM vs PR-list mismatch~~ — _done 2026-07-30_, see below.
+
+_Genuinely remaining:_
+
+- **Supersets.** The only item with no implementation anywhere in the codebase.
+  Needs a data-model decision (pairing exercises in a session and alternating
+  through them) before any UI, and it touches the most-used screen in the app.
+- **A PR timeline graph.** The history data exists; there is no chart of it.
+
+The lesson worth keeping: a stale backlog costs more than no backlog. I wrote a
+plate-maths module before discovering `plateBreakdown` already existed, tested
+and wired — and deleted it. Check the code before trusting this file.
 
 ## Phase 3 — Retention loop
 
