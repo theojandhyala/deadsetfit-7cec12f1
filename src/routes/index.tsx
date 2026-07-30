@@ -6,16 +6,17 @@ import { isNativeIos } from "@/lib/platform";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "DEADSET — Train Smarter. Track Everything. Forge Your Body." },
+      { title: "DEADSET — A Clearer Way to Train" },
       {
         name: "description",
         content:
-          "DEADSET is the all-in-one fitness app built to help you plan workouts, track progress, and stay motivated to reach your goals.",
+          "Plan your week, log every set, and see what is improving. DEADSET brings training, nutrition, health data, and progress into one gym app.",
       },
-      { property: "og:title", content: "DEADSET — Forge Your Body" },
+      { property: "og:title", content: "DEADSET — A Clearer Way to Train" },
       {
         property: "og:description",
-        content: "Track PRs, follow programs, log workouts. Train. Build. Become.",
+        content:
+          "Build your schedule, log workouts, track nutrition, and see your progress clearly.",
       },
       { property: "og:url", content: "https://deadsetfit.org/" },
       {
@@ -28,10 +29,11 @@ export const Route = createFileRoute("/")({
         content:
           "https://deadsetfit.org/__l5e/assets-v1/784b292b-3adf-4fa7-9f14-d45495738304/deadset-logo.png",
       },
-      { name: "twitter:title", content: "DEADSET — Forge Your Body" },
+      { name: "twitter:title", content: "DEADSET — A Clearer Way to Train" },
       {
         name: "twitter:description",
-        content: "Track PRs, follow programs, log workouts. Train. Build. Become.",
+        content:
+          "Build your schedule, log workouts, track nutrition, and see your progress clearly.",
       },
     ],
     links: [{ rel: "canonical", href: "https://deadsetfit.org/" }],

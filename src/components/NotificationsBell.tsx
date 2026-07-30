@@ -4,7 +4,12 @@ import { Bell, X, UserPlus, MessageCircle } from "lucide-react";
 import { getNotifications, type AppNotification } from "@/lib/social.functions";
 
 const SEEN_KEY = "deadset_notifs_seen_at";
-const REACTION_EMOJI: Record<string, string> = { fire: "🔥", beast: "💪", respect: "🙌", goat: "🐐" };
+const REACTION_EMOJI: Record<string, string> = {
+  fire: "🔥",
+  beast: "💪",
+  respect: "🙌",
+  goat: "🐐",
+};
 
 function timeAgo(iso: string): string {
   const t = new Date(iso).getTime();
@@ -94,14 +99,23 @@ export function NotificationsBell() {
             ) : (
               <ul className="divide-y divide-[#1c1c1c]">
                 {items.map((n, i) => {
-                  const actor = n.actor ?? { id: "", username: null, display_name: null, avatar_url: null };
+                  const actor = n.actor ?? {
+                    id: "",
+                    username: null,
+                    display_name: null,
+                    avatar_url: null,
+                  };
                   const name = actor.display_name || actor.username || "Athlete";
                   const rowClass = "flex items-center gap-3 px-4 py-3 press";
                   const inner = (
                     <>
                       <div className="w-9 h-9 rounded-full overflow-hidden bg-[#1a1a1a] flex items-center justify-center shrink-0 border border-grit">
                         {actor.avatar_url ? (
-                          <img src={actor.avatar_url} alt="" className="w-full h-full object-cover" />
+                          <img
+                            src={actor.avatar_url}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
                         ) : n.type === "follow" ? (
                           <UserPlus size={15} className="text-accent-red" />
                         ) : n.type === "comment" ? (
@@ -120,7 +134,9 @@ export function NotificationsBell() {
                               : `commented: "${n.snippet}"`}
                         </p>
                       </div>
-                      <span className="text-[11px] text-grit-dim shrink-0">{timeAgo(n.created_at)}</span>
+                      <span className="text-[11px] text-grit-dim shrink-0">
+                        {timeAgo(n.created_at)}
+                      </span>
                     </>
                   );
                   return (

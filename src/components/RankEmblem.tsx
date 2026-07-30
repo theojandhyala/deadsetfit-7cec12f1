@@ -1,4 +1,50 @@
+import { useId } from "react";
+import {
+  BicepsFlexed,
+  Crown,
+  Dumbbell,
+  Flame,
+  Gem,
+  Hexagon,
+  Medal,
+  Shield,
+  Star,
+  Swords,
+  Trophy,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
+
 import { getRank, rankProgress, pointsToNextTier } from "@/lib/rank";
+import type { RankTier } from "@/lib/rank";
+
+const RANK_GLYPHS: Record<RankTier, LucideIcon> = {
+  IRON: Dumbbell,
+  BRONZE: Shield,
+  SILVER: Swords,
+  GOLD: Crown,
+  PLATINUM: Hexagon,
+  DIAMOND: Gem,
+  ELITE: Zap,
+  MASTER: Star,
+  CHAMPION: Trophy,
+  LEGEND: Medal,
+  UNREAL: Flame,
+  DEADSET: BicepsFlexed,
+};
+
+export function RankTierGlyph({
+  tier,
+  size = 18,
+  color = "currentColor",
+}: {
+  tier: RankTier;
+  size?: number;
+  color?: string;
+}) {
+  const Icon = RANK_GLYPHS[tier];
+  return <Icon size={size} color={color} strokeWidth={2.35} aria-hidden="true" />;
+}
 
 export function RankEmblem({
   gritPoints,
@@ -11,6 +57,7 @@ export function RankEmblem({
   showProgress?: boolean;
   showLabel?: boolean;
 }) {
+  const id = useId().replace(/:/g, "");
   const rank = getRank(gritPoints);
   const progress = rankProgress(gritPoints);
   const toNext = pointsToNextTier(gritPoints);
@@ -34,13 +81,13 @@ export function RankEmblem({
       >
         <svg viewBox="0 0 100 100" className="absolute inset-0" aria-hidden="true">
           <defs>
-            <linearGradient id={`rank-shell-${rank.tier}-${size}`} x1="12" y1="10" x2="88" y2="92">
+            <linearGradient id={`rank-shell-${id}`} x1="12" y1="10" x2="88" y2="92">
               <stop offset="0" stopColor="#f8fafc" stopOpacity=".82" />
               <stop offset=".2" stopColor={rank.color} stopOpacity=".86" />
               <stop offset=".56" stopColor={rank.gradient[0]} />
               <stop offset="1" stopColor="#050505" />
             </linearGradient>
-            <linearGradient id={`rank-core-${rank.tier}-${size}`} x1="24" y1="16" x2="78" y2="92">
+            <linearGradient id={`rank-core-${id}`} x1="24" y1="16" x2="78" y2="92">
               <stop offset="0" stopColor={rank.color} stopOpacity=".95" />
               <stop offset=".48" stopColor={rank.gradient[1]} stopOpacity=".78" />
               <stop offset="1" stopColor={rank.gradient[0]} />
@@ -48,7 +95,7 @@ export function RankEmblem({
           </defs>
           <path
             d="M50 4 84 20 96 50 78 86 50 98 22 86 4 50 16 20Z"
-            fill={`url(#rank-shell-${rank.tier}-${size})`}
+            fill={`url(#rank-shell-${id})`}
             stroke="rgba(255,255,255,.22)"
             strokeWidth={stroke}
           />
@@ -61,13 +108,25 @@ export function RankEmblem({
           />
           <path
             d="M50 22 68 50 50 78 32 50Z"
-            fill={`url(#rank-core-${rank.tier}-${size})`}
+            fill={`url(#rank-core-${id})`}
             stroke="rgba(255,255,255,.38)"
             strokeWidth="1.2"
           />
           <path d="M50 29 59 50 50 71 41 50Z" fill="rgba(255,255,255,.28)" />
-          <path d="M26 51H13M87 51H74" stroke={rank.color} strokeOpacity=".62" strokeWidth="2.4" strokeLinecap="round" />
-          <path d="M39 20 50 13 61 20M39 80 50 88 61 80" stroke="rgba(255,255,255,.28)" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+          <path
+            d="M26 51H13M87 51H74"
+            stroke={rank.color}
+            strokeOpacity=".62"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+          />
+          <path
+            d="M39 20 50 13 61 20M39 80 50 88 61 80"
+            stroke="rgba(255,255,255,.28)"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            fill="none"
+          />
         </svg>
 
         <div
@@ -86,14 +145,7 @@ export function RankEmblem({
             border: `1px solid ${rank.color}66`,
           }}
         >
-          <span
-            className="block h-1/2 w-[2px] rounded-full"
-            style={{
-              background: `linear-gradient(180deg, #fff, ${rank.color})`,
-              boxShadow: `0 0 12px ${rank.glowColor}`,
-              transform: "skewX(-12deg)",
-            }}
-          />
+          <RankTierGlyph tier={rank.tier} size={Math.max(12, dim * 0.23)} color={rank.color} />
         </div>
 
         {rank.division && (

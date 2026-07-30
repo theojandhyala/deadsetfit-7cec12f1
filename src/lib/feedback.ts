@@ -5,7 +5,8 @@
 export function restDoneChime() {
   try {
     const Ctx =
-      window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (Ctx) {
       const ctx = new Ctx();
       const now = ctx.currentTime;

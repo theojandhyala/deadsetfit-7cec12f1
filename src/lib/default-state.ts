@@ -3,6 +3,7 @@ import type { AppState } from "./types";
 export const DEFAULT_STATE: AppState = {
   profile: null,
   schedule: null,
+  savedExercises: [],
   logs: [],
   checkIns: [],
   weights: [],
@@ -19,6 +20,11 @@ export const DEFAULT_STATE: AppState = {
   manualPRs: {},
   units: "kg",
   remindersEnabled: true,
+  autoShareWorkouts: false,
+  deviceRemindersEnabled: false,
+  workoutReminderHour: 18,
+  workoutReminderMinute: 0,
   streakArmor: { shields: 0, lastRefillMonth: "", usedDates: [] },
   healthSync: { enabled: false, importWorkouts: true, exportWorkouts: true },
+  strengthGoals: [],
 };

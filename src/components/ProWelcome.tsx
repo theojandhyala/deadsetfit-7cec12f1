@@ -5,6 +5,8 @@ import { usePro } from "@/hooks/usePro";
 const WELCOME_FLAG = "deadset_pro_welcomed_v1";
 
 const UNLOCKED = [
+  "Weekly Review — your next three moves, prioritized",
+  "PR Roadmap — targets, gaps and projected dates",
   "Streak Armor — your streak is now protected",
   "Progression intelligence + Ghost Mode",
   "Full Weekly Leagues + Head-to-Head",
@@ -21,7 +23,8 @@ const UNLOCKED = [
  * redirect-return flows alike.
  */
 export function ProWelcome() {
-  const { isPro } = usePro();
+  // Only celebrate a real purchase — not the blanket iOS entitlement.
+  const { isPaidPro: isPro } = usePro();
   const [show, setShow] = useState(false);
   const prev = useRef<boolean | null>(null);
 
@@ -99,7 +102,7 @@ export function ProWelcome() {
           DEADSET Pro
         </h2>
         <p className="text-xs text-[#b7ac8e] mt-3 mb-4">
-          You just unlocked the full arsenal. Here's everything that's now yours:
+          Your Pro training tools are ready. Here's everything now included:
         </p>
         <div className="grid grid-cols-1 gap-1.5 text-left mb-5">
           {UNLOCKED.map((item) => (

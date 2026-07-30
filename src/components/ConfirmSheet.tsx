@@ -51,7 +51,11 @@ export function ConfirmSheet() {
   }
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-end justify-center" role="alertdialog" aria-modal="true">
+    <div
+      className="fixed inset-0 z-[110] flex items-end justify-center"
+      role="alertdialog"
+      aria-modal="true"
+    >
       <div
         className="absolute inset-0 bg-black/80"
         onClick={() => finish(request.kind === "text" ? null : false)}
@@ -75,9 +79,7 @@ export function ConfirmSheet() {
 
         {needsWord && (
           <div className="mt-4">
-            <p className="label-cap text-[10px] mb-1.5">
-              Type {request.typedWord} to confirm
-            </p>
+            <p className="label-cap text-[10px] mb-1.5">Type {request.typedWord} to confirm</p>
             <input
               key={reqSeq}
               defaultValue=""

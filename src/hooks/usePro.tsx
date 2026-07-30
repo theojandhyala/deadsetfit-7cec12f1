@@ -3,11 +3,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { getStripeEnvironment, isPaymentsConfigured } from "@/lib/stripe";
 import { getSubscriptionStatus } from "@/lib/payments.functions";
 import { withTimeout } from "@/lib/account-restore";
+import { isNativeIos } from "@/lib/platform";
 
 const PRO_CACHE_KEY = "deadset_pro_status_v1";
 
 type ProState = {
+  /**
+   * ENTITLEMENT — drives every feature gate.
+   * On native iOS this is always true: Pro can't be sold in the app (no IAP),
+   * so gating features there would mean charging outside the App Store
+   * (Guideline 3.1.1) and hiding advertised features from review (2.3).
+   * Every feature is simply free on iOS.
+   */
   isPro: boolean;
+  /** Actual paid subscription — identity/badging and billing surfaces only. */
+  isPaidPro: boolean;
   loading: boolean;
   status: string | null;
   priceId: string | null;
@@ -16,13 +26,15 @@ type ProState = {
   refresh: () => Promise<void>;
 };
 
-type CachedProState = Omit<ProState, "loading" | "refresh"> & { checkedAt: number };
+type CachedProState = Omit<ProState, "loading" | "refresh" | "isPaidPro"> & { checkedAt: number };
 
 const ProContext = createContext<ProState | null>(null);
 
 function readCachedPro(): CachedProState | null {
   try {
-    const parsed = JSON.parse(localStorage.getItem(PRO_CACHE_KEY) || "null") as CachedProState | null;
+    const parsed = JSON.parse(
+      localStorage.getItem(PRO_CACHE_KEY) || "null",
+    ) as CachedProState | null;
     if (!parsed || Date.now() - parsed.checkedAt > 10 * 60_000) return null;
     if (parsed.currentPeriodEnd && new Date(parsed.currentPeriodEnd) <= new Date()) return null;
     return parsed;
@@ -31,7 +43,7 @@ function readCachedPro(): CachedProState | null {
   }
 }
 
-function writeCachedPro(status: Omit<ProState, "loading" | "refresh">) {
+function writeCachedPro(status: Omit<CachedProState, "checkedAt">) {
   try {
     localStorage.setItem(PRO_CACHE_KEY, JSON.stringify({ ...status, checkedAt: Date.now() }));
   } catch {
@@ -47,7 +59,11 @@ function clearCachedPro() {
   }
 }
 
-async function rejectOnTimeout<T>(promise: PromiseLike<T>, timeoutMs: number, message: string): Promise<T> {
+async function rejectOnTimeout<T>(
+  promise: PromiseLike<T>,
+  timeoutMs: number,
+  message: string,
+): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
@@ -67,17 +83,24 @@ export function ProProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<string | null>(cached?.status ?? null);
   const [priceId, setPriceId] = useState<string | null>(cached?.priceId ?? null);
-  const [currentPeriodEnd, setCurrentPeriodEnd] = useState<string | null>(cached?.currentPeriodEnd ?? null);
+  const [currentPeriodEnd, setCurrentPeriodEnd] = useState<string | null>(
+    cached?.currentPeriodEnd ?? null,
+  );
   const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(cached?.cancelAtPeriodEnd ?? false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    if (!isPaymentsConfigured()) {
+    // Native iOS never queries subscription/purchase state: there is nothing to
+    // buy in the app and every feature is already unlocked, so the app makes no
+    // payment-related requests at all (App Store Guideline 3.1.1).
+    if (isNativeIos() || !isPaymentsConfigured()) {
       setLoading(false);
       return;
     }
     try {
-      const { data: { session } } = await withTimeout(
+      const {
+        data: { session },
+      } = await withTimeout(
         supabase.auth.getSession(),
         { data: { session: null }, error: null },
         3500,
@@ -156,8 +179,23 @@ export function ProProvider({ children }: { children: ReactNode }) {
     };
   }, [refresh]);
 
+  // On native iOS every feature is free (see ProState.isPro), and we must not
+  // flash a locked state while the subscription check is in flight either.
+  const iosFree = isNativeIos();
+
   return (
-    <ProContext.Provider value={{ isPro, loading, status, priceId, currentPeriodEnd, cancelAtPeriodEnd, refresh }}>
+    <ProContext.Provider
+      value={{
+        isPro: isPro || iosFree,
+        isPaidPro: isPro,
+        loading: iosFree ? false : loading,
+        status,
+        priceId,
+        currentPeriodEnd,
+        cancelAtPeriodEnd,
+        refresh,
+      }}
+    >
       {children}
     </ProContext.Provider>
   );
@@ -165,7 +203,17 @@ export function ProProvider({ children }: { children: ReactNode }) {
 
 export function usePro(): ProState {
   const ctx = useContext(ProContext);
-  if (!ctx) return { isPro: false, loading: false, status: null, priceId: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, refresh: async () => {} };
+  if (!ctx)
+    return {
+      // No provider: still unlock everything on iOS so no gate can ever appear there.
+      isPro: isNativeIos(),
+      isPaidPro: false,
+      loading: false,
+      status: null,
+      priceId: null,
+      currentPeriodEnd: null,
+      cancelAtPeriodEnd: false,
+      refresh: async () => {},
+    };
   return ctx;
 }
-

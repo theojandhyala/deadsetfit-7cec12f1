@@ -1,4 +1,5 @@
-import type { Profile, AppState, SetLog, DayKey } from "./types";
+import { getExercise } from "./exercises";
+import type { Profile, AppState, DayKey, DaySchedule, Schedule, SetLog } from "./types";
 
 export const WEEK: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
@@ -19,6 +20,15 @@ export function normaliseTrainingDays(days: DayKey[] | undefined, wanted: number
   const cleaned = WEEK.filter((d) => days?.includes(d));
   if (cleaned.length > 0) return cleaned;
   return DEFAULT_TRAINING_DAYS[wanted] ?? DEFAULT_TRAINING_DAYS[3];
+}
+
+export function updateScheduleDay(
+  schedule: Schedule,
+  dayKey: DayKey,
+  updater: (day: DaySchedule) => DaySchedule,
+): Schedule {
+  const currentDay = schedule[dayKey] ?? { label: "REST", exerciseIds: [] };
+  return { ...schedule, [dayKey]: updater(currentDay) };
 }
 
 export function calculateCalories(p: Profile): number {
@@ -56,48 +66,80 @@ export function defaultSchedule(p: Profile) {
   const REST: Day = { label: "REST", ids: [] };
 
   const equip = p.equipment;
-  const has = (e: string) => equip === e || equip === "FULL_GYM";
-  const pickPress = has("FULL_GYM")
-    ? "bench-press"
-    : has("HOME_GYM")
-      ? "incline-db-press"
-      : "push-ups";
-  const pickPull = has("FULL_GYM") ? "lat-pulldown" : "pull-ups";
-  const pickSquat = has("FULL_GYM") ? "squat" : has("HOME_GYM") ? "rdl" : "lunges";
-  const pickHinge = has("FULL_GYM") ? "deadlift" : "rdl";
+  const templates = {
+    FULL_GYM: {
+      push: ["bench-press", "incline-db-press", "ohp", "lateral-raise", "tricep-pushdown"],
+      pull: ["lat-pulldown", "seated-row", "face-pull", "barbell-curl", "hammer-curl"],
+      legs: ["squat", "rdl", "leg-press", "lunges", "leg-curl"],
+      upper: ["bench-press", "lat-pulldown", "ohp", "barbell-curl", "tricep-pushdown"],
+      lower: ["squat", "rdl", "lunges", "plank", "hanging-leg-raise"],
+      full: ["squat", "bench-press", "lat-pulldown", "rdl", "plank"],
+      arms: ["barbell-curl", "hammer-curl", "skull-crushers", "tricep-pushdown"],
+      shoulders: ["ohp", "lateral-raise", "front-raise", "rear-delt-fly"],
+      core: ["plank", "hanging-leg-raise", "cable-crunch", "ab-wheel"],
+    },
+    HOME_GYM: {
+      push: ["incline-db-press", "push-ups", "ohp", "lateral-raise", "skull-crushers"],
+      pull: ["pull-ups", "inverted-row", "rear-delt-fly", "barbell-curl", "hammer-curl"],
+      legs: ["goblet-squat", "rdl", "lunges", "glute-bridge", "calf-raise"],
+      upper: ["incline-db-press", "pull-ups", "ohp", "inverted-row", "barbell-curl"],
+      lower: ["goblet-squat", "rdl", "lunges", "glute-bridge", "plank"],
+      full: ["goblet-squat", "incline-db-press", "pull-ups", "rdl", "plank"],
+      arms: ["barbell-curl", "hammer-curl", "skull-crushers", "close-grip-push-up"],
+      shoulders: ["ohp", "lateral-raise", "rear-delt-fly", "pike-push-up"],
+      core: ["plank", "hanging-leg-raise", "ab-wheel", "dead-bug"],
+    },
+    BODYWEIGHT: {
+      push: ["push-ups", "pike-push-up", "dips", "close-grip-push-up"],
+      pull: ["pull-ups", "inverted-row", "superman", "dead-bug"],
+      legs: ["bodyweight-squat", "lunges", "split-squat", "glute-bridge", "calf-raise"],
+      upper: ["push-ups", "pull-ups", "pike-push-up", "inverted-row", "close-grip-push-up"],
+      lower: ["bodyweight-squat", "split-squat", "glute-bridge", "calf-raise", "plank"],
+      full: ["bodyweight-squat", "push-ups", "pull-ups", "glute-bridge", "plank"],
+      arms: ["close-grip-push-up", "dips", "push-ups", "inverted-row"],
+      shoulders: ["pike-push-up", "push-ups", "plank", "dead-bug"],
+      core: ["plank", "dead-bug", "bicycle-crunch", "superman"],
+    },
+  } as const;
+  const selected = templates[equip];
+  const available = (ids: readonly string[]) =>
+    ids.filter((id, index) => {
+      const exercise = getExercise(id);
+      return exercise?.equipment.includes(equip) && ids.indexOf(id) === index;
+    });
 
   const PUSH: Day = {
     label: "PUSH — CHEST / SHOULDERS / TRICEPS",
-    ids: [pickPress, "incline-db-press", "ohp", "lateral-raise", "tricep-pushdown"].filter(uniq),
+    ids: available(selected.push),
   };
   const PULL: Day = {
     label: "PULL — BACK / BICEPS",
-    ids: [pickPull, "seated-row", "face-pull", "barbell-curl", "hammer-curl"],
+    ids: available(selected.pull),
   };
   const LEGS: Day = {
     label: "LEGS — QUADS / HAMS / GLUTES",
-    ids: [pickSquat, pickHinge, "leg-press", "lunges", "leg-curl"].filter(uniq),
+    ids: available(selected.legs),
   };
   const UPPER: Day = {
     label: "UPPER — CHEST / BACK / ARMS",
-    ids: [pickPress, pickPull, "ohp", "barbell-curl", "tricep-pushdown"],
+    ids: available(selected.upper),
   };
   const LOWER: Day = {
     label: "LOWER — LEGS / CORE",
-    ids: [pickSquat, pickHinge, "lunges", "plank", "hanging-leg-raise"].filter(uniq),
+    ids: available(selected.lower),
   };
-  const FULL: Day = { label: "FULL BODY", ids: [pickSquat, pickPress, pickPull, "plank"] };
+  const FULL: Day = { label: "FULL BODY", ids: available(selected.full) };
   const ARMS: Day = {
     label: "ARMS — BI / TRI",
-    ids: ["barbell-curl", "hammer-curl", "skull-crushers", "tricep-pushdown"],
+    ids: available(selected.arms),
   };
   const SHO: Day = {
     label: "SHOULDERS — DELTS",
-    ids: ["ohp", "lateral-raise", "front-raise", "rear-delt-fly"],
+    ids: available(selected.shoulders),
   };
   const CORE: Day = {
     label: "CORE",
-    ids: ["plank", "hanging-leg-raise", "cable-crunch", "ab-wheel"],
+    ids: available(selected.core),
   };
 
   // The workouts that make up one week, in the order they should be trained.
@@ -121,27 +163,40 @@ export function defaultSchedule(p: Profile) {
 
   // Personalisation: bias the split toward the lifter's focus muscles by
   // appending one extra exercise on the days that already hit that muscle.
-  const FOCUS_EXTRA: Record<string, { id: string; days: string[] }> = {
-    CHEST: { id: "cable-fly", days: ["PUSH", "UPPER", "FULL BODY", "CHEST"] },
-    BACK: { id: "seated-row", days: ["PULL", "UPPER", "FULL BODY"] },
-    SHOULDERS: { id: "lateral-raise", days: ["PUSH", "UPPER", "SHOULDERS", "FULL BODY"] },
-    ARMS: { id: "hammer-curl", days: ["PULL", "UPPER", "ARMS"] },
-    LEGS: { id: "leg-press", days: ["LEGS", "LOWER", "FULL BODY"] },
-    CORE: { id: "plank", days: ["LEGS", "LOWER", "CORE", "FULL BODY"] },
+  const FOCUS_EXTRA: Record<string, { ids: string[]; days: string[] }> = {
+    CHEST: {
+      ids: ["cable-fly", "incline-db-press", "push-ups"],
+      days: ["PUSH", "UPPER", "FULL BODY", "CHEST"],
+    },
+    BACK: { ids: ["seated-row", "inverted-row", "superman"], days: ["PULL", "UPPER", "FULL BODY"] },
+    SHOULDERS: {
+      ids: ["lateral-raise", "pike-push-up"],
+      days: ["PUSH", "UPPER", "SHOULDERS", "FULL BODY"],
+    },
+    ARMS: { ids: ["hammer-curl", "close-grip-push-up"], days: ["PULL", "UPPER", "ARMS"] },
+    LEGS: {
+      ids: ["leg-press", "goblet-squat", "split-squat"],
+      days: ["LEGS", "LOWER", "FULL BODY"],
+    },
+    CORE: { ids: ["plank", "dead-bug"], days: ["LEGS", "LOWER", "CORE", "FULL BODY"] },
   };
   for (const focus of p.focusMuscles ?? []) {
     const extra = FOCUS_EXTRA[focus];
     if (!extra) continue;
+    const extraId = available(extra.ids)[0];
+    if (!extraId) continue;
     for (const day of plan) {
-      if (extra.days.some((k) => day.label.includes(k)) && !day.ids.includes(extra.id)) {
-        day.ids = [...day.ids, extra.id];
+      if (extra.days.some((k) => day.label.includes(k)) && !day.ids.includes(extraId)) {
+        day.ids = [...day.ids, extraId];
       }
     }
   }
 
-  // Session length shapes volume: cap exercises per training day.
+  // The explicit exercise count wins. Older profiles still fall back to the
+  // session-duration answer so existing schedules remain stable.
   const cap =
-    p.sessionMinutes === 30 ? 3 : p.sessionMinutes === 45 ? 4 : p.sessionMinutes === 90 ? 7 : 5;
+    p.exercisesPerSession ??
+    (p.sessionMinutes === 30 ? 3 : p.sessionMinutes === 45 ? 4 : p.sessionMinutes === 90 ? 7 : 5);
   for (const day of plan) {
     if (day.ids.length > cap) day.ids = day.ids.slice(0, cap);
   }
@@ -151,10 +206,6 @@ export function defaultSchedule(p: Profile) {
     result[d] = { label: plan[i].label, exerciseIds: plan[i].ids };
   });
   return result as import("./types").Schedule;
-}
-
-function uniq(v: string, i: number, a: string[]) {
-  return a.indexOf(v) === i;
 }
 
 export function todayKey(): "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT" | "SUN" {

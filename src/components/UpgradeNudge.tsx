@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Crown, Check, X } from "lucide-react";
 import { usePro } from "@/hooks/usePro";
 import { maybeNudge, type NudgePayload } from "@/lib/upgrade-prompts";
+import { useAppState } from "@/lib/storage";
 
 const PERKS = [
   "Volume Optimizer + Plateau Breaker",
@@ -17,6 +18,7 @@ const PERKS = [
  */
 export function UpgradeNudge() {
   const { isPro, loading } = usePro();
+  const [state] = useAppState();
   const navigate = useNavigate();
   const [payload, setPayload] = useState<NudgePayload | null>(null);
 
@@ -31,10 +33,10 @@ export function UpgradeNudge() {
 
   // Soft weekly nudge shortly after the app settles — only for confirmed free users.
   useEffect(() => {
-    if (loading || isPro) return;
+    if (loading || isPro || (state.sessions?.length ?? 0) < 2) return;
     const t = setTimeout(() => maybeNudge("weekly"), 5000);
     return () => clearTimeout(t);
-  }, [loading, isPro]);
+  }, [loading, isPro, state.sessions?.length]);
 
   if (!payload || isPro) return null;
 
@@ -69,7 +71,7 @@ export function UpgradeNudge() {
         </button>
         <div className="flex items-center gap-2 mb-2">
           <div
-            className="flex h-9 w-9 items-center justify-center rounded-full shrink-0"
+            className="flex h-11 w-11 items-center justify-center rounded-full shrink-0"
             style={{ background: "radial-gradient(circle at 50% 35%, #f8d566, #eab212 70%)" }}
           >
             <Crown size={18} strokeWidth={2.5} className="text-[#14110a]" />

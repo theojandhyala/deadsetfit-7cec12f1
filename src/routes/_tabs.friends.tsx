@@ -29,6 +29,7 @@ import {
 import { restoreSupabaseSession, supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/account-restore";
 import { getInviteUrl } from "@/lib/referral";
+import { isNativeIos } from "@/lib/platform";
 import { NotificationsBell } from "@/components/NotificationsBell";
 import { blockUser, reportContent } from "@/lib/account.functions";
 import { askConfirm, askText } from "@/lib/confirm";
@@ -467,6 +468,42 @@ function Feed({ userId }: { userId: string }) {
         </div>
       )}
 
+      {(() => {
+        const weekAgo = Date.now() - 7 * 86400000;
+        const prs = posts.filter(
+          (p) =>
+            p.kind === "pr" &&
+            p.metadata &&
+            typeof p.metadata === "object" &&
+            "lift" in p.metadata &&
+            "weight" in p.metadata &&
+            new Date(p.created_at).getTime() >= weekAgo,
+        );
+        if (prs.length === 0) return null;
+        const top = prs.reduce((a, b) =>
+          Number((b.metadata as { weight?: number }).weight) >
+          Number((a.metadata as { weight?: number }).weight)
+            ? b
+            : a,
+        );
+        const m = top.metadata as { lift?: string; weight?: number };
+        const name = top.author?.display_name || top.author?.username || "Athlete";
+        return (
+          <div
+            className="rounded-2xl p-4 mb-3 border border-accent-red"
+            style={{ background: "linear-gradient(135deg, rgba(230,50,34,0.14), #141414)" }}
+          >
+            <p className="label-cap text-[10px] text-accent-red flex items-center gap-1.5">
+              <Trophy size={12} /> PR of the week
+            </p>
+            <p className="display text-2xl font-extrabold uppercase text-grit mt-1">
+              {String(m.lift)} · {String(m.weight)}kg
+            </p>
+            <p className="text-xs text-grit-dim mt-0.5">by {name}</p>
+          </div>
+        );
+      })()}
+
       {posts.map((p) => (
         <article key={p.id} className="bg-grit-card border border-grit p-4 mb-3">
           <header className="flex items-center gap-3 mb-3">
@@ -575,11 +612,14 @@ function Feed({ userId }: { userId: string }) {
                   )}
                 </div>
                 <div className="flex gap-4">
-                  <FeedStat label="Exercises" v={Number((p.metadata as { exercises?: number }).exercises) || 0} />
+                  <FeedStat
+                    label="Exercises"
+                    v={Number((p.metadata as { exercises?: number }).exercises) || 0}
+                  />
                   <FeedStat label="Sets" v={Number((p.metadata as { sets?: number }).sets) || 0} />
                   <FeedStat
                     label="Volume"
-                    v={`${Math.round((Number((p.metadata as { volume?: number }).volume) || 0) / 1000 * 10) / 10}t`}
+                    v={`${Math.round(((Number((p.metadata as { volume?: number }).volume) || 0) / 1000) * 10) / 10}t`}
                   />
                 </div>
               </div>
@@ -685,7 +725,11 @@ function CommentsPanel({ postId, onPosted }: { postId: string; onPosted: () => v
           <div key={c.id} className="mb-2 text-xs">
             {c.author?.id ? (
               // Tappable so a commenter can be reported/blocked from their profile (UGC 1.2).
-              <Link to="/athlete/$id" params={{ id: c.author.id }} className="font-bold text-grit press">
+              <Link
+                to="/athlete/$id"
+                params={{ id: c.author.id }}
+                className="font-bold text-grit press"
+              >
                 {c.author?.display_name || "User"}
               </Link>
             ) : (
@@ -884,18 +928,23 @@ function ArenaTile({ icon, title, sub }: { icon: ReactNode; title: string; sub: 
 }
 
 function leagueColor(l: string) {
-  switch (l) {
-    case "ELITE":
-      return "#a78bfa";
-    case "DIAMOND":
-      return "#67e8f9";
-    case "GOLD":
-      return "#fbbf24";
-    case "SILVER":
-      return "#cbd5e1";
-    default:
-      return "#b45309";
+  if (l.startsWith("DEADSET")) return "#e63222";
+  if (l.startsWith("UNREAL")) return "#22d3ee";
+  if (l.startsWith("CHAMPION")) return "#f43f5e";
+  if (l.startsWith("ELITE")) {
+    return "#a78bfa";
   }
+  if (l.startsWith("DIAMOND")) {
+    return "#67e8f9";
+  }
+  if (l.startsWith("PLATINUM")) return "#67e8f9";
+  if (l.startsWith("GOLD")) {
+    return "#fbbf24";
+  }
+  if (l.startsWith("SILVER")) {
+    return "#cbd5e1";
+  }
+  return "#b45309";
 }
 
 // ============ INVITE ============
@@ -932,7 +981,7 @@ function Invite() {
     setBusy(true);
     try {
       await _redeem({ data: { code: code.trim() } });
-      toast.success("Both got 30 days Pro!");
+      toast.success(isNativeIos() ? "Code applied — you're connected!" : "Both got 30 days Pro!");
       setCode("");
       if (codeRef.current) codeRef.current.value = "";
       setInfo(await _info());
@@ -968,20 +1017,23 @@ function Invite() {
 
   return (
     <div className="px-5 pb-6 space-y-4">
-      {/* Pro status */}
-      <div className="bg-grit-card border border-grit p-5">
-        <p className="label-cap text-accent-red mb-1">DEADSET PRO</p>
-        {info.proUntil && new Date(info.proUntil) > new Date() ? (
-          <>
-            <p className="display font-extrabold text-grit text-3xl leading-none">ACTIVE</p>
-            <p className="text-xs text-[#8a8a8a] mt-1">
-              Until {new Date(info.proUntil).toLocaleDateString()}
-            </p>
-          </>
-        ) : (
-          <p className="text-sm text-[#8a8a8a]">Free tier. Earn Pro by inviting mates.</p>
-        )}
-      </div>
+      {/* Pro status — web only. On iOS every feature is already free, so there
+          is no subscription to show or earn (App Store Guideline 3.1.1). */}
+      {!isNativeIos() && (
+        <div className="bg-grit-card border border-grit p-5">
+          <p className="label-cap text-accent-red mb-1">DEADSET PRO</p>
+          {info.proUntil && new Date(info.proUntil) > new Date() ? (
+            <>
+              <p className="display font-extrabold text-grit text-3xl leading-none">ACTIVE</p>
+              <p className="text-xs text-[#8a8a8a] mt-1">
+                Until {new Date(info.proUntil).toLocaleDateString()}
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-[#8a8a8a]">Free tier. Earn Pro by inviting mates.</p>
+          )}
+        </div>
+      )}
 
       {/* Username */}
       <div className="bg-grit-card border border-grit p-5">
@@ -1014,7 +1066,11 @@ function Invite() {
       <div className="bg-grit-card border border-accent-red p-5">
         <div className="flex items-center gap-2 mb-2">
           <Gift size={14} className="text-accent-red" />
-          <p className="label-cap text-accent-red">Invite a mate, both get 30 days Pro</p>
+          <p className="label-cap text-accent-red">
+            {isNativeIos()
+              ? "Invite a mate to train with you"
+              : "Invite a mate, both get 30 days Pro"}
+          </p>
         </div>
         <div className="display font-extrabold text-grit text-4xl leading-none my-3 tracking-wider">
           {info.code}
@@ -1028,7 +1084,13 @@ function Invite() {
         </button>
         {(() => {
           const tiers = [1, 3, 5, 10, 25];
-          const labels: Record<number, string> = { 1: "First Recruit", 3: "Squad Builder", 5: "Recruiter", 10: "Ambassador", 25: "Legend" };
+          const labels: Record<number, string> = {
+            1: "First Recruit",
+            3: "Squad Builder",
+            5: "Recruiter",
+            10: "Ambassador",
+            25: "Legend",
+          };
           const count = info.count ?? 0;
           const next = tiers.find((t) => count < t) ?? null;
           const cur = [...tiers].reverse().find((t) => count >= t) ?? null;
@@ -1038,15 +1100,23 @@ function Invite() {
             <div className="mt-3">
               <div className="flex items-center justify-between text-xs mb-1.5">
                 <span className="text-[#8a8a8a]">
-                  Invited <span className="text-grit font-bold">{count}</span> · earned{" "}
-                  <span className="text-grit font-bold">{count * 30}</span> Pro days
+                  Invited <span className="text-grit font-bold">{count}</span>
+                  {!isNativeIos() && (
+                    <>
+                      {" "}
+                      · earned <span className="text-grit font-bold">{count * 30}</span> Pro days
+                    </>
+                  )}
                 </span>
                 {cur && <span className="label-cap text-[9px] text-accent-red">{labels[cur]}</span>}
               </div>
               {next && (
                 <>
                   <div className="h-1.5 rounded-full bg-[#0a0a0a] overflow-hidden">
-                    <div className="h-full bg-accent-red rounded-full" style={{ width: `${Math.round(prog * 100)}%` }} />
+                    <div
+                      className="h-full bg-accent-red rounded-full"
+                      style={{ width: `${Math.round(prog * 100)}%` }}
+                    />
                   </div>
                   <p className="text-[10px] text-[#8a8a8a] mt-1">
                     {next - count} more to {labels[next]}
@@ -1100,8 +1170,8 @@ const COUNTRY_ALIASES: Record<string, string> = {
   "iran, islamic republic of": "Iran",
   "syrian arab republic": "Syria",
   "viet nam": "Vietnam",
-  "czechia": "Czech Republic",
-  "türkiye": "Turkey",
+  czechia: "Czech Republic",
+  türkiye: "Turkey",
   "tanzania, united republic of": "Tanzania",
   "bolivia (plurinational state of)": "Bolivia",
   "venezuela (bolivarian republic of)": "Venezuela",

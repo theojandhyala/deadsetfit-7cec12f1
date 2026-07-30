@@ -5,6 +5,12 @@ import { restoreSupabaseSession } from "./integrations/supabase/client";
 import { capturePendingRef } from "./lib/referral";
 import "./styles.css";
 
+// Exposes the bundled release in diagnostics and scopes asset recovery to this
+// deployment so one old CDN race cannot strand later versions.
+const RELEASE_ID = "2026-07-28-release1";
+const PRELOAD_RETRY_KEY = `deadset_preload_retry_${RELEASE_ID}`;
+document.documentElement.dataset.deadsetRelease = RELEASE_ID;
+
 // Grab any ?ref= invite code before the router rewrites the URL.
 capturePendingRef();
 
@@ -50,16 +56,20 @@ async function clearOldBrowserCaches() {
 }
 
 window.addEventListener("vite:preloadError", async () => {
-  const key = "deadset_preload_retry_v1";
-  if (sessionStorage.getItem(key)) {
+  const previousRetry = Number(sessionStorage.getItem(PRELOAD_RETRY_KEY) ?? 0);
+  if (previousRetry && Date.now() - previousRetry < 30_000) {
     await clearOldBrowserCaches();
     renderBootFailure(new Error("App asset failed to load after retry"));
     return;
   }
-  sessionStorage.setItem(key, "1");
+  sessionStorage.setItem(PRELOAD_RETRY_KEY, String(Date.now()));
   await clearOldBrowserCaches();
   window.location.reload();
 });
+
+// A successful boot re-arms recovery. This also prevents stale sessionStorage
+// copied into a new tab from disabling future release repairs.
+window.setTimeout(() => sessionStorage.removeItem(PRELOAD_RETRY_KEY), 10_000);
 
 function withBootTimeout<T>(promise: Promise<T>, timeoutMs = 2500): Promise<T | undefined> {
   return Promise.race([

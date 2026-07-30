@@ -11,7 +11,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
+import { reportAppError } from "../lib/error-reporting";
 import { StateSync } from "../components/StateSync";
 import { UsernameGate } from "../components/UsernameGate";
 import { PaywallSheet } from "../components/PaywallSheet";
@@ -24,6 +24,8 @@ import { UpgradeNudge } from "../components/UpgradeNudge";
 import { ReferralRedeemer } from "../components/ReferralRedeemer";
 import { StreakMilestoneWatcher } from "../components/StreakMilestoneWatcher";
 import { captureAttribution } from "../lib/attribution";
+import { WeeklyRecapNudge } from "../components/WeeklyRecapNudge";
+import { DeviceReminderSync } from "../components/DeviceReminderSync";
 
 function NotFoundComponent() {
   return (
@@ -51,7 +53,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    reportAppError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
 
   return (
@@ -110,6 +112,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
       { property: "og:site_name", content: "DEADSET" },
+      // Mirrors index.html so a link shared from any in-app route unfurls with
+      // the real card rather than the touch icon.
+      { property: "og:image", content: "https://deadsetfit.org/og-image.png" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { name: "twitter:image", content: "https://deadsetfit.org/og-image.png" },
       { property: "og:type", content: "website" },
       { property: "og:locale", content: "en_US" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -124,7 +132,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           url: "https://deadsetfit.org",
           logo: "https://deadsetfit.org/favicon.ico",
           description:
-            "DEADSET. Train. Build. Become. A no-nonsense gym companion for tracking PRs, programs, and progress.",
+            "DEADSET is a gym app for planning workouts, logging sets, tracking nutrition, and understanding progress.",
         }),
       },
     ],
@@ -186,6 +194,8 @@ function RootComponent() {
         {!isAuthRoute && <ProWelcome />}
         {!isAuthRoute && <UpgradeNudge />}
         {!isAuthRoute && <StreakMilestoneWatcher />}
+        {!isAuthRoute && <WeeklyRecapNudge />}
+        {!isAuthRoute && <DeviceReminderSync />}
         <ReferralRedeemer />
         <ConfirmSheet />
         <Toaster />

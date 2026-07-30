@@ -1,6 +1,7 @@
 # DEADSET Roadmap
 
 ## v1.0 — App Store submission (current build)
+
 Clean, compliant build. Free app; DEADSET Pro sold on the web only
 (deadsetfit.org), fully gated off native iOS per App Store Guideline 3.1.1.
 No in-app purchase UI, no external purchase links, no prices shown on iPhone.
@@ -8,6 +9,7 @@ This is intentional — it's the lowest-risk path through App Store review.
 **Do not add in-app checkout or external purchase links to this build.**
 
 ## v1.1 — External purchase link (first update, AFTER v1.0 is approved)
+
 Add a Safari link-out to web checkout (the "Spotify" model), so iPhone users
 can reach DEADSET Pro directly.
 
@@ -25,6 +27,7 @@ can reach DEADSET Pro directly.
   dedicated deadset account) — v1.1 is only the iOS link-out + entitlement.
 
 ## Future / parked (see project memory)
+
 - Apple In-App Purchase (StoreKit) at 15% Small Business Program rate — the
   one-tap in-app buy path; bigger build, evaluate once web demand is proven.
 - Server-authoritative leaderboard stats (grit_points/public_stats currently

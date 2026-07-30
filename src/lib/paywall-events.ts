@@ -1,16 +1,25 @@
+import { isNativeIos } from "./platform";
+
 export type PaywallFeature =
   | "streak-armor"
   | "advanced-analytics"
   | "featured-programs"
   | "custom-programs"
-  // "leagues" and "h2h" were removed when duels and the full ladder became free.
+  | "leagues"
+  | "h2h"
   | "reminders"
   | "recovery"
   | "nutrition"
   | "photos"
   | "challenges"
   | "progression"
-  | "report";
+  | "report"
+  | "plan-audit"
+  | "advanced-programming"
+  | "smart-swaps"
+  | "autopilot"
+  | "weekly-review"
+  | "pr-roadmap";
 
 export type PaywallEvent = {
   id: string;
@@ -21,6 +30,9 @@ const EVENT_NAME = "deadset:paywall";
 
 export function openPaywall(feature: PaywallFeature) {
   if (typeof window === "undefined") return;
+  // Nothing is gated on native iOS (every feature is free there), so a paywall
+  // must never surface — belt-and-braces for App Store Guideline 3.1.1.
+  if (isNativeIos()) return;
   window.dispatchEvent(
     new CustomEvent<PaywallEvent>(EVENT_NAME, {
       detail: { id: crypto.randomUUID(), feature },

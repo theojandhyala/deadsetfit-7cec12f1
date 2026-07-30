@@ -2,22 +2,46 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { toast } from "sonner";
-import { Check, ChevronLeft, Zap } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Check,
+  ChevronLeft,
+  Dumbbell,
+  Minus,
+  Plus,
+  Trash2,
+  Zap,
+} from "lucide-react";
 import { GritLogo } from "@/components/GritLogo";
 import { getState, setLocalStateOwner, setState, waitForRemoteState } from "@/lib/storage";
 import { calculateCalories, calculateMacros, defaultSchedule, isoDay } from "@/lib/calc";
 import { strengthStandard, TIER_COLORS } from "@/lib/strength-standards";
-import { getExercise } from "@/lib/exercises";
+import { EXERCISES, getExercise } from "@/lib/exercises";
 import { getMyProfile, saveProfile } from "@/lib/profile.functions";
 import { saveUserState } from "@/lib/user-state.functions";
 import { profileFromAccount, profileQuestionsComplete, withTimeout } from "@/lib/account-restore";
-import type { DayKey, Equipment, Experience, FocusMuscle, Gender, Goal, Profile, Weakness } from "@/lib/types";
+import type {
+  DayKey,
+  Equipment,
+  Experience,
+  FocusMuscle,
+  Gender,
+  Goal,
+  Profile,
+  Schedule,
+  Weakness,
+} from "@/lib/types";
 import { WeekdayPicker } from "@/components/WeekdayPicker";
 import { daysPerWeekFor, describeDays, MIN_TRAINING_DAYS } from "@/lib/training-days";
 import { buildPublicStats } from "@/lib/fifa-stats";
-import { isNativeIos } from "@/lib/platform";
 import { PRO_HIGHLIGHTS } from "@/lib/pro-features";
-import { CURRENCY_META, currencyForCountry, detectCountry, type SupportedCurrency } from "@/lib/currency";
+import {
+  CURRENCY_META,
+  currencyForCountry,
+  detectCountry,
+  type SupportedCurrency,
+} from "@/lib/currency";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "DEADSET — Onboarding" }] }),
@@ -47,118 +71,84 @@ type Step =
   | "analyzing"
   | "blueprint"
   | "commit"
-  | "tune"
   | "pro";
 
 type Mode = "GENERATE" | "BUILD";
 
-/**
- * Everything we genuinely need before a lifter can train. Keep this list short —
- * it is the promise the first screen makes, and every addition is another wall
- * between signing up and the app doing something useful.
- */
-const CORE_QUESTIONS: Step[] = [
-  "goal",
-  "days",
-  "equipment",
-  "session",
-  "experience",
-  "about",
-  "name",
-  "username",
-];
+const REP_TARGETS = [
+  "1-3",
+  "3-5",
+  "5-8",
+  "6-8",
+  "6-10",
+  "8-10",
+  "8-12",
+  "10-12",
+  "10-15",
+  "10/leg",
+  "12-15",
+  "12-20",
+  "15-20",
+  "45-60s",
+  "AMRAP",
+] as const;
 
-/**
- * Optional depth. These sharpen the plan but nothing here blocks training, so
- * they sit behind the "fine-tune" gate and every one of them can be skipped.
- */
-const EXTRA_QUESTIONS: Step[] = [
-  "focus",
-  "prs",
-  "target",
-  "injuries",
-  "why",
-  "sleep",
-  "dream",
-  "weakness",
-  "photo",
-];
-
-/** The reveal at the end: build animation, the plan, the pledge, the Pro pitch. */
-function payoffSteps(mode: Mode): Step[] {
-  return [
-    ...(mode === "GENERATE" ? (["schedule"] as Step[]) : []),
-    "analyzing",
-    "blueprint",
-    "commit",
-    // App Store 3.1.1: the Pro pitch (prices, upgrade CTA) is web-only. On
-    // native iOS onboarding ends at the commit pledge.
-    ...(isNativeIos() ? [] : (["pro"] as Step[])),
-  ];
-}
-
-function orderFor(mode: Mode | null, fineTune: boolean): Step[] {
+function orderFor(mode: Mode | null): Step[] {
   const base: Step[] = ["mode"];
   if (!mode) return base;
-  return [
-    ...base,
-    ...CORE_QUESTIONS,
-    "tune",
-    ...(fineTune ? EXTRA_QUESTIONS : []),
-    ...payoffSteps(mode),
-  ];
+  const schedule: Step[] =
+    mode === "GENERATE"
+      ? ["goal", "experience", "about", "days", "equipment", "focus", "session", "schedule"]
+      : ["goal", "experience", "about", "days", "equipment", "focus", "session"];
+  return [...base, ...schedule, "username"];
 }
 
 function Onboarding() {
   const navigate = useNavigate();
   const [idx, setIdx] = useState(0);
   const [mode, setMode] = useState<Mode | null>(null);
-  const [fineTune, setFineTune] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Partial<Profile>>({});
+  const [draftSchedule, setDraftSchedule] = useState<Schedule | null>(null);
   const savingRef = useRef(false);
   // Where to land after the final save: the web pro step can point this at
   // /upgrade; everything else finishes into the app.
-  const destinationRef = useRef<"/train" | "/upgrade">("/train");
+  const destinationRef = useRef<"/train" | "/plan" | "/upgrade">("/train");
   const save = saveProfile;
   const saveFullState = saveUserState;
   const getProfile = getMyProfile;
-  const ORDER = useMemo(() => orderFor(mode, fineTune), [mode, fineTune]);
+  const ORDER = useMemo(() => orderFor(mode), [mode]);
   const step = ORDER[idx];
-  // The first screen only knows about itself, so a raw idx/length would read
-  // "1 / 1" at 100% before a single question is answered. Show the length of
-  // the shortest real run instead until the mode is picked.
-  const totalSteps = mode ? ORDER.length : orderFor("GENERATE", false).length;
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-      const { supabase } = await import("@/integrations/supabase/client");
-      const {
-        data: { session },
-      } = await withTimeout(supabase.auth.getSession(), { data: { session: null }, error: null });
-      if (cancelled) return;
-      if (!session) {
-        navigate({ to: "/auth", replace: true });
-        return;
-      }
-      setUserId(session.user.id);
-      await withTimeout(waitForRemoteState(session.user.id), undefined);
-      if (cancelled) return;
-      const row = await withTimeout(
-        getProfile().catch(() => null),
-        null,
-      );
-      const accountProfile = profileQuestionsComplete(row) ? profileFromAccount(row) : null;
-      if (accountProfile) {
-        setState((current) => ({
-          ...current,
-          profile: accountProfile,
-          schedule: current.schedule ?? defaultSchedule(accountProfile),
-        }));
-        navigate({ to: "/train", replace: true });
-      }
+        const { supabase } = await import("@/integrations/supabase/client");
+        const {
+          data: { session },
+        } = await withTimeout(supabase.auth.getSession(), { data: { session: null }, error: null });
+        if (cancelled) return;
+        if (!session) {
+          navigate({ to: "/auth", replace: true });
+          return;
+        }
+        setUserId(session.user.id);
+        await withTimeout(waitForRemoteState(session.user.id), undefined);
+        if (cancelled) return;
+        const row = await withTimeout(
+          getProfile().catch(() => null),
+          null,
+        );
+        const accountProfile = profileQuestionsComplete(row) ? profileFromAccount(row) : null;
+        if (accountProfile) {
+          setState((current) => ({
+            ...current,
+            profile: accountProfile,
+            schedule: current.schedule ?? defaultSchedule(accountProfile),
+          }));
+          navigate({ to: "/train", replace: true });
+        }
       } catch {
         // Auth hiccup: stay on onboarding — the final save re-checks the session.
       }
@@ -183,9 +173,14 @@ function Onboarding() {
       savingRef.current = true;
       const p = {
         ...merged,
+        motivation: merged.motivation ?? "DISCIPLINE",
+        sleepQuality: merged.sleepQuality ?? "OK",
+        weakness: merged.weakness ?? "CONSISTENCY",
+        displayName: merged.displayName ?? merged.username,
+        injuries: merged.injuries ?? "",
         startingWeightKg: merged.startingWeightKg ?? merged.weightKg,
       } as Profile;
-      const sched = mode === "BUILD" ? emptySchedule() : defaultSchedule(p);
+      const sched = mode === "BUILD" ? emptySchedule() : (draftSchedule ?? defaultSchedule(p));
       const publicStats = buildPublicStats({ ...getState(), profile: p, schedule: sched });
       save({
         data: {
@@ -211,7 +206,7 @@ function Onboarding() {
           await saveFullState({ data: { data: JSON.stringify(nextState) } }).catch(() => {
             toast.warning("Setup saved locally. We'll keep trying to sync it.");
           });
-          navigate({ to: destinationRef.current, replace: true });
+          navigate({ to: mode === "BUILD" ? "/plan" : destinationRef.current, replace: true });
         })
         .catch((e: Error) => {
           savingRef.current = false;
@@ -230,7 +225,7 @@ function Onboarding() {
 
   return (
     <div
-      className="min-h-screen bg-grit flex flex-col"
+      className="deadset-onboarding min-h-screen bg-grit flex flex-col"
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
       <div className="px-6 pt-10 pb-6 flex items-center justify-between">
@@ -247,14 +242,17 @@ function Onboarding() {
           <GritLogo className="text-3xl" />
         </div>
         <span className="label-cap">
-          {idx + 1} / {totalSteps}
+          {idx === 0 ? "QUICK SETUP" : `${idx} / ${ORDER.length - 1}`}
         </span>
       </div>
       <div className="px-6">
         <div className="h-1.5 bg-grit-card rounded-full overflow-hidden">
           <div
             className="h-full bg-accent-red rounded-full transition-all"
-            style={{ width: `${Math.min(100, ((idx + 1) / totalSteps) * 100)}%` }}
+            style={{
+              width:
+                idx === 0 ? "0%" : `${Math.round((idx / Math.max(1, ORDER.length - 1)) * 100)}%`,
+            }}
           />
         </div>
       </div>
@@ -284,11 +282,27 @@ function Onboarding() {
             eyebrow="No wrong answer — be honest"
             title="Why are you really here?"
             options={[
-              { v: "STRONGER", l: "Get seriously strong", sub: "Move real weight. Numbers that shut people up." },
+              {
+                v: "STRONGER",
+                l: "Get seriously strong",
+                sub: "Move real weight. Numbers that shut people up.",
+              },
               { v: "PHYSIQUE", l: "Build the physique", sub: "Look like you lift. Head-turning." },
-              { v: "CONFIDENCE", l: "Feel confident again", sub: "In my own skin, in the mirror, everywhere." },
-              { v: "DISCIPLINE", l: "Prove I can commit", sub: "No more starting and quitting. This time it sticks." },
-              { v: "COMPETE", l: "Compete and win", sub: "Rank up, beat rivals, top the leaderboard." },
+              {
+                v: "CONFIDENCE",
+                l: "Feel confident again",
+                sub: "In my own skin, in the mirror, everywhere.",
+              },
+              {
+                v: "DISCIPLINE",
+                l: "Prove I can commit",
+                sub: "No more starting and quitting. This time it sticks.",
+              },
+              {
+                v: "COMPETE",
+                l: "Compete and win",
+                sub: "Rank up, beat rivals, top the leaderboard.",
+              },
             ]}
             onPick={(v) => next({ motivation: v })}
           />
@@ -324,19 +338,6 @@ function Onboarding() {
             onSubmit={(days) => next({ trainingDays: days, daysPerWeek: daysPerWeekFor(days) })}
           />
         )}
-        {step === "tune" && (
-          <TuneGateStep
-            draft={draft}
-            onFineTune={() => {
-              setFineTune(true);
-              setIdx(idx + 1);
-            }}
-            onSkip={() => {
-              setFineTune(false);
-              setIdx(idx + 1);
-            }}
-          />
-        )}
         {step === "equipment" && (
           <Choice
             title="Equipment access"
@@ -348,7 +349,16 @@ function Onboarding() {
             onPick={(v) => next({ equipment: v as Equipment })}
           />
         )}
-        {step === "schedule" && <SchedulePreview draft={draft} onContinue={() => next({})} />}
+        {step === "schedule" && (
+          <SchedulePreview
+            draft={draft}
+            initial={draftSchedule}
+            onContinue={(schedule) => {
+              setDraftSchedule(schedule);
+              next({});
+            }}
+          />
+        )}
         {step === "injuries" && (
           <Injuries
             initial={draft.injuries}
@@ -365,14 +375,16 @@ function Onboarding() {
         )}
         {step === "session" && (
           <Choice
-            title="How long are your sessions?"
+            eyebrow="You can change every day later"
+            title="Exercises per workout"
             options={[
-              { v: "30", l: "30 min — in and out" },
-              { v: "45", l: "45 min — focused" },
-              { v: "60", l: "60 min — standard" },
-              { v: "90", l: "90 min — the works" },
+              { v: "3", l: "3 exercises", sub: "Short and focused." },
+              { v: "4", l: "4 exercises", sub: "Main lifts plus accessories." },
+              { v: "5", l: "5 exercises", sub: "Balanced — recommended." },
+              { v: "6", l: "6 exercises", sub: "More volume and variety." },
+              { v: "7", l: "7 exercises", sub: "High-volume sessions." },
             ]}
-            onPick={(v) => next({ sessionMinutes: Number(v) as 30 | 45 | 60 | 90 })}
+            onPick={(v) => next({ exercisesPerSession: Number(v) as 3 | 4 | 5 | 6 | 7 })}
           />
         )}
         {step === "target" && (
@@ -389,10 +401,22 @@ function Onboarding() {
             eyebrow="Picture 12 weeks from now"
             title="What does winning look like?"
             options={[
-              { v: "PLATES", l: "Plates I couldn't touch", sub: "Bench, squat and deadlift up across the board." },
-              { v: "MIRROR", l: "The mirror hits different", sub: "Visibly leaner, fuller, more defined." },
+              {
+                v: "PLATES",
+                l: "Plates I couldn't touch",
+                sub: "Bench, squat and deadlift up across the board.",
+              },
+              {
+                v: "MIRROR",
+                l: "The mirror hits different",
+                sub: "Visibly leaner, fuller, more defined.",
+              },
               { v: "STREAK", l: "A streak I never break", sub: "Training is just who I am now." },
-              { v: "RANK", l: "Top of the rankings", sub: "Elite rank, rivals beaten, respect earned." },
+              {
+                v: "RANK",
+                l: "Top of the rankings",
+                sub: "Elite rank, rivals beaten, respect earned.",
+              },
             ]}
             onPick={(v) => next({ dreamOutcome: v })}
           />
@@ -465,7 +489,9 @@ function Choice({
             <span className="display text-lg uppercase tracking-wide font-bold text-grit block">
               {o.l}
             </span>
-            {o.sub && <span className="text-[12px] text-grit-dim mt-1 block normal-case">{o.sub}</span>}
+            {o.sub && (
+              <span className="text-[12px] text-grit-dim mt-1 block normal-case">{o.sub}</span>
+            )}
           </button>
         ))}
       </div>
@@ -493,9 +519,33 @@ function AboutYouStep({
   const valid = ageOk && weightOk && heightOk && gender !== null;
 
   const fields = [
-    { label: "AGE", suffix: "yrs", value: age, set: setAge, ok: ageOk, placeholder: "24", digitsOnly: true },
-    { label: "WEIGHT", suffix: "kg", value: weight, set: setWeight, ok: weightOk, placeholder: "80", digitsOnly: false },
-    { label: "HEIGHT", suffix: "cm", value: height, set: setHeight, ok: heightOk, placeholder: "180", digitsOnly: false },
+    {
+      label: "AGE",
+      suffix: "yrs",
+      value: age,
+      set: setAge,
+      ok: ageOk,
+      placeholder: "24",
+      digitsOnly: true,
+    },
+    {
+      label: "WEIGHT",
+      suffix: "kg",
+      value: weight,
+      set: setWeight,
+      ok: weightOk,
+      placeholder: "80",
+      digitsOnly: false,
+    },
+    {
+      label: "HEIGHT",
+      suffix: "cm",
+      value: height,
+      set: setHeight,
+      ok: heightOk,
+      placeholder: "180",
+      digitsOnly: false,
+    },
   ];
 
   return (
@@ -513,10 +563,7 @@ function AboutYouStep({
                 autoFocus={i === 0}
                 defaultValue={f.value}
                 onChange={(e) => {
-                  const cleaned = e.target.value.replace(
-                    f.digitsOnly ? /[^0-9]/g : /[^0-9.]/g,
-                    "",
-                  );
+                  const cleaned = e.target.value.replace(f.digitsOnly ? /[^0-9]/g : /[^0-9.]/g, "");
                   e.target.value = cleaned;
                   f.set(cleaned);
                 }}
@@ -668,7 +715,11 @@ function UsernameStep({ initial, onSubmit }: { initial?: string; onSubmit: (u: s
           placeholder="ironwolf"
         />
       </div>
-      <button disabled={!valid} onClick={() => onSubmit(clean)} className="btn-grit mt-auto disabled:opacity-40">
+      <button
+        disabled={!valid}
+        onClick={() => onSubmit(clean)}
+        className="btn-grit mt-auto disabled:opacity-40"
+      >
         Continue
       </button>
     </>
@@ -735,13 +786,14 @@ function PhotoStep({ onSubmit, onSkip }: { onSubmit: (url: string) => void; onSk
 
 function SchedulePreview({
   draft,
+  initial,
   onContinue,
 }: {
   draft: Partial<Profile>;
-  onContinue: () => void;
+  initial: Schedule | null;
+  onContinue: (schedule: Schedule) => void;
 }) {
-  // Preview must match what actually gets saved — defaultSchedule also uses
-  // focus muscles and session length.
+  // Preview must match what actually gets saved.
   const stub = useMemo(
     () =>
       ({
@@ -749,57 +801,370 @@ function SchedulePreview({
         daysPerWeek: draft.daysPerWeek ?? 4,
         equipment: draft.equipment ?? "FULL_GYM",
         focusMuscles: draft.focusMuscles,
-        sessionMinutes: draft.sessionMinutes,
+        exercisesPerSession: draft.exercisesPerSession ?? 5,
       }) as Profile,
-    [draft.goal, draft.daysPerWeek, draft.equipment, draft.focusMuscles, draft.sessionMinutes],
+    [draft.goal, draft.daysPerWeek, draft.equipment, draft.focusMuscles, draft.exercisesPerSession],
   );
-  const schedule = useMemo(() => defaultSchedule(stub), [stub]);
+  const [schedule, setSchedule] = useState<Schedule>(() => initial ?? defaultSchedule(stub));
+  const [selectedDay, setSelectedDay] = useState<DayKey>("MON");
 
-  const DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] as const;
+  const DAYS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+  const available = EXERCISES.filter(
+    (exercise) =>
+      exercise.equipment.includes(stub.equipment) || exercise.equipment.includes("BODYWEIGHT"),
+  );
+  const selected = schedule[selectedDay];
+  const configuredDays = DAYS.filter((day) => schedule[day].exerciseIds.length).length;
+
+  function daySets(dayKey: DayKey) {
+    return schedule[dayKey].sets ?? 3;
+  }
+
+  function dayReps(dayKey: DayKey) {
+    return schedule[dayKey].reps ?? "8-12";
+  }
+
+  function updateDayTargets(dayKey: DayKey, patch: { sets?: number; reps?: string }) {
+    setSchedule((current) => ({
+      ...current,
+      [dayKey]: { ...current[dayKey], ...patch },
+    }));
+  }
+
+  function updateExercisePlan(
+    dayKey: DayKey,
+    exerciseId: string,
+    patch: { sets?: number; reps?: string },
+  ) {
+    setSchedule((current) => ({
+      ...current,
+      [dayKey]: {
+        ...current[dayKey],
+        exerciseConfig: {
+          ...(current[dayKey].exerciseConfig ?? {}),
+          [exerciseId]: {
+            ...(current[dayKey].exerciseConfig?.[exerciseId] ?? {}),
+            ...patch,
+          },
+        },
+      },
+    }));
+  }
+
+  function moveExercise(dayKey: DayKey, index: number, direction: -1 | 1) {
+    const target = index + direction;
+    const exerciseIds = schedule[dayKey].exerciseIds;
+    if (target < 0 || target >= exerciseIds.length) return;
+    const next = [...exerciseIds];
+    [next[index], next[target]] = [next[target], next[index]];
+    setSchedule((current) => ({
+      ...current,
+      [dayKey]: { ...current[dayKey], exerciseIds: next },
+    }));
+  }
+
+  function removeExercise(dayKey: DayKey, exerciseId: string) {
+    setSchedule((current) => {
+      const exerciseIds = current[dayKey].exerciseIds.filter((id) => id !== exerciseId);
+      const exerciseConfig = { ...(current[dayKey].exerciseConfig ?? {}) };
+      delete exerciseConfig[exerciseId];
+      return {
+        ...current,
+        [dayKey]: {
+          ...current[dayKey],
+          exerciseIds,
+          exerciseConfig: Object.keys(exerciseConfig).length ? exerciseConfig : undefined,
+          label: exerciseIds.length ? current[dayKey].label : "REST",
+        },
+      };
+    });
+  }
+
+  function addExercise(exerciseId: string) {
+    if (!exerciseId) return;
+    const exercise = getExercise(exerciseId);
+    if (!exercise) return;
+    setSchedule((current) => {
+      const day = current[selectedDay];
+      if (day.exerciseIds.includes(exerciseId)) return current;
+      return {
+        ...current,
+        [selectedDay]: {
+          ...day,
+          label: day.label === "REST" ? exercise.muscleGroup : day.label,
+          exerciseIds: [...day.exerciseIds, exerciseId],
+        },
+      };
+    });
+  }
 
   return (
     <>
-      <p className="label-cap text-accent-red mb-2 flex items-center gap-1.5">
-        <Zap size={12} /> YOUR WEEK
+      <p className="label-cap mb-2 flex items-center gap-1.5 text-accent-red">
+        <Zap size={12} /> BUILD YOUR WEEK
       </p>
-      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-1">
-        Schedule locked in
+      <h1 className="display mb-1 text-3xl font-extrabold uppercase text-grit sm:text-4xl">
+        Set every target now
       </h1>
-      <p className="text-sm text-[#8a8a8a] mb-6">
-        {draft.daysPerWeek} days · {(draft.equipment ?? "").replace("_", " ").toLowerCase()} · tuned
-        for {(draft.goal ?? "").toLowerCase()}. Change it any time from Train → Edit.
+      <p className="mb-5 text-sm leading-relaxed text-[#8a8a8a]">
+        Choose the exercises, order, sets and reps before you start. Everything remains editable
+        later.
       </p>
-      <div className="flex flex-col gap-1.5 mb-6">
+
+      <div className="grid grid-cols-7 gap-1.5" aria-label="Training week">
         {DAYS.map((d) => {
           const day = schedule[d];
           const isRest = !day.exerciseIds.length;
           return (
-            <div
+            <button
               key={d}
-              className="bg-grit-card border border-grit rounded-xl p-3 flex items-start gap-3"
-              style={{ borderColor: isRest ? "#262626" : "#3a1410" }}
+              onClick={() => setSelectedDay(d)}
+              aria-pressed={selectedDay === d}
+              aria-label={`${d}, ${isRest ? "rest day" : `${day.exerciseIds.length} exercises`}`}
+              className="relative min-w-0 rounded-lg border px-1 py-3 text-center press"
+              style={{
+                borderColor: selectedDay === d ? "#e63222" : "rgba(255,255,255,.1)",
+                background: selectedDay === d ? "rgba(230,50,34,.12)" : "rgba(18,18,18,.9)",
+              }}
             >
-              <span className="label-cap text-[10px] w-10 pt-0.5 text-grit-dim">{d}</span>
-              <div className="flex-1 min-w-0">
-                <p
-                  className="display text-xs uppercase font-extrabold leading-tight"
-                  style={{ color: isRest ? "#8a8a8a" : "#f5f5f0" }}
-                >
-                  {day.label}
-                </p>
-                {!isRest && (
-                  <p className="text-[10px] text-grit-dim mt-1 truncate">
-                    {day.exerciseIds.map((id) => getExercise(id)?.name ?? id).join(" · ")}
-                  </p>
-                )}
-              </div>
-              {!isRest && <Check size={14} className="text-accent-red flex-shrink-0 mt-1" />}
-            </div>
+              <span
+                className={`block text-[9px] font-black uppercase ${
+                  selectedDay === d ? "text-accent-red" : "text-grit-dim"
+                }`}
+              >
+                {d}
+              </span>
+              <span className="display mt-1 block text-sm font-black text-grit">
+                {isRest ? "—" : day.exerciseIds.length}
+              </span>
+              {!isRest && (
+                <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-accent-red" />
+              )}
+            </button>
           );
         })}
       </div>
-      <button onClick={onContinue} className="btn-grit mt-auto">
-        Lock it in — finish profile
+
+      <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-[#111214] shadow-[0_18px_46px_rgba(0,0,0,.34)]">
+        <div className="border-b border-white/10 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase text-accent-red">{selectedDay}</p>
+              <input
+                key={`onboarding-label-${selectedDay}`}
+                defaultValue={selected.label}
+                onBlur={(event) => {
+                  const label = event.target.value.trim().toUpperCase() || "TRAINING";
+                  event.target.value = label;
+                  setSchedule((current) => ({
+                    ...current,
+                    [selectedDay]: { ...current[selectedDay], label },
+                  }));
+                }}
+                aria-label={`${selectedDay} workout name`}
+                className="display mt-1 w-full border-0 bg-transparent p-0 text-2xl font-black uppercase text-grit outline-none"
+              />
+            </div>
+            <span className="shrink-0 rounded-md border border-white/10 bg-black/30 px-2.5 py-1.5 text-[9px] font-black uppercase text-grit-dim">
+              {selected.exerciseIds.length
+                ? `${selected.exerciseIds.reduce(
+                    (total, id) =>
+                      total +
+                      (selected.exerciseConfig?.[id]?.sets ??
+                        selected.sets ??
+                        getExercise(id)?.sets ??
+                        3),
+                    0,
+                  )} sets`
+                : "Rest"}
+            </span>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="rounded-lg border border-white/10 bg-black/30 p-2.5">
+              <p className="text-[9px] font-black uppercase text-grit-dim">Default sets</p>
+              <div className="mt-2 flex items-center justify-between">
+                <button
+                  onClick={() =>
+                    updateDayTargets(selectedDay, {
+                      sets: Math.max(1, daySets(selectedDay) - 1),
+                    })
+                  }
+                  disabled={daySets(selectedDay) <= 1}
+                  aria-label={`Use fewer sets on ${selectedDay}`}
+                  className="grid h-11 w-11 place-items-center rounded-md border border-white/10 text-grit-dim disabled:opacity-30"
+                >
+                  <Minus size={14} />
+                </button>
+                <span className="display text-xl font-black text-grit">{daySets(selectedDay)}</span>
+                <button
+                  onClick={() =>
+                    updateDayTargets(selectedDay, {
+                      sets: Math.min(12, daySets(selectedDay) + 1),
+                    })
+                  }
+                  disabled={daySets(selectedDay) >= 12}
+                  aria-label={`Use more sets on ${selectedDay}`}
+                  className="grid h-11 w-11 place-items-center rounded-md border border-white/10 text-grit-dim disabled:opacity-30"
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
+            </div>
+            <label className="rounded-lg border border-white/10 bg-black/30 p-2.5">
+              <span className="block text-[9px] font-black uppercase text-grit-dim">
+                Default reps
+              </span>
+              <select
+                value={dayReps(selectedDay)}
+                onChange={(event) => updateDayTargets(selectedDay, { reps: event.target.value })}
+                aria-label={`Default reps for ${selectedDay}`}
+                className="mt-2 min-h-9 w-full bg-transparent text-sm font-black text-grit outline-none"
+              >
+                {REP_TARGETS.map((reps) => (
+                  <option key={reps} value={reps}>
+                    {reps}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <p className="mt-2 text-[10px] leading-relaxed text-grit-dim">
+            New exercises use these targets. Fine-tune any movement below.
+          </p>
+        </div>
+
+        <div className="space-y-2 p-3">
+          {selected.exerciseIds.length ? (
+            selected.exerciseIds.map((id, index) => {
+              const exercise = getExercise(id);
+              if (!exercise) return null;
+              const config = selected.exerciseConfig?.[id];
+              const sets = config?.sets ?? selected.sets ?? exercise.sets;
+              const reps = config?.reps ?? selected.reps ?? exercise.reps;
+              return (
+                <div key={id} className="rounded-xl border border-white/[0.08] bg-black/30 p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-accent-red/10 text-[10px] font-black text-accent-red">
+                      {index + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-black text-grit">{exercise.name}</p>
+                      <p className="text-[9px] font-bold uppercase text-grit-dim">
+                        {exercise.muscleGroup}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center">
+                      <button
+                        onClick={() => moveExercise(selectedDay, index, -1)}
+                        disabled={index === 0}
+                        aria-label={`Move ${exercise.name} up`}
+                        className="grid h-11 w-11 place-items-center text-grit-dim disabled:opacity-20"
+                      >
+                        <ArrowUp size={13} />
+                      </button>
+                      <button
+                        onClick={() => moveExercise(selectedDay, index, 1)}
+                        disabled={index === selected.exerciseIds.length - 1}
+                        aria-label={`Move ${exercise.name} down`}
+                        className="grid h-11 w-11 place-items-center text-grit-dim disabled:opacity-20"
+                      >
+                        <ArrowDown size={13} />
+                      </button>
+                      <button
+                        onClick={() => removeExercise(selectedDay, id)}
+                        aria-label={`Remove ${exercise.name}`}
+                        className="grid h-11 w-11 place-items-center text-grit-dim"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <label className="flex min-h-11 items-center justify-between rounded-md border border-white/10 bg-[#111214] px-3">
+                      <span className="text-[9px] font-black uppercase text-grit-dim">Sets</span>
+                      <select
+                        value={sets}
+                        onChange={(event) =>
+                          updateExercisePlan(selectedDay, id, {
+                            sets: Number(event.target.value),
+                          })
+                        }
+                        aria-label={`${exercise.name} sets`}
+                        className="bg-transparent text-sm font-black text-grit outline-none"
+                      >
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map((value) => (
+                          <option key={value} value={value}>
+                            {value}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="flex min-h-11 items-center justify-between rounded-md border border-white/10 bg-[#111214] px-3">
+                      <span className="text-[9px] font-black uppercase text-grit-dim">Reps</span>
+                      <select
+                        value={reps}
+                        onChange={(event) =>
+                          updateExercisePlan(selectedDay, id, { reps: event.target.value })
+                        }
+                        aria-label={`${exercise.name} reps`}
+                        className="max-w-[5.5rem] bg-transparent text-sm font-black text-grit outline-none"
+                      >
+                        {REP_TARGETS.map((value) => (
+                          <option key={value} value={value}>
+                            {value}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="py-7 text-center">
+              <Dumbbell size={22} className="mx-auto text-grit-dim" />
+              <p className="display mt-3 text-lg font-black uppercase text-grit">Recovery day</p>
+              <p className="mt-1 text-xs text-grit-dim">Add a movement to turn it into training.</p>
+            </div>
+          )}
+
+          <label className="flex items-center gap-2 rounded-xl border border-dashed border-white/15 bg-black/20 px-3">
+            <Plus size={14} className="shrink-0 text-accent-red" />
+            <select
+              value=""
+              onChange={(event) => addExercise(event.target.value)}
+              aria-label={`Add exercise to ${selectedDay}`}
+              className="min-h-12 min-w-0 flex-1 bg-transparent text-xs font-bold text-grit outline-none"
+            >
+              <option value="">Add an exercise...</option>
+              {available
+                .filter((exercise) => !selected.exerciseIds.includes(exercise.id))
+                .map((exercise) => (
+                  <option key={exercise.id} value={exercise.id}>
+                    {exercise.name} · {exercise.muscleGroup}
+                  </option>
+                ))}
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3">
+        <div className="flex items-center gap-2">
+          <Check size={14} className="shrink-0 text-emerald-400" />
+          <p className="text-xs font-bold text-grit">{configuredDays} training days configured</p>
+        </div>
+        <p className="mt-1 pl-6 text-[10px] leading-relaxed text-grit-dim">
+          Each workout will open with these exact movements and targets.
+        </p>
+      </div>
+      <button
+        onClick={() => onContinue(schedule)}
+        disabled={configuredDays === 0}
+        className="btn-grit mt-auto disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        Lock in my week
       </button>
     </>
   );
@@ -834,7 +1199,7 @@ function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
             Generate Schedule
           </span>
           <p className="text-xs text-[#8a8a8a] mt-1">
-            Answer 8 quick questions. We build your week.
+            A short guided setup. We build your first week.
           </p>
         </button>
         <button
@@ -931,6 +1296,11 @@ function PRStep({ onContinue }: { onContinue: () => void }) {
   );
 }
 
+/**
+ * Asks which weekdays the lifter trains rather than only how many. The count
+ * alone left `defaultSchedule` guessing — three days was always Mon/Wed/Fri,
+ * whatever the lifter's week actually looked like.
+ */
 function TrainingDaysStep({
   initial,
   onSubmit,
@@ -955,8 +1325,7 @@ function TrainingDaysStep({
       <p className="text-sm mt-4" style={{ color: enough ? "#f5f5f0" : "#8a8a8a" }}>
         {enough ? (
           <>
-            <span className="font-bold">{days.length} days a week</span> —{" "}
-            {describeDays(days)}.
+            <span className="font-bold">{days.length} days a week</span> — {describeDays(days)}.
           </>
         ) : (
           `Pick at least ${MIN_TRAINING_DAYS} days.`
@@ -970,63 +1339,6 @@ function TrainingDaysStep({
           className="btn-grit disabled:opacity-40"
         >
           Continue
-        </button>
-        <p className="text-center text-xs text-[#6a6a6a]">
-          You can change these any time from Train.
-        </p>
-      </div>
-    </>
-  );
-}
-
-const EQUIPMENT_LABEL: Record<string, string> = {
-  FULL_GYM: "Full gym",
-  HOME_GYM: "Home gym",
-  BODYWEIGHT: "Bodyweight",
-};
-
-function TuneGateStep({
-  draft,
-  onFineTune,
-  onSkip,
-}: {
-  draft: Partial<Profile>;
-  onFineTune: () => void;
-  onSkip: () => void;
-}) {
-  const days = draft.trainingDays ?? [];
-  const summary = [
-    days.length > 0 ? `${days.length} days — ${describeDays(days)}` : null,
-    draft.equipment ? EQUIPMENT_LABEL[draft.equipment] : null,
-    draft.sessionMinutes ? `${draft.sessionMinutes} min sessions` : null,
-  ].filter(Boolean) as string[];
-
-  return (
-    <>
-      <p className="label-cap text-accent-red text-[10px] mb-2">That's everything we need</p>
-      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">
-        Ready to train
-      </h1>
-      <p className="text-sm text-[#8a8a8a] mb-6">
-        We can build your week right now. The extra questions only sharpen it —
-        skip them and you can add the detail later from your profile.
-      </p>
-
-      <div className="border border-grit rounded-2xl bg-grit-card p-4 mb-6">
-        {summary.map((line) => (
-          <div key={line} className="flex items-center gap-2.5 py-1">
-            <Check size={15} className="text-accent-red flex-shrink-0" />
-            <span className="text-sm text-grit">{line}</span>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-auto flex flex-col gap-3">
-        <button onClick={onSkip} className="btn-grit">
-          Build my week — I'm ready
-        </button>
-        <button onClick={onFineTune} className="btn-ghost">
-          Fine-tune first (about a minute)
         </button>
       </div>
     </>
@@ -1078,7 +1390,10 @@ function FocusStep({
               }}
             >
               <p className="display text-lg font-extrabold uppercase text-grit">{o.l}</p>
-              <p className="label-cap text-[9px] mt-0.5" style={{ color: active ? "#e63222" : "#8a8a8a" }}>
+              <p
+                className="label-cap text-[9px] mt-0.5"
+                style={{ color: active ? "#e63222" : "#8a8a8a" }}
+              >
                 {active ? "PRIORITY" : "TAP TO PICK"}
               </p>
             </button>
@@ -1145,7 +1460,11 @@ function TargetStep({
         <span className="label-cap text-grit-dim">kg</span>
       </div>
       <div className="mt-auto flex flex-col gap-3">
-        <button onClick={() => valid && onSubmit(n)} disabled={!valid} className="btn-grit disabled:opacity-40">
+        <button
+          onClick={() => valid && onSubmit(n)}
+          disabled={!valid}
+          className="btn-grit disabled:opacity-40"
+        >
           Continue
         </button>
         <button onClick={onSkip} className="btn-ghost">
@@ -1171,8 +1490,7 @@ function BlueprintStep({ draft, onEnter }: { draft: Partial<Profile>; onEnter: (
     .map((l) => {
       const pr = manualPRs[l.id];
       const oneRm = pr?.value ?? 0;
-      const std =
-        oneRm && p.weightKg ? strengthStandard(oneRm, p.weightKg, l.id, p.gender) : null;
+      const std = oneRm && p.weightKg ? strengthStandard(oneRm, p.weightKg, l.id, p.gender) : null;
       return { ...l, oneRm, std };
     })
     .filter((l) => l.std);
@@ -1198,7 +1516,7 @@ function BlueprintStep({ draft, onEnter }: { draft: Partial<Profile>; onEnter: (
         <div className="bg-grit-card border border-grit p-4">
           <p className="label-cap text-[9px] text-grit-dim">THE WEEK</p>
           <p className="text-sm text-grit font-bold mt-1">
-            {p.daysPerWeek} days · {p.sessionMinutes ?? 60} min sessions
+            {p.daysPerWeek} days · {p.exercisesPerSession ?? 5} exercises per workout
             {focus && ` · extra ${focus.toLowerCase()}`}
           </p>
         </div>
@@ -1289,8 +1607,12 @@ function ProChoiceStep({ onChoose }: { onChoose: (goPro: boolean) => void }) {
         </div>
         <div className="grid grid-cols-[1fr_56px_56px] items-center px-4 py-2.5 border-b border-grit/60">
           <span className="text-xs text-grit font-medium">All core training & social</span>
-          <span className="text-center"><Check size={14} className="inline text-grit" /></span>
-          <span className="text-center"><Check size={14} className="inline text-accent-red" /></span>
+          <span className="text-center">
+            <Check size={14} className="inline text-grit" />
+          </span>
+          <span className="text-center">
+            <Check size={14} className="inline text-accent-red" />
+          </span>
         </div>
         {PRO_HIGHLIGHTS.map((r) => (
           <div
@@ -1329,7 +1651,9 @@ function ProChoiceStep({ onChoose }: { onChoose: (goPro: boolean) => void }) {
             Save 33%
           </span>
           <p className="label-cap text-[9px] text-grit-dim">Yearly</p>
-          <p className="display text-xl font-extrabold text-white leading-none mt-0.5">{meta.yearly}</p>
+          <p className="display text-xl font-extrabold text-white leading-none mt-0.5">
+            {meta.yearly}
+          </p>
           <p className="text-[10px] text-grit-dim">per year</p>
         </button>
         <button
@@ -1341,13 +1665,18 @@ function ProChoiceStep({ onChoose }: { onChoose: (goPro: boolean) => void }) {
           }}
         >
           <p className="label-cap text-[9px] text-grit-dim">Monthly</p>
-          <p className="display text-xl font-extrabold text-white leading-none mt-0.5">{meta.monthly}</p>
+          <p className="display text-xl font-extrabold text-white leading-none mt-0.5">
+            {meta.monthly}
+          </p>
           <p className="text-[10px] text-grit-dim">per month · cancel anytime</p>
         </button>
       </div>
 
       <div className="mt-auto">
-        <button onClick={() => onChoose(true)} className="btn-grit w-full py-4 text-base animate-subtle-pulse">
+        <button
+          onClick={() => onChoose(true)}
+          className="btn-grit w-full py-4 text-base animate-subtle-pulse"
+        >
           <Zap size={16} className="mr-2" />
           Unlock DEADSET Pro
         </button>
@@ -1369,23 +1698,21 @@ function AnalyzingStep({ draft, onDone }: { draft: Partial<Profile>; onDone: () 
   const focus = (p.focusMuscles ?? []).join(" + ").toLowerCase();
   const lines = useMemo(
     () => [
-      p.motivation ? "Reading your goals and your why" : "Reading your goals",
+      "Reading your goals and your why",
       `Calibrating a ${p.daysPerWeek ?? 4}-day split${focus ? ` with extra ${focus}` : ""}`,
       "Setting your calorie and protein targets",
       "Benchmarking your lifts against the standards",
       "Locking in your ranked starting point",
     ],
-    [p.daysPerWeek, p.motivation, focus],
+    [p.daysPerWeek, focus],
   );
   const [done, setDone] = useState(0);
   useEffect(() => {
     if (done >= lines.length) {
-      const t = setTimeout(onDone, 400);
+      const t = setTimeout(onDone, 750);
       return () => clearTimeout(t);
     }
-    // Fast enough to read as "working", short enough that nobody sits waiting:
-    // five lines plus the hand-off lands under two seconds.
-    const t = setTimeout(() => setDone((d) => d + 1), 300);
+    const t = setTimeout(() => setDone((d) => d + 1), 720);
     return () => clearTimeout(t);
   }, [done, lines.length, onDone]);
   const pct = Math.round((done / lines.length) * 100);

@@ -272,7 +272,9 @@ const CHALLENGES: Challenge[] = [
 ];
 
 const TIER_COLOR = { EASY: "#60a5fa", BEAST: "#fbbf24", GOD: "#e63222", ELITE: "#a855f7" };
-const TIER_LABEL = { EASY: "Entry", BEAST: "Beast", GOD: "God Tier", ELITE: "Elite · Pro" };
+// "Elite" is deliberately not labelled "Pro" — this label renders on iOS, where
+// every tier is free, so a "Pro" suffix would imply paid content (Guideline 3.1.1).
+const TIER_LABEL = { EASY: "Entry", BEAST: "Beast", GOD: "God Tier", ELITE: "Elite" };
 
 // "Finish the work, beat the clock" challenges: LOWER time is better. Holds
 // (plank, dead hang, wall sit, carries) stay higher-is-better.
@@ -319,7 +321,9 @@ function ChallengesPage() {
   const eliteLocked = !proLoading && !isPro;
   const [active, setActive] = useState<Challenge | null>(null);
   const [tab, setTab] = useState<Tab>("GRIND");
-  const [filter, setFilter] = useState<"ALL" | "EASY" | "BEAST" | "GOD" | "ELITE" | "BEATEN">("ALL");
+  const [filter, setFilter] = useState<"ALL" | "EASY" | "BEAST" | "GOD" | "ELITE" | "BEATEN">(
+    "ALL",
+  );
 
   const filtered = CHALLENGES.filter((c) => {
     if (filter === "ALL") return true;
@@ -517,7 +521,8 @@ function GrindTab({
                 <div
                   className="absolute top-0 right-0 w-16 h-16"
                   style={{
-                    background: "linear-gradient(135deg, transparent 50%, rgba(230,50,34,0.15) 50%)",
+                    background:
+                      "linear-gradient(135deg, transparent 50%, rgba(230,50,34,0.15) 50%)",
                   }}
                 />
               )}
@@ -635,9 +640,10 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
-  // H2H challenges are free on both sides. Charging the challenger meant the
-  // feature only worked when both people happened to be Pro, which throttled
-  // the friend-invites-friend loop the app grows on.
+  const { isPro, loading: proLoading } = usePro();
+  // Creating an H2H challenge is Pro-only; viewing/accepting stays free.
+  // While entitlement is loading, treat as unlocked (never flash a lock at paying users).
+  const h2hLocked = !proLoading && !isPro;
   const _search = searchAthletes;
   const _createPost = createPost;
 
@@ -662,6 +668,10 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
 
   async function sendChallenge() {
     if (!selected || !challenge) return;
+    if (h2hLocked) {
+      openPaywall("h2h");
+      return;
+    }
     setSending(true);
     try {
       const targetName = selected.display_name || selected.username || "friend";
@@ -715,7 +725,9 @@ function H2HTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
       {/* Real tracked duels — challenge, accept, auto-scored live */}
       <DuelsPanel />
 
-      <p className="label-cap text-[10px] text-grit-dim -mb-1">Or post an open challenge to your feed</p>
+      <p className="label-cap text-[10px] text-grit-dim -mb-1">
+        Or post an open challenge to your feed
+      </p>
 
       {/* Step 1: Search for opponent */}
       <div
@@ -973,39 +985,43 @@ function WarsTab({ state }: { state: ReturnType<typeof useAppState>[0] }) {
         {thisWeekSessions.length === 0 ? (
           <div className="mt-4 text-center py-3">
             <p className="text-sm text-grit-dim">No sessions logged this week yet.</p>
-            <Link to="/workout/live" className="btn-ghost inline-block mt-3">
+            <Link to="/workout/live" search={{}} className="btn-ghost inline-block mt-3">
               Start this week strong
             </Link>
           </div>
         ) : (
-        <div className="flex items-end gap-1.5 mt-4 h-14">
-          {weeks.map((day) => {
-            const count = weekSessionMap.get(day) ?? 0;
-            const today = new Date();
-            const todayKey = weeks[today.getDay() === 0 ? 6 : today.getDay() - 1];
-            const isToday = day === todayKey;
-            return (
-              <div key={day} className="flex-1 flex flex-col items-center gap-1">
-                <div className="w-full flex flex-col justify-end" style={{ height: 40 }}>
-                  <div
-                    className="w-full rounded-t-md"
-                    style={{
-                      height: count > 0 ? Math.min(40, count * 20) : 4,
-                      background: isToday ? "#e63222" : count > 0 ? "rgba(230,50,34,0.4)" : "#262626",
-                      transition: "height 400ms ease",
-                    }}
-                  />
+          <div className="flex items-end gap-1.5 mt-4 h-14">
+            {weeks.map((day) => {
+              const count = weekSessionMap.get(day) ?? 0;
+              const today = new Date();
+              const todayKey = weeks[today.getDay() === 0 ? 6 : today.getDay() - 1];
+              const isToday = day === todayKey;
+              return (
+                <div key={day} className="flex-1 flex flex-col items-center gap-1">
+                  <div className="w-full flex flex-col justify-end" style={{ height: 40 }}>
+                    <div
+                      className="w-full rounded-t-md"
+                      style={{
+                        height: count > 0 ? Math.min(40, count * 20) : 4,
+                        background: isToday
+                          ? "#e63222"
+                          : count > 0
+                            ? "rgba(230,50,34,0.4)"
+                            : "#262626",
+                        transition: "height 400ms ease",
+                      }}
+                    />
+                  </div>
+                  <span
+                    className="text-[9px] font-bold"
+                    style={{ color: isToday ? "#e63222" : "#8a8a8a" }}
+                  >
+                    {day[0]}
+                  </span>
                 </div>
-                <span
-                  className="text-[9px] font-bold"
-                  style={{ color: isToday ? "#e63222" : "#8a8a8a" }}
-                >
-                  {day[0]}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
         )}
       </div>
 

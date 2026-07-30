@@ -6,10 +6,23 @@
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>org.deadsetfit.app.auth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>org.deadsetfit.app</string>
+			</array>
+		</dict>
+	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSHealthShareUsageDescription</key>
-	<string>DEADSET reads your Apple Watch workouts and active energy so training done on your watch counts toward your streak, grit and calorie balance.</string>
+	<string>DEADSET reads your steps, activity rings, walking distance, resting heart rate, active energy and Apple Watch workouts to show your daily fitness and training progress.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>DEADSET saves your finished gym sessions to Apple Health so they close your rings and appear on your Apple Watch.</string>
 	<key>NSCameraUsageDescription</key>
@@ -58,6 +71,8 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<true/>
+	<key>NSSupportsLiveActivities</key>
 	<true/>
 </dict>
 </plist>

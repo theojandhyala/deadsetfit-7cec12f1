@@ -1,146 +1,310 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { Activity, ChevronLeft, Dumbbell, Flame, Medal, Scale, Swords, Trophy } from "lucide-react";
 
-import { ChevronLeft, Trophy, Medal, Flame, Swords } from "lucide-react";
-import { getLeaderboard, type LeaderboardCategory, type LeaderboardRow } from "@/lib/leaderboard.functions";
 import { supabase } from "@/integrations/supabase/client";
+import { getSeasonInfo } from "@/lib/competition";
+import {
+  getLeaderboard,
+  type LeaderboardCategory,
+  type LeaderboardRow,
+} from "@/lib/leaderboard.functions";
 
 export const Route = createFileRoute("/leaderboard")({
-  head: () => ({ meta: [{ title: "DEADSET — Leaderboard" }] }),
+  head: () => ({ meta: [{ title: "DEADSET - Leaderboards" }] }),
   component: LeaderboardPage,
 });
 
-const CATS: { key: LeaderboardCategory; label: string }[] = [
-  { key: "RANK", label: "RANK" },
-  { key: "STREAK", label: "STREAK" },
-  { key: "OVERALL", label: "OVERALL" },
-  { key: "TOTAL", label: "TOTAL" },
-  { key: "BENCH", label: "BENCH" },
-  { key: "SQUAT", label: "SQUAT" },
-  { key: "DEADLIFT", label: "DEAD" },
+type BoardGroup = "SEASON" | "STRENGTH" | "CONSISTENCY";
+
+const GROUPS: Array<{ key: BoardGroup; label: string; icon: typeof Trophy }> = [
+  { key: "SEASON", label: "Season", icon: Swords },
+  { key: "STRENGTH", label: "Strength", icon: Dumbbell },
+  { key: "CONSISTENCY", label: "Training", icon: Activity },
 ];
+
+const BOARDS: Record<
+  BoardGroup,
+  Array<{ key: LeaderboardCategory; label: string; description: string }>
+> = {
+  SEASON: [
+    {
+      key: "WEEKLY",
+      label: "Weekly",
+      description: "Workouts, trained days, working sets, volume and PRs this week.",
+    },
+    {
+      key: "RANK",
+      label: "Rank",
+      description: "Your long-term DEADSET grit and league position.",
+    },
+    {
+      key: "OVERALL",
+      label: "Overall",
+      description: "Balanced strength, training, consistency and nutrition rating.",
+    },
+  ],
+  STRENGTH: [
+    { key: "TOTAL", label: "Big 3", description: "Bench + squat + deadlift estimated 1RM." },
+    {
+      key: "P4P",
+      label: "Pound for pound",
+      description: "Big Three total divided by body weight.",
+    },
+    { key: "BENCH", label: "Bench", description: "Highest bench press estimated 1RM." },
+    { key: "SQUAT", label: "Squat", description: "Highest back squat estimated 1RM." },
+    { key: "DEADLIFT", label: "Deadlift", description: "Highest deadlift estimated 1RM." },
+  ],
+  CONSISTENCY: [
+    { key: "VOLUME", label: "Volume", description: "Total working weight moved this week." },
+    { key: "PRS", label: "PRs", description: "Personal records earned this week." },
+    { key: "STREAK", label: "Streak", description: "Current consecutive training-day streak." },
+  ],
+};
 
 function LeaderboardPage() {
   const navigate = useNavigate();
-  const fetchBoard = getLeaderboard;
-  const [cat, setCat] = useState<LeaderboardCategory>("RANK");
+  const season = getSeasonInfo();
+  const [group, setGroup] = useState<BoardGroup>("SEASON");
+  const [category, setCategory] = useState<LeaderboardCategory>("WEEKLY");
   const [rows, setRows] = useState<LeaderboardRow[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [retry, setRetry] = useState(0);
   const [meId, setMeId] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setMeId(data.user?.id ?? null));
+    void supabase.auth.getUser().then(({ data }) => setMeId(data.user?.id ?? null));
   }, []);
 
   useEffect(() => {
+    let active = true;
     setLoading(true);
-    fetchBoard({ data: { category: cat } })
-      .then((r) => setRows(r.rows))
-      .catch(() => setRows([]))
-      .finally(() => setLoading(false));
-  }, [cat, fetchBoard]);
+    setFailed(false);
+    void getLeaderboard({ data: { category, limit: 100 } })
+      .then((result) => {
+        if (active) setRows(result.rows);
+      })
+      .catch(() => {
+        if (!active) return;
+        setRows([]);
+        setFailed(true);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [category, retry]);
 
-  const myRank = meId ? rows.findIndex((r) => r.id === meId) : -1;
+  const boards = BOARDS[group];
+  const board = boards.find((item) => item.key === category) ?? boards[0];
+  const myRank = meId ? rows.findIndex((row) => row.id === meId) : -1;
+
+  function chooseGroup(next: BoardGroup) {
+    setGroup(next);
+    setCategory(BOARDS[next][0].key);
+  }
 
   return (
-    <div className="pb-20" style={{ paddingTop: "env(safe-area-inset-top)" }}>
-      <header className="px-5 pt-4 pb-3 flex items-center gap-2 border-b border-grit">
-        <button onClick={() => navigate({ to: "/friends" as never })} className="p-1 -ml-1">
+    <div className="deadset-page pb-20" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+      <header className="deadset-section flex items-center gap-3 pt-4">
+        <button
+          onClick={() => navigate({ to: "/friends" as never })}
+          aria-label="Back to friends"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-grit bg-grit-card text-grit-dim press"
+        >
           <ChevronLeft size={20} />
         </button>
-        <Trophy size={16} className="text-accent-red" />
-        <p className="display text-lg font-extrabold uppercase text-grit leading-none">Leaderboard</p>
+        <div>
+          <p className="label-cap text-[10px] text-accent-red">DEADSET Arenas</p>
+          <h1 className="display text-3xl font-black uppercase leading-none text-grit">
+            Leaderboards
+          </h1>
+        </div>
       </header>
 
-      <section className="px-5 pt-5">
-        <div className="border border-accent-red bg-grit-card p-5 relative overflow-hidden">
-          <div className="absolute -right-14 -top-14 h-36 w-36 rounded-full bg-accent-red/20 blur-2xl" />
-          <p className="label-cap text-accent-red text-[10px] flex items-center gap-1.5">
-            <Swords size={12} /> ARENA BOARDS
-          </p>
-          <h1 className="display text-3xl font-extrabold uppercase text-grit leading-none mt-1">
-            Rank & PR ladders
-          </h1>
-          <p className="text-xs text-grit-dim mt-2 leading-relaxed">
-            Rank is your grit arena score. PR boards compare your Overall, Big 3, Bench, Squat and Deadlift numbers.
-          </p>
-          <div className="grid grid-cols-2 gap-2 mt-4">
-            <Link to="/challenges" className="btn-grit py-2 text-xs flex items-center justify-center gap-2">
-              <Flame size={13} /> Enter Arena
+      <section className="deadset-section">
+        <div className="border-y border-white/10 bg-[#111216] py-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="label-cap flex items-center gap-1.5 text-[10px] text-accent-red">
+                <Swords size={12} /> {season.label}
+              </p>
+              <h2 className="display mt-1 text-2xl font-black uppercase text-grit">
+                Earn your position
+              </h2>
+              <p className="mt-2 max-w-md text-sm leading-relaxed text-grit-dim">
+                Weekly competition resets every Monday. Your league rank stays tied to long-term
+                grit.
+              </p>
+            </div>
+            <div className="shrink-0 border-l border-white/10 pl-4 text-right">
+              <p className="display text-3xl font-black text-accent-red">{season.daysLeft}</p>
+              <p className="text-[9px] font-bold uppercase text-grit-dim">Days left</p>
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <Link
+              to="/challenges"
+              className="btn-grit flex min-h-11 items-center justify-center gap-2 text-xs"
+            >
+              <Flame size={14} /> Challenges
             </Link>
-            <Link to="/friends" className="btn-ghost py-2 text-xs flex items-center justify-center gap-2">
-              Find Rivals
+            <Link
+              to="/friends"
+              className="btn-ghost flex min-h-11 items-center justify-center gap-2 text-xs"
+            >
+              Find rivals
             </Link>
           </div>
         </div>
       </section>
 
-      <div className="px-3 pt-3 pb-2 flex gap-1.5 overflow-x-auto no-scrollbar">
-        {CATS.map((c) => (
-          <button
-            key={c.key}
-            onClick={() => setCat(c.key)}
-            className={`px-3 py-1.5 label-cap text-[11px] border whitespace-nowrap transition-colors ${
-              cat === c.key ? "bg-accent-red border-accent-red text-white" : "border-grit text-grit-dim"
-            }`}
-          >
-            {c.label}
-          </button>
-        ))}
-      </div>
-
-      {myRank >= 0 && (
-        <div className="px-5 py-2 text-[11px] label-cap text-accent-red">
-          You're #{myRank + 1} of {rows.length}
+      <section className="deadset-section">
+        <div className="grid grid-cols-3 border border-grit bg-grit-card p-1">
+          {GROUPS.map((item) => {
+            const Icon = item.icon;
+            const selected = item.key === group;
+            return (
+              <button
+                key={item.key}
+                onClick={() => chooseGroup(item.key)}
+                aria-pressed={selected}
+                className={`flex min-h-11 items-center justify-center gap-1.5 px-2 text-[10px] font-black uppercase transition-colors ${
+                  selected ? "bg-accent-red text-white" : "text-grit-dim"
+                }`}
+              >
+                <Icon size={13} />
+                {item.label}
+              </button>
+            );
+          })}
         </div>
-      )}
 
-      <div className="px-3">
-        {loading && <div className="text-center py-8 text-grit-dim text-sm">Loading…</div>}
-        {!loading && rows.length === 0 && (
-          <div className="bg-grit-card border border-grit p-6 text-center text-sm text-grit-dim">
-            No ranked athletes yet for this category.
-          </div>
-        )}
-        {!loading && rows.map((r, i) => {
-          const isMe = r.id === meId;
-          const podium = i < 3;
-          return (
-            <Link
-              key={r.id}
-              to="/athlete/$id"
-              params={{ id: r.id }}
-              className={`flex items-center gap-3 px-3 py-2.5 border mb-1.5 transition-colors ${
-                isMe ? "bg-accent-red/10 border-accent-red" : "bg-grit-card border-grit"
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+          {boards.map((item) => (
+            <button
+              key={item.key}
+              onClick={() => setCategory(item.key)}
+              aria-pressed={category === item.key}
+              className={`shrink-0 border px-3 py-2 text-[10px] font-black uppercase transition-colors ${
+                category === item.key
+                  ? "border-accent-red bg-accent-red/10 text-accent-red"
+                  : "border-grit text-grit-dim"
               }`}
             >
-              <div className={`w-7 text-center display font-extrabold text-sm ${podium ? "text-accent-red" : "text-grit-dim"}`}>
-                {podium ? <Medal size={16} className="inline" /> : `#${i + 1}`}
-              </div>
-              {r.avatar_url ? (
-                <img src={r.avatar_url} alt="" className="w-9 h-9 border border-grit object-cover" />
-              ) : (
-                <div className="w-9 h-9 bg-[#1a1a1a] border border-grit flex items-center justify-center display font-extrabold text-grit text-sm">
-                  {(r.display_name || r.username || "A")[0]?.toUpperCase()}
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-grit truncate">
-                  {r.display_name || r.username || "Athlete"}
-                  {isMe && <span className="ml-2 label-cap text-[9px] text-accent-red">YOU</span>}
-                </p>
-                <p className="text-[10px] text-grit-dim label-cap">
-                  {r.username ? `@${r.username}` : ""}{r.level ? ` · ${r.level}` : ""}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="display text-lg font-extrabold text-grit leading-none">{r.value}</p>
-                <p className="text-[9px] text-grit-dim label-cap">{r.unit}</p>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-4 flex items-end justify-between gap-3 border-b border-white/10 pb-3">
+          <div>
+            <h2 className="display text-2xl font-black uppercase text-grit">{board.label}</h2>
+            <p className="mt-1 text-xs leading-relaxed text-grit-dim">{board.description}</p>
+          </div>
+          {myRank >= 0 && (
+            <div className="shrink-0 text-right">
+              <p className="display text-2xl font-black text-accent-red">#{myRank + 1}</p>
+              <p className="text-[9px] font-bold uppercase text-grit-dim">Your place</p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="deadset-section pt-0">
+        {loading && (
+          <div className="border border-grit bg-grit-card py-10 text-center text-sm text-grit-dim">
+            Loading board...
+          </div>
+        )}
+        {!loading && rows.length === 0 && (
+          <div className="border border-grit bg-grit-card px-5 py-8 text-center">
+            <Trophy size={22} className="mx-auto text-grit-dim" />
+            <h3 className="display mt-3 text-xl font-black uppercase text-grit">
+              {failed ? "Board unavailable" : "First place is open"}
+            </h3>
+            <p className="mt-2 text-sm text-grit-dim">
+              {failed
+                ? "The board could not load. Check your connection and try again."
+                : "Log a qualifying workout or PR to enter this board."}
+            </p>
+            {failed && (
+              <button
+                onClick={() => setRetry((current) => current + 1)}
+                className="btn-ghost mt-4 min-h-11 px-5"
+              >
+                Try again
+              </button>
+            )}
+          </div>
+        )}
+        {!loading && rows.length > 0 && (
+          <div className="overflow-hidden border-y border-white/10">
+            {rows.map((row, index) => {
+              const isMe = row.id === meId;
+              const podium = index < 3;
+              return (
+                <Link
+                  key={row.id}
+                  to="/athlete/$id"
+                  params={{ id: row.id }}
+                  className={`flex min-h-[68px] items-center gap-3 border-b border-white/10 px-3 py-3 last:border-b-0 ${
+                    isMe ? "bg-accent-red/10" : "bg-[#111216]"
+                  }`}
+                >
+                  <div
+                    className={`w-8 shrink-0 text-center display text-base font-black ${
+                      podium ? "text-accent-red" : "text-grit-dim"
+                    }`}
+                  >
+                    {podium ? <Medal size={18} className="inline" /> : `#${index + 1}`}
+                  </div>
+                  {row.avatar_url ? (
+                    <img
+                      src={row.avatar_url}
+                      alt=""
+                      className="h-10 w-10 shrink-0 border border-grit object-cover"
+                    />
+                  ) : (
+                    <div className="grid h-10 w-10 shrink-0 place-items-center border border-grit bg-black text-sm font-black text-grit">
+                      {(row.display_name || row.username || "A")[0]?.toUpperCase()}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-grit">
+                      {row.display_name || row.username || "Athlete"}
+                      {isMe && (
+                        <span className="ml-2 text-[9px] font-black uppercase text-accent-red">
+                          You
+                        </span>
+                      )}
+                    </p>
+                    <p className="mt-0.5 truncate text-[9px] font-bold uppercase text-grit-dim">
+                      {row.rank_label || row.level || "Unranked"}
+                      {row.username ? ` · @${row.username}` : ""}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="display text-lg font-black leading-none text-grit">
+                      {row.value.toLocaleString()}
+                    </p>
+                    <p className="mt-1 text-[9px] font-bold uppercase text-grit-dim">{row.unit}</p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+        {category === "P4P" && (
+          <div className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-grit-dim">
+            <Scale size={14} className="mt-0.5 shrink-0 text-accent-red" />
+            Add your body weight and Big Three records to qualify.
+          </div>
+        )}
+      </section>
     </div>
   );
 }

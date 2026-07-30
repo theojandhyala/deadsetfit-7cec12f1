@@ -1,17 +1,38 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-import { X, Check, Play, Trophy, Share2, Flame, Lock, TrendingUp, Ghost, Pencil } from "lucide-react";
+import {
+  X,
+  Check,
+  Play,
+  Trophy,
+  Share2,
+  Flame,
+  Lock,
+  TrendingUp,
+  Ghost,
+  Pencil,
+} from "lucide-react";
 import { useAppState, getState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
 import { defaultSchedule, isoDay, todayKey, plateBreakdown, warmupRamp } from "@/lib/calc";
-import { topSetHistory, suggestNextWeight, ghostSets, beatsGhost, type TopSet, type Suggestion, type GhostSet } from "@/lib/progression";
+import {
+  topSetHistory,
+  suggestNextWeight,
+  ghostSets,
+  beatsGhost,
+  type TopSet,
+  type Suggestion,
+  type GhostSet,
+} from "@/lib/progression";
+import { buildAutopilotPlan } from "@/lib/training-autopilot";
 import { usePro } from "@/hooks/usePro";
 import { openPaywall } from "@/lib/paywall-events";
 import { askConfirm } from "@/lib/confirm";
 import { exportSessionToHealth } from "@/lib/health";
 import { shareWorkoutToFeed } from "@/lib/auto-share";
 import { emitGritEarned } from "@/lib/grit-events";
+import { isPersonalRecord } from "@/lib/workout-pr";
 import { VideoModal } from "@/components/VideoModal";
 import { ShareCard } from "@/components/ShareCard";
 import { GritEarnedLayer } from "@/components/GritEarnedLayer";
@@ -26,12 +47,25 @@ import type {
   Schedule,
 } from "@/lib/types";
 
+type WorkoutSource = "auto" | "program" | "schedule";
+type LiveWorkoutSearch = {
+  day?: DayKey;
+  source?: Exclude<WorkoutSource, "auto">;
+};
+
+const DAY_KEYS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+
 export const Route = createFileRoute("/workout/live")({
+  validateSearch: (search: Record<string, unknown>): LiveWorkoutSearch => ({
+    day: DAY_KEYS.includes(search.day as DayKey) ? (search.day as DayKey) : undefined,
+    source:
+      search.source === "schedule" || search.source === "program"
+        ? (search.source as LiveWorkoutSearch["source"])
+        : undefined,
+  }),
   head: () => ({ meta: [{ title: "DEADSET — Live Workout" }] }),
   component: LiveWorkoutPage,
 });
-
-type WorkoutSource = "auto" | "program" | "schedule";
 
 function getScheduleForState(state: ReturnType<typeof useAppState>[0]) {
   return state.schedule ?? (state.profile ? defaultSchedule(state.profile) : null);
@@ -43,6 +77,12 @@ function buildSession(
   source: WorkoutSource = "auto",
 ): WorkoutSession | null {
   const active = state.programs.find((p) => p.id === state.activeProgramId);
+  const autopilot = state.trainingAutopilot?.enabled
+    ? buildAutopilotPlan(state, state.trainingAutopilot.strategy)
+    : null;
+  const autopilotByExercise = new Map(
+    (autopilot?.prescriptions ?? []).map((item) => [item.exerciseId, item]),
+  );
   const id = crypto.randomUUID();
   const base = {
     id,
@@ -59,14 +99,21 @@ function buildSession(
       return {
         ...base,
         label: d.label,
-        exercises: d.items.map<WorkoutSessionExercise>((it) => ({
-          exerciseId: it.id,
-          name: it.name,
-          primary_muscles: it.primary_muscles,
-          targetSets: it.sets,
-          targetReps: it.reps,
-          sets: [],
-        })),
+        exercises: d.items.map<WorkoutSessionExercise>((it) => {
+          const prescription = autopilotByExercise.get(it.id);
+          return {
+            exerciseId: it.id,
+            name: it.name,
+            primary_muscles: it.primary_muscles,
+            targetSets: prescription?.reduceSets ? Math.max(2, it.sets - 1) : it.sets,
+            targetReps: it.reps,
+            plannedWeightKg:
+              prescription && prescription.prescribedWeightKg > 0
+                ? prescription.prescribedWeightKg
+                : undefined,
+            sets: [],
+          };
+        }),
       };
     }
     if (source === "program") return null;
@@ -81,15 +128,26 @@ function buildSession(
     label: d.label,
     programId: null,
     exercises: d.exerciseIds.map<WorkoutSessionExercise>((eid) => {
-      const ex = getExercise(eid);
+      const ex = getExercise(eid, state.savedExercises);
       const cfg = d.exerciseConfig?.[eid];
+      const prescription = autopilotByExercise.get(eid);
       return {
         exerciseId: eid,
         name: ex?.name ?? eid,
         primary_muscles: ex?.muscleGroup ? [ex.muscleGroup] : [],
-        targetSets: cfg?.sets ?? d.sets ?? ex?.sets ?? 3,
+        targetSets: prescription?.reduceSets
+          ? Math.max(2, (cfg?.sets ?? d.sets ?? ex?.sets ?? 3) - 1)
+          : (cfg?.sets ?? d.sets ?? ex?.sets ?? 3),
         targetReps: cfg?.reps ?? d.reps ?? ex?.reps ?? "8-12",
-        plannedWeightKg: cfg?.weightKg,
+        plannedWeightKg:
+          prescription && prescription.prescribedWeightKg > 0
+            ? prescription.prescribedWeightKg
+            : cfg?.weightKg,
+        restSeconds: cfg?.restSeconds,
+        targetRir: cfg?.targetRir,
+        progression: cfg?.progression,
+        tempo: cfg?.tempo,
+        note: cfg?.note,
         sets: [],
       };
     }),
@@ -144,6 +202,7 @@ function DayPickerRow({
   dayKey,
   label,
   count,
+  exerciseNames,
   isToday,
   onStart,
   emptyCta,
@@ -151,47 +210,61 @@ function DayPickerRow({
   dayKey: DayKey;
   label: string;
   count: number;
+  exerciseNames: string[];
   isToday: boolean;
   onStart: () => void;
   emptyCta?: ReactNode;
 }) {
   const empty = count === 0;
-  return (
-    <button
-      onClick={() => !empty && onStart()}
-      disabled={empty}
-      className="w-full bg-grit-card border p-3 flex items-center justify-between text-left disabled:opacity-50"
-      style={{ borderColor: isToday ? "#e63222" : "#262626" }}
-    >
-      <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="label-cap text-[10px] text-grit-dim">{DAY_SHORT[dayKey]}</span>
-          {isToday && (
-            <span className="text-[9px] px-1.5 py-0.5 bg-accent-red text-white label-cap">
-              TODAY
-            </span>
-          )}
-        </div>
-        <div className="display uppercase font-extrabold text-grit text-sm truncate">{label}</div>
-        <div className="text-[10px] label-cap text-grit-dim mt-0.5">
-          {count} {count === 1 ? "exercise" : "exercises"}
-        </div>
+  const summary = (
+    <div className="min-w-0 flex-1">
+      <div className="flex items-center gap-2">
+        <span className="label-cap text-[10px] text-grit-dim">{DAY_SHORT[dayKey]}</span>
+        {isToday && (
+          <span className="text-[9px] px-1.5 py-0.5 bg-accent-red text-white label-cap">TODAY</span>
+        )}
       </div>
-      {empty ? (
-        (emptyCta ?? <span className="text-[10px] label-cap text-grit-dim">REST</span>)
-      ) : (
-        <Play size={18} className="text-accent-red" />
+      <div className="display uppercase font-extrabold text-grit text-sm truncate">{label}</div>
+      <div className="text-[10px] label-cap text-grit-dim mt-0.5">
+        {count} {count === 1 ? "exercise" : "exercises"}
+      </div>
+      {!empty && (
+        <div className="mt-1.5 line-clamp-2 text-[11px] leading-relaxed text-grit-dim">
+          {exerciseNames.slice(0, 4).join(" · ")}
+          {exerciseNames.length > 4 ? ` · +${exerciseNames.length - 4} more` : ""}
+        </div>
       )}
+    </div>
+  );
+  const className =
+    "w-full bg-grit-card border p-3 flex items-center gap-3 justify-between text-left";
+  const style = { borderColor: isToday ? "#e63222" : "#262626" };
+
+  if (empty) {
+    return (
+      <div className={`${className} opacity-70`} style={style}>
+        {summary}
+        {emptyCta ?? <span className="text-[10px] label-cap text-grit-dim">REST</span>}
+      </div>
+    );
+  }
+
+  return (
+    <button onClick={onStart} className={`${className} press`} style={style}>
+      {summary}
+      <Play size={18} className="shrink-0 text-accent-red" />
     </button>
   );
 }
 
 function ScheduleDayPicker({
   schedule,
+  savedExercises,
   today,
   onStart,
 }: {
   schedule: Schedule;
+  savedExercises: AppState["savedExercises"];
   today: DayKey;
   onStart: (dayKey: DayKey) => void;
 }) {
@@ -202,12 +275,16 @@ function ScheduleDayPicker({
       <div className="space-y-2 mb-6">
         {DAY_KEYS.map((k) => {
           const d = schedule[k];
+          const exerciseNames = (d?.exerciseIds ?? []).map(
+            (id) => getExercise(id, savedExercises)?.name ?? id,
+          );
           return (
             <DayPickerRow
               key={k}
               dayKey={k}
               label={d?.label || "REST"}
               count={d?.exerciseIds.length || 0}
+              exerciseNames={exerciseNames}
               isToday={k === today}
               onStart={() => onStart(k)}
             />
@@ -224,12 +301,14 @@ function ScheduleDayPicker({
 function ProgramDayPicker({
   active,
   schedule,
+  savedExercises,
   today,
   onStartProgram,
   onStartSchedule,
 }: {
   active: Program;
   schedule: Schedule | null;
+  savedExercises: AppState["savedExercises"];
   today: DayKey;
   onStartProgram: (dayKey: DayKey) => void;
   onStartSchedule: (dayKey: DayKey) => void;
@@ -249,6 +328,7 @@ function ProgramDayPicker({
               dayKey={k}
               label={d.label}
               count={d.items.length}
+              exerciseNames={d.items.map((item) => item.name)}
               isToday={k === today}
               onStart={() => onStartProgram(k)}
               emptyCta={
@@ -274,7 +354,12 @@ function ProgramDayPicker({
       </Link>
       {schedule && (
         <div className="mt-6 border-t border-grit pt-6">
-          <ScheduleDayPicker schedule={schedule} today={today} onStart={onStartSchedule} />
+          <ScheduleDayPicker
+            schedule={schedule}
+            savedExercises={savedExercises}
+            today={today}
+            onStart={onStartSchedule}
+          />
         </div>
       )}
     </>
@@ -286,7 +371,6 @@ function ProgramDayPicker({
   The user's schedule is the source of truth for ordinary training.
 */
 
-const DAY_KEYS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const DAY_SHORT: Record<DayKey, string> = {
   MON: "Mon",
   TUE: "Tue",
@@ -300,6 +384,7 @@ const DAY_SHORT: Record<DayKey, string> = {
 function LiveWorkoutPage() {
   const [state, set] = useAppState();
   const nav = useNavigate();
+  const requested = Route.useSearch();
 
   function startDay(dayKey: DayKey, source: WorkoutSource = "auto") {
     const s = buildSession(state, dayKey, source);
@@ -328,6 +413,12 @@ function LiveWorkoutPage() {
           primary_muscles: e.primary_muscles,
           targetSets: Math.max(1, e.sets.length || e.targetSets),
           targetReps: e.targetReps,
+          plannedWeightKg: e.plannedWeightKg,
+          restSeconds: e.restSeconds,
+          targetRir: e.targetRir,
+          progression: e.progression,
+          tempo: e.tempo,
+          note: e.note,
           sets: [],
         })),
       };
@@ -337,16 +428,40 @@ function LiveWorkoutPage() {
 
   useEffect(() => {
     set((st) => {
-      if (st.activeSessionId) return st;
+      const activeSession = st.activeSessionId
+        ? st.sessions.find((candidate) => candidate.id === st.activeSessionId)
+        : undefined;
+      if (activeSession) return st;
+
+      // Repair a stale pointer left by an interrupted reset or an older synced
+      // state before deciding which workout to open.
+      const repairedState = st.activeSessionId ? { ...st, activeSessionId: null } : st;
+      if (requested.day) {
+        const requestedSession = buildSession(
+          repairedState,
+          requested.day,
+          requested.source ?? "auto",
+        );
+        if (!requestedSession) return repairedState;
+        return {
+          ...repairedState,
+          sessions: [...repairedState.sessions, requestedSession],
+          activeSessionId: requestedSession.id,
+        };
+      }
       // Already trained today? Land on the day picker instead of silently
       // spinning up a duplicate session.
       const today = isoDay();
-      if (st.sessions.some((s) => s.endedAt && s.date === today)) return st;
-      const s = buildSession(st, todayKey());
-      if (!s) return st;
-      return { ...st, sessions: [...st.sessions, s], activeSessionId: s.id };
+      if (repairedState.sessions.some((s) => s.endedAt && s.date === today)) return repairedState;
+      const s = buildSession(repairedState, todayKey());
+      if (!s) return repairedState;
+      return {
+        ...repairedState,
+        sessions: [...repairedState.sessions, s],
+        activeSessionId: s.id,
+      };
     });
-  }, [set]);
+  }, [requested.day, requested.source, set]);
 
   const session = state.sessions.find((s) => s.id === state.activeSessionId);
 
@@ -396,15 +511,18 @@ function LiveWorkoutPage() {
   const suggestion = useMemo(
     () =>
       activeExercise
-        ? suggestNextWeight(state, activeExercise.exerciseId, activeExercise.targetReps)
+        ? suggestNextWeight(
+            state,
+            activeExercise.exerciseId,
+            activeExercise.targetReps,
+            activeExercise.progression ?? "DOUBLE",
+          )
         : null,
     [state, activeExercise],
   );
   const ghost = useMemo(
     () =>
-      activeExercise && session
-        ? ghostSets(state, activeExercise.exerciseId, session.id)
-        : [],
+      activeExercise && session ? ghostSets(state, activeExercise.exerciseId, session.id) : [],
     [state, activeExercise, session],
   );
 
@@ -416,7 +534,8 @@ function LiveWorkoutPage() {
     const repsGuess = Number(String(ex.targetReps).match(/\d+/)?.[0] ?? 8);
     if (ex.plannedWeightKg != null) return { weight: ex.plannedWeightKg, reps: repsGuess };
     const hist = prefillFromHistory(state, session.id, ex.exerciseId);
-    if (hist.weight) return { weight: Number(hist.weight) || 0, reps: Number(hist.reps) || repsGuess };
+    if (hist.weight)
+      return { weight: Number(hist.weight) || 0, reps: Number(hist.reps) || repsGuess };
     return { weight: 0, reps: repsGuess };
   }, [state, session, activeIdx]);
 
@@ -458,7 +577,10 @@ function LiveWorkoutPage() {
           <button
             onClick={() => repeatSession(lastDone.id)}
             className="deadset-3d-panel deadset-lift w-full p-4 mb-5 text-left press"
-            style={{ background: "linear-gradient(135deg, rgba(230,50,34,0.14), #141414)", border: "1.5px solid rgba(230,50,34,0.4)" }}
+            style={{
+              background: "linear-gradient(135deg, rgba(230,50,34,0.14), #141414)",
+              border: "1.5px solid rgba(230,50,34,0.4)",
+            }}
           >
             <div className="flex items-center justify-between">
               <div className="min-w-0">
@@ -467,7 +589,8 @@ function LiveWorkoutPage() {
                   Repeat last workout
                 </p>
                 <p className="text-[11px] text-grit-dim mt-1 truncate">
-                  {(lastDone.label || "Session").split(" — ")[0]} · {lastDone.exercises.length} exercises
+                  {(lastDone.label || "Session").split(" — ")[0]} · {lastDone.exercises.length}{" "}
+                  exercises
                 </p>
               </div>
               <Play size={22} style={{ color: "#e63222" }} className="shrink-0" />
@@ -478,6 +601,7 @@ function LiveWorkoutPage() {
           <ProgramDayPicker
             active={active}
             schedule={schedule}
+            savedExercises={state.savedExercises}
             today={today}
             onStartProgram={(k) => startDay(k, "program")}
             onStartSchedule={(k) => startDay(k, "schedule")}
@@ -485,6 +609,7 @@ function LiveWorkoutPage() {
         ) : schedule ? (
           <ScheduleDayPicker
             schedule={schedule}
+            savedExercises={state.savedExercises}
             today={today}
             onStart={(k) => startDay(k, "schedule")}
           />
@@ -506,9 +631,17 @@ function LiveWorkoutPage() {
   }
 
   const current = session.exercises[activeIdx];
+  const currentRestSeconds = current.restSeconds ?? restPref;
+  const progressionLabel =
+    current.progression === "DOUBLE"
+      ? "Double progression"
+      : current.progression === "LINEAR"
+        ? "Linear load"
+        : current.progression === "HOLD"
+          ? "Manual progression"
+          : null;
   const totalEx = session.exercises.length;
   const progress = Math.min(100, Math.round((totals.sets / Math.max(1, plannedSets)) * 100));
-
 
   function logSet(weight: number, reps: number, kind?: "warmup" | "drop") {
     const ex = session!.exercises[activeIdx];
@@ -519,7 +652,16 @@ function LiveWorkoutPage() {
     let awardedPR = false;
     set((st) => {
       const { bestWeight, bestBwReps } = bestsFor(st, ex.exerciseId);
-      awardedPR = kind ? false : weight > 0 ? weight > bestWeight : reps > bestBwReps;
+      const definition = getExercise(ex.exerciseId, st.savedExercises);
+      const supportsBodyweight = definition?.equipment.includes("BODYWEIGHT") ?? false;
+      awardedPR = isPersonalRecord({
+        weight,
+        reps,
+        bestWeight,
+        bestBodyweightReps: bestBwReps,
+        supportsBodyweight,
+        specialSet: !!kind,
+      });
       const newSet: CompletedSet = {
         weight,
         reps,
@@ -550,7 +692,8 @@ function LiveWorkoutPage() {
     }
     // Auto rest-timer after each working/drop set (not warm-ups) unless the
     // lifter has turned it off (restTimerSeconds === 0).
-    if (restPref > 0 && kind !== "warmup") setResting(true);
+    const exerciseRest = ex.restSeconds ?? restPref;
+    if (exerciseRest > 0 && kind !== "warmup") setResting(true);
   }
 
   function undoLastSet() {
@@ -582,9 +725,7 @@ function LiveWorkoutPage() {
               ...s,
               exercises: s.exercises.map((e, i) => {
                 if (i !== activeIdx || e.sets.length === 0) return e;
-                const sets = e.sets.map((cs, j) =>
-                  j === e.sets.length - 1 ? { ...cs, rpe } : cs,
-                );
+                const sets = e.sets.map((cs, j) => (j === e.sets.length - 1 ? { ...cs, rpe } : cs));
                 return { ...e, sets };
               }),
             }
@@ -619,7 +760,11 @@ function LiveWorkoutPage() {
         let best: CompletedSet | null = null;
         e.sets.forEach((cs) => {
           if (cs.weight <= 0 || cs.kind) return; // only true working sets set the best
-          if (!best || cs.weight > best.weight || (cs.weight === best.weight && cs.reps > best.reps))
+          if (
+            !best ||
+            cs.weight > best.weight ||
+            (cs.weight === best.weight && cs.reps > best.reps)
+          )
             best = cs;
         });
         if (best) {
@@ -650,8 +795,8 @@ function LiveWorkoutPage() {
       const finished = getState().sessions.find((s) => s.id === session!.id);
       if (finished) void exportSessionToHealth(finished);
     }
-    // Auto-share to the social feed (default on) so friends see the session.
-    if (getState().autoShareWorkouts !== false) {
+    // Posting is explicit opt-in; a finished workout is private by default.
+    if (getState().autoShareWorkouts === true) {
       const finished = getState().sessions.find((s) => s.id === session!.id);
       if (finished) void shareWorkoutToFeed(finished);
     }
@@ -673,14 +818,13 @@ function LiveWorkoutPage() {
     nav({ to: "/train" });
   }
 
-
   return (
     <div
       className="min-h-screen flex flex-col"
       style={{ background: "#0a0a0a", paddingTop: "env(safe-area-inset-top)" }}
     >
       <div className="flex items-center justify-between px-4 pt-3 pb-2">
-        <button onClick={discardWorkout} className="text-grit-dim">
+        <button onClick={discardWorkout} className="text-grit-dim" aria-label="Exit workout">
           <X size={22} />
         </button>
         <div className="text-center">
@@ -741,9 +885,7 @@ function LiveWorkoutPage() {
           const dx = e.changedTouches[0].clientX - start.x;
           const dy = e.changedTouches[0].clientY - start.y;
           if (Math.abs(dx) < 64 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
-          setActiveIdx((i) =>
-            dx < 0 ? Math.min(totalEx - 1, i + 1) : Math.max(0, i - 1),
-          );
+          setActiveIdx((i) => (dx < 0 ? Math.min(totalEx - 1, i + 1) : Math.max(0, i - 1)));
         }}
       >
         <div className="flex items-start justify-between gap-3 mb-2">
@@ -757,6 +899,33 @@ function LiveWorkoutPage() {
             <p className="text-xs text-[#8a8a8a] mt-1">
               {current.targetSets} × {current.targetReps}
             </p>
+            {(current.targetRir != null ||
+              current.tempo ||
+              current.restSeconds ||
+              progressionLabel) && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {progressionLabel && (
+                  <span className="rounded-md border border-amber-300/25 bg-amber-300/[0.06] px-2 py-1 text-[9px] font-black uppercase text-amber-300">
+                    {progressionLabel}
+                  </span>
+                )}
+                {current.targetRir != null && (
+                  <span className="rounded-md border border-grit px-2 py-1 text-[9px] font-black uppercase text-grit-dim">
+                    {current.targetRir} RIR
+                  </span>
+                )}
+                {current.tempo && (
+                  <span className="rounded-md border border-grit px-2 py-1 text-[9px] font-black uppercase text-grit-dim">
+                    {current.tempo} tempo
+                  </span>
+                )}
+                {current.restSeconds != null && (
+                  <span className="rounded-md border border-grit px-2 py-1 text-[9px] font-black uppercase text-grit-dim">
+                    {current.restSeconds}s rest
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           <div className="flex flex-shrink-0 gap-2">
             <Link
@@ -773,17 +942,32 @@ function LiveWorkoutPage() {
                 setVideoTitle(current.name);
               }}
               className="w-12 h-12 border border-accent-red flex items-center justify-center"
+              aria-label={`${current.name} form guide`}
             >
               <Play size={20} className="text-accent-red" />
             </button>
           </div>
         </div>
 
+        {current.note && (
+          <div className="mb-3 rounded-xl border border-amber-300/20 bg-amber-300/[0.05] px-3 py-2.5">
+            <p className="label-cap text-[9px] text-amber-300">Workout cue</p>
+            <p className="mt-1 text-xs leading-relaxed text-grit">{current.note}</p>
+          </div>
+        )}
+
         <SetLogger
           key={`${session.id}:${activeIdx}`}
           exercise={current}
           defaultWeight={defaults.weight}
           defaultReps={defaults.reps}
+          requiresWeight={
+            !(
+              getExercise(current.exerciseId, state.savedExercises)?.equipment.includes(
+                "BODYWEIGHT",
+              ) ?? false
+            )
+          }
           history={evolution}
           suggestion={suggestion}
           ghost={ghost}
@@ -794,7 +978,6 @@ function LiveWorkoutPage() {
           onRpe={rpeLastSet}
         />
       </div>
-
 
       <div
         className="border-t border-grit p-4 grid grid-cols-2 gap-3"
@@ -829,10 +1012,11 @@ function LiveWorkoutPage() {
       {videoQuery && (
         <VideoModal query={videoQuery} title={videoTitle} onClose={() => setVideoQuery(null)} />
       )}
-      {resting && restPref > 0 && (
+      {resting && currentRestSeconds > 0 && (
         <RestTimer
           key={session.exercises[activeIdx]?.sets.length ?? 0}
-          seconds={restPref}
+          seconds={currentRestSeconds}
+          nextExercise={current.name}
           onDone={() => setResting(false)}
           onDisable={() => {
             set((s) => ({ ...s, restTimerSeconds: 0 }));
@@ -859,11 +1043,11 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
   );
 }
 
-
 function SetLogger({
   exercise,
   defaultWeight,
   defaultReps,
+  requiresWeight,
   history,
   suggestion,
   ghost,
@@ -876,6 +1060,7 @@ function SetLogger({
   exercise: WorkoutSessionExercise;
   defaultWeight: number;
   defaultReps: number;
+  requiresWeight: boolean;
   history: TopSet[];
   suggestion: Suggestion | null;
   ghost: GhostSet[];
@@ -890,6 +1075,7 @@ function SetLogger({
   // pending set if the day deviates from the plan.
   const [override, setOverride] = useState<{ weight: number; reps: number } | null>(null);
   const [editing, setEditing] = useState(false);
+  const [weightError, setWeightError] = useState(false);
   const [extraSets, setExtraSets] = useState(0);
   const editWeightRef = useRef<HTMLInputElement>(null);
   const editRepsRef = useRef<HTMLInputElement>(null);
@@ -921,14 +1107,27 @@ function SetLogger({
   function saveEdit() {
     const w = Number((editWeightRef.current?.value ?? "").replace(/[^0-9.]/g, ""));
     const r = Math.floor(Number((editRepsRef.current?.value ?? "").replace(/[^0-9]/g, "")));
+    if (requiresWeight && (!Number.isFinite(w) || w <= 0)) {
+      setWeightError(true);
+      editWeightRef.current?.focus();
+      return;
+    }
     setOverride({
       weight: Number.isFinite(w) && w >= 0 ? w : nextWeight,
       reps: Number.isFinite(r) && r > 0 ? r : nextReps,
     });
+    setWeightError(false);
     setEditing(false);
   }
 
-  const fmt = (w: number, r: number) => (w > 0 ? `${w} kg × ${r}` : `${r} reps`);
+  function openWeightEditor() {
+    setWeightError(false);
+    setEditing(true);
+    requestAnimationFrame(() => editWeightRef.current?.focus());
+  }
+
+  const fmt = (w: number, r: number) =>
+    w > 0 ? `${w} kg × ${r}` : requiresWeight ? `Set weight · ${r} reps` : `${r} reps`;
 
   return (
     <div className="mt-5 bg-grit-card border border-grit rounded-2xl p-4">
@@ -1032,7 +1231,11 @@ function SetLogger({
         >
           <span>
             <span className="label-cap text-[9px] text-accent-red block">
-              {progressionLocked ? "SMART SUGGESTION" : suggestion.kind === "up" ? "MOVE UP" : "HOLD & EARN IT"}
+              {progressionLocked
+                ? "SMART SUGGESTION"
+                : suggestion.kind === "up"
+                  ? "MOVE UP"
+                  : "HOLD & EARN IT"}
             </span>
             <span
               className={
@@ -1082,7 +1285,13 @@ function SetLogger({
                   if (i === logged - 1) onUndo();
                   return;
                 }
-                if (isNext) onLog(nextWeight, nextReps);
+                if (isNext) {
+                  if (requiresWeight && nextWeight <= 0) {
+                    openWeightEditor();
+                    return;
+                  }
+                  onLog(nextWeight, nextReps);
+                }
               }}
               className="w-full flex items-center justify-between border rounded-xl px-3 py-3 press text-left disabled:opacity-40"
               style={{
@@ -1142,12 +1351,14 @@ function SetLogger({
         <div className="mt-2 border border-grit rounded-xl px-3 py-2.5">
           <p className="label-cap text-[9px] text-grit-dim mb-2">How hard was set {logged}?</p>
           <div className="grid grid-cols-4 gap-1.5">
-            {([
-              { label: "Easy", rpe: 7 },
-              { label: "Solid", rpe: 8 },
-              { label: "Hard", rpe: 9 },
-              { label: "Max", rpe: 10 },
-            ] as const).map((o) => (
+            {(
+              [
+                { label: "Easy", rpe: 7 },
+                { label: "Solid", rpe: 8 },
+                { label: "Hard", rpe: 9 },
+                { label: "Max", rpe: 10 },
+              ] as const
+            ).map((o) => (
               <button
                 key={o.label}
                 type="button"
@@ -1175,7 +1386,7 @@ function SetLogger({
               inputMode="decimal"
               defaultValue={nextWeight > 0 ? String(nextWeight) : ""}
               placeholder="kg"
-              className="input-grit"
+              className={`input-grit ${weightError ? "border-accent-red" : ""}`}
               aria-label="Weight (kg)"
             />
             <input
@@ -1186,10 +1397,20 @@ function SetLogger({
               className="input-grit"
               aria-label="Reps"
             />
-            <button onClick={saveEdit} className="btn-grit px-4">
+            <button
+              type="button"
+              onClick={saveEdit}
+              aria-label="Save set weight and reps"
+              className="btn-grit px-4"
+            >
               <Check size={16} />
             </button>
           </div>
+          {weightError && (
+            <p className="mt-2 text-xs font-semibold text-accent-red">
+              Enter the working weight before logging this set.
+            </p>
+          )}
         </div>
       )}
 
@@ -1204,9 +1425,14 @@ function SetLogger({
         <button
           type="button"
           onClick={() => {
+            if (requiresWeight && nextWeight <= 0) {
+              openWeightEditor();
+              return;
+            }
             // Drop set: ~20% off the working weight, logged straight away and
             // marked (never a PR, but counts as volume).
-            const dropW = nextWeight > 0 ? Math.max(2.5, Math.round((nextWeight * 0.8) / 2.5) * 2.5) : 0;
+            const dropW =
+              nextWeight > 0 ? Math.max(2.5, Math.round((nextWeight * 0.8) / 2.5) * 2.5) : 0;
             onLog(dropW, nextReps, "drop");
           }}
           className="w-full border border-dashed border-accent-red/40 rounded-xl py-2.5 label-cap text-[10px] text-accent-red press"
@@ -1289,7 +1515,8 @@ function FinishedScreen({
           <div className="bg-grit-card border border-grit p-4 mt-3">
             <p className="label-cap text-[10px] text-grit-dim">TOTAL VOLUME</p>
             <p className="display text-3xl font-extrabold mt-1 text-grit">
-              {Math.round(session.totalVolume).toLocaleString()} <span className="text-sm text-grit-dim">kg</span>
+              {Math.round(session.totalVolume).toLocaleString()}{" "}
+              <span className="text-sm text-grit-dim">kg</span>
             </p>
           </div>
         )}

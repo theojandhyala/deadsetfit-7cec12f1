@@ -1,50 +1,24 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Dumbbell, Apple, User, Users, Plus } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { getMyFollowStats } from "@/lib/social.functions";
-
-const STORAGE_KEY = "deadset_last_seen_followers";
+import { Dumbbell, CalendarDays, User, TrendingUp, Plus } from "lucide-react";
 
 const LEFT_TABS = [
   { to: "/train", label: "Train", Icon: Dumbbell },
-  { to: "/diet", label: "Diet", Icon: Apple },
+  { to: "/plan", label: "Plan", Icon: CalendarDays },
 ] as const;
 
 const RIGHT_TABS = [
-  { to: "/friends", label: "Friends", Icon: Users },
+  { to: "/progress", label: "Progress", Icon: TrendingUp },
   { to: "/profile", label: "You", Icon: User },
 ] as const;
 
 export function BottomNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const [hasFriendsBadge, setHasFriendsBadge] = useState(false);
-  const loadFollowStats = useCallback(() => getMyFollowStats(), []);
-
-  useEffect(() => {
-    let cancelled = false;
-    loadFollowStats()
-      .then(({ followers }) => {
-        if (cancelled) return;
-        const lastSeen = Number(localStorage.getItem(STORAGE_KEY) ?? "0");
-        if (followers > lastSeen) setHasFriendsBadge(true);
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [loadFollowStats]);
-
-  useEffect(() => {
-    if (!pathname.startsWith("/friends")) return;
-    setHasFriendsBadge(false);
-    loadFollowStats()
-      .then(({ followers }) => localStorage.setItem(STORAGE_KEY, String(followers)))
-      .catch(() => {});
-  }, [loadFollowStats, pathname]);
 
   const isRecordActive = pathname.startsWith("/workout/live");
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50"
+      className="fixed bottom-0 left-0 right-0 z-50 px-2"
       style={{
         // No backdrop-filter: fixed bars with backdrop blur intermittently
         // composite as solid BLACK while scrolling in WKWebView/iOS Safari.
@@ -54,7 +28,7 @@ export function BottomNav() {
         paddingBottom: "env(safe-area-inset-bottom)",
       }}
     >
-      <ul className="flex items-center h-[70px]">
+      <ul className="flex h-[70px] items-center">
         {/* Left tabs */}
         {LEFT_TABS.map(({ to, label, Icon }) => {
           const active = pathname.startsWith(to);
@@ -62,7 +36,7 @@ export function BottomNav() {
             <li key={to} className="flex-1">
               <Link
                 to={to}
-                className="flex flex-col items-center justify-center gap-1.5 h-[70px] relative press"
+                className="relative flex h-[70px] flex-col items-center justify-center gap-1.5 press"
                 style={{ color: active ? "#e63222" : "#8a8a8a" }}
               >
                 <div className="relative">
@@ -76,7 +50,7 @@ export function BottomNav() {
                 </span>
                 {active && (
                   <span
-                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-[3px] rounded-t-full"
+                    className="absolute bottom-0 left-1/2 h-[3px] w-8 -translate-x-1/2 rounded-t-full"
                     style={{ background: "#e63222" }}
                   />
                 )}
@@ -89,19 +63,22 @@ export function BottomNav() {
         <li className="flex-shrink-0 px-2">
           <Link
             to="/workout/live"
+            search={{}}
             className="flex flex-col items-center justify-center gap-1 press"
             aria-label="Start workout"
           >
             <div
               className="flex items-center justify-center"
               style={{
-                width: 56,
-                height: 56,
+                width: 54,
+                height: 54,
                 borderRadius: "50%",
                 background: isRecordActive
-                  ? "#d93e00"
-                  : "linear-gradient(135deg, #e63222 0%, #e63222 100%)",
-                boxShadow: "0 8px 28px rgba(230,50,34,0.34)",
+                  ? "#b92318"
+                  : "linear-gradient(145deg, #f04434 0%, #d5261a 100%)",
+                border: "1px solid rgba(255,255,255,0.2)",
+                boxShadow:
+                  "0 10px 30px rgba(230,50,34,0.36), 0 0 0 5px rgba(7,7,8,0.92), inset 0 1px 0 rgba(255,255,255,0.24)",
                 transform: isRecordActive ? "translateY(-4px) scale(1.04)" : "translateY(-9px)",
                 transition: "box-shadow 0.2s ease, transform 0.15s ease",
               }}
@@ -114,22 +91,15 @@ export function BottomNav() {
         {/* Right tabs */}
         {RIGHT_TABS.map(({ to, label, Icon }) => {
           const active = pathname.startsWith(to);
-          const showBadge = to === "/friends" && hasFriendsBadge;
           return (
             <li key={to} className="flex-1">
               <Link
                 to={to}
-                className="flex flex-col items-center justify-center gap-1.5 h-[70px] relative press"
+                className="relative flex h-[70px] flex-col items-center justify-center gap-1.5 press"
                 style={{ color: active ? "#e63222" : "#8a8a8a" }}
               >
                 <div className="relative">
                   <Icon size={22} strokeWidth={active ? 2.5 : 2} />
-                  {showBadge && (
-                    <span
-                      className="absolute -top-1 -right-1 w-2 h-2 rounded-full"
-                      style={{ background: "#e63222" }}
-                    />
-                  )}
                 </div>
                 <span
                   className="text-[10px] font-semibold"
@@ -139,7 +109,7 @@ export function BottomNav() {
                 </span>
                 {active && (
                   <span
-                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-[3px] rounded-t-full"
+                    className="absolute bottom-0 left-1/2 h-[3px] w-8 -translate-x-1/2 rounded-t-full"
                     style={{ background: "#e63222" }}
                   />
                 )}

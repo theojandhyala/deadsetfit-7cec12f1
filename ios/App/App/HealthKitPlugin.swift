@@ -14,6 +14,7 @@ public class HealthKitPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "requestAuthorization", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "queryWorkouts", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "todayActiveEnergy", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "fitnessSummary", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "saveWorkout", returnType: CAPPluginReturnPromise)
     ]
 
@@ -23,6 +24,14 @@ public class HealthKitPlugin: CAPPlugin, CAPBridgedPlugin {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return f
+    }()
+
+    private static let dayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
     }()
 
     private func parseDate(_ value: String?) -> Date? {
@@ -42,7 +51,11 @@ public class HealthKitPlugin: CAPPlugin, CAPBridgedPlugin {
         }
         let read: Set<HKObjectType> = [
             HKObjectType.workoutType(),
-            HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!
+            HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!,
+            HKQuantityType.quantityType(forIdentifier: .stepCount)!,
+            HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning)!,
+            HKQuantityType.quantityType(forIdentifier: .restingHeartRate)!,
+            HKObjectType.activitySummaryType()
         ]
         let write: Set<HKSampleType> = [
             HKObjectType.workoutType(),
@@ -116,6 +129,200 @@ public class HealthKitPlugin: CAPPlugin, CAPBridgedPlugin {
             call.resolve(["kcal": kcal])
         }
         store.execute(query)
+    }
+
+    @objc func fitnessSummary(_ call: CAPPluginCall) {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            call.reject("Apple Health is not available on this device")
+            return
+        }
+
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let start = calendar.date(byAdding: .day, value: -6, to: today) ?? today
+        let end = Date()
+        let group = DispatchGroup()
+        let lock = NSLock()
+
+        var stepsByDay: [String: Double] = [:]
+        var energyByDay: [String: Double] = [:]
+        var distanceKm = 0.0
+        var restingHeartRate = 0.0
+        var exerciseMinutes = 0.0
+        var standHours = 0.0
+        var moveGoal = 0.0
+        var exerciseGoal = 0.0
+        var standGoal = 0.0
+        var firstError: Error?
+
+        func recordError(_ error: Error?) {
+            guard let error = error else { return }
+            lock.lock()
+            if firstError == nil { firstError = error }
+            lock.unlock()
+        }
+
+        func dailyTotals(
+            _ identifier: HKQuantityTypeIdentifier,
+            unit: HKUnit,
+            completion: @escaping ([String: Double], Error?) -> Void
+        ) {
+            guard let type = HKQuantityType.quantityType(forIdentifier: identifier) else {
+                completion([:], nil)
+                return
+            }
+            let predicate = HKQuery.predicateForSamples(
+                withStart: start,
+                end: end,
+                options: .strictStartDate
+            )
+            let query = HKStatisticsCollectionQuery(
+                quantityType: type,
+                quantitySamplePredicate: predicate,
+                options: .cumulativeSum,
+                anchorDate: today,
+                intervalComponents: DateComponents(day: 1)
+            )
+            query.initialResultsHandler = { _, collection, error in
+                var values: [String: Double] = [:]
+                collection?.enumerateStatistics(from: start, to: end) { stats, _ in
+                    let key = HealthKitPlugin.dayFormatter.string(from: stats.startDate)
+                    values[key] = stats.sumQuantity()?.doubleValue(for: unit) ?? 0
+                }
+                completion(values, error)
+            }
+            self.store.execute(query)
+        }
+
+        group.enter()
+        dailyTotals(.stepCount, unit: .count()) { values, error in
+            lock.lock()
+            stepsByDay = values
+            lock.unlock()
+            recordError(error)
+            group.leave()
+        }
+
+        group.enter()
+        dailyTotals(.activeEnergyBurned, unit: .kilocalorie()) { values, error in
+            lock.lock()
+            energyByDay = values
+            lock.unlock()
+            recordError(error)
+            group.leave()
+        }
+
+        if let distanceType = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning) {
+            group.enter()
+            let predicate = HKQuery.predicateForSamples(
+                withStart: today,
+                end: end,
+                options: .strictStartDate
+            )
+            let query = HKStatisticsQuery(
+                quantityType: distanceType,
+                quantitySamplePredicate: predicate,
+                options: .cumulativeSum
+            ) { _, stats, error in
+                lock.lock()
+                distanceKm = stats?.sumQuantity()?.doubleValue(for: .meterUnit(with: .kilo)) ?? 0
+                lock.unlock()
+                recordError(error)
+                group.leave()
+            }
+            store.execute(query)
+        }
+
+        if let heartType = HKQuantityType.quantityType(forIdentifier: .restingHeartRate) {
+            group.enter()
+            let predicate = HKQuery.predicateForSamples(
+                withStart: start,
+                end: end,
+                options: .strictStartDate
+            )
+            let query = HKStatisticsQuery(
+                quantityType: heartType,
+                quantitySamplePredicate: predicate,
+                options: .discreteAverage
+            ) { _, stats, error in
+                let bpm = HKUnit.count().unitDivided(by: .minute())
+                lock.lock()
+                restingHeartRate = stats?.averageQuantity()?.doubleValue(for: bpm) ?? 0
+                lock.unlock()
+                recordError(error)
+                group.leave()
+            }
+            store.execute(query)
+        }
+
+        group.enter()
+        let components = calendar.dateComponents([.year, .month, .day], from: today)
+        let summaryPredicate = HKQuery.predicateForActivitySummary(with: components)
+        let summaryQuery = HKActivitySummaryQuery(predicate: summaryPredicate) { _, summaries, error in
+            if let summary = summaries?.first {
+                lock.lock()
+                exerciseMinutes = summary.appleExerciseTime.doubleValue(for: .minute())
+                standHours = summary.appleStandHours.doubleValue(for: .count())
+                moveGoal = summary.activeEnergyBurnedGoal.doubleValue(for: .kilocalorie())
+                exerciseGoal = summary.appleExerciseTimeGoal.doubleValue(for: .minute())
+                standGoal = summary.appleStandHoursGoal.doubleValue(for: .count())
+                lock.unlock()
+            }
+            recordError(error)
+            group.leave()
+        }
+        store.execute(summaryQuery)
+
+        group.notify(queue: .global(qos: .userInitiated)) {
+            lock.lock()
+            let steps = stepsByDay
+            let energy = energyByDay
+            let distance = distanceKm
+            let heartRate = restingHeartRate
+            let exercise = exerciseMinutes
+            let stand = standHours
+            let activeGoal = moveGoal
+            let workoutGoal = exerciseGoal
+            let standingGoal = standGoal
+            let error = firstError
+            lock.unlock()
+
+            if steps.isEmpty && energy.isEmpty, let error = error {
+                call.reject("Fitness data query failed: \(error.localizedDescription)")
+                return
+            }
+
+            let todayKey = HealthKitPlugin.dayFormatter.string(from: today)
+            var days: [[String: Any]] = []
+            for offset in 0..<7 {
+                guard let date = calendar.date(byAdding: .day, value: offset, to: start) else {
+                    continue
+                }
+                let key = HealthKitPlugin.dayFormatter.string(from: date)
+                days.append([
+                    "date": key,
+                    "steps": Int((steps[key] ?? 0).rounded()),
+                    "activeKcal": (energy[key] ?? 0).rounded()
+                ])
+            }
+
+            call.resolve([
+                "today": [
+                    "steps": Int((steps[todayKey] ?? 0).rounded()),
+                    "activeKcal": (energy[todayKey] ?? 0).rounded(),
+                    "distanceKm": distance,
+                    "exerciseMinutes": exercise,
+                    "standHours": stand,
+                    "restingHeartRate": heartRate
+                ],
+                "goals": [
+                    "activeKcal": activeGoal,
+                    "exerciseMinutes": workoutGoal,
+                    "standHours": standingGoal
+                ],
+                "days": days
+            ])
+        }
     }
 
     @objc func saveWorkout(_ call: CAPPluginCall) {

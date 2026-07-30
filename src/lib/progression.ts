@@ -1,4 +1,4 @@
-import type { AppState } from "./types";
+import type { AppState, ExercisePlan } from "./types";
 import { getExercise } from "./exercises";
 
 export interface TopSet {
@@ -66,6 +66,7 @@ export function suggestNextWeight(
   state: AppState,
   exerciseId: string,
   targetReps: string,
+  progression: ExercisePlan["progression"] = "DOUBLE",
 ): Suggestion | null {
   const sessions = [...state.sessions]
     .filter((s) => s.endedAt)
@@ -80,6 +81,30 @@ export function suggestNextWeight(
     const allHit = working.every((s) => s.reps >= target);
     const jump = BIG_JUMP.has(exerciseId) ? 5 : 2.5;
     const effort = avgRpe(working);
+
+    if (progression === "HOLD") {
+      return {
+        weightKg: top,
+        kind: "hold",
+        reason: `Manual progression — repeat ${top}kg until you choose to move it`,
+      };
+    }
+
+    if (progression === "LINEAR") {
+      if (effort !== undefined && effort >= 9) {
+        return {
+          weightKg: top,
+          kind: "hold",
+          reason: `${top}kg reached RPE ${effort.toFixed(0)} — consolidate before the next linear jump`,
+        };
+      }
+      return {
+        weightKg: top + jump,
+        kind: "up",
+        reason: `Linear progression — add ${jump}kg after the completed session`,
+        ready: true,
+      };
+    }
 
     if (allHit) {
       // Autoregulation: hitting the reps AT RPE 9+ (grinding) means the weight
@@ -116,7 +141,11 @@ export interface GhostSet {
  * Ghost Mode: the full set list from the most recent finished session that
  * contained this exercise — the "ghost" the lifter races set-by-set.
  */
-export function ghostSets(state: AppState, exerciseId: string, currentSessionId: string): GhostSet[] {
+export function ghostSets(
+  state: AppState,
+  exerciseId: string,
+  currentSessionId: string,
+): GhostSet[] {
   const sessions = [...state.sessions]
     .filter((s) => s.endedAt && s.id !== currentSessionId)
     .sort((a, b) => b.date.localeCompare(a.date));
@@ -132,7 +161,7 @@ export function ghostSets(state: AppState, exerciseId: string, currentSessionId:
 /** Did the lifter beat the ghost set? Weight first, reps as tiebreak. */
 export function beatsGhost(set: GhostSet, ghost: GhostSet): boolean {
   if (set.weight !== ghost.weight) return set.weight > ghost.weight;
-  return set.reps >= ghost.reps;
+  return set.reps > ghost.reps;
 }
 
 export interface ProgressionEntry {
@@ -152,7 +181,9 @@ export function progressionBoard(state: AppState): ProgressionEntry[] {
   // Collect every weighted exercise id + its most recent target-rep string.
   const targetByExercise = new Map<string, string>();
   const sessionCount = new Map<string, number>();
-  for (const s of [...state.sessions].filter((x) => x.endedAt).sort((a, b) => b.date.localeCompare(a.date))) {
+  for (const s of [...state.sessions]
+    .filter((x) => x.endedAt)
+    .sort((a, b) => b.date.localeCompare(a.date))) {
     for (const e of s.exercises) {
       if (!e.sets.some((set) => set.weight > 0)) continue;
       sessionCount.set(e.exerciseId, (sessionCount.get(e.exerciseId) ?? 0) + 1);

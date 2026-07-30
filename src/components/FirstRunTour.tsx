@@ -34,7 +34,7 @@ const CARDS: Card[] = [
     icon: <CalendarDays size={22} />,
     eyebrow: "ANY TIME",
     title: "Change your week whenever",
-    body: "Life moves. On the Train tab tap Edit, then tap the days you train — your plan reshuffles around them.",
+    body: "Life moves. Open the Plan tab to reshape your week — change a day's focus, swap exercises, or set the sets and reps.",
   },
 ];
 

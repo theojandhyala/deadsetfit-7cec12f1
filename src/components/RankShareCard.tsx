@@ -35,7 +35,8 @@ export function RankShareCard({
   useEffect(() => {
     const c = canvasRef.current;
     if (!c) return;
-    const W = 1080, H = 1920;
+    const W = 1080,
+      H = 1920;
     c.width = W;
     c.height = H;
     const ctx = c.getContext("2d")!;
@@ -89,7 +90,9 @@ export function RankShareCard({
     ctx.textAlign = "left";
 
     // ── Avatar circle ────────────────────────────────────────────
-    const avatarX = W / 2, avatarY = 460, avatarR = 160;
+    const avatarX = W / 2,
+      avatarY = 460,
+      avatarR = 160;
     ctx.save();
     ctx.beginPath();
     ctx.arc(avatarX, avatarY, avatarR + 6, 0, Math.PI * 2);
@@ -121,7 +124,11 @@ export function RankShareCard({
       };
       img.src = avatarDataUrl;
       // Draw immediately too in case the image is already decoded (cached).
-      try { ctx.drawImage(img, avatarX - avatarR, avatarY - avatarR, avatarR * 2, avatarR * 2); } catch { /* */ }
+      try {
+        ctx.drawImage(img, avatarX - avatarR, avatarY - avatarR, avatarR * 2, avatarR * 2);
+      } catch {
+        /* */
+      }
     } else {
       ctx.fillStyle = "#222";
       ctx.fillRect(avatarX - avatarR, avatarY - avatarR, avatarR * 2, avatarR * 2);
@@ -134,7 +141,8 @@ export function RankShareCard({
     ctx.restore();
 
     // ── Rank emblem (below avatar) ───────────────────────────────
-    const embX = W / 2, embY = 700;
+    const embX = W / 2,
+      embY = 700;
     const embR = 122;
     drawModernRankPlate(ctx, embX, embY, embR, rank);
 
@@ -169,7 +177,10 @@ export function RankShareCard({
     ctx.textAlign = "left";
 
     // ── Progress bar ─────────────────────────────────────────────
-    const barX = 80, barY = embY + embR + 160, barW = W - 160, barH = 18;
+    const barX = 80,
+      barY = embY + embR + 160,
+      barW = W - 160,
+      barH = 18;
     ctx.fillStyle = "#1a1a1a";
     roundRect(ctx, barX, barY, barW, barH, 9);
     ctx.fill();
@@ -231,7 +242,8 @@ export function RankShareCard({
 
     const topPRs = prs.slice(0, 4);
     topPRs.forEach((pr, i) => {
-      const row = Math.floor(i / 2), col = i % 2;
+      const row = Math.floor(i / 2),
+        col = i % 2;
       const px = 80 + col * ((W - 160) / 2);
       const py = prY + 40 + row * 220;
       const pw = (W - 160) / 2 - 12;
@@ -291,7 +303,9 @@ export function RankShareCard({
         });
         return;
       }
-    } catch { /* fall through to download */ }
+    } catch {
+      /* fall through to download */
+    }
     download();
   }
 
@@ -315,7 +329,10 @@ export function RankShareCard({
         </button>
       </div>
 
-      <div className="flex-1 overflow-auto px-5 pb-6 flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="flex-1 overflow-auto px-5 pb-6 flex flex-col items-center"
+        onClick={(e) => e.stopPropagation()}
+      >
         {dataUrl ? (
           <img
             src={dataUrl}
@@ -333,7 +350,8 @@ export function RankShareCard({
 
         <p className="text-[11px] text-grit-dim text-center mt-4 max-w-xs">
           Save it → post to TikTok / Reels and tag{" "}
-          <span className="text-white font-bold">#deadset</span> — dare your followers to beat your rank.
+          <span className="text-white font-bold">#deadset</span> — dare your followers to beat your
+          rank.
         </p>
 
         <div className="grid grid-cols-2 gap-3 mt-5 w-full max-w-xs">

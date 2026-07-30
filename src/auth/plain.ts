@@ -1,4 +1,12 @@
 import { createClient, type Session } from "@supabase/supabase-js";
+import {
+  buildOAuthStartUrl,
+  createOAuthState,
+  hasOAuthResult,
+  oauthProvidersUrl,
+  parseOAuthCallback,
+  type OAuthProvider,
+} from "./oauth";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const publishableKey = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
@@ -9,13 +17,23 @@ const sessionCookieAccess = "deadset_at";
 const sessionCookieRefresh = "deadset_rt";
 const supabaseCookiePrefix = "deadset_sb_";
 const cookieMaxAge = 60 * 60 * 24 * 180;
+const nativeAuthCallback = "org.deadsetfit.app://auth/callback";
+const nativeAuthBridge = "https://deadsetfit.org/auth/native-callback";
+const oauthStateKey = "deadset_oauth_state_v1";
 
 const form = document.getElementById("auth-form") as HTMLFormElement;
 const emailInput = document.getElementById("email") as HTMLInputElement;
 const passwordInput = document.getElementById("password") as HTMLInputElement;
 const submitButton = document.getElementById("submit") as HTMLButtonElement;
-const signinTab = document.getElementById("signin-tab") as HTMLButtonElement;
-const signupTab = document.getElementById("signup-tab") as HTMLButtonElement;
+const googleButton = document.getElementById("google-auth") as HTMLButtonElement;
+const appleButton = document.getElementById("apple-auth") as HTMLButtonElement;
+const socialOptions = document.getElementById("social-options") as HTMLDivElement;
+const emailDivider = document.getElementById("email-divider") as HTMLDivElement;
+const authTitle = document.getElementById("auth-title") as HTMLHeadingElement;
+const authSubtitle = document.getElementById("auth-subtitle") as HTMLParagraphElement;
+const modeRow = document.getElementById("mode-row") as HTMLParagraphElement;
+const modeQuestion = document.getElementById("mode-question") as HTMLSpanElement;
+const modeSwitch = document.getElementById("mode-switch") as HTMLButtonElement;
 const forgotButton = document.getElementById("forgot") as HTMLButtonElement;
 const message = document.getElementById("message") as HTMLDivElement;
 const togglePassword = document.getElementById("toggle-password") as HTMLButtonElement | null;
@@ -23,11 +41,12 @@ const passwordHint = document.getElementById("password-hint") as HTMLParagraphEl
 const freeNote = document.getElementById("free-note") as HTMLParagraphElement | null;
 const closeButton = document.getElementById("close") as HTMLButtonElement;
 
-let mode: "signin" | "signup" = "signin";
+let mode: "signin" | "signup" = "signup";
 // Landing from a Supabase email link (?code=...) — confirm or recovery.
 // The auth event (SIGNED_IN vs PASSWORD_RECOVERY) decides what happens.
 let recoveryMode = false;
-const hasAuthCode = new URLSearchParams(window.location.search).has("code");
+const initialAuthCallback = parseOAuthCallback(window.location.href);
+const hasAuthCallback = hasOAuthResult(initialAuthCallback);
 
 function setMessage(text: string, tone: "neutral" | "error" | "success" = "neutral") {
   message.textContent = text;
@@ -45,8 +64,9 @@ function updatePasswordHint() {
 
 function setBusy(busy: boolean) {
   submitButton.disabled = busy;
-  signinTab.disabled = busy;
-  signupTab.disabled = busy;
+  googleButton.disabled = busy;
+  appleButton.disabled = busy;
+  modeSwitch.disabled = busy;
   forgotButton.disabled = busy;
   submitButton.textContent = busy
     ? "Please wait..."
@@ -54,7 +74,7 @@ function setBusy(busy: boolean) {
       ? "Set New Password"
       : mode === "signup"
         ? "Create Account"
-        : "Sign In";
+        : "Log In";
 }
 
 function cookieAttributes(maxAge = cookieMaxAge) {
@@ -140,16 +160,55 @@ function saveSessionBackup(session: Session) {
   setCookie(sessionCookieRefresh, session.refresh_token);
 }
 
-function redirectUrl() {
-  if (window.location.protocol === "capacitor:" || window.location.protocol === "ionic:") {
+function isNativeShell() {
+  return (
+    window.location.protocol === "capacitor:" ||
+    window.location.protocol === "ionic:" ||
+    (
+      window as typeof window & {
+        Capacitor?: { isNativePlatform?: () => boolean };
+      }
+    ).Capacitor?.isNativePlatform?.() === true
+  );
+}
+
+function emailRedirectUrl() {
+  if (isNativeShell()) {
     return "https://deadsetfit.org/auth/";
   }
   return `${window.location.origin}/auth/`;
 }
 
-function destinationFor(session: Session, signingUp = false) {
-  if (signingUp || !session.user.id) return "/onboarding";
-  return "/train";
+/** The broker sends the finished session to /auth/ on the web and to the
+ *  HTTPS bridge (which deep links into the app) on iOS. */
+function oauthFlow(): "web" | "native" {
+  return isNativeShell() ? "native" : "web";
+}
+
+function oauthReturnOrigin() {
+  return isNativeShell() ? new URL(nativeAuthBridge).origin : window.location.origin;
+}
+
+function saveOAuthState(state: string) {
+  safeLocalStorageSet(oauthStateKey, state);
+}
+
+function validateAndClearOAuthState(callbackState: string | null) {
+  if (!callbackState) return true;
+  const expected = safeLocalStorageGet(oauthStateKey);
+  safeLocalStorageRemove(oauthStateKey);
+  return Boolean(expected && expected === callbackState);
+}
+
+async function destinationFor(session: Session, signingUp = false) {
+  if (signingUp || !session.user.id || !supabase) return "/onboarding";
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", session.user.id)
+    .maybeSingle();
+  if (error) return "/train";
+  return data ? "/train" : "/onboarding";
 }
 
 function errorMessage(error: unknown, fallback: string) {
@@ -183,7 +242,7 @@ const supabase =
           storage: persistentAuthStorage(),
           persistSession: true,
           autoRefreshToken: true,
-          detectSessionInUrl: true,
+          detectSessionInUrl: false,
           flowType: "pkce",
         },
       })
@@ -193,10 +252,13 @@ function enterRecoveryMode(session: Session | null) {
   recoveryMode = true;
   if (session?.user.email) emailInput.value = session.user.email;
   emailInput.disabled = true;
-  signinTab.style.display = "none";
-  signupTab.style.display = "none";
-  forgotButton.style.visibility = "hidden";
+  socialOptions.hidden = true;
+  emailDivider.hidden = true;
+  modeRow.hidden = true;
+  forgotButton.hidden = true;
   if (freeNote) freeNote.hidden = true;
+  authTitle.textContent = "Reset your password";
+  authSubtitle.textContent = "Choose a new password to secure your account.";
   passwordInput.value = "";
   passwordInput.autocomplete = "new-password";
   submitButton.textContent = "Set New Password";
@@ -208,40 +270,184 @@ supabase?.auth.onAuthStateChange((event, session) => {
   if (session) saveSessionBackup(session);
   if (event === "PASSWORD_RECOVERY") {
     enterRecoveryMode(session);
-  } else if (event === "SIGNED_IN" && hasAuthCode && !recoveryMode && session) {
-    // Email-confirmation link: the session is live — go straight into the app.
-    window.location.replace(destinationFor(session));
   }
 });
 
 async function restoreExistingSession() {
   // When arriving from an email link, the auth event decides the destination —
   // never auto-redirect a recovery visit before the new password is set.
-  if (!supabase || hasAuthCode) return;
+  if (!supabase || hasAuthCallback) return;
   const {
     data: { session },
   } = await supabase.auth.getSession();
   if (session) {
     saveSessionBackup(session);
-    window.location.replace(destinationFor(session));
+    window.location.replace(await destinationFor(session));
   }
+}
+
+async function sessionFromCallback(callback: ReturnType<typeof parseOAuthCallback>) {
+  if (!supabase) throw new Error("Authentication is not configured.");
+  if (!validateAndClearOAuthState(callback.state)) {
+    throw new Error("The sign-in response could not be verified. Please try again.");
+  }
+
+  if (callback.accessToken && callback.refreshToken) {
+    const { data, error } = await supabase.auth.setSession({
+      access_token: callback.accessToken,
+      refresh_token: callback.refreshToken,
+    });
+    if (error) throw error;
+    return data.session;
+  }
+
+  if (callback.code) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(callback.code);
+    if (error) throw error;
+    return data.session;
+  }
+
+  throw new Error("Sign in returned without a session. Please try again.");
+}
+
+async function completeBrowserAuthCallback() {
+  if (!hasAuthCallback || !supabase) return false;
+  if (initialAuthCallback.error) {
+    setMessage(
+      errorMessage(new Error(initialAuthCallback.error), "Sign in was cancelled."),
+      "error",
+    );
+    return true;
+  }
+
+  setBusy(true);
+  setMessage("Finishing secure sign in...");
+  try {
+    const session = await sessionFromCallback(initialAuthCallback);
+    if (!session) throw new Error("No session returned. Please try again.");
+    saveSessionBackup(session);
+    window.history.replaceState({}, "", "/auth/index.html");
+    if (initialAuthCallback.type === "recovery") {
+      enterRecoveryMode(session);
+      setBusy(false);
+      return true;
+    }
+    window.location.replace(await destinationFor(session));
+  } catch (error) {
+    setMessage(errorMessage(error, "Could not finish sign in."), "error");
+    setBusy(false);
+  }
+  return true;
+}
+
+async function setupNativeAuthCallback() {
+  if (!isNativeShell() || !supabase) return;
+  const [{ App }, { Browser }] = await Promise.all([
+    import("@capacitor/app"),
+    import("@capacitor/browser"),
+  ]);
+
+  const handleUrl = async (url: string) => {
+    if (!url.startsWith(nativeAuthCallback)) return;
+    await Browser.close().catch(() => {});
+    const callback = parseOAuthCallback(url);
+    if (callback.error) {
+      setMessage(errorMessage(new Error(callback.error), "Sign in was cancelled."), "error");
+      setBusy(false);
+      return;
+    }
+
+    setBusy(true);
+    setMessage("Finishing secure sign in...");
+    try {
+      const session = await sessionFromCallback(callback);
+      if (!session) throw new Error("No session returned. Please try again.");
+      saveSessionBackup(session);
+      window.location.replace(await destinationFor(session));
+    } catch (error) {
+      setMessage(errorMessage(error, "Could not finish sign in."), "error");
+      setBusy(false);
+    }
+  };
+
+  await App.addListener("appUrlOpen", ({ url }) => void handleUrl(url));
+  await Browser.addListener("browserFinished", () => setBusy(false));
+  const launch = await App.getLaunchUrl();
+  if (launch?.url) await handleUrl(launch.url);
 }
 
 function switchMode(next: "signin" | "signup") {
   mode = next;
   const signingUp = mode === "signup";
-  signinTab.classList.toggle("active", !signingUp);
-  signupTab.classList.toggle("active", signingUp);
+  authTitle.textContent = signingUp ? "Create your account" : "Welcome back";
+  authSubtitle.textContent = signingUp
+    ? "Build your training plan and start logging in minutes."
+    : "Log in to continue your training.";
+  modeQuestion.textContent = signingUp ? "Already have an account?" : "New to DEADSET?";
+  modeSwitch.textContent = signingUp ? "Log in" : "Create an account";
   passwordInput.autocomplete = signingUp ? "new-password" : "current-password";
-  forgotButton.style.visibility = signingUp ? "hidden" : "visible";
-  submitButton.textContent = signingUp ? "Create Account" : "Sign In";
+  forgotButton.hidden = signingUp;
+  submitButton.textContent = signingUp ? "Create Account" : "Log In";
   if (freeNote) freeNote.hidden = !signingUp;
   updatePasswordHint();
   setMessage("");
 }
 
-signinTab.addEventListener("click", () => switchMode("signin"));
-signupTab.addEventListener("click", () => switchMode("signup"));
+modeSwitch.addEventListener("click", () => switchMode(mode === "signup" ? "signin" : "signup"));
+
+/** Asks the broker whether the provider's credentials are live, so an
+ *  unconfigured provider says so instead of bouncing through a broken redirect. */
+async function providerConfigurationError(provider: OAuthProvider, providerName: string) {
+  try {
+    const response = await fetch(oauthProvidersUrl(import.meta.env.VITE_API_ORIGIN), {
+      cache: "no-store",
+    });
+    if (!response.ok) return null;
+    const providers = (await response.json()) as Partial<Record<OAuthProvider, boolean>>;
+    if (providers[provider] === false) {
+      return `${providerName} sign-in is temporarily unavailable. Use email for now.`;
+    }
+    return null;
+  } catch {
+    // A blocked probe must not block sign-in — let the redirect speak instead.
+    return null;
+  }
+}
+
+async function continueWithProvider(provider: OAuthProvider) {
+  if (!supabase) {
+    setMessage("Authentication is not configured.", "error");
+    return;
+  }
+
+  setBusy(true);
+  setMessage(`Opening ${provider === "google" ? "Google" : "Apple"}…`);
+  try {
+    const state = createOAuthState();
+    saveOAuthState(state);
+    const authorizationUrl = buildOAuthStartUrl(provider, {
+      state,
+      flow: oauthFlow(),
+      origin: oauthReturnOrigin(),
+      brokerOrigin: import.meta.env.VITE_API_ORIGIN,
+    });
+    const providerName = provider === "google" ? "Google" : "Apple";
+    const configurationError = await providerConfigurationError(provider, providerName);
+    if (configurationError) throw new Error(configurationError);
+    if (isNativeShell()) {
+      const { Browser } = await import("@capacitor/browser");
+      await Browser.open({ url: authorizationUrl, presentationStyle: "popover" });
+    } else {
+      window.location.assign(authorizationUrl);
+    }
+  } catch (error) {
+    setMessage(errorMessage(error, `Could not open ${provider} sign in.`), "error");
+    setBusy(false);
+  }
+}
+
+googleButton.addEventListener("click", () => void continueWithProvider("google"));
+appleButton.addEventListener("click", () => void continueWithProvider("apple"));
 
 togglePassword?.addEventListener("click", () => {
   const showing = passwordInput.type === "text";
@@ -273,7 +479,7 @@ forgotButton.addEventListener("click", async () => {
   setMessage("Sending reset email...");
   try {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectUrl(),
+      redirectTo: emailRedirectUrl(),
     });
     if (error) throw error;
     setMessage("Password reset email sent. Check your inbox.", "success");
@@ -307,7 +513,7 @@ form.addEventListener("submit", async (event) => {
       } = await supabase.auth.getSession();
       if (session) saveSessionBackup(session);
       setMessage("Password updated — taking you in...", "success");
-      window.location.replace(session ? destinationFor(session) : "/auth/index.html");
+      window.location.replace(session ? await destinationFor(session) : "/auth/index.html");
     } catch (error) {
       setMessage(errorMessage(error, "Could not update password"), "error");
     } finally {
@@ -325,12 +531,12 @@ form.addEventListener("submit", async (event) => {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: redirectUrl() },
+        options: { emailRedirectTo: emailRedirectUrl() },
       });
       if (error) throw error;
       if (data.session) {
         saveSessionBackup(data.session);
-        window.location.replace(destinationFor(data.session, true));
+        window.location.replace(await destinationFor(data.session, true));
         return;
       }
       // With email confirmation on, Supabase "succeeds" for an existing email
@@ -341,7 +547,10 @@ form.addEventListener("submit", async (event) => {
         return;
       }
       switchMode("signin");
-      setMessage("Almost there — confirm your email via the link we sent, then sign in.", "success");
+      setMessage(
+        "Almost there — confirm your email via the link we sent, then sign in.",
+        "success",
+      );
       return;
     }
 
@@ -349,7 +558,7 @@ form.addEventListener("submit", async (event) => {
     if (error) throw error;
     if (!data.session) throw new Error("No session returned. Please try again.");
     saveSessionBackup(data.session);
-    window.location.replace(destinationFor(data.session));
+    window.location.replace(await destinationFor(data.session));
   } catch (error) {
     setMessage(errorMessage(error, "Authentication failed"), "error");
   } finally {
@@ -357,6 +566,14 @@ form.addEventListener("submit", async (event) => {
   }
 });
 
-void restoreExistingSession().catch(() => {
-  /* The form stays usable if session restore fails. */
+switchMode("signup");
+void completeBrowserAuthCallback()
+  .then((handled) => {
+    if (!handled) return restoreExistingSession();
+  })
+  .catch(() => {
+    /* The form stays usable if callback/session restoration fails. */
+  });
+void setupNativeAuthCallback().catch(() => {
+  setMessage("Native sign in could not start. Email sign in is still available.", "error");
 });

@@ -12,12 +12,40 @@ export interface HealthWorkout {
   source: string;
 }
 
+export interface FitnessDay {
+  date: string;
+  steps: number;
+  activeKcal: number;
+}
+
+export interface FitnessSummary {
+  today: {
+    steps: number;
+    activeKcal: number;
+    distanceKm: number;
+    exerciseMinutes: number;
+    standHours: number;
+    restingHeartRate: number;
+  };
+  goals: {
+    activeKcal: number;
+    exerciseMinutes: number;
+    standHours: number;
+  };
+  days: FitnessDay[];
+}
+
 interface HealthKitPlugin {
   isAvailable(): Promise<{ available: boolean }>;
   requestAuthorization(): Promise<{ granted: boolean }>;
   queryWorkouts(options: { sinceIso?: string }): Promise<{ workouts: HealthWorkout[] }>;
   todayActiveEnergy(): Promise<{ kcal: number }>;
-  saveWorkout(options: { startIso: string; endIso: string; calories?: number }): Promise<{ saved: boolean }>;
+  fitnessSummary(): Promise<FitnessSummary>;
+  saveWorkout(options: {
+    startIso: string;
+    endIso: string;
+    calories?: number;
+  }): Promise<{ saved: boolean }>;
 }
 
 const HealthKit = registerPlugin<HealthKitPlugin>("HealthKit");
@@ -49,6 +77,15 @@ export async function todayActiveBurn(): Promise<number | null> {
   }
 }
 
+export async function getFitnessSummary(): Promise<FitnessSummary | null> {
+  if (!healthSupported()) return null;
+  try {
+    return await HealthKit.fitnessSummary();
+  } catch {
+    return null;
+  }
+}
+
 /** Write a finished DEADSET session to Apple Health (closes rings, shows on watch). */
 export async function exportSessionToHealth(session: WorkoutSession): Promise<void> {
   if (!healthSupported() || !session.endedAt) return;
@@ -71,8 +108,7 @@ export async function importHealthWorkouts(state: AppState): Promise<AppState | 
   const sync = state.healthSync;
   if (!sync?.enabled || !sync.importWorkouts) return null;
   try {
-    const since =
-      sync.lastImportIso ?? new Date(Date.now() - 7 * 86400000).toISOString();
+    const since = sync.lastImportIso ?? new Date(Date.now() - 7 * 86400000).toISOString();
     const { workouts } = await HealthKit.queryWorkouts({ sinceIso: since });
     if (!workouts.length) return null;
 

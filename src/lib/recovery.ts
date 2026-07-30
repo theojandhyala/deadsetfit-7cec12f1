@@ -21,9 +21,11 @@ export function toMuscleGroup(raw: string): MuscleGroup | null {
   const m = raw.trim().toLowerCase();
   if (!m) return null;
   if (m.includes("chest") || m.includes("pec")) return "CHEST";
-  if (m.includes("lat") || m.includes("back") || m.includes("trap") || m.includes("rhomboid")) return "BACK";
+  if (m.includes("lat") || m.includes("back") || m.includes("trap") || m.includes("rhomboid"))
+    return "BACK";
   if (m.includes("delt") || m.includes("shoulder")) return "SHOULDERS";
-  if (m.includes("bicep") || m.includes("tricep") || m.includes("forearm") || m.includes("arm")) return "ARMS";
+  if (m.includes("bicep") || m.includes("tricep") || m.includes("forearm") || m.includes("arm"))
+    return "ARMS";
   if (
     m.includes("quad") ||
     m.includes("hamstring") ||

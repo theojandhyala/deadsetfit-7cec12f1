@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { X, Bell, Dumbbell, Scale, Apple, Camera, Crown } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useAppState } from "@/lib/storage";
-import { isoDay } from "@/lib/calc";
+import { defaultSchedule, isoDay, todayKey } from "@/lib/calc";
 import { usePro } from "@/hooks/usePro";
 import { isNativeIos } from "@/lib/platform";
 
@@ -16,7 +16,6 @@ type Reminder = {
 };
 
 const DISMISS_KEY = "deadset_reminder_dismiss_v1";
-const POPUP_KEY = "deadset_daily_popup_seen_v1";
 
 function getDismissed(): Record<string, string> {
   if (typeof window === "undefined") return {};
@@ -41,80 +40,86 @@ export function Reminders() {
   const { isPro, loading: proLoading } = usePro();
   const [dismissed, setDismissedState] = useState<Record<string, string>>({});
   const [open, setOpen] = useState<Reminder | null>(null);
-  const [autoOpened, setAutoOpened] = useState(false);
 
   useEffect(() => {
     setDismissedState(getDismissed());
   }, []);
 
   const today = isoDay();
-   
+
   const items = useMemo(() => {
     const items: Reminder[] = [];
 
-  // Workout today
-  if (!state.completedDates.includes(today)) {
-    items.push({
-      id: "workout-" + today,
-      icon: <Dumbbell size={18} />,
-      title: "Time to train",
-      body: "You haven't logged a workout today. Hit the iron — even 20 minutes counts.",
-      to: "/train",
-      cta: "Start workout",
-    });
-  }
+    const schedule = state.schedule ?? (state.profile ? defaultSchedule(state.profile) : null);
+    const activeProgram = state.programs.find((program) => program.id === state.activeProgramId);
+    const scheduledExerciseCount =
+      activeProgram?.days[todayKey()]?.items.length ??
+      schedule?.[todayKey()]?.exerciseIds.length ??
+      0;
 
-  // Weight log (3+ days)
-  const lastWeight = state.weights[state.weights.length - 1]?.date;
-  const wDays = daysSince(lastWeight);
-  if (wDays >= 1) {
-    items.push({
-      id: "weight-" + today,
-      icon: <Scale size={18} />,
-      title: wDays === Infinity ? "Log your starting weight" : `Weigh in (${wDays}d ago)`,
-      body: "Quick daily weigh-in. It builds the trend that actually tells the truth.",
-      to: "/progress",
-      cta: "Log weight",
-    });
-  }
+    // Workout today. Rest days stay quiet.
+    if (scheduledExerciseCount > 0 && !state.completedDates.includes(today)) {
+      items.push({
+        id: "workout-" + today,
+        icon: <Dumbbell size={18} />,
+        title: "Time to train",
+        body: "You haven't logged a workout today. Hit the iron — even 20 minutes counts.",
+        to: "/train",
+        cta: "Start workout",
+      });
+    }
 
-  // Progress picture weekly
-  const lastCheckIn = state.checkIns[state.checkIns.length - 1]?.date;
-  if (daysSince(lastCheckIn) >= 7) {
-    items.push({
-      id: "checkin-" + today.slice(0, 7),
-      icon: <Camera size={18} />,
-      title: "Take a progress picture",
-      body: "One photo a week makes progress obvious. Same lighting, same angle, no guessing.",
-      to: "/progress",
-      cta: "Take photo",
-    });
-  }
+    // Weight log (3+ days)
+    const lastWeight = state.weights[state.weights.length - 1]?.date;
+    const wDays = daysSince(lastWeight);
+    if (wDays >= 1) {
+      items.push({
+        id: "weight-" + today,
+        icon: <Scale size={18} />,
+        title: wDays === Infinity ? "Log your starting weight" : `Weigh in (${wDays}d ago)`,
+        body: "Quick daily weigh-in. It builds the trend that actually tells the truth.",
+        to: "/progress",
+        cta: "Log weight",
+      });
+    }
 
-  // Pro: streak armor, head-to-head challenges and full leagues.
-  if (!proLoading && !isPro) {
-    items.push({
-      id: "pro-" + today.slice(0, 7),
-      icon: <Crown size={18} />,
-      title: "Protect the streak",
-      body: "Pro unlocks Streak Armor, head-to-head challenges, full weekly leagues and advanced analytics.",
-      to: "/upgrade",
-      cta: "Go Pro",
-    });
-  }
+    // Progress picture weekly
+    const lastCheckIn = state.checkIns[state.checkIns.length - 1]?.date;
+    if (daysSince(lastCheckIn) >= 7) {
+      items.push({
+        id: "checkin-" + today.slice(0, 7),
+        icon: <Camera size={18} />,
+        title: "Take a progress picture",
+        body: "One photo a week makes progress obvious. Same lighting, same angle, no guessing.",
+        to: "/progress",
+        cta: "Take photo",
+      });
+    }
 
-  // Food logging
-  const ateToday = state.foodLog?.some((f) => f.date.startsWith(today));
-  if (!ateToday) {
-    items.push({
-      id: "food-" + today,
-      icon: <Apple size={18} />,
-      title: "Log your meals",
-      body: "Barcode, presets or quick manual log. Hitting protein is the difference between bulk and bloat.",
-      to: "/diet",
-      cta: "Log food",
-    });
-  }
+    // Pro: streak armor, head-to-head challenges and full leagues.
+    if (!proLoading && !isPro) {
+      items.push({
+        id: "pro-" + today.slice(0, 7),
+        icon: <Crown size={18} />,
+        title: "Protect the streak",
+        body: "Pro unlocks Streak Armor, head-to-head challenges, full weekly leagues and advanced analytics.",
+        to: "/upgrade",
+        cta: "Go Pro",
+      });
+    }
+
+    // Food logging
+    const ateToday = state.foodLog?.some((f) => f.date.startsWith(today));
+    if (!ateToday) {
+      items.push({
+        id: "food-" + today,
+        icon: <Apple size={18} />,
+        title: "Log your meals",
+        body: "Barcode, presets or quick manual log. Hitting protein is the difference between bulk and bloat.",
+        to: "/diet",
+        cta: "Log food",
+      });
+    }
 
     return items;
   }, [state, isPro, proLoading, today]);
@@ -125,25 +130,6 @@ export function Reminders() {
     () => (enabled ? items.filter((r) => dismissed[r.id] !== today) : []),
     [enabled, items, dismissed, today],
   );
-
-  useEffect(() => {
-    if (autoOpened || visible.length === 0) return;
-    try {
-      if (localStorage.getItem(POPUP_KEY) === today) return;
-    } catch {
-      // If storage is blocked, still show once during this render session.
-    }
-    const timer = window.setTimeout(() => {
-      setOpen(visible[0]);
-      setAutoOpened(true);
-      try {
-        localStorage.setItem(POPUP_KEY, today);
-      } catch {
-        // ignore
-      }
-    }, 1100);
-    return () => window.clearTimeout(timer);
-  }, [autoOpened, today, visible]);
 
   if (visible.length === 0) return null;
 

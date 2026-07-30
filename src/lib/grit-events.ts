@@ -5,6 +5,8 @@ export type GritAnimationEvent = {
   amount: number;
   label?: string;
   kind: GritAnimationKind;
+  rankPoints?: number;
+  previousRankLabel?: string;
 };
 
 const EVENT_NAME = "deadset:grit-earned";
@@ -13,6 +15,7 @@ export function emitGritEarned(
   amount: number,
   label = "GRIT EARNED",
   kind: GritAnimationKind = "grit",
+  details?: Pick<GritAnimationEvent, "rankPoints" | "previousRankLabel">,
 ) {
   if (typeof window === "undefined" || amount <= 0) return;
   window.dispatchEvent(
@@ -22,6 +25,7 @@ export function emitGritEarned(
         amount: Math.round(amount),
         label,
         kind,
+        ...details,
       },
     }),
   );

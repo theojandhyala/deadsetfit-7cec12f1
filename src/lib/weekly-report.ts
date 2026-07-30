@@ -69,6 +69,25 @@ function gradeFor(t: WeekTotals, plannedDays: number): WeeklyReport["grade"] {
   return "F";
 }
 
+function currentGradeFor(
+  totals: WeekTotals,
+  plannedDays: number,
+  now: Date,
+): WeeklyReport["grade"] {
+  if (totals.sessions === 0) return "F";
+  const weekday = now.getDay();
+  const daysElapsed = weekday === 0 ? 7 : weekday;
+  const expectedDays = Math.max(1, Math.floor(plannedDays * (daysElapsed / 7)));
+  const consistency = Math.min(1, totals.days / expectedDays);
+  const score =
+    consistency * 60 + Math.min(20, totals.prs * 10) + Math.min(20, totals.sets / 2);
+  if (score >= 85) return "A";
+  if (score >= 65) return "B";
+  if (score >= 40) return "C";
+  if (score >= 20) return "D";
+  return "F";
+}
+
 /** Report for the most recent COMPLETED Monday-to-Sunday week. */
 export function weeklyReport(state: AppState): WeeklyReport {
   const thisMonday = mondayOf(new Date());
@@ -106,6 +125,42 @@ export function weeklyReport(state: AppState): WeeklyReport {
     daysTrained: week.days,
     volumeDelta: prev.sessions > 0 ? Math.round(week.volume - prev.volume) : null,
     sessionsDelta: prev.sessions > 0 ? week.sessions - prev.sessions : null,
+    grade,
+    headline,
+  };
+}
+
+/** Live Monday-to-now report used by the Pro Weekly Review. */
+export function currentWeekReport(state: AppState, now = new Date()): WeeklyReport {
+  const current = new Date(now);
+  const thisMonday = mondayOf(current);
+  const previousMonday = new Date(thisMonday);
+  previousMonday.setDate(previousMonday.getDate() - 7);
+  const previousSunday = new Date(thisMonday);
+  previousSunday.setDate(previousSunday.getDate() - 1);
+
+  const week = totalsFor(state, thisMonday, current);
+  const previous = totalsFor(state, previousMonday, previousSunday);
+  const plannedDays = state.profile?.daysPerWeek ?? 3;
+  const grade = currentGradeFor(week, plannedDays, current);
+  const headline =
+    week.sessions === 0
+      ? "The week is open. Start the first planned session."
+      : week.prs > 0
+        ? `${week.prs} PR${week.prs > 1 ? "s" : ""} already this week. Keep the next session controlled.`
+        : week.days >= plannedDays
+          ? "Every planned day is complete. Recover and protect the work."
+          : `${week.days}/${plannedDays} planned days complete. Keep the week moving.`;
+
+  return {
+    weekStart: isoDay(thisMonday),
+    sessions: week.sessions,
+    volumeKg: Math.round(week.volume),
+    prs: week.prs,
+    setsLogged: week.sets,
+    daysTrained: week.days,
+    volumeDelta: previous.sessions > 0 ? Math.round(week.volume - previous.volume) : null,
+    sessionsDelta: previous.sessions > 0 ? week.sessions - previous.sessions : null,
     grade,
     headline,
   };

@@ -425,10 +425,7 @@ function ProgramsPage() {
       splitType: "CUSTOM",
       createdAt: new Date().toISOString(),
       days: Object.fromEntries(
-        DAYS.map((d) => [
-          d,
-          { label: p.days[d].label, items: p.days[d].items.map(featuredRef) },
-        ]),
+        DAYS.map((d) => [d, { label: p.days[d].label, items: p.days[d].items.map(featuredRef) }]),
       ) as unknown as Program["days"],
     };
     // Deliberately not activated here. An active program overrides the whole
@@ -446,7 +443,11 @@ function ProgramsPage() {
     set((s) => ({ ...s, activeProgramId: null }));
   }
   async function remove(id: string) {
-    const ok = await askConfirm({ title: "Delete this program?", confirmLabel: "Delete", danger: true });
+    const ok = await askConfirm({
+      title: "Delete this program?",
+      confirmLabel: "Delete",
+      danger: true,
+    });
     if (!ok) return;
     set((s) => ({
       ...s,
@@ -471,7 +472,9 @@ function ProgramsPage() {
 
       {state.programs.length === 0 && (
         <div className="bg-grit-card border border-grit p-6 text-center mb-5 animate-pop-in">
-          <p className="display text-xl font-extrabold uppercase text-grit">Build your first split</p>
+          <p className="display text-xl font-extrabold uppercase text-grit">
+            Build your first split
+          </p>
           <p className="text-sm text-grit-dim mt-1">
             Start from an expert template below, or build your own day by day.
           </p>

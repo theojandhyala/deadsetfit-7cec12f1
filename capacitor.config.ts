@@ -10,6 +10,11 @@ const config: CapacitorConfig = {
   //   url: 'https://deadsetfit.org',
   //   cleartext: false
   // }
+  plugins: {
+    LocalNotifications: {
+      presentationOptions: ["sound", "banner", "list"],
+    },
+  },
 };
 
 export default config;

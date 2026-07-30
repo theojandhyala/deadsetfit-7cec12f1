@@ -25,9 +25,7 @@ export function OneRmCalculator({
     initialWeight && initialWeight > 0 ? String(initialWeight) : "",
   );
   const [reps, setReps] = useState(
-    initialReps && initialReps >= 1
-      ? String(Math.min(12, Math.round(initialReps)))
-      : "",
+    initialReps && initialReps >= 1 ? String(Math.min(12, Math.round(initialReps))) : "",
   );
 
   const w = Number(weight);

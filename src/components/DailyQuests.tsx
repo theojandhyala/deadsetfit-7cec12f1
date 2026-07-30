@@ -2,7 +2,14 @@ import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Flame, Check, Dumbbell, Droplets, Apple, Scale, Camera, Trophy, Zap } from "lucide-react";
 import { useAppState } from "@/lib/storage";
-import { calculateStreak, calculateCalories, calculateMacros, isoDay } from "@/lib/calc";
+import {
+  calculateStreak,
+  calculateCalories,
+  calculateMacros,
+  defaultSchedule,
+  isoDay,
+  todayKey,
+} from "@/lib/calc";
 
 type Quest = {
   id: string;
@@ -21,16 +28,23 @@ export function DailyQuests() {
 
   const quests: Quest[] = useMemo(() => {
     const list: Quest[] = [];
-    // 1. Workout
-    list.push({
-      id: "workout",
-      icon: <Dumbbell size={16} />,
-      title: "Crush today's workout",
-      sub: "Hit the iron",
-      to: "/train",
-      xp: 50,
-      done: state.completedDates.includes(today),
-    });
+    const schedule = state.schedule ?? (state.profile ? defaultSchedule(state.profile) : null);
+    const activeProgram = state.programs.find((program) => program.id === state.activeProgramId);
+    const scheduledExerciseCount =
+      activeProgram?.days[todayKey()]?.items.length ??
+      schedule?.[todayKey()]?.exerciseIds.length ??
+      0;
+    if (scheduledExerciseCount > 0) {
+      list.push({
+        id: "workout",
+        icon: <Dumbbell size={16} />,
+        title: "Crush today's workout",
+        sub: `${scheduledExerciseCount} ${scheduledExerciseCount === 1 ? "exercise" : "exercises"} planned`,
+        to: "/train",
+        xp: 50,
+        done: state.completedDates.includes(today),
+      });
+    }
     // 2. Protein
     if (state.profile) {
       const cal = calculateCalories(state.profile);

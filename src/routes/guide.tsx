@@ -29,20 +29,22 @@ function GuidePage() {
         </button>
         <div>
           <p className="label-cap text-accent-red text-[10px]">START HERE</p>
-          <h1 className="display text-3xl font-extrabold uppercase text-grit leading-none">How DEADSET Works</h1>
+          <h1 className="display text-3xl font-extrabold uppercase text-grit leading-none">
+            How DEADSET Works
+          </h1>
         </div>
       </header>
 
       <main className="px-5 pt-5 space-y-5">
-        <section className="border border-accent-red bg-grit-card p-5 relative overflow-hidden">
+        <section className="border border-accent-red bg-grit-card p-5 relative overflow-hidden rounded-xl">
           <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-accent-red/20 blur-2xl" />
           <p className="label-cap text-accent-red text-[10px]">THE LOOP</p>
           <h2 className="display text-2xl font-extrabold uppercase text-grit mt-1">
             Train. Log. Rank up. Compete.
           </h2>
           <p className="text-sm text-grit-dim leading-relaxed mt-2">
-            DEADSET turns your training into a ranked game. Build a schedule, complete workouts,
-            hit PRs, track your body, earn grit, climb arenas, and challenge friends.
+            DEADSET turns your training into a ranked game. Build a schedule, complete workouts, hit
+            PRs, track your body, earn grit, climb arenas, and challenge friends.
           </p>
           <div className="grid grid-cols-2 gap-2 mt-4">
             <QuickLink to="/train" icon={<Dumbbell size={14} />} label="Start training" />
@@ -82,14 +84,14 @@ function GuidePage() {
         <GuideSection
           icon={<Dumbbell size={18} />}
           title="1. Build your training week"
-          body="Open Train and tap Edit my week. Step 1 is which days you train — tap the days that suit you and the plan moves onto them. Step 2 is editing a single day: pick the muscles, set sets and reps, add exercises."
+          body="Open Plan to see the whole week at a glance. Choose a day to set its focus, then add exercises with the sets, reps, rest and order you want before training."
           bullets={[
-            "Change your training days whenever life changes — nothing is locked in.",
+            "Use Edit exercises on any day to change its full session.",
+            "Choose Build My Split on Train if you want a fresh starting point.",
             "Finish workouts to keep your streak alive.",
-            "Your logged sets power rankings, PR boards and your public athlete card.",
           ]}
-          to="/train"
-          cta="Open Train"
+          to="/plan"
+          cta="Open Plan"
         />
 
         <GuideSection
@@ -108,7 +110,7 @@ function GuidePage() {
         <GuideSection
           icon={<Flame size={18} />}
           title="3. Climb ranked arenas"
-          body="Your grit score creates a Fortnite-style ranked ladder: Bronze, Silver, Gold, Platinum, Diamond, Elite, Champion, Unreal and DEADSET."
+          body="Your grit score moves through Iron, Bronze, Silver, Gold, Platinum, Diamond, Elite, Master, Champion, Legend, Unreal and DEADSET."
           bullets={[
             "Complete workouts, streaks, PRs, diet hits and check-ins to gain grit.",
             "Ranked Arena cards show exactly what to do next.",
@@ -157,13 +159,13 @@ function GuidePage() {
           cta="Open Diet"
         />
 
-        <section className="bg-grit-card border border-grit p-5">
+        <section className="bg-grit-card border border-grit p-5 rounded-xl">
           <p className="label-cap text-accent-red text-[10px] flex items-center gap-2">
             <Brain size={12} /> IF SOMETHING FEELS OFF
           </p>
           <p className="text-sm text-grit-dim leading-relaxed mt-2">
-            Sign-in is intentionally a native page so typing stays reliable. If a page ever feels stale,
-            refresh once. If sync or leaderboards look wrong, check you are signed in.
+            Check Settings to confirm your account and sync status. Your workouts remain saved on
+            this device if the connection drops and sync again when you are online.
           </p>
           <Link to="/auth" className="btn-ghost w-full mt-4 inline-flex justify-center">
             Sign in again
@@ -176,7 +178,10 @@ function GuidePage() {
 
 function QuickLink({ to, icon, label }: { to: string; icon: ReactNode; label: string }) {
   return (
-    <Link to={to as never} className="border border-grit bg-[#080808] px-3 py-2 flex items-center gap-2">
+    <Link
+      to={to as never}
+      className="border border-grit bg-[#080808] px-3 py-2 flex items-center gap-2 rounded-lg"
+    >
       <span className="text-accent-red">{icon}</span>
       <span className="label-cap text-[10px] text-grit">{label}</span>
     </Link>
@@ -199,13 +204,15 @@ function GuideSection({
   cta: string;
 }) {
   return (
-    <section className="bg-grit-card border border-grit p-5">
+    <section className="bg-grit-card border border-grit p-5 rounded-xl">
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 bg-accent-red/10 border border-accent-red flex items-center justify-center text-accent-red shrink-0">
+        <div className="w-10 h-10 rounded-lg bg-accent-red/10 border border-accent-red flex items-center justify-center text-accent-red shrink-0">
           {icon}
         </div>
         <div>
-          <h2 className="display text-xl font-extrabold uppercase text-grit leading-tight">{title}</h2>
+          <h2 className="display text-xl font-extrabold uppercase text-grit leading-tight">
+            {title}
+          </h2>
           <p className="text-sm text-grit-dim leading-relaxed mt-2">{body}</p>
         </div>
       </div>
@@ -217,7 +224,10 @@ function GuideSection({
           </li>
         ))}
       </ul>
-      <Link to={to as never} className="btn-grit w-full mt-4 inline-flex items-center justify-center gap-2">
+      <Link
+        to={to as never}
+        className="btn-grit w-full mt-4 inline-flex items-center justify-center gap-2"
+      >
         <Share2 size={13} /> {cta}
       </Link>
     </section>

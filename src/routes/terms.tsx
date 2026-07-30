@@ -70,10 +70,9 @@ function TermsPage() {
       <H>6. Subscriptions & payments</H>
       <p>
         DEADSET Pro may be sold as a recurring subscription. Web subscriptions are processed by
-        Stripe and can be cancelled from the in-app subscription settings or by contacting support.
-        Subscriptions made via the Apple App Store are managed by Apple and renew automatically
-        unless cancelled at least 24 hours before the period ends; manage or cancel from your Apple
-        ID account settings.
+        Stripe and can be managed or cancelled from your DEADSET account on the website. Stripe
+        subscriptions renew automatically until cancelled. The iPhone app does not sell
+        subscriptions or process payments.
       </p>
 
       <H>7. Termination</H>

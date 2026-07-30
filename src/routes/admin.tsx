@@ -1,15 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-} from "recharts";
-import { ArrowLeft, Users, Crown, TrendingUp, Globe, RefreshCw } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { Activity, ArrowLeft, Users, Crown, TrendingUp, Globe, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { getAdminStats, type AdminStats } from "@/lib/admin.functions";
 
@@ -95,11 +87,57 @@ function AdminPage() {
               />
             </div>
 
+            <Section title="ACTIVATION & RETENTION">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <Metric
+                  label="Setup complete"
+                  value={stats.engagement.onboardedUsers}
+                  total={stats.engagement.syncedUsers}
+                />
+                <Metric
+                  label="Started a workout"
+                  value={stats.engagement.startedWorkoutUsers}
+                  total={stats.engagement.syncedUsers}
+                />
+                <Metric
+                  label="Finished a workout"
+                  value={stats.engagement.finishedWorkoutUsers}
+                  total={stats.engagement.syncedUsers}
+                />
+                <Metric
+                  label="Active in 7 days"
+                  value={stats.engagement.active7DayUsers}
+                  total={stats.engagement.syncedUsers}
+                  accent
+                />
+                <Metric
+                  label="Active in 30 days"
+                  value={stats.engagement.active30DayUsers}
+                  total={stats.engagement.syncedUsers}
+                />
+                <div className="border border-[#262626] bg-[#141414] p-3">
+                  <p className="flex items-center gap-1 text-[9px] uppercase text-grit-dim">
+                    <Activity size={11} /> Workouts finished
+                  </p>
+                  <p className="display mt-1 text-2xl font-extrabold text-white">
+                    {stats.engagement.completedWorkouts}
+                  </p>
+                </div>
+              </div>
+              <p className="mt-3 text-[10px] leading-relaxed text-grit-dim">
+                Counts use synced account activity only. Watch these before and after acquisition
+                campaigns to see whether new users reach their first workout and return.
+              </p>
+            </Section>
+
             {/* New users per day */}
             <Section title="NEW USERS — LAST 30 DAYS">
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={stats.signupsPerDay} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
+                  <BarChart
+                    data={stats.signupsPerDay}
+                    margin={{ top: 4, right: 4, left: -28, bottom: 0 }}
+                  >
                     <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
                     <XAxis
                       dataKey="date"
@@ -165,8 +203,12 @@ function AdminPage() {
                 <div className="grid grid-cols-2 gap-3">
                   {stats.subscriptionPlans.map((p) => (
                     <div key={p.plan} className="border border-[#262626] bg-[#141414] p-3">
-                      <p className="text-[10px] uppercase tracking-widest text-grit-dim">{p.plan}</p>
-                      <p className="display mt-1 text-2xl font-extrabold text-accent-red">{p.count}</p>
+                      <p className="text-[10px] uppercase tracking-widest text-grit-dim">
+                        {p.plan}
+                      </p>
+                      <p className="display mt-1 text-2xl font-extrabold text-accent-red">
+                        {p.count}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -228,7 +270,9 @@ function Kpi({
       <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-grit-dim">
         {icon} {label}
       </p>
-      <p className={`display mt-1 text-3xl font-extrabold ${accent ? "text-accent-red" : "text-white"}`}>
+      <p
+        className={`display mt-1 text-3xl font-extrabold ${accent ? "text-accent-red" : "text-white"}`}
+      >
         {value}
       </p>
     </div>
@@ -241,6 +285,33 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h2 className="label-cap mb-3 text-xs text-grit-dim">{title}</h2>
       <div className="border border-[#262626] bg-[#0f0f0f] p-4">{children}</div>
     </section>
+  );
+}
+
+function Metric({
+  label,
+  value,
+  total,
+  accent,
+}: {
+  label: string;
+  value: number;
+  total: number;
+  accent?: boolean;
+}) {
+  const percentage = total ? Math.round((value / total) * 100) : 0;
+  return (
+    <div className="border border-[#262626] bg-[#141414] p-3">
+      <p className="text-[9px] uppercase text-grit-dim">{label}</p>
+      <div className="mt-1 flex items-end justify-between gap-2">
+        <p
+          className={`display text-2xl font-extrabold ${accent ? "text-accent-red" : "text-white"}`}
+        >
+          {value}
+        </p>
+        <p className="text-xs font-bold text-grit-dim">{percentage}%</p>
+      </div>
+    </div>
   );
 }
 

@@ -47,7 +47,9 @@ export function TrainingInsight() {
         <p className="text-sm font-bold text-grit">
           {insights.length} coaching insight{insights.length === 1 ? "" : "s"} from your training
         </p>
-        <p className="text-xs text-[#b7ac8e] mt-0.5 blur-[5px] select-none">{top.title} — {top.message}</p>
+        <p className="text-xs text-[#b7ac8e] mt-0.5 blur-[5px] select-none">
+          {top.title} — {top.message}
+        </p>
         <span className="inline-flex items-center gap-1 mt-2 text-[11px] font-display font-extrabold uppercase tracking-wide text-pro">
           Unlock with Pro <ChevronRight size={12} />
         </span>

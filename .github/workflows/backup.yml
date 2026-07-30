@@ -1,0 +1,53 @@
+name: Nightly Supabase backup
+
+# Supabase's Free plan takes no automated backups and PITR is a paid add-on, so
+# without this the training history of every user has no safety net. Snapshots
+# land as workflow artifacts (private to the repo, 90-day retention) which costs
+# nothing and needs no extra storage account.
+#
+# Requires the SUPABASE_SERVICE_ROLE_KEY repo secret. Until it exists the job
+# skips cleanly rather than failing every night.
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Check credentials
+        id: creds
+        run: |
+          if [ -z "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" ]; then
+            echo "SUPABASE_SERVICE_ROLE_KEY is not set — skipping backup."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install dependencies
+        if: steps.creds.outputs.ready == 'true'
+        run: bun install
+
+      - name: Take snapshot
+        if: steps.creds.outputs.ready == 'true'
+        run: bun scripts/backup-supabase.ts
+        env:
+          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Upload snapshot
+        if: steps.creds.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: deadset-supabase-backup
+          path: backups/*.json.gz
+          retention-days: 90

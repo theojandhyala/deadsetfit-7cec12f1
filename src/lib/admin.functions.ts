@@ -12,6 +12,15 @@ export type AdminStats = {
   activeSubscriptions: number;
   subscriptionPlans: { plan: string; count: number }[];
   sources: { source: string; count: number }[];
+  engagement: {
+    syncedUsers: number;
+    onboardedUsers: number;
+    startedWorkoutUsers: number;
+    finishedWorkoutUsers: number;
+    active7DayUsers: number;
+    active30DayUsers: number;
+    completedWorkouts: number;
+  };
 };
 
 export const getAdminStats = () => callRpc<AdminStats>("adminStats");

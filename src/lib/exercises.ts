@@ -57,6 +57,18 @@ export const EXERCISES: Exercise[] = [
     videoId: "IODxDxX7oi4",
     instruction: "Body rigid, lower chest to floor, press fully up.",
   },
+  {
+    id: "close-grip-push-up",
+    name: "Close-Grip Push Up",
+    muscleGroup: "ARMS",
+    equipment: ["BODYWEIGHT", "HOME_GYM", "FULL_GYM"],
+    skill: "BEGINNER",
+    sets: 3,
+    reps: "8-15",
+    videoId: "",
+    youtubeQuery: "close grip push up proper form",
+    instruction: "Keep hands just inside shoulder width and elbows close as you press.",
+  },
 
   // BACK
   {
@@ -113,6 +125,30 @@ export const EXERCISES: Exercise[] = [
     reps: "12-15",
     videoId: "rep-qVOkqgk",
     instruction: "Pull rope to forehead, elbows high, externally rotate.",
+  },
+  {
+    id: "inverted-row",
+    name: "Inverted Row",
+    muscleGroup: "BACK",
+    equipment: ["FULL_GYM", "HOME_GYM", "BODYWEIGHT"],
+    skill: "BEGINNER",
+    sets: 3,
+    reps: "8-15",
+    videoId: "",
+    youtubeQuery: "inverted row proper form",
+    instruction: "Keep your body rigid and pull your chest toward the bar or sturdy support.",
+  },
+  {
+    id: "superman",
+    name: "Superman",
+    muscleGroup: "BACK",
+    equipment: ["FULL_GYM", "HOME_GYM", "BODYWEIGHT"],
+    skill: "BEGINNER",
+    sets: 3,
+    reps: "10-15",
+    videoId: "",
+    youtubeQuery: "superman exercise proper form",
+    instruction: "Lift arms and legs gently, pause, then lower without overextending your back.",
   },
 
   // LEGS
@@ -171,6 +207,66 @@ export const EXERCISES: Exercise[] = [
     videoId: "1Tq3QdYUuHs",
     instruction: "Curl heels to glutes, squeeze hamstrings hard.",
   },
+  {
+    id: "goblet-squat",
+    name: "Goblet Squat",
+    muscleGroup: "LEGS",
+    equipment: ["FULL_GYM", "HOME_GYM"],
+    skill: "BEGINNER",
+    sets: 3,
+    reps: "8-12",
+    videoId: "",
+    youtubeQuery: "goblet squat proper form",
+    instruction: "Hold one weight at your chest, brace, and sit between your hips.",
+  },
+  {
+    id: "bodyweight-squat",
+    name: "Bodyweight Squat",
+    muscleGroup: "LEGS",
+    equipment: ["FULL_GYM", "HOME_GYM", "BODYWEIGHT"],
+    skill: "BEGINNER",
+    sets: 3,
+    reps: "12-20",
+    videoId: "",
+    youtubeQuery: "bodyweight squat proper form",
+    instruction: "Brace your trunk, sit between your hips, and keep your whole foot planted.",
+  },
+  {
+    id: "split-squat",
+    name: "Split Squat",
+    muscleGroup: "LEGS",
+    equipment: ["FULL_GYM", "HOME_GYM", "BODYWEIGHT"],
+    skill: "BEGINNER",
+    sets: 3,
+    reps: "8-12/leg",
+    videoId: "",
+    youtubeQuery: "bodyweight split squat proper form",
+    instruction: "Use a stable stance, lower the back knee, and drive through the front foot.",
+  },
+  {
+    id: "glute-bridge",
+    name: "Glute Bridge",
+    muscleGroup: "LEGS",
+    equipment: ["FULL_GYM", "HOME_GYM", "BODYWEIGHT"],
+    skill: "BEGINNER",
+    sets: 3,
+    reps: "12-20",
+    videoId: "",
+    youtubeQuery: "glute bridge proper form",
+    instruction: "Brace your ribs down and squeeze your glutes to reach full hip extension.",
+  },
+  {
+    id: "calf-raise",
+    name: "Standing Calf Raise",
+    muscleGroup: "LEGS",
+    equipment: ["FULL_GYM", "HOME_GYM", "BODYWEIGHT"],
+    skill: "BEGINNER",
+    sets: 3,
+    reps: "12-20",
+    videoId: "",
+    youtubeQuery: "standing calf raise proper form",
+    instruction: "Rise onto the balls of your feet, pause at the top, and lower under control.",
+  },
 
   // SHOULDERS
   {
@@ -216,6 +312,18 @@ export const EXERCISES: Exercise[] = [
     reps: "12-15",
     videoId: "EA7u4Q_8HQ0",
     instruction: "Hinge forward, raise arms out to sides, squeeze rear delts.",
+  },
+  {
+    id: "pike-push-up",
+    name: "Pike Push Up",
+    muscleGroup: "SHOULDERS",
+    equipment: ["FULL_GYM", "HOME_GYM", "BODYWEIGHT"],
+    skill: "INTERMEDIATE",
+    sets: 3,
+    reps: "6-12",
+    videoId: "",
+    youtubeQuery: "pike push up proper form",
+    instruction: "Keep hips high and lower your head forward between your hands before pressing.",
   },
 
   // ARMS
@@ -309,8 +417,40 @@ export const EXERCISES: Exercise[] = [
     videoId: "rqiTPdK1c_I",
     instruction: "Roll out controlled, keep back flat, pull back in.",
   },
+  {
+    id: "dead-bug",
+    name: "Dead Bug",
+    muscleGroup: "CORE",
+    equipment: ["BODYWEIGHT", "HOME_GYM", "FULL_GYM"],
+    skill: "BEGINNER",
+    sets: 3,
+    reps: "8-12/side",
+    videoId: "",
+    youtubeQuery: "dead bug exercise proper form",
+    instruction: "Press your lower back down and extend opposite limbs without losing position.",
+  },
+  {
+    id: "bicycle-crunch",
+    name: "Bicycle Crunch",
+    muscleGroup: "CORE",
+    equipment: ["BODYWEIGHT", "HOME_GYM", "FULL_GYM"],
+    skill: "BEGINNER",
+    sets: 3,
+    reps: "12-20/side",
+    videoId: "",
+    youtubeQuery: "bicycle crunch proper form",
+    instruction: "Rotate your ribs toward the opposite knee without pulling on your neck.",
+  },
 ];
 
-export function getExercise(id: string) {
-  return EXERCISES.find((e) => e.id === id);
+export function getExercise(id: string, saved: Exercise[] = []) {
+  return (
+    saved.find((exercise) => exercise.id === id) ?? EXERCISES.find((exercise) => exercise.id === id)
+  );
+}
+
+export function allExercises(saved: Exercise[] = []) {
+  const byId = new Map(EXERCISES.map((exercise) => [exercise.id, exercise]));
+  for (const exercise of saved) byId.set(exercise.id, exercise);
+  return [...byId.values()];
 }

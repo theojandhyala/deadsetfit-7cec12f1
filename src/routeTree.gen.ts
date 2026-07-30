@@ -28,6 +28,7 @@ import { Route as TabsTrainRouteImport } from './routes/_tabs.train'
 import { Route as TabsProgressRouteImport } from './routes/_tabs.progress'
 import { Route as TabsProgramsRouteImport } from './routes/_tabs.programs'
 import { Route as TabsProfileRouteImport } from './routes/_tabs.profile'
+import { Route as TabsPlanRouteImport } from './routes/_tabs.plan'
 import { Route as TabsLibraryRouteImport } from './routes/_tabs.library'
 import { Route as TabsFriendsRouteImport } from './routes/_tabs.friends'
 import { Route as TabsDietRouteImport } from './routes/_tabs.diet'
@@ -131,6 +132,11 @@ const TabsProfileRoute = TabsProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => TabsRoute,
 } as any)
+const TabsPlanRoute = TabsPlanRouteImport.update({
+  id: '/plan',
+  path: '/plan',
+  getParentRoute: () => TabsRoute,
+} as any)
 const TabsLibraryRoute = TabsLibraryRouteImport.update({
   id: '/library',
   path: '/library',
@@ -190,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/diet': typeof TabsDietRoute
   '/friends': typeof TabsFriendsRoute
   '/library': typeof TabsLibraryRoute
+  '/plan': typeof TabsPlanRoute
   '/profile': typeof TabsProfileRoute
   '/programs': typeof TabsProgramsRouteWithChildren
   '/progress': typeof TabsProgressRoute
@@ -218,6 +225,7 @@ export interface FileRoutesByTo {
   '/diet': typeof TabsDietRoute
   '/friends': typeof TabsFriendsRoute
   '/library': typeof TabsLibraryRoute
+  '/plan': typeof TabsPlanRoute
   '/profile': typeof TabsProfileRoute
   '/programs': typeof TabsProgramsRouteWithChildren
   '/progress': typeof TabsProgressRoute
@@ -248,6 +256,7 @@ export interface FileRoutesById {
   '/_tabs/diet': typeof TabsDietRoute
   '/_tabs/friends': typeof TabsFriendsRoute
   '/_tabs/library': typeof TabsLibraryRoute
+  '/_tabs/plan': typeof TabsPlanRoute
   '/_tabs/profile': typeof TabsProfileRoute
   '/_tabs/programs': typeof TabsProgramsRouteWithChildren
   '/_tabs/progress': typeof TabsProgressRoute
@@ -278,6 +287,7 @@ export interface FileRouteTypes {
     | '/diet'
     | '/friends'
     | '/library'
+    | '/plan'
     | '/profile'
     | '/programs'
     | '/progress'
@@ -306,6 +316,7 @@ export interface FileRouteTypes {
     | '/diet'
     | '/friends'
     | '/library'
+    | '/plan'
     | '/profile'
     | '/programs'
     | '/progress'
@@ -335,6 +346,7 @@ export interface FileRouteTypes {
     | '/_tabs/diet'
     | '/_tabs/friends'
     | '/_tabs/library'
+    | '/_tabs/plan'
     | '/_tabs/profile'
     | '/_tabs/programs'
     | '/_tabs/progress'
@@ -499,6 +511,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TabsProfileRouteImport
       parentRoute: typeof TabsRoute
     }
+    '/_tabs/plan': {
+      id: '/_tabs/plan'
+      path: '/plan'
+      fullPath: '/plan'
+      preLoaderRoute: typeof TabsPlanRouteImport
+      parentRoute: typeof TabsRoute
+    }
     '/_tabs/library': {
       id: '/_tabs/library'
       path: '/library'
@@ -576,6 +595,7 @@ interface TabsRouteChildren {
   TabsDietRoute: typeof TabsDietRoute
   TabsFriendsRoute: typeof TabsFriendsRoute
   TabsLibraryRoute: typeof TabsLibraryRoute
+  TabsPlanRoute: typeof TabsPlanRoute
   TabsProfileRoute: typeof TabsProfileRoute
   TabsProgramsRoute: typeof TabsProgramsRouteWithChildren
   TabsProgressRoute: typeof TabsProgressRoute
@@ -590,6 +610,7 @@ const TabsRouteChildren: TabsRouteChildren = {
   TabsDietRoute: TabsDietRoute,
   TabsFriendsRoute: TabsFriendsRoute,
   TabsLibraryRoute: TabsLibraryRoute,
+  TabsPlanRoute: TabsPlanRoute,
   TabsProfileRoute: TabsProfileRoute,
   TabsProgramsRoute: TabsProgramsRouteWithChildren,
   TabsProgressRoute: TabsProgressRoute,

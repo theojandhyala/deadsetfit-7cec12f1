@@ -13,6 +13,7 @@ import {
   Sparkles,
   Heart,
   Check,
+  Share2,
 } from "lucide-react";
 import { useAppState, flushRemoteState } from "@/lib/storage";
 import { askConfirm, withDeadline } from "@/lib/confirm";
@@ -61,7 +62,7 @@ import { usePro } from "@/hooks/usePro";
 import { isNativeIos } from "@/lib/platform";
 import { FifaCard } from "@/components/FifaCard";
 import { ProBadge } from "@/components/ProBadge";
-import { QuickLogFAB } from "@/components/QuickLogFAB";
+import { StreakShareCard } from "@/components/StreakShareCard";
 import { StatsGrid } from "@/components/StatsGrid";
 import { LiftLevels } from "@/components/LiftLevels";
 import { TrophyCase } from "@/components/TrophyCase";
@@ -98,8 +99,11 @@ function ProfilePage() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [session, setSession] = useState<{ userId: string } | null | "loading">("loading");
   const [editingPR, setEditingPR] = useState<PRDef | null>(null);
+  const [showStreakShare, setShowStreakShare] = useState(false);
   const {
-    isPro,
+    // Identity/badging reflects a real paid subscription, not the blanket
+    // iOS entitlement — a free iOS user shouldn't wear a PRO badge.
+    isPaidPro: isPro,
     status: proStatus,
     currentPeriodEnd,
     cancelAtPeriodEnd,
@@ -447,7 +451,18 @@ function ProfilePage() {
           <div className="flex items-center gap-4">
             <Flame size={28} className="text-accent-red" />
             <div>
-              <p className="label-cap">Current Streak</p>
+              <p className="label-cap flex items-center gap-2">
+                Current Streak
+                {streak >= 3 && (
+                  <button
+                    onClick={() => setShowStreakShare(true)}
+                    aria-label="Share streak"
+                    className="text-accent-red press"
+                  >
+                    <Share2 size={12} />
+                  </button>
+                )}
+              </p>
               <p className="display text-2xl font-extrabold text-grit leading-none">
                 {streak}
                 <span className="text-sm ml-2 text-grit-dim">{streak === 1 ? "day" : "days"}</span>
@@ -624,64 +639,63 @@ function ProfilePage() {
         </div>
       </section>
 
-      {/* DEADSET Pro */}
-      <section className="px-5 mb-6">
-        <div
-          className={`border p-5 relative overflow-hidden ${isPro ? "border-pro pro-glow" : "border-accent-red"}`}
-          style={{
-            background: isPro
-              ? "linear-gradient(135deg, #1c180c 0%, #2b2108 55%, #0d0a04 100%)"
-              : "linear-gradient(135deg, #1a1a1a 0%, #2a0d0a 100%)",
-          }}
-        >
-          {isPro && (
-            <div className="absolute top-4 right-4">
-              <ProBadge size="md" />
-            </div>
-          )}
-          <Crown size={20} className={isPro ? "text-pro mb-2" : "text-accent-red mb-2"} />
-          <p className={`display text-2xl font-extrabold uppercase ${isPro ? "text-pro-gradient" : "text-grit"}`}>
-            DEADSET Pro
-          </p>
-          {isPro ? (
-            <>
-              <p className="label-cap text-[10px] text-pro/90 mt-0.5">Membership active</p>
-              <div className="grid grid-cols-1 gap-1.5 mt-3 mb-4">
-                {[
-                  "Streak Armor — never lose your streak",
-                  "Progression intelligence + Ghost Mode",
-                  "Full Weekly Leagues + H2H challenges",
-                  "Advanced analytics & strength standards",
-                  "Unlimited custom programs + featured plans",
-                ].map((perk) => (
-                  <div key={perk} className="flex items-center gap-2 text-xs text-grit">
-                    <Check size={13} className="text-pro shrink-0" strokeWidth={3} />
-                    <span>{perk}</span>
-                  </div>
-                ))}
+      {/* DEADSET Pro — web only. On iOS every feature is already unlocked, so
+          there is no subscription to advertise or manage (Guideline 3.1.1). */}
+      {!nativeIos && (
+        <section className="px-5 mb-6">
+          <div
+            className={`border p-5 relative overflow-hidden ${isPro ? "border-pro pro-glow" : "border-accent-red"}`}
+            style={{
+              background: isPro
+                ? "linear-gradient(135deg, #1c180c 0%, #2b2108 55%, #0d0a04 100%)"
+                : "linear-gradient(135deg, #1a1a1a 0%, #2a0d0a 100%)",
+            }}
+          >
+            {isPro && (
+              <div className="absolute top-4 right-4">
+                <ProBadge size="md" />
               </div>
-              {(currentPeriodEnd || cancelAtPeriodEnd) && (
-                <p className="text-[11px] text-[#8a8a8a] mb-4">
-                  {cancelAtPeriodEnd
-                    ? `Cancels ${currentPeriodEnd ? new Date(currentPeriodEnd).toLocaleDateString() : "at period end"}.`
-                    : currentPeriodEnd
-                      ? `Renews ${new Date(currentPeriodEnd).toLocaleDateString()}.`
-                      : ""}
-                </p>
-              )}
-            </>
-          ) : (
-            <p className="text-xs text-[#8a8a8a] mt-1 mb-4">
-              Streak Armor, H2H challenges, full leagues, advanced analytics, featured programs.
+            )}
+            <Crown size={20} className={isPro ? "text-pro mb-2" : "text-accent-red mb-2"} />
+            <p
+              className={`display text-2xl font-extrabold uppercase ${isPro ? "text-pro-gradient" : "text-grit"}`}
+            >
+              DEADSET Pro
             </p>
-          )}
-          {isPro ? (
-            nativeIos ? (
-              // App Store 3.1.1: no billing-management link on iOS.
-              <button onClick={() => void refreshPro()} className="btn-grit w-full">
-                Refresh status
-              </button>
+            {isPro ? (
+              <>
+                <p className="label-cap text-[10px] text-pro/90 mt-0.5">Membership active</p>
+                <div className="grid grid-cols-1 gap-1.5 mt-3 mb-4">
+                  {[
+                    "Weekly Review + PR Roadmap",
+                    "Streak Armor — never lose your streak",
+                    "Progression intelligence + Ghost Mode",
+                    "Full Weekly Leagues + H2H challenges",
+                    "Advanced analytics & strength standards",
+                    "Unlimited custom programs + featured plans",
+                  ].map((perk) => (
+                    <div key={perk} className="flex items-center gap-2 text-xs text-grit">
+                      <Check size={13} className="text-pro shrink-0" strokeWidth={3} />
+                      <span>{perk}</span>
+                    </div>
+                  ))}
+                </div>
+                {(currentPeriodEnd || cancelAtPeriodEnd) && (
+                  <p className="text-[11px] text-[#8a8a8a] mb-4">
+                    {cancelAtPeriodEnd
+                      ? `Cancels ${currentPeriodEnd ? new Date(currentPeriodEnd).toLocaleDateString() : "at period end"}.`
+                      : currentPeriodEnd
+                        ? `Renews ${new Date(currentPeriodEnd).toLocaleDateString()}.`
+                        : ""}
+                  </p>
+                )}
+              </>
             ) : (
+              <p className="text-xs text-[#8a8a8a] mt-1 mb-4">
+                Streak Armor, H2H challenges, full leagues, advanced analytics, featured programs.
+              </p>
+            )}
+            {isPro ? (
               <div className="grid grid-cols-2 gap-2">
                 <Link to="/upgrade" className="btn-ghost w-full inline-flex justify-center">
                   Manage Pro
@@ -690,22 +704,17 @@ function ProfilePage() {
                   Refresh
                 </button>
               </div>
-            )
-          ) : nativeIos ? (
-            // App Store 3.1.1: no purchase CTA on iOS.
-            <p className="text-xs text-grit-dim">
-              Pro isn’t available on iPhone yet — every core feature stays unlocked.
-            </p>
-          ) : (
-            <Link to="/upgrade" className="btn-grit w-full inline-flex justify-center">
-              Upgrade — Go Pro
-            </Link>
-          )}
-          {isPro && proStatus && (
-            <p className="mt-3 label-cap text-[10px] text-pro/80">Status: {proStatus}</p>
-          )}
-        </div>
-      </section>
+            ) : (
+              <Link to="/upgrade" className="btn-grit w-full inline-flex justify-center">
+                Upgrade — Go Pro
+              </Link>
+            )}
+            {isPro && proStatus && (
+              <p className="mt-3 label-cap text-[10px] text-pro/80">Status: {proStatus}</p>
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="px-5 mb-6 flex flex-col gap-2">
         <Link to="/recovery" className="btn-ghost w-full inline-flex items-center justify-center">
@@ -741,12 +750,17 @@ function ProfilePage() {
           <span>·</span>
           <Link to="/disclaimer">Disclaimer</Link>
         </div>
-        <p className="label-cap text-[10px] text-grit-dim">
-          DEADSET — made by Theo Jandhyala
-        </p>
+        <p className="label-cap text-[10px] text-grit-dim">DEADSET — made by Theo Jandhyala</p>
       </section>
 
-      <QuickLogFAB />
+      {showStreakShare && (
+        <StreakShareCard
+          streak={streak}
+          displayName={p.displayName || p.username || "Athlete"}
+          username={p.username}
+          onClose={() => setShowStreakShare(false)}
+        />
+      )}
     </div>
   );
 }
@@ -835,7 +849,11 @@ function PREditSheet({
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center" role="dialog" aria-modal="true">
+    <div
+      className="fixed inset-0 z-[100] flex items-end justify-center"
+      role="dialog"
+      aria-modal="true"
+    >
       <div className="absolute inset-0 bg-black/80" onClick={onClose} />
       <div
         className="relative w-full max-w-md bg-grit-card border rounded-t-3xl rounded-b-none p-6 animate-slide-up"

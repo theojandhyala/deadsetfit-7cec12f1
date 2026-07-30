@@ -72,19 +72,20 @@ export function TopBar() {
         // No backdrop-filter: fixed bars with backdrop blur intermittently
         // composite as solid BLACK while scrolling in WKWebView/iOS Safari.
         // A near-opaque gradient reads the same without the blur.
-        background: "linear-gradient(180deg, rgba(16,17,21,0.99), rgba(10,10,10,0.97))",
-        borderBottom: "1px solid rgba(255,255,255,0.075)",
-        boxShadow: "0 16px 42px rgba(0,0,0,0.40), inset 0 -1px 0 rgba(230,50,34,0.12)",
+        background: "linear-gradient(180deg, rgba(18,19,22,0.995), rgba(8,8,9,0.985))",
+        borderBottom: "1px solid rgba(255,255,255,0.09)",
+        boxShadow: "0 16px 38px rgba(0,0,0,0.36), inset 0 -2px 0 rgba(230,50,34,0.18)",
         paddingTop: "calc(env(safe-area-inset-top) + 12px)",
         paddingBottom: "14px",
         height: "calc(env(safe-area-inset-top) + 72px)",
       }}
     >
       {/* Logo */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
+        <span className="h-7 w-[3px] bg-accent-red" />
         <span
-          className="display font-extrabold text-lg tracking-widest"
-          style={{ fontStyle: "italic", letterSpacing: "0.12em" }}
+          className="display block text-xl font-black leading-none"
+          style={{ fontStyle: "italic", letterSpacing: "0.08em" }}
         >
           <span style={{ color: "#ffffff" }}>DEAD</span>
           <span style={{ color: "#e63222" }}>SET</span>
@@ -98,10 +99,10 @@ export function TopBar() {
         <Link
           to="/guide"
           aria-label="How DEADSET works"
-          className="h-9 rounded-full flex items-center gap-1 pl-2 pr-2.5 press"
+          className="flex h-11 items-center gap-1 rounded-md px-2.5 press"
           style={{
-            background: "rgba(255,255,255,0.035)",
-            border: "1px solid rgba(255,255,255,0.10)",
+            background: "rgba(255,255,255,0.025)",
+            border: "1px solid rgba(255,255,255,0.11)",
             color: "#c9c9c9",
           }}
         >
@@ -110,19 +111,17 @@ export function TopBar() {
         </Link>
         {/* XP pill */}
         <div
-          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full ${scorePop ? "grit-score-pop" : ""}`}
-          style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))", border: "1px solid rgba(255,255,255,0.10)", boxShadow: "0 8px 20px rgba(0,0,0,0.25)" }}
+          className={`flex items-center gap-1.5 rounded-md px-3 py-2 ${scorePop ? "grit-score-pop" : ""}`}
+          style={{
+            background: "linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.015))",
+            border: "1px solid rgba(255,255,255,0.11)",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+          }}
         >
-          <span
-            className="text-[10px] font-bold uppercase tracking-wider"
-            style={{ color }}
-          >
+          <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color }}>
             {badge}
           </span>
-          <span
-            className="text-[10px] font-bold"
-            style={{ color: "#8A8A8A" }}
-          >
+          <span className="text-[10px] font-bold" style={{ color: "#8A8A8A" }}>
             {score}
           </span>
         </div>

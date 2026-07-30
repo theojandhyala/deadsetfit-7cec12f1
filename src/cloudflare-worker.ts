@@ -1,7 +1,13 @@
 import rpcHandler from "../api/rpc";
 import { createClient } from "@supabase/supabase-js";
+import { handleOAuthRequest, providerConfigured, type OAuthBrokerEnv } from "./lib/oauth.server";
+import {
+  subscriptionPayload,
+  subscriptionStillUnlocksPro,
+  type StripeEnv,
+} from "./lib/entitlements";
 
-interface Env {
+interface Env extends OAuthBrokerEnv {
   ASSETS?: { fetch(request: Request): Promise<Response> };
   SUPABASE_URL?: string;
   SUPABASE_PUBLISHABLE_KEY?: string;
@@ -13,7 +19,6 @@ interface Env {
   VITE_PAYMENTS_CLIENT_TOKEN?: string;
 }
 
-type StripeEnv = "sandbox" | "live";
 type StripeEvent = { type: string; data: { object: any } };
 
 const RUNTIME_ENV_KEYS = [
@@ -34,7 +39,8 @@ function configured(value: unknown): boolean {
 }
 
 function installRuntimeEnv(env: Env) {
-  const runtimeEnv = (globalThis as unknown as Record<string, Record<string, string>>)[RUNTIME_ENV_GLOBAL] ?? {};
+  const runtimeEnv =
+    (globalThis as unknown as Record<string, Record<string, string>>)[RUNTIME_ENV_GLOBAL] ?? {};
   for (const key of RUNTIME_ENV_KEYS) {
     const value = env[key];
     if (typeof value === "string" && value.length > 0) {
@@ -42,7 +48,8 @@ function installRuntimeEnv(env: Env) {
       if (typeof process !== "undefined" && process.env) process.env[key] = value;
     }
   }
-  (globalThis as unknown as Record<string, Record<string, string>>)[RUNTIME_ENV_GLOBAL] = runtimeEnv;
+  (globalThis as unknown as Record<string, Record<string, string>>)[RUNTIME_ENV_GLOBAL] =
+    runtimeEnv;
 }
 
 function requestHeaders(headers: Headers): Record<string, string> {
@@ -51,7 +58,7 @@ function requestHeaders(headers: Headers): Record<string, string> {
   );
 }
 
-async function handleRpc(request: Request): Promise<Response> {
+async function handleRpc(request: Request, env: Env): Promise<Response> {
   let status = 200;
   let body = "";
   const headers = new Headers();
@@ -90,6 +97,7 @@ async function handleRpc(request: Request): Promise<Response> {
       method: request.method,
       headers: requestHeaders(request.headers),
       body: parsedBody,
+      env,
     },
     response,
   );
@@ -98,26 +106,30 @@ async function handleRpc(request: Request): Promise<Response> {
 }
 
 function handleHealth(env: Env): Response {
-  return Response.json({
-    ok: true,
-    app: "deadset",
-    runtime: "cloudflare-worker",
-    time: new Date().toISOString(),
-    services: {
-      supabase:
-        configured(env.SUPABASE_URL) &&
-        configured(env.SUPABASE_PUBLISHABLE_KEY) &&
-        configured(env.SUPABASE_SERVICE_ROLE_KEY),
-      stripeLive:
-        configured(env.STRIPE_LIVE_API_KEY) &&
-        configured(env.VITE_PAYMENTS_CLIENT_TOKEN),
-      stripeWebhook: configured(env.PAYMENTS_LIVE_WEBHOOK_SECRET),
+  return Response.json(
+    {
+      ok: true,
+      app: "deadset",
+      runtime: "cloudflare-worker",
+      time: new Date().toISOString(),
+      services: {
+        supabase:
+          configured(env.SUPABASE_URL) &&
+          configured(env.SUPABASE_PUBLISHABLE_KEY) &&
+          configured(env.SUPABASE_SERVICE_ROLE_KEY),
+        googleAuth: providerConfigured("google", env),
+        appleAuth: providerConfigured("apple", env),
+        stripeLive:
+          configured(env.STRIPE_LIVE_API_KEY) && configured(env.VITE_PAYMENTS_CLIENT_TOKEN),
+        stripeWebhook: configured(env.PAYMENTS_LIVE_WEBHOOK_SECRET),
+      },
     },
-  }, {
-    headers: {
-      "Cache-Control": "no-store",
+    {
+      headers: {
+        "Cache-Control": "no-store",
+      },
     },
-  });
+  );
 }
 
 function required(value: string | undefined, name: string): string {
@@ -192,47 +204,6 @@ function getSupabaseAdmin(env: Env) {
   );
 }
 
-function stripeId(value: unknown): string | null {
-  if (!value) return null;
-  if (typeof value === "string") return value;
-  if (
-    typeof value === "object" &&
-    "id" in value &&
-    typeof (value as { id?: unknown }).id === "string"
-  ) {
-    return (value as { id: string }).id;
-  }
-  return null;
-}
-
-function subscriptionPayload(subscription: any, stripeEnv: StripeEnv) {
-  const item = subscription.items?.data?.[0];
-  const price = item?.price ?? {};
-  const periodStart = item?.current_period_start ?? subscription.current_period_start;
-  const periodEnd = item?.current_period_end ?? subscription.current_period_end;
-  const priceId = price.lookup_key || price.metadata?.lovable_external_id || price.id || "unknown";
-  const productId = stripeId(price.product) || "unknown";
-
-  return {
-    user_id: subscription.metadata?.userId,
-    stripe_subscription_id: subscription.id,
-    stripe_customer_id: stripeId(subscription.customer) || "unknown",
-    product_id: productId,
-    price_id: priceId,
-    status: subscription.status || "unknown",
-    current_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
-    current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
-    cancel_at_period_end: !!subscription.cancel_at_period_end,
-    environment: stripeEnv,
-    updated_at: new Date().toISOString(),
-  };
-}
-
-function subscriptionStillUnlocksPro(status: string | null | undefined, periodEnd: string | null): boolean {
-  return ["active", "trialing", "past_due"].includes(status ?? "")
-    || (status === "canceled" && !!periodEnd && new Date(periodEnd) > new Date());
-}
-
 async function syncWebhookProfileEntitlement(
   env: Env,
   userId: string | undefined,
@@ -255,7 +226,12 @@ async function handleSubscriptionCreated(subscription: any, stripeEnv: StripeEnv
     .from("subscriptions")
     .upsert(payload, { onConflict: "stripe_subscription_id" });
   if (error) throw error;
-  await syncWebhookProfileEntitlement(env, payload.user_id, payload.status, payload.current_period_end);
+  await syncWebhookProfileEntitlement(
+    env,
+    payload.user_id,
+    payload.status,
+    payload.current_period_end,
+  );
 }
 
 async function handleSubscriptionUpdated(subscription: any, stripeEnv: StripeEnv, env: Env) {
@@ -272,7 +248,12 @@ async function handleSubscriptionUpdated(subscription: any, stripeEnv: StripeEnv
     .from("subscriptions")
     .upsert(mergedPayload, { onConflict: "stripe_subscription_id" });
   if (error) throw error;
-  await syncWebhookProfileEntitlement(env, mergedPayload.user_id, mergedPayload.status, mergedPayload.current_period_end);
+  await syncWebhookProfileEntitlement(
+    env,
+    mergedPayload.user_id,
+    mergedPayload.status,
+    mergedPayload.current_period_end,
+  );
 }
 
 async function handleSubscriptionDeleted(subscription: any, stripeEnv: StripeEnv, env: Env) {
@@ -321,6 +302,49 @@ async function handleStripeWebhook(request: Request, env: Env): Promise<Response
   }
 }
 
+/** Live-tests the stored service-role key with a read-only admin call. The key
+ *  being merely present is not enough: a key belonging to a different Supabase
+ *  project is accepted at deploy time and then fails at sign-in with "Invalid
+ *  API key". Returns ok/status only — never key material or user data. */
+async function handleSupabaseHealth(env: Env): Promise<Response> {
+  const headers = { "Cache-Control": "no-store" };
+  try {
+    const url = required(env.SUPABASE_URL, "SUPABASE_URL");
+    const key = required(env.SUPABASE_SERVICE_ROLE_KEY, "SUPABASE_SERVICE_ROLE_KEY");
+    const response = await fetch(`${url}/auth/v1/admin/users?page=1&per_page=1`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+    });
+
+    if (!response.ok) {
+      const detail = await response.text();
+      return Response.json(
+        {
+          ok: false,
+          serviceRoleKey: "REJECTED",
+          project: new URL(url).hostname,
+          status: response.status,
+          error: detail.slice(0, 200),
+        },
+        { status: 500, headers },
+      );
+    }
+
+    return Response.json(
+      { ok: true, serviceRoleKey: "valid", project: new URL(url).hostname },
+      { headers },
+    );
+  } catch (error) {
+    return Response.json(
+      {
+        ok: false,
+        serviceRoleKey: "FAILED",
+        error: error instanceof Error ? error.message.slice(0, 200) : "unknown error",
+      },
+      { status: 500, headers },
+    );
+  }
+}
+
 /** Live-tests the stored Stripe key with a read-only call. Returns only
  *  ok/error text — never key material. Lets us catch a rolled/expired key
  *  from the outside instead of discovering it via a failed checkout. */
@@ -356,8 +380,13 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === "/api/health") return handleHealth(env);
     if (url.pathname === "/api/health/stripe") return handleStripeHealth(env);
+    if (url.pathname === "/api/health/supabase") return handleSupabaseHealth(env);
     if (url.pathname === "/api/public/payments/webhook") return handleStripeWebhook(request, env);
-    if (url.pathname === "/api/rpc") return handleRpc(request);
+    if (url.pathname === "/api/rpc") return handleRpc(request, env);
+    if (url.pathname.startsWith("/api/auth/")) {
+      const response = await handleOAuthRequest(request, env);
+      if (response) return response;
+    }
     if (url.pathname.startsWith("/api/")) {
       return Response.json({ error: "Not found" }, { status: 404 });
     }

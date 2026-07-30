@@ -1,5 +1,6 @@
 import type { AppState, SetLog } from "./types";
 import { bestSetFor, maxRepsFor, calculateStreak, calculateGritScore } from "./calc";
+import { getWeeklyCompetitionStats, type WeeklyCompetitionStats } from "./competition";
 
 // === PR Catalog — used for the "Personal Records" editor + FIFA stat math ===
 export type PRKind = "1RM" | "REPS" | "TIME";
@@ -58,16 +59,33 @@ function as1RM(pr: ManualPR): number {
   return pr.value;
 }
 
-/** Effective 1RM for a lift: best of manual PR vs. logged best set. */
-function effective1RM(state: AppState, def: PRDef): number {
-  let best = 0;
+/** Effective 1RM for a lift, and whether it was measured or calculated.
+ *
+ *  The card used to show this number bare while the PR list showed the raw entry
+ *  — so a 100kg x 5 appeared as "117" in one place and "100kg x 5" in the other,
+ *  same lift, two numbers, no explanation. The value is right (a comparable 1RM
+ *  is what the leaderboard needs); it just has to say when it is an estimate. */
+type OneRMDetail = { value: number; estimated: boolean };
+
+function effective1RMDetail(state: AppState, def: PRDef): OneRMDetail {
+  let best: OneRMDetail = { value: 0, estimated: false };
   const manual = state.manualPRs?.[def.id];
-  if (manual) best = Math.max(best, as1RM(manual));
+  if (manual?.value) {
+    const value = as1RM(manual);
+    // A PR entered as a single is measured; more than one rep has been through
+    // the Epley formula.
+    if (value > best.value) best = { value, estimated: (manual.reps ?? 1) > 1 };
+  }
   if (def.kind === "1RM") {
     const log = bestSetFor(state.logs, def.id);
-    if (log) best = Math.max(best, log.oneRm);
+    if (log && log.oneRm > best.value) best = { value: log.oneRm, estimated: log.reps > 1 };
   }
   return best;
+}
+
+/** Effective 1RM for a lift: best of manual PR vs. logged best set. */
+function effective1RM(state: AppState, def: PRDef): number {
+  return effective1RMDetail(state, def).value;
 }
 
 function effectiveReps(state: AppState, def: PRDef): number {
@@ -222,12 +240,20 @@ export interface HeadlinePR {
   label: string;
   value: number;
   unit: string;
+  /** True when the number came out of the Epley formula rather than a measured
+   *  single, so the UI can mark it as an estimate instead of contradicting the
+   *  PR list. */
+  estimated?: boolean;
 }
 
 export function buildHeadlinePRs(state: AppState): HeadlinePR[] {
   return HEADLINE_PRS.map(({ id, short, unit }) => {
     const def = PR_CATALOG.find((d) => d.id === id)!;
-    return { id, label: short, value: getPRValue(state, def), unit };
+    if (def.kind === "1RM") {
+      const detail = effective1RMDetail(state, def);
+      return { id, label: short, value: detail.value, unit, estimated: detail.estimated };
+    }
+    return { id, label: short, value: getPRValue(state, def), unit, estimated: false };
   });
 }
 
@@ -243,6 +269,9 @@ export interface PublicStats {
   /** Current consecutive-day training streak (for the streak leaderboard) */
   streak: number;
   topPRs: HeadlinePR[];
+  weekly: WeeklyCompetitionStats;
+  /** Big Three total divided by body weight. */
+  strengthToWeight: number;
   goal?: string;
   experience?: string;
   weightKg?: number;
@@ -251,12 +280,16 @@ export interface PublicStats {
   prefs?: {
     focusMuscles?: string[];
     sessionMinutes?: number;
+    exercisesPerSession?: number;
     targetWeightKg?: number;
   };
 }
 
 export function buildPublicStats(state: AppState): PublicStats {
   const stats = computeFifaStats(state);
+  const topPRs = buildHeadlinePRs(state);
+  const total = topPRs.reduce((sum, lift) => sum + lift.value, 0);
+  const bodyWeight = state.profile?.weightKg ?? 0;
   return {
     overall: stats.overall,
     STR: stats.STR,
@@ -266,7 +299,9 @@ export function buildPublicStats(state: AppState): PublicStats {
     CON: stats.CON,
     DIE: stats.DIE,
     streak: calculateStreak(state.completedDates),
-    topPRs: buildHeadlinePRs(state),
+    topPRs,
+    weekly: getWeeklyCompetitionStats(state),
+    strengthToWeight: bodyWeight > 0 ? Math.round((total / bodyWeight) * 100) / 100 : 0,
     goal: state.profile?.goal,
     experience: state.profile?.experience,
     weightKg: state.profile?.weightKg,
@@ -276,6 +311,7 @@ export function buildPublicStats(state: AppState): PublicStats {
     prefs: {
       focusMuscles: state.profile?.focusMuscles,
       sessionMinutes: state.profile?.sessionMinutes,
+      exercisesPerSession: state.profile?.exercisesPerSession,
       targetWeightKg: state.profile?.targetWeightKg,
     },
   };

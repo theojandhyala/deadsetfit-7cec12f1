@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -17,14 +17,26 @@
       name="description"
       content="DEADSET — the training system for lifters. Live set logging, automatic PR detection, streak armor, ranked leagues, strength standards and recovery tracking. Start free."
     />
-    <meta property="og:title" content="DEADSET — Train Smarter. Track Everything. Forge Your Body." />
+    <meta
+      property="og:title"
+      content="DEADSET — Train Smarter. Track Everything. Forge Your Body."
+    />
     <meta
       property="og:description"
       content="Live set logging, automatic PR detection, streak armor, ranked leagues and strength analytics. Built for the lift, not the feed."
     />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://deadsetfit.org" />
-    <meta name="twitter:card" content="summary" />
+    <!-- Without an og:image, Safari/iMessage/WhatsApp fall back to the 180px
+         touch icon, which unfurls as a tiny logo lost in a dark tile. This card
+         is generated from the same vectors as the app icon
+         (scripts/generate-og-image.mjs) so the two cannot drift apart. -->
+    <meta property="og:image" content="https://deadsetfit.org/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="DEADSET — log every set, catch every PR" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://deadsetfit.org/og-image.png" />
     <meta name="twitter:title" content="DEADSET — Train Smarter. Track Everything." />
     <meta
       name="twitter:description"
@@ -32,18 +44,119 @@
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Inter:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* Boot screen. Inline on purpose: it must paint before any stylesheet,
+         webfont or module has loaded, since those are exactly what can fail. The
+         mark is a data URI for the same reason — no request, no dependency. It
+         also avoids the wordmark being typeset in a font the device may not have
+         (the previous version asked for Impact, which iOS does not ship). */
+      .boot {
+        min-height: 100vh;
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        background: radial-gradient(120% 90% at 50% 0%, #1a0b0b 0%, #0a0a0a 55%);
+        color: #f5f5f0;
+        font-family:
+          Inter,
+          system-ui,
+          -apple-system,
+          sans-serif;
+        padding: 24px;
+        text-align: center;
+      }
+      .boot-mark {
+        width: 88px;
+        height: 88px;
+        display: block;
+        margin: 0 auto;
+        border-radius: 20px;
+        animation: boot-breathe 2.4s ease-in-out infinite;
+      }
+      .boot-track {
+        width: 132px;
+        height: 2px;
+        margin: 26px auto 0;
+        overflow: hidden;
+        border-radius: 2px;
+        background: #262626;
+      }
+      .boot-bar {
+        width: 40%;
+        height: 100%;
+        border-radius: 2px;
+        background: linear-gradient(90deg, transparent, #e10600 40%, #ff4b45);
+        animation: boot-sweep 1.25s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+      }
+      .boot-label {
+        margin: 16px 0 0;
+        color: #8a8a8a;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+      }
+      @keyframes boot-breathe {
+        0%,
+        100% {
+          transform: scale(1);
+          filter: drop-shadow(0 0 0 rgba(225, 6, 0, 0));
+        }
+        50% {
+          transform: scale(1.045);
+          filter: drop-shadow(0 6px 22px rgba(225, 6, 0, 0.32));
+        }
+      }
+      @keyframes boot-sweep {
+        0% {
+          transform: translateX(-140%);
+        }
+        100% {
+          transform: translateX(340%);
+        }
+      }
+      /* Respect a stated preference for stillness: motion sickness and
+         vestibular disorders are not edge cases. */
+      @media (prefers-reduced-motion: reduce) {
+        .boot-mark,
+        .boot-bar {
+          animation: none;
+        }
+        .boot-bar {
+          width: 100%;
+        }
+      }
+    </style>
+    <script>
+      window.addEventListener(
+        "error",
+        function (event) {
+          document.documentElement.dataset.deadsetModuleError =
+            [event.message, event.filename, event.lineno].filter(Boolean).join(" · ") ||
+            "Unknown module error";
+        },
+        true,
+      );
+    </script>
   </head>
   <body>
     <div id="root">
-      <main style="min-height:100vh;display:grid;place-items:center;background:#0a0a0a;color:#f5f5f0;font-family:Inter,system-ui,sans-serif;padding:24px;text-align:center">
+      <main class="boot">
         <div>
-          <h1 style="margin:0;font-family:Impact,'Arial Black',sans-serif;font-size:48px;font-style:italic;letter-spacing:-.04em">
-            DEAD<span style="color:#E10600">SET</span>
-          </h1>
-          <p style="margin:14px 0 0;color:#8a8a8a;font-size:12px;font-weight:800;letter-spacing:.28em;text-transform:uppercase">
-            Loading your training
-          </p>
+          <img
+            class="boot-mark"
+            src="data:image/png;base64,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"
+            width="88"
+            height="88"
+            alt="DEADSET"
+            decoding="sync"
+          />
+          <div class="boot-track"><div class="boot-bar"></div></div>
+          <p class="boot-label">Loading your training</p>
         </div>
       </main>
     </div>
@@ -53,15 +166,24 @@
       // with a cache-busting query so the browser gets a fresh copy. Without
       // this, one bad response mid-deploy leaves a device broken for a year.
       (function () {
-        var RETRY_KEY = "deadset_boot_retry_v2";
+        var RETRY_KEY = "deadset_boot_retry_v5";
         var CSS_KEY = "deadset_css_retry_v1";
-        function showBootFailure() {
+        function showBootFailure(error) {
+          try {
+            document.documentElement.dataset.deadsetBootError =
+              error && error.message
+                ? error.message
+                : String(error || "entry module did not execute");
+            console.error("DEADSET boot watchdog", error);
+          } catch (e) {
+            /* diagnostic only */
+          }
           var root = document.getElementById("root");
           if (!root) return;
           root.innerHTML =
             '<main style="min-height:100vh;display:grid;place-items:center;background:#0a0a0a;color:#f5f5f0;font-family:Inter,system-ui,sans-serif;padding:24px;text-align:center">' +
             '<div style="max-width:360px">' +
-            '<h1 style="margin:0;font-family:Impact,\'Arial Black\',sans-serif;font-size:44px;font-style:italic;letter-spacing:-.04em">DEAD<span style="color:#E10600">SET</span></h1>' +
+            '<h1 style="margin:0;font-family:Inter,system-ui,-apple-system,sans-serif;font-size:40px;font-weight:900;font-style:italic;letter-spacing:-.03em">DEAD<span style="color:#E10600">SET</span></h1>' +
             '<p style="margin:18px 0 0;font-size:14px;font-weight:800;letter-spacing:.14em;text-transform:uppercase">Loading hit a snag</p>' +
             '<p style="margin:10px 0 22px;color:#8a8a8a;font-size:13px;line-height:1.5">Your account data is safe. Reload the app to pull the latest version.</p>' +
             '<button onclick="window.location.reload()" style="appearance:none;border:0;background:#E10600;color:white;padding:14px 22px;font-weight:900;letter-spacing:.12em;text-transform:uppercase">Reload DEADSET</button>' +
@@ -98,7 +220,7 @@
             if (window.__DEADSET_BOOT_OK) return;
             var entry = document.querySelector('script[type="module"][src]');
             if (!entry || sessionStorage.getItem(RETRY_KEY)) {
-              showBootFailure();
+              showBootFailure(new Error("Entry module did not execute after retry"));
               return;
             }
             sessionStorage.setItem(RETRY_KEY, "1");

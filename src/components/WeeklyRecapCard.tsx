@@ -135,7 +135,11 @@ export function WeeklyRecapCard({ recap, onClose }: { recap: WeeklyRecap; onClos
       </div>
       <div className="flex-1 overflow-auto px-5 pb-5" onClick={(e) => e.stopPropagation()}>
         {dataUrl && (
-          <img src={dataUrl} alt="Weekly recap" className="w-full max-w-[360px] mx-auto border border-grit" />
+          <img
+            src={dataUrl}
+            alt="Weekly recap"
+            className="w-full max-w-[360px] mx-auto border border-grit"
+          />
         )}
         <canvas ref={canvasRef} className="hidden" />
         <p className="text-[11px] text-grit-dim text-center mt-3 max-w-xs mx-auto">

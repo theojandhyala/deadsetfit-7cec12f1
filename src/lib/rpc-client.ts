@@ -42,7 +42,9 @@ export async function callRpc<T>(fn: string, data?: unknown): Promise<T> {
       });
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
-        throw new Error("DEADSET took too long to respond. Check your connection and try again.");
+        throw new Error("DEADSET took too long to respond. Check your connection and try again.", {
+          cause: error,
+        });
       }
       throw error;
     } finally {
