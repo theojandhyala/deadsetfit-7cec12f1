@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { BottomNav } from "@/components/BottomNav";
 import { GritEarnedLayer } from "@/components/GritEarnedLayer";
+import { FirstRunTour } from "@/components/FirstRunTour";
 import { TopBar } from "@/components/TopBar";
 import {
   getLocalStateOwner,
@@ -192,6 +193,7 @@ function TabsLayout() {
       <Outlet />
       <FeatureTour />
       <GritEarnedLayer />
+      <FirstRunTour active={!!state.profile} />
       <BottomNav />
     </div>
   );

@@ -5,7 +5,7 @@ import { usePro } from "@/hooks/usePro";
 import { openPaywall } from "@/lib/paywall-events";
 import { askConfirm } from "@/lib/confirm";
 import type { DayKey, Program, ProgramExerciseRef, SplitType } from "@/lib/types";
-import { Plus, Check, Trash2, Lock } from "lucide-react";
+import { Plus, Check, Trash2, Lock, X } from "lucide-react";
 
 export const Route = createFileRoute("/_tabs/programs")({
   head: () => ({ meta: [{ title: "DEADSET — Programs" }] }),
@@ -406,7 +406,10 @@ function ProgramsPage() {
         DAYS.map((d) => [d, { label: template.days[d], items: [] }]),
       ) as unknown as Program["days"],
     };
-    set((s) => ({ ...s, programs: [...s.programs, program], activeProgramId: id }));
+    // Deliberately not activated here. An active program overrides the whole
+    // weekly schedule, so merely opening a template must not replace the week
+    // the lifter already built — the builder's "Set Active & Train" does that.
+    set((s) => ({ ...s, programs: [...s.programs, program] }));
     nav({ to: "/programs/$programId", params: { programId: id } });
   }
 
@@ -425,12 +428,19 @@ function ProgramsPage() {
         DAYS.map((d) => [d, { label: p.days[d].label, items: p.days[d].items.map(featuredRef) }]),
       ) as unknown as Program["days"],
     };
-    set((s) => ({ ...s, programs: [...s.programs, program], activeProgramId: id }));
+    // Deliberately not activated here. An active program overrides the whole
+    // weekly schedule, so merely opening a template must not replace the week
+    // the lifter already built — the builder's "Set Active & Train" does that.
+    set((s) => ({ ...s, programs: [...s.programs, program] }));
     nav({ to: "/programs/$programId", params: { programId: id } });
   }
 
   function activate(id: string) {
     set((s) => ({ ...s, activeProgramId: id }));
+  }
+  /** Hands the week back to the lifter's own schedule on the Train tab. */
+  function deactivate() {
+    set((s) => ({ ...s, activeProgramId: null }));
   }
   async function remove(id: string) {
     const ok = await askConfirm({
@@ -454,7 +464,11 @@ function ProgramsPage() {
           DONE
         </Link>
       </div>
-      <p className="label-cap text-grit-dim text-xs mb-5">Build your own splits</p>
+      <p className="text-xs text-grit-dim mb-5 leading-relaxed">
+        A program is a ready-made week you can swap in. Making one won't change
+        anything — it only takes over your training week once you set it active,
+        and you can switch back to your own schedule any time.
+      </p>
 
       {state.programs.length === 0 && (
         <div className="bg-grit-card border border-grit p-6 text-center mb-5 animate-pop-in">
@@ -498,22 +512,31 @@ function ProgramsPage() {
                     {trainingDays} DAYS · {filled} EXERCISES
                   </p>
                 </Link>
+                {/* Text labels, not bare icons: a `title` tooltip never appears
+                    on a touch screen, so these read as unmarked squares there. */}
                 <div className="flex flex-col border-l border-grit">
-                  {!isActive && (
-                    <button
-                      onClick={() => activate(p.id)}
-                      className="px-3 flex-1 flex items-center justify-center"
-                      title="Set active"
-                    >
-                      <Check size={18} className="text-grit-dim" />
-                    </button>
-                  )}
+                  <button
+                    onClick={() => (isActive ? deactivate() : activate(p.id))}
+                    className="px-3 py-2 flex-1 flex items-center gap-1.5 justify-center"
+                  >
+                    {isActive ? (
+                      <>
+                        <X size={14} className="text-grit-dim" />
+                        <span className="label-cap text-[9px] text-grit-dim">Stop</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check size={16} className="text-accent-red" />
+                        <span className="label-cap text-[9px] text-grit">Use</span>
+                      </>
+                    )}
+                  </button>
                   <button
                     onClick={() => remove(p.id)}
-                    className="px-3 flex-1 flex items-center justify-center border-t border-grit"
-                    title="Delete"
+                    className="px-3 py-2 flex-1 flex items-center gap-1.5 justify-center border-t border-grit"
                   >
-                    <Trash2 size={16} className="text-grit-dim" />
+                    <Trash2 size={14} className="text-grit-dim" />
+                    <span className="label-cap text-[9px] text-grit-dim">Delete</span>
                   </button>
                 </div>
               </div>

@@ -32,6 +32,8 @@ import type {
   Schedule,
   Weakness,
 } from "@/lib/types";
+import { WeekdayPicker } from "@/components/WeekdayPicker";
+import { daysPerWeekFor, describeDays, MIN_TRAINING_DAYS } from "@/lib/training-days";
 import { buildPublicStats } from "@/lib/fifa-stats";
 import { PRO_HIGHLIGHTS } from "@/lib/pro-features";
 import {
@@ -331,15 +333,9 @@ function Onboarding() {
           />
         )}
         {step === "days" && (
-          <Choice
-            title="Days per week you can train"
-            options={[
-              { v: "3", l: "3 days" },
-              { v: "4", l: "4 days" },
-              { v: "5", l: "5 days" },
-              { v: "6", l: "6 days" },
-            ]}
-            onPick={(v) => next({ daysPerWeek: Number(v) as 3 | 4 | 5 | 6 })}
+          <TrainingDaysStep
+            initial={draft.trainingDays}
+            onSubmit={(days) => next({ trainingDays: days, daysPerWeek: daysPerWeekFor(days) })}
           />
         )}
         {step === "equipment" && (
@@ -1294,6 +1290,55 @@ function PRStep({ onContinue }: { onContinue: () => void }) {
         </button>
         <button onClick={onContinue} className="btn-ghost">
           Skip for now
+        </button>
+      </div>
+    </>
+  );
+}
+
+/**
+ * Asks which weekdays the lifter trains rather than only how many. The count
+ * alone left `defaultSchedule` guessing — three days was always Mon/Wed/Fri,
+ * whatever the lifter's week actually looked like.
+ */
+function TrainingDaysStep({
+  initial,
+  onSubmit,
+}: {
+  initial?: DayKey[];
+  onSubmit: (days: DayKey[]) => void;
+}) {
+  const [days, setDays] = useState<DayKey[]>(initial ?? ["MON", "WED", "FRI"]);
+  const enough = days.length >= MIN_TRAINING_DAYS;
+  return (
+    <>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">
+        Which days do you train?
+      </h1>
+      <p className="text-sm text-[#8a8a8a] mb-6">
+        Tap the days that suit your week. We'll put your workouts on exactly those
+        days and rest you on the others.
+      </p>
+
+      <WeekdayPicker value={days} onChange={setDays} />
+
+      <p className="text-sm mt-4" style={{ color: enough ? "#f5f5f0" : "#8a8a8a" }}>
+        {enough ? (
+          <>
+            <span className="font-bold">{days.length} days a week</span> — {describeDays(days)}.
+          </>
+        ) : (
+          `Pick at least ${MIN_TRAINING_DAYS} days.`
+        )}
+      </p>
+
+      <div className="mt-auto flex flex-col gap-3">
+        <button
+          onClick={() => onSubmit(days)}
+          disabled={!enough}
+          className="btn-grit disabled:opacity-40"
+        >
+          Continue
         </button>
       </div>
     </>

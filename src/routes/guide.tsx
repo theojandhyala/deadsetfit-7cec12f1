@@ -54,6 +54,33 @@ function GuidePage() {
           </div>
         </section>
 
+        {/* The app invents a fair amount of vocabulary. Define it once, plainly,
+            rather than expecting people to infer it from context. */}
+        <section className="border border-grit bg-grit-card p-5">
+          <p className="label-cap text-accent-red text-[10px]">THE WORDS WE USE</p>
+          <h2 className="display text-2xl font-extrabold uppercase text-grit mt-1">
+            In plain English
+          </h2>
+          <dl className="mt-3 space-y-3">
+            {[
+              ["Grit", "Points you earn for training. Finished workouts, streaks and personal bests all add grit."],
+              ["Rank", "Your tier, based on total grit — Bronze up to DEADSET. It goes up as you train."],
+              ["PR", "Personal record: the heaviest you've ever lifted on a given exercise."],
+              ["Streak", "Days in a row you've trained. Miss a day and it resets."],
+              ["Arena", "A league table you're placed in, so you're compared with people at your level."],
+              ["Duel", "A head-to-head challenge against one friend, scored over a set period."],
+              ["Schedule", "Your own training week — which days you train and what's on each day."],
+              ["Program", "A ready-made week you can swap in instead of your own schedule."],
+              ["Big 3", "Bench press, squat and deadlift — the three lifts used to gauge overall strength."],
+            ].map(([term, meaning]) => (
+              <div key={term}>
+                <dt className="display text-sm font-extrabold uppercase text-grit">{term}</dt>
+                <dd className="text-sm text-grit-dim leading-relaxed">{meaning}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+
         <GuideSection
           icon={<Dumbbell size={18} />}
           title="1. Build your training week"

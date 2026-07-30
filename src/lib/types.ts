@@ -14,6 +14,11 @@ export interface Profile {
   heightCm: number;
   gender: Gender;
   daysPerWeek: 3 | 4 | 5 | 6;
+  /**
+   * The actual weekdays the lifter trains. When absent the schedule falls back
+   * to a Mon-first spread of `daysPerWeek`, which is how older profiles behave.
+   */
+  trainingDays?: DayKey[];
   equipment: Equipment;
   injuries?: string;
   weakness?: Weakness;

@@ -23,7 +23,37 @@ import {
   supabase,
 } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/account-restore";
-import { calculateStreak, calculateGritScore, gritBadge, badgeColor, isoDay } from "@/lib/calc";
+import {
+  calculateStreak,
+  calculateGritScore,
+  gritBadge,
+  badgeColor,
+  isoDay,
+  defaultSchedule,
+} from "@/lib/calc";
+
+import { describeDays } from "@/lib/training-days";
+
+const LABEL_EQUIPMENT: Record<string, string> = {
+  FULL_GYM: "a full gym",
+  HOME_GYM: "a home gym",
+  BODYWEIGHT: "bodyweight only",
+};
+
+const SLEEP_LABEL: Record<string, string> = {
+  LOW: "Under 6 hrs",
+  OK: "6–7 hrs",
+  GOOD: "7–8 hrs",
+  GREAT: "8+ hrs",
+};
+
+const MOTIVATION_LABEL: Record<string, string> = {
+  STRENGTH: "Get seriously strong",
+  PHYSIQUE: "Build the physique",
+  CONFIDENCE: "Feel confident again",
+  DISCIPLINE: "Prove I can commit",
+  COMPETE: "Compete and win",
+};
 import { currentMilestone, nextMilestone, milestoneProgress } from "@/lib/streak-milestones";
 import { emitGritEarned } from "@/lib/grit-events";
 import { saveProfile } from "@/lib/profile.functions";
@@ -60,6 +90,7 @@ function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [goal, setGoal] = useState<string>(p?.goal || "BULK");
   const [exp, setExp] = useState<string>(p?.experience || "BEGINNER");
+  const [equip, setEquip] = useState<string>(p?.equipment || "FULL_GYM");
   // Edit-form inputs are DOM-owned (defaultValue + ref, read on save) — the
   // controlled value/onChange pattern freezes typing in the iOS WKWebView.
   const usernameRef = useRef<HTMLInputElement>(null);
@@ -199,6 +230,19 @@ function ProfilePage() {
     const newWeight = Number(weightRef.current?.value) || p.weightKg;
     const newHeight = Number(heightRef.current?.value) || p.heightCm;
     const newUsername = clean || p.username;
+    const newEquip = equip as typeof p.equipment;
+    // Exercise choices are derived from equipment, so a change leaves the saved
+    // week full of kit the lifter no longer has. Offer to rebuild rather than
+    // silently rewriting days they may have hand-edited.
+    let rebuildWeek = false;
+    if (newEquip !== p.equipment) {
+      rebuildWeek = await askConfirm({
+        title: "Rebuild your week?",
+        message: `Your plan was built for ${LABEL_EQUIPMENT[p.equipment] ?? p.equipment}. Rebuild it for ${LABEL_EQUIPMENT[newEquip] ?? newEquip}? This replaces the exercises on your training days.`,
+        confirmLabel: "Rebuild",
+        cancelLabel: "Keep my exercises",
+      });
+    }
     setSavingProfile(true);
     try {
       await persist({
@@ -208,25 +252,28 @@ function ProfilePage() {
           display_name: (p.displayName?.trim() || newUsername || "Athlete").slice(0, 60),
           goal: goal as "BULK" | "CUT" | "MAINTAIN" | "ATHLETIC",
           experience: exp as "BEGINNER" | "INTERMEDIATE" | "ADVANCED",
+          equipment: newEquip,
           weight_kg: newWeight,
           height_cm: newHeight,
         },
       });
-      set((s) =>
-        s.profile
-          ? {
-              ...s,
-              profile: {
-                ...s.profile,
-                goal: goal as typeof s.profile.goal,
-                experience: exp as typeof s.profile.experience,
-                weightKg: newWeight,
-                heightCm: newHeight,
-                username: newUsername,
-              },
-            }
-          : s,
-      );
+      set((s) => {
+        if (!s.profile) return s;
+        const profile = {
+          ...s.profile,
+          goal: goal as typeof s.profile.goal,
+          experience: exp as typeof s.profile.experience,
+          equipment: newEquip,
+          weightKg: newWeight,
+          heightCm: newHeight,
+          username: newUsername,
+        };
+        return {
+          ...s,
+          profile,
+          schedule: rebuildWeek ? defaultSchedule(profile) : s.schedule,
+        };
+      });
       await flushRemoteState();
       setEditing(false);
       toast.success("Profile saved");
@@ -516,6 +563,16 @@ function ProfilePage() {
                   opts={["BEGINNER", "INTERMEDIATE", "ADVANCED"]}
                 />
               </Field>
+              {/* Equipment decides which exercises your plan can use, so it has
+                  to be changeable — moving gym, or losing access to one, used
+                  to leave the plan permanently wrong. */}
+              <Field label="Equipment">
+                <Select
+                  value={equip}
+                  onChange={setEquip}
+                  opts={["FULL_GYM", "HOME_GYM", "BODYWEIGHT"]}
+                />
+              </Field>
               <Field label="Weight (kg)">
                 <input
                   ref={weightRef}
@@ -542,7 +599,14 @@ function ProfilePage() {
             <>
               <Stat label="Goal" v={p.goal} />
               <Stat label="Experience" v={p.experience} />
-              <Stat label="Days / Week" v={String(p.daysPerWeek)} />
+              <Stat
+                label="Training Days"
+                v={
+                  p.trainingDays?.length
+                    ? describeDays(p.trainingDays)
+                    : `${p.daysPerWeek} / week`
+                }
+              />
               <Stat label="Current Weight" v={`${p.weightKg} kg`} />
               <div className="flex justify-between items-center px-4 py-3">
                 <span className="label-cap">Start → Now</span>
@@ -561,6 +625,15 @@ function ProfilePage() {
               <Stat label="Equipment" v={p.equipment.replace("_", " ")} />
               {p.weakness && <Stat label="Focus Area" v={p.weakness} />}
               {p.injuries && <Stat label="Injuries" v={p.injuries} />}
+              {/* Onboarding asked for these and then showed them nowhere. If we
+                  take the answer, it has to surface somewhere. */}
+              {p.sessionMinutes && <Stat label="Session Length" v={`${p.sessionMinutes} min`} />}
+              {p.focusMuscles?.length ? (
+                <Stat label="Priority Muscles" v={p.focusMuscles.join(" · ")} />
+              ) : null}
+              {p.sleepQuality && <Stat label="Sleep" v={SLEEP_LABEL[p.sleepQuality]} />}
+              {p.motivation && <Stat label="Why You Train" v={MOTIVATION_LABEL[p.motivation] ?? p.motivation} />}
+              {p.targetWeightKg && <Stat label="Target Weight" v={`${p.targetWeightKg} kg`} />}
             </>
           )}
         </div>

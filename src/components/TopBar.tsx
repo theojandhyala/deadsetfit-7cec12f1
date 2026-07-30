@@ -94,17 +94,20 @@ export function TopBar() {
 
       {/* Right: score + avatar */}
       <div className="flex items-center gap-2">
+        {/* Was an unlabelled grey circle — the app's only always-visible route
+            into the guide, and effectively invisible. It now says "Help". */}
         <Link
           to="/guide"
           aria-label="How DEADSET works"
-          className="flex h-11 w-11 items-center justify-center rounded-md press"
+          className="flex h-11 items-center gap-1 rounded-md px-2.5 press"
           style={{
             background: "rgba(255,255,255,0.025)",
             border: "1px solid rgba(255,255,255,0.11)",
-            color: "#8A8A8A",
+            color: "#c9c9c9",
           }}
         >
-          <CircleHelp size={16} />
+          <CircleHelp size={15} />
+          <span className="text-[10px] font-bold uppercase tracking-wider">Help</span>
         </Link>
         {/* XP pill */}
         <div
