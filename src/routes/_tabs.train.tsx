@@ -1,6 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Play, ListPlus, Flame, Trophy, Heart, Pencil, Shield, Lock, LineChart } from "lucide-react";
+import {
+  Play,
+  ListPlus,
+  Flame,
+  Trophy,
+  Heart,
+  Pencil,
+  Shield,
+  Lock,
+  LineChart,
+  ChevronDown,
+} from "lucide-react";
 
 import { VideoModal } from "@/components/VideoModal";
 import { Reminders } from "@/components/Reminders";
@@ -113,6 +124,22 @@ function TrainPage() {
   } | null>(null);
 
   const [editMode, setEditMode] = useState(false);
+  // Collapsed by default so a new lifter sees the workout, not a wall of cards.
+  // Remembered, so anyone who wants the stats up front only asks once.
+  const [showExtras, setShowExtras] = useState(() => {
+    try {
+      return localStorage.getItem("deadset_show_extras") === "1";
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("deadset_show_extras", showExtras ? "1" : "0");
+    } catch {
+      /* storage unavailable — the toggle still works for this session */
+    }
+  }, [showExtras]);
   const [editSearch, setEditSearch] = useState("");
   const [easyFocus, setEasyFocus] = useState<SimpleFocusKey[]>(["UPPER"]);
   const [easySets, setEasySets] = useState("3");
@@ -979,22 +1006,8 @@ function TrainPage() {
         </div>
       )}
 
-      <div className="deadset-section-title mt-2">
-        <div>
-          <p className="label-cap text-accent-red text-[10px]">Everything else</p>
-          <h2 className="display text-2xl font-black uppercase text-grit leading-none">
-            Your week at a glance
-          </h2>
-        </div>
-      </div>
+
       <TodayReadiness state={state} schedule={schedule} />
-      <div className="px-5">
-        <TrainingInsight />
-        <WeeklyMission state={state} />
-      </div>
-      <WeeklyReportCard />
-      <ProBanner />
-      <Reminders />
 
       {/* Progress has no bottom-nav entry, so this row is how it gets found at
           all. Each link says what it does rather than relying on a one-word
@@ -1052,17 +1065,50 @@ function TrainPage() {
         </div>
       </div>
 
-      <section className="deadset-section">
-        <RankedArena state={state} compact />
-      </section>
+      {/* The supporting widgets used to sit on the page permanently — eleven
+          cards between the workout and the bottom of the screen. They are all
+          still here, one tap away, and the choice is remembered. */}
       <div className="deadset-section">
-        <Big3Card state={state} />
-      </div>
-      <div className="deadset-section">
-        <WeeklyRecap state={state} />
+        <button
+          onClick={() => setShowExtras((v) => !v)}
+          aria-expanded={showExtras}
+          className="btn-ghost w-full min-h-[52px] rounded-2xl flex items-center justify-center gap-2 text-xs"
+        >
+          {showExtras ? "Hide stats and extras" : "Show stats and extras"}
+          <ChevronDown
+            size={15}
+            style={{
+              transform: showExtras ? "rotate(180deg)" : "none",
+              transition: "transform .18s ease",
+            }}
+          />
+        </button>
       </div>
 
-      <DailyQuests />
+      {/* Stays outside the collapse: it self-gates for Pro users and iOS, and
+          burying the upgrade path behind a tap would quietly cost conversions. */}
+      <ProBanner />
+
+      {showExtras && (
+        <>
+          <div className="px-5">
+            <TrainingInsight />
+            <WeeklyMission state={state} />
+          </div>
+          <WeeklyReportCard />
+          <Reminders />
+          <section className="deadset-section">
+            <RankedArena state={state} compact />
+          </section>
+          <div className="deadset-section">
+            <Big3Card state={state} />
+          </div>
+          <div className="deadset-section">
+            <WeeklyRecap state={state} />
+          </div>
+          <DailyQuests />
+        </>
+      )}
 
       {videoState && (
         <VideoModal
