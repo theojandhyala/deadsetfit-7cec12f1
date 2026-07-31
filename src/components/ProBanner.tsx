@@ -53,7 +53,7 @@ export function ProBanner() {
         <button
           onClick={dismiss}
           aria-label="Dismiss"
-          className="shrink-0 -mr-1 p-1 text-grit hover:text-grit-text"
+          className="icon-btn shrink-0 -mr-1 p-1 text-grit hover:text-grit-text"
         >
           <X size={14} />
         </button>

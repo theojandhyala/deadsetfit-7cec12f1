@@ -324,7 +324,7 @@ export function RankShareCard({
           <p className="label-cap text-white text-xs font-bold">YOUR RANK CARD</p>
           <p className="text-[10px] text-grit-dim">9:16 · TikTok / Reels / Shorts ready</p>
         </div>
-        <button onClick={onClose} className="text-grit p-1">
+        <button onClick={onClose} className="icon-btn text-grit p-1">
           <X size={22} />
         </button>
       </div>

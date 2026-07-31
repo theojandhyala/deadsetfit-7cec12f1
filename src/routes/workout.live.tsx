@@ -824,7 +824,7 @@ function LiveWorkoutPage() {
       style={{ background: "#0a0a0a", paddingTop: "env(safe-area-inset-top)" }}
     >
       <div className="flex items-center justify-between px-4 pt-3 pb-2">
-        <button onClick={discardWorkout} className="text-grit-dim" aria-label="Exit workout">
+        <button onClick={discardWorkout} className="icon-btn text-grit-dim" aria-label="Exit workout">
           <X size={22} />
         </button>
         <div className="text-center">

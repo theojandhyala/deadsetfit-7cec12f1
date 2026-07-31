@@ -271,7 +271,7 @@ function NewDuelModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
         <button
           onClick={onClose}
           aria-label="Close"
-          className="absolute top-3 right-3 text-grit-dim press"
+          className="icon-btn absolute top-3 right-3 text-grit-dim press"
         >
           <X size={18} />
         </button>

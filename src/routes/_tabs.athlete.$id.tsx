@@ -137,7 +137,7 @@ function AthletePage() {
         <button
           onClick={() => navigate({ to: "/friends" })}
           aria-label="Back"
-          className="p-1.5 -ml-1.5"
+          className="icon-btn -ml-1.5"
         >
           <ArrowLeft size={20} className="text-grit" />
         </button>

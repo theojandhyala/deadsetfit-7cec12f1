@@ -143,7 +143,7 @@ export function ShareCard({ session, onClose }: { session: WorkoutSession; onClo
     <div className="fixed inset-0 z-[200] bg-black/95 flex flex-col" onClick={onClose}>
       <div className="flex items-center justify-between p-4">
         <p className="label-cap text-grit">9:16 · TIKTOK READY</p>
-        <button onClick={onClose} className="text-grit">
+        <button onClick={onClose} className="icon-btn text-grit">
           <X size={22} />
         </button>
       </div>

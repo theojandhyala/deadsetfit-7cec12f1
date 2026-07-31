@@ -65,7 +65,7 @@ export function UpgradeNudge() {
         <button
           onClick={dismiss}
           aria-label="Dismiss"
-          className="absolute top-3 right-3 text-[#8a8a8a] press"
+          className="icon-btn absolute top-3 right-3 text-[#8a8a8a] press"
         >
           <X size={18} />
         </button>

@@ -748,7 +748,12 @@ function CommentsPanel({ postId, onPosted }: { postId: string; onPosted: () => v
           maxLength={500}
           className="input-grit flex-1 text-xs"
         />
-        <button onClick={send} disabled={busy || !text.trim()} className="btn-grit px-3">
+        <button
+          onClick={send}
+          disabled={busy || !text.trim()}
+          aria-label="Send reply"
+          className="btn-grit px-3"
+        >
           <Send size={12} />
         </button>
       </div>

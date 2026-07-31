@@ -186,7 +186,7 @@ export function Reminders() {
           >
             <button
               onClick={() => setOpen(null)}
-              className="absolute top-3 right-3 text-grit-dim hover:text-grit"
+              className="icon-btn absolute top-3 right-3 text-grit-dim hover:text-grit"
             >
               <X size={20} />
             </button>
