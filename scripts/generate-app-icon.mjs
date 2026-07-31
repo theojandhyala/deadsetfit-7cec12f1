@@ -43,10 +43,14 @@ const monogram = Buffer.from(`
 `);
 
 const outputs = [
+  // Anywhere the icon represents "the app" — the App Store listing and the
+  // home-screen tile — carries the wordmark.
   ["ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png", 1024, wordmark],
-  ["public/icon-512.png", 512, monogram],
-  ["public/icon-192.png", 192, monogram],
-  ["public/apple-touch-icon.png", 180, monogram],
+  ["public/icon-512.png", 512, wordmark],
+  ["public/icon-192.png", 192, wordmark],
+  ["public/apple-touch-icon.png", 180, wordmark],
+  // Browser-tab favicons keep the monogram: at 16px the wordmark collapses
+  // into an unreadable smudge, where two letters still read.
   ["public/favicon-48.png", 48, monogram],
   ["public/favicon-32.png", 32, monogram],
   ["public/favicon-16.png", 16, monogram],
