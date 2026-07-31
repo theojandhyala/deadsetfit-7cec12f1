@@ -28,11 +28,6 @@ const svg = Buffer.from(`
     </defs>
     <rect width="${WIDTH}" height="${HEIGHT}" fill="url(#glow)"/>
 
-    <!-- Bracket motif, same proportions as the app icon -->
-    <path d="M104 196h11v238h-11z" fill="#ef3829"/>
-    <path d="M115 196h62" stroke="#ef3829" stroke-width="11"/>
-    <path d="M115 434h62" stroke="#ef3829" stroke-width="11"/>
-
     <!-- One text element with tspans: the renderer computes advance widths, so
          DEAD and SET can never overlap the way hand-placed coordinates did. -->
     <text x="152" y="372" transform="skewX(-8)"
@@ -44,7 +39,6 @@ const svg = Buffer.from(`
       LOG EVERY SET. CATCH EVERY PR.
     </text>
 
-    <rect x="106" y="516" width="104" height="5" fill="#ef3829"/>
     <text x="106" y="572" fill="#6f6f78"
       font-family="Arial, sans-serif" font-size="25" font-weight="700" letter-spacing="4">
       DEADSETFIT.ORG
