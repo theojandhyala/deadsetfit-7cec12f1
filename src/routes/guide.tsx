@@ -24,7 +24,11 @@ function GuidePage() {
   return (
     <div className="min-h-screen bg-grit pb-10" style={{ paddingTop: "env(safe-area-inset-top)" }}>
       <header className="px-5 pt-5 pb-4 border-b border-grit flex items-center gap-3">
-        <button onClick={() => navigate({ to: "/train" })} className="p-1 -ml-1 text-grit-dim">
+        <button
+          onClick={() => navigate({ to: "/train" })}
+          aria-label="Back to Train"
+          className="icon-btn -ml-2 text-grit-dim"
+        >
           <ChevronLeft size={20} />
         </button>
         <div>

@@ -177,7 +177,7 @@ function SettingsPage() {
   return (
     <div style={{ paddingTop: "env(safe-area-inset-top)" }} className="pb-24">
       <header className="px-5 pt-6 pb-4 flex items-center gap-2">
-        <button onClick={() => navigate({ to: "/profile" as never })} className="p-1 -ml-1">
+        <button onClick={() => navigate({ to: "/profile" as never })} className="icon-btn -ml-1">
           <ChevronLeft size={20} />
         </button>
         <p className="label-cap">Settings</p>

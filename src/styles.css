@@ -88,6 +88,26 @@
     border-color: var(--color-border);
     -webkit-tap-highlight-color: transparent;
   }
+
+  /* Keyboard and Switch Control users had only the browser's default ring,
+     which is a 1px hairline that all but vanishes against #0a0a0a. This is the
+     one focus style for the whole app, and :focus-visible keeps it off normal
+     taps.
+
+     The ring is off-white rather than brand red on purpose: red would sit at
+     roughly 1.1:1 against the red primary buttons and disappear on exactly the
+     controls that matter most. Off-white clears 3:1 against both the near-black
+     page (18:1) and the red CTA (4.5:1). */
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid #f5f5f0;
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+  /* Inputs draw their own focus treatment and sit flush in card rows, so the
+     offset ring would collide with the field border. */
+  :where(input, textarea, select):focus-visible {
+    outline-offset: 1px;
+  }
   html,
   body,
   #root {
@@ -661,6 +681,18 @@
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: rgba(255, 255, 255, 0.035);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  /* Guarantees the 44x44 minimum touch target Apple's HIG asks for, without
+     changing how big the icon looks. Dismiss buttons were landing around
+     24x28 — small enough that a missed tap on a modal was routine. */
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    flex-shrink: 0;
   }
 
   .press {

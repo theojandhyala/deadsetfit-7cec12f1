@@ -70,7 +70,7 @@ export function PRCelebration({
       <button
         onClick={onClose}
         aria-label="Close"
-        className="absolute top-4 right-4 text-grit-dim z-10 p-2"
+        className="icon-btn absolute top-4 right-4 text-grit-dim z-10 p-2"
         style={{ top: "calc(env(safe-area-inset-top) + 1rem)" }}
       >
         <X size={24} />

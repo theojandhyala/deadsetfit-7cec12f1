@@ -54,7 +54,7 @@ export function PlateCalculator({
       >
         <div className="flex items-center justify-between mb-3">
           <p className="label-cap text-accent-red">PLATE CALCULATOR</p>
-          <button onClick={onClose} className="text-grit-dim">
+          <button onClick={onClose} className="icon-btn text-grit-dim">
             <X size={20} />
           </button>
         </div>

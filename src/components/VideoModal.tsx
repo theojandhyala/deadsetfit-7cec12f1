@@ -60,13 +60,13 @@ export function VideoModal({ videoId, query, title, clipStart, clipEnd, cue, onC
             {videoId && (
               <button
                 onClick={() => setMuted((m) => !m)}
-                className="text-grit-dim hover:text-grit p-1"
+                className="icon-btn text-grit-dim hover:text-grit"
                 aria-label={muted ? "Unmute" : "Mute"}
               >
                 {muted ? <VolumeX size={20} /> : <Volume2 size={20} />}
               </button>
             )}
-            <button onClick={onClose} className="text-grit p-1" aria-label="Close">
+            <button onClick={onClose} className="icon-btn text-grit p-1" aria-label="Close">
               <X size={22} />
             </button>
           </div>

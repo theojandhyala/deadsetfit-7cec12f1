@@ -149,7 +149,7 @@ export function StreakShareCard({
           <p className="label-cap text-white text-xs font-bold">YOUR STREAK CARD</p>
           <p className="text-[10px] text-grit-dim">9:16 · TikTok / Reels / Shorts ready</p>
         </div>
-        <button onClick={onClose} className="text-grit p-1" aria-label="Close">
+        <button onClick={onClose} className="icon-btn text-grit p-1" aria-label="Close">
           <X size={22} />
         </button>
       </div>

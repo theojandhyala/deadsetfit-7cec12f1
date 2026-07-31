@@ -1209,7 +1209,7 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
           <div className="w-10 h-1 rounded-full" style={{ background: "#262626" }} />
         </div>
 
-        <button onClick={onClose} className="absolute top-4 right-4" style={{ color: "#8A8A8A" }}>
+        <button onClick={onClose} className="icon-btn absolute top-4 right-4" style={{ color: "#8A8A8A" }}>
           <X size={20} />
         </button>
 
