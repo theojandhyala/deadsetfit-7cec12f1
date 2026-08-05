@@ -8,6 +8,7 @@ import { calculateCalories, calculateMacros, isoDay } from "@/lib/calc";
 import { usePro } from "@/hooks/usePro";
 import { ProBanner } from "@/components/ProBanner";
 import { NutritionIntelligence } from "@/components/NutritionIntelligence";
+import { AdaptiveTdeeCard } from "@/components/AdaptiveTdeeCard";
 import { todayActiveBurn, healthSupported } from "@/lib/health";
 import { openPaywall } from "@/lib/paywall-events";
 import { Lock } from "lucide-react";
@@ -324,6 +325,12 @@ function DietPage() {
           onAdd={addFoods}
           onRemove={removeFood}
         />
+      )}
+
+      {view === "insights" && (
+        <section className="deadset-section">
+          <AdaptiveTdeeCard state={state} formulaTarget={calories} />
+        </section>
       )}
 
       {view === "insights" && calories > 0 && (

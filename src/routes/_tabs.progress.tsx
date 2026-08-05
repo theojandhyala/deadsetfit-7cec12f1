@@ -9,6 +9,7 @@ import { PRList } from "@/components/PRList";
 import { groupForMuscle } from "@/lib/pr-groups";
 import { usePro } from "@/hooks/usePro";
 import { ProBanner } from "@/components/ProBanner";
+import { TrainingHeatmap } from "@/components/TrainingHeatmap";
 import { ProgressionBoard } from "@/components/ProgressionBoard";
 import { ProIntelligence } from "@/components/ProIntelligence";
 import { bodyweightTrend } from "@/lib/pro-intelligence";
@@ -395,12 +396,11 @@ function ProgressPage() {
       {/* Progression Ready — what to load next, per lift (RPE-aware) */}
       <ProgressionBoard />
 
-      {/* Calendar streak */}
+      {/* Training heatmap — replaces the old binary streak calendar with
+          volume-weighted intensity, so heavy weeks read differently from
+          show-up weeks. */}
       <section className="px-5 mb-6">
-        <p className="label-cap mb-2">Last 12 Weeks</p>
-        <div className="rounded-2xl p-4 overflow-x-auto">
-          <StreakCalendar completedDates={state.completedDates} />
-        </div>
+        <TrainingHeatmap state={state} />
       </section>
 
       {/* Advanced Analytics (Pro) */}
@@ -1012,45 +1012,6 @@ function ConsistencyHeatmap({ completedDates }: { completedDates: string[] }) {
         ))}
         <span className="text-[9px] label-cap text-[#8A8A8A]">More</span>
       </div>
-    </div>
-  );
-}
-
-function StreakCalendar({ completedDates }: { completedDates: string[] }) {
-  const set = new Set(completedDates);
-  const weeks = 12;
-  const cells: { date: string; done: boolean; isToday: boolean }[][] = [];
-  const today = new Date();
-  // align to Monday of current week
-  const start = new Date(today);
-  start.setDate(start.getDate() - ((start.getDay() + 6) % 7) - (weeks - 1) * 7);
-  for (let w = 0; w < weeks; w++) {
-    const col: { date: string; done: boolean; isToday: boolean }[] = [];
-    for (let d = 0; d < 7; d++) {
-      const dt = new Date(start);
-      dt.setDate(start.getDate() + w * 7 + d);
-      const iso = isoDay(dt);
-      col.push({ date: iso, done: set.has(iso), isToday: iso === isoDay() });
-    }
-    cells.push(col);
-  }
-  return (
-    <div className="flex gap-[3px]">
-      {cells.map((col, i) => (
-        <div key={i} className="flex flex-col gap-[3px]">
-          {col.map((c) => (
-            <div
-              key={c.date}
-              title={c.date}
-              className="w-3 h-3"
-              style={{
-                background: c.done ? "#e63222" : "#0A0A0A",
-                outline: c.isToday ? "1px solid #f5f5f0" : undefined,
-              }}
-            />
-          ))}
-        </div>
-      ))}
     </div>
   );
 }
