@@ -67,8 +67,15 @@ const heroFeatures = ["Live set logging", "Auto PR detection", "Ranked leagues",
 
 function Hero() {
   return (
-    <section id="top" className="overflow-hidden border-b border-white/10 bg-[#080808]">
-      <div className="mx-auto max-w-7xl px-5 pt-14 sm:px-6 sm:pt-20">
+    <section id="top" className="relative overflow-hidden border-b border-white/10 bg-[#080808]">
+      {/* Atmosphere sits behind everything and captures no events; the content
+          wrapper below is relative so it stacks above. */}
+      <div className="hero-atmosphere" aria-hidden="true">
+        <div className="aurora-blob aurora-a" />
+        <div className="aurora-blob aurora-b" />
+        <div className="grid-floor" />
+      </div>
+      <div className="relative mx-auto max-w-7xl px-5 pt-14 sm:px-6 sm:pt-20">
         <div className="mx-auto max-w-3xl text-center">
           <p className="animate-slide-up inline-flex min-h-11 items-center gap-2 rounded-full border border-accent-red/40 bg-accent-red/5 px-5 text-[11px] font-bold uppercase text-white/55 sm:text-xs">
             <Zap size={15} className="text-accent-red" aria-hidden="true" />
@@ -77,7 +84,7 @@ function Hero() {
 
           <h1 className="display mt-8 animate-slide-up text-5xl font-bold uppercase leading-[0.88] text-[#f4f3ef] delay-50 sm:text-7xl lg:text-[6.5rem]">
             Train like
-            <span className="block text-accent-red">it counts.</span>
+            <span className="shimmer-red block">it counts.</span>
           </h1>
 
           <p className="mx-auto mt-7 max-w-2xl animate-slide-up text-base leading-7 text-white/55 delay-150 sm:text-lg sm:leading-8">
@@ -117,7 +124,7 @@ function Hero() {
 
         <div className="animate-float-in relative mx-auto mt-12 w-[300px] sm:mt-14 sm:w-[350px] lg:w-[390px]">
           <div
-            className="absolute inset-x-10 top-6 h-3/4 rounded-[52px] shadow-[0_0_90px_rgba(230,50,34,0.18)]"
+            className="phone-glow absolute inset-x-10 top-6 h-3/4 rounded-[52px] shadow-[0_0_90px_rgba(230,50,34,0.22)]"
             aria-hidden="true"
           />
           <div className="relative rounded-[48px] border border-white/14 bg-[#1b1b1d] p-[9px] shadow-[0_36px_90px_rgba(0,0,0,0.68)] sm:rounded-[56px] sm:p-[11px]">

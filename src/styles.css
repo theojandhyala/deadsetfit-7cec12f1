@@ -683,6 +683,129 @@
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
 
+  /* ---- Landing hero atmosphere ------------------------------------------
+     Three layers: drifting aurora blobs, a perspective grid floor, and a
+     shimmer sweep across the red half of the headline. Everything animates
+     transform/opacity only (GPU-composited), and the reduced-motion block
+     below freezes all of it into a static gradient. */
+  .hero-atmosphere {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .aurora-blob {
+    position: absolute;
+    width: 55vw;
+    min-width: 420px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.5;
+    will-change: transform;
+  }
+  .aurora-a {
+    left: -12%;
+    top: -18%;
+    background: radial-gradient(circle, rgba(230, 50, 34, 0.34), transparent 65%);
+    animation: aurora-drift-a 26s ease-in-out infinite alternate;
+  }
+  .aurora-b {
+    right: -16%;
+    top: 4%;
+    background: radial-gradient(circle, rgba(120, 12, 6, 0.5), transparent 62%);
+    animation: aurora-drift-b 32s ease-in-out infinite alternate;
+  }
+  @keyframes aurora-drift-a {
+    from {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    to {
+      transform: translate3d(9vw, 6vh, 0) scale(1.18);
+    }
+  }
+  @keyframes aurora-drift-b {
+    from {
+      transform: translate3d(0, 0, 0) scale(1.12);
+    }
+    to {
+      transform: translate3d(-7vw, -4vh, 0) scale(0.95);
+    }
+  }
+  /* Perspective floor: a scrolling line grid, faded out well below the CTAs so
+     it reads as depth rather than decoration fighting the copy. */
+  .grid-floor {
+    position: absolute;
+    inset-inline: -40%;
+    bottom: -12%;
+    height: 46%;
+    transform: perspective(620px) rotateX(62deg);
+    transform-origin: bottom center;
+    background-image:
+      linear-gradient(rgba(230, 50, 34, 0.16) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(230, 50, 34, 0.16) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent 82%);
+    -webkit-mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent 82%);
+    animation: grid-scroll 3.2s linear infinite;
+  }
+  @keyframes grid-scroll {
+    from {
+      background-position-y: 0;
+    }
+    to {
+      background-position-y: 44px;
+    }
+  }
+  .shimmer-red {
+    background: linear-gradient(
+      100deg,
+      #e63222 42%,
+      #ff8a7d 50%,
+      #e63222 58%
+    );
+    background-size: 250% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: shimmer-sweep 4.5s ease-in-out infinite;
+  }
+  @keyframes shimmer-sweep {
+    0%,
+    55% {
+      background-position: 120% 0;
+    }
+    90%,
+    100% {
+      background-position: -60% 0;
+    }
+  }
+  .phone-glow {
+    animation: phone-breathe 5s ease-in-out infinite;
+  }
+  @keyframes phone-breathe {
+    0%,
+    100% {
+      opacity: 0.65;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .aurora-blob,
+    .grid-floor,
+    .shimmer-red,
+    .phone-glow {
+      animation: none;
+    }
+    /* The shimmer gradient still needs to paint the text legibly when frozen. */
+    .shimmer-red {
+      background-position: 120% 0;
+    }
+  }
+
   /* Guarantees the 44x44 minimum touch target Apple's HIG asks for, without
      changing how big the icon looks. Dismiss buttons were landing around
      24x28 — small enough that a missed tap on a modal was routine. */

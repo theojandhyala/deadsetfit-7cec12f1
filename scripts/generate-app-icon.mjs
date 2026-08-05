@@ -22,25 +22,24 @@ const wordmark = Buffer.from(`
 `);
 
 /**
- * The browser icons stay on the DS monogram: a wordmark rendered at 16px is an
- * unreadable smudge in a tab strip, where a two-letter mark still reads.
+ * Small square marks — the Live Activity badge and the tab favicons. The
+ * wordmark is stacked over two lines and the tagline dropped, so DEADSET still
+ * reads in a 34pt Dynamic Island slot instead of collapsing into a grey bar.
  */
-const monogram = Buffer.from(`
-  <svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-    <rect width="1024" height="1024" fill="#070707"/>
-    <path d="M98 142h14v740H98z" fill="#ef3829"/>
-    <path d="M112 142h92" stroke="#ef3829" stroke-width="14"/>
-    <path d="M112 882h92" stroke="#ef3829" stroke-width="14"/>
+const stacked = Buffer.from(`
+  <svg width="384" height="384" viewBox="0 0 384 384" xmlns="http://www.w3.org/2000/svg">
+    <rect width="384" height="384" fill="#0a0a0a"/>
     <g transform="skewX(-8)">
-      <text x="145" y="665" fill="#f5f5f0"
-        font-family="Arial Black, Arial, sans-serif" font-size="500" font-weight="900">D</text>
-      <text x="505" y="665" fill="#ef3829"
-        font-family="Arial Black, Arial, sans-serif" font-size="500" font-weight="900">S</text>
+      <text x="200" y="170" text-anchor="middle" fill="#f5f5f0"
+        font-family="Arial Black, Arial, sans-serif" font-size="106" font-weight="900">DEAD</text>
+      <text x="200" y="288" text-anchor="middle" fill="#e10600"
+        font-family="Arial Black, Arial, sans-serif" font-size="106" font-weight="900">SET</text>
     </g>
-    <text x="512" y="788" text-anchor="middle" fill="#9b9ba3"
-      font-family="Arial, sans-serif" font-size="54" font-weight="800" letter-spacing="18">DEADSET</text>
   </svg>
 `);
+
+/* The DS monogram lived here. It carried the red bracket, which is not part of
+   the DEADSET mark, so nothing generates it any more. */
 
 const outputs = [
   // Anywhere the icon represents "the app" — the App Store listing and the
@@ -49,11 +48,14 @@ const outputs = [
   ["public/icon-512.png", 512, wordmark],
   ["public/icon-192.png", 192, wordmark],
   ["public/apple-touch-icon.png", 180, wordmark],
-  // Browser-tab favicons keep the monogram: at 16px the wordmark collapses
-  // into an unreadable smudge, where two letters still read.
-  ["public/favicon-48.png", 48, monogram],
-  ["public/favicon-32.png", 32, monogram],
-  ["public/favicon-16.png", 16, monogram],
+  // The rest-timer badge on the Lock Screen and Dynamic Island. It was the last
+  // place the DS monogram survived.
+  ["ios/App/DeadSetRestActivity/Assets.xcassets/RestMark.imageset/RestMark.png", 192, stacked],
+  // Tab favicons use the stacked wordmark. Two short lines survive 16px far
+  // better than the full lockup would.
+  ["public/favicon-48.png", 48, stacked],
+  ["public/favicon-32.png", 32, stacked],
+  ["public/favicon-16.png", 16, stacked],
 ];
 
 for (const [path, size, source] of outputs) {
