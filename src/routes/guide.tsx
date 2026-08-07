@@ -76,6 +76,8 @@ function GuidePage() {
               ["Schedule", "Your own training week — which days you train and what's on each day."],
               ["Program", "A ready-made week you can swap in instead of your own schedule."],
               ["Big 3", "Bench press, squat and deadlift — the three lifts used to gauge overall strength."],
+              ["Adaptive TDEE", "Your real maintenance calories, measured from what you logged and how your weight actually moved — not a formula's guess."],
+              ["Rep zones", "Where your sets land: 1–5 reps builds strength, 6–12 builds muscle, 13+ builds endurance. Progress shows your mix."],
             ].map(([term, meaning]) => (
               <div key={term}>
                 <dt className="display text-sm font-extrabold uppercase text-grit">{term}</dt>
