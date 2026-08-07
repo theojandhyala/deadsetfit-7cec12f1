@@ -10,6 +10,8 @@ import { groupForMuscle } from "@/lib/pr-groups";
 import { usePro } from "@/hooks/usePro";
 import { ProBanner } from "@/components/ProBanner";
 import { TrainingHeatmap } from "@/components/TrainingHeatmap";
+import { RepZoneCard } from "@/components/RepZoneCard";
+import { LifetimeStatsCard } from "@/components/LifetimeStatsCard";
 import { ProgressionBoard } from "@/components/ProgressionBoard";
 import { ProIntelligence } from "@/components/ProIntelligence";
 import { bodyweightTrend } from "@/lib/pro-intelligence";
@@ -402,6 +404,14 @@ function ProgressPage() {
       <section className="px-5 mb-6">
         <TrainingHeatmap state={state} />
       </section>
+
+      {/* Rep-zone mix — right KIND of sets for the goal (Volume Optimizer
+          answers "enough sets"; this answers "the right reps"). Each card
+          brings its own section so an empty state leaves no gap. */}
+      <RepZoneCard state={state} />
+
+      {/* Lifetime story — Wrapped-style totals, tonnage in real-world objects */}
+      <LifetimeStatsCard state={state} />
 
       {/* Advanced Analytics (Pro) */}
       <section className="px-5 mb-6">
