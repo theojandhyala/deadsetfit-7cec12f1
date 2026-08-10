@@ -1,8 +1,9 @@
 import { useMemo } from "react";
 import { Trophy } from "lucide-react";
 
-import { lifetimeStats } from "@/lib/lifetime-stats";
+import { lifetimeStats, avgWeeklyVolume } from "@/lib/lifetime-stats";
 import { nextTonnageMilestone } from "@/lib/tonnage-milestones";
+import { isoDay } from "@/lib/calc";
 import type { AppState } from "@/lib/types";
 
 /**
@@ -44,11 +45,18 @@ export function LifetimeStatsCard({ state }: { state: AppState }) {
       {(() => {
         const next = nextTonnageMilestone(stats.totalVolumeKg);
         if (!next) return null;
+        // ETA at the current pace — only when the horizon is believable.
+        const weekly = avgWeeklyVolume(state.sessions, isoDay());
+        const etaWeeks = weekly
+          ? Math.ceil((next.milestone.kg - stats.totalVolumeKg) / weekly)
+          : null;
+        const eta = etaWeeks && etaWeeks >= 1 && etaWeeks <= 52 ? etaWeeks : null;
         return (
           <div className="mt-2.5">
             <div className="flex items-baseline justify-between">
               <p className="label-cap text-[8px] text-grit-dim">
                 Next: {next.milestone.label} {next.milestone.emoji}
+                {eta ? ` · ~${eta} wk${eta === 1 ? "" : "s"} at this pace` : ""}
               </p>
               <p className="label-cap text-[8px] text-accent-red">{next.pct}%</p>
             </div>

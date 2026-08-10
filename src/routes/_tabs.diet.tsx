@@ -11,6 +11,7 @@ import { NutritionIntelligence } from "@/components/NutritionIntelligence";
 import { AdaptiveTdeeCard } from "@/components/AdaptiveTdeeCard";
 import { CalorieCyclingCard } from "@/components/CalorieCyclingCard";
 import { ProteinSpreadCard } from "@/components/ProteinSpreadCard";
+import { HydrationInsightCard } from "@/components/HydrationInsightCard";
 import { todayActiveBurn, healthSupported } from "@/lib/health";
 import { openPaywall } from "@/lib/paywall-events";
 import { Lock } from "lucide-react";
@@ -334,6 +335,7 @@ function DietPage() {
           <AdaptiveTdeeCard state={state} formulaTarget={calories} />
           <CalorieCyclingCard state={state} baseCalories={calories} />
           <ProteinSpreadCard state={state} />
+          <HydrationInsightCard state={state} />
         </section>
       )}
 

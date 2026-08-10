@@ -19,6 +19,7 @@ import { DataFreshnessCard } from "@/components/DataFreshnessCard";
 import { ReportHistoryCard } from "@/components/ReportHistoryCard";
 import { ThrowbackCard } from "@/components/ThrowbackCard";
 import { MonthRankCard } from "@/components/MonthRankCard";
+import { TimeOfDayCard } from "@/components/TimeOfDayCard";
 import { ProgressionBoard } from "@/components/ProgressionBoard";
 import { ProIntelligence } from "@/components/ProIntelligence";
 import { bodyweightTrend } from "@/lib/pro-intelligence";
@@ -430,6 +431,7 @@ function ProgressPage() {
       {/* Whole-workout records + weekday rhythm — each renders only with data */}
       <SessionRecordsCard state={state} />
       <TrainingRhythmCard state={state} />
+      <TimeOfDayCard state={state} />
       <FreshStimulusCard state={state} />
 
       {/* Eight completed weeks graded side by side */}
