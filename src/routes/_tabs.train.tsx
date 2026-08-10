@@ -31,6 +31,7 @@ import { ProBanner } from "@/components/ProBanner";
 import { usePro } from "@/hooks/usePro";
 import { useCountUp } from "@/hooks/useCountUp";
 import { WeeklyReportCard } from "@/components/WeeklyReportCard";
+import { WhatsNewCard } from "@/components/WhatsNewCard";
 import { TrainingAutopilot } from "@/components/TrainingAutopilot";
 import { openPaywall } from "@/lib/paywall-events";
 import type { DayKey, Schedule, Program } from "@/lib/types";
@@ -412,6 +413,7 @@ function TrainPage() {
           <WeeklyMission state={state} />
         </div>
         <WeeklyReportCard />
+        <WhatsNewCard />
         <ProBanner />
         <Reminders />
 

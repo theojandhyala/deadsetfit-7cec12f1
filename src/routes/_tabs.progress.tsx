@@ -16,6 +16,7 @@ import { SessionRecordsCard } from "@/components/SessionRecordsCard";
 import { TrainingRhythmCard } from "@/components/TrainingRhythmCard";
 import { FreshStimulusCard } from "@/components/FreshStimulusCard";
 import { DataFreshnessCard } from "@/components/DataFreshnessCard";
+import { ReportHistoryCard } from "@/components/ReportHistoryCard";
 import { ProgressionBoard } from "@/components/ProgressionBoard";
 import { ProIntelligence } from "@/components/ProIntelligence";
 import { bodyweightTrend } from "@/lib/pro-intelligence";
@@ -418,6 +419,9 @@ function ProgressPage() {
       <SessionRecordsCard state={state} />
       <TrainingRhythmCard state={state} />
       <FreshStimulusCard state={state} />
+
+      {/* Eight completed weeks graded side by side */}
+      <ReportHistoryCard state={state} />
 
       {/* Quiet-data nudges — only speaks when a used stream goes stale */}
       <DataFreshnessCard state={state} />
