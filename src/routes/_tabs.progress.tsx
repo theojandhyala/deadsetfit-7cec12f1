@@ -12,6 +12,8 @@ import { ProBanner } from "@/components/ProBanner";
 import { TrainingHeatmap } from "@/components/TrainingHeatmap";
 import { RepZoneCard } from "@/components/RepZoneCard";
 import { LifetimeStatsCard } from "@/components/LifetimeStatsCard";
+import { SessionRecordsCard } from "@/components/SessionRecordsCard";
+import { TrainingRhythmCard } from "@/components/TrainingRhythmCard";
 import { ProgressionBoard } from "@/components/ProgressionBoard";
 import { ProIntelligence } from "@/components/ProIntelligence";
 import { bodyweightTrend } from "@/lib/pro-intelligence";
@@ -409,6 +411,10 @@ function ProgressPage() {
           answers "enough sets"; this answers "the right reps"). Each card
           brings its own section so an empty state leaves no gap. */}
       <RepZoneCard state={state} />
+
+      {/* Whole-workout records + weekday rhythm — each renders only with data */}
+      <SessionRecordsCard state={state} />
+      <TrainingRhythmCard state={state} />
 
       {/* Lifetime story — Wrapped-style totals, tonnage in real-world objects */}
       <LifetimeStatsCard state={state} />
