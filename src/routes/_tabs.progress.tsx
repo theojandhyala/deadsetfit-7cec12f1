@@ -14,6 +14,7 @@ import { RepZoneCard } from "@/components/RepZoneCard";
 import { LifetimeStatsCard } from "@/components/LifetimeStatsCard";
 import { SessionRecordsCard } from "@/components/SessionRecordsCard";
 import { TrainingRhythmCard } from "@/components/TrainingRhythmCard";
+import { FreshStimulusCard } from "@/components/FreshStimulusCard";
 import { ProgressionBoard } from "@/components/ProgressionBoard";
 import { ProIntelligence } from "@/components/ProIntelligence";
 import { bodyweightTrend } from "@/lib/pro-intelligence";
@@ -415,6 +416,7 @@ function ProgressPage() {
       {/* Whole-workout records + weekday rhythm — each renders only with data */}
       <SessionRecordsCard state={state} />
       <TrainingRhythmCard state={state} />
+      <FreshStimulusCard state={state} />
 
       {/* Lifetime story — Wrapped-style totals, tonnage in real-world objects */}
       <LifetimeStatsCard state={state} />
