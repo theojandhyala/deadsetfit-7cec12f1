@@ -36,7 +36,7 @@ export function AdaptiveTdeeCard({ state, formulaTarget }: { state: AppState; fo
         <p className="display text-3xl font-extrabold text-grit leading-none">
           {result.tdee.toLocaleString()}
         </p>
-        <p className="label-cap text-[9px] text-grit-dim">kcal / day measured burn</p>
+        <p className="label-cap text-[9px] text-grit-dim">kcal measured burn</p>
       </div>
       <p className="text-xs text-grit-dim leading-relaxed mt-2">
         From {result.foodDays} logged days averaging {result.avgIntake.toLocaleString()} kcal while{" "}

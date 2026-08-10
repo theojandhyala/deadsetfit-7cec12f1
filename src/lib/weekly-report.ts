@@ -50,6 +50,9 @@ function totalsFor(state: AppState, start: Date, end: Date): WeekTotals {
     days.add(day);
     for (const ex of s.exercises) {
       for (const set of ex.sets) {
+        // Warm-ups aren't working volume — same rule the live logger applies
+        // when it computes a session's totalVolume.
+        if (set.kind === "warmup" || set.reps <= 0) continue;
         volume += set.weight * set.reps;
         sets += 1;
       }

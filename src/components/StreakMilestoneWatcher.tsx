@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Flame } from "lucide-react";
-import { useAppState } from "@/lib/storage";
+import { useAppState, getHydrationCount } from "@/lib/storage";
 import { calculateStreak } from "@/lib/calc";
 import { currentMilestone, type StreakMilestone } from "@/lib/streak-milestones";
 
@@ -29,6 +29,7 @@ export function StreakMilestoneWatcher() {
   const [state] = useAppState();
   const [hit, setHit] = useState<StreakMilestone | null>(null);
   const initialised = useRef(false);
+  const lastHydration = useRef(getHydrationCount());
 
   const streak = calculateStreak(state.completedDates);
   const milestone = currentMilestone(streak);
@@ -36,7 +37,12 @@ export function StreakMilestoneWatcher() {
   useEffect(() => {
     const seen = readSeen();
     const reached = milestone?.days ?? 0;
-    const first = !initialised.current;
+    // A remote hydration means history arrived, not a live crossing —
+    // mark it silently exactly like first observation.
+    const hydration = getHydrationCount();
+    const hydrated = hydration !== lastHydration.current;
+    lastHydration.current = hydration;
+    const first = !initialised.current || hydrated;
     initialised.current = true;
     // Streak fell below the last celebrated milestone (broke and rebuilding) —
     // reset so re-reaching it celebrates again rather than staying silent forever.

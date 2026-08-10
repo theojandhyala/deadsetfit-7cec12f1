@@ -44,16 +44,20 @@ export function sessionRecords(sessions: WorkoutSession[]): SessionRecords | nul
   const finished = (sessions ?? []).filter((s) => s.endedAt);
   if (!finished.length) return null;
 
-  let heaviest: SessionRecords["heaviest"] = null;
+  // Measure each session once — record scans and latestBroke reuse the result.
+  const measured = finished.map((s) => ({ s, m: metricsOf(s) }));
+
+  // Compare raw volume; round only at output so a fractionally lighter later
+  // session can never steal the record from the true holder.
+  let heaviest: { raw: number; date: string; label: string } | null = null;
   let mostReps: SessionRecords["mostReps"] = null;
   let longest: SessionRecords["longest"] = null;
-  let latest: WorkoutSession | null = null;
+  let latest: { s: WorkoutSession; m: Metrics } | null = null;
   let latestKey = "";
 
-  for (const s of finished) {
-    const m = metricsOf(s);
-    if (m.volume > 0 && (!heaviest || m.volume > heaviest.volumeKg)) {
-      heaviest = { volumeKg: Math.round(m.volume), date: s.date, label: s.label };
+  for (const { s, m } of measured) {
+    if (m.volume > 0 && (!heaviest || m.volume > heaviest.raw)) {
+      heaviest = { raw: m.volume, date: s.date, label: s.label };
     }
     if (m.reps > 0 && (!mostReps || m.reps > mostReps.reps)) {
       mostReps = { reps: m.reps, date: s.date, label: s.label };
@@ -65,14 +69,14 @@ export function sessionRecords(sessions: WorkoutSession[]): SessionRecords | nul
     const key = `${s.endedAt}|${s.id}`;
     if (key > latestKey) {
       latestKey = key;
-      latest = s;
+      latest = { s, m };
     }
   }
 
   const latestBroke: SessionRecords["latestBroke"] = [];
   if (latest) {
-    const m = metricsOf(latest);
-    const others = finished.filter((s) => s.id !== latest!.id).map(metricsOf);
+    const { s: latestSession, m } = latest;
+    const others = measured.filter((x) => x.s.id !== latestSession.id).map((x) => x.m);
     const beats = (pick: (x: Metrics) => number) =>
       pick(m) > 0 && others.every((o) => pick(m) > pick(o));
     if (beats((x) => x.volume)) latestBroke.push("VOLUME");
@@ -80,5 +84,13 @@ export function sessionRecords(sessions: WorkoutSession[]): SessionRecords | nul
     if (beats((x) => x.minutes)) latestBroke.push("DURATION");
   }
 
-  return { heaviest, mostReps, longest, latestBroke, latestDate: latest?.date ?? null };
+  return {
+    heaviest: heaviest
+      ? { volumeKg: Math.round(heaviest.raw), date: heaviest.date, label: heaviest.label }
+      : null,
+    mostReps,
+    longest,
+    latestBroke,
+    latestDate: latest?.s.date ?? null,
+  };
 }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Dumbbell } from "lucide-react";
 
-import { useAppState } from "@/lib/storage";
+import { useAppState, getHydrationCount } from "@/lib/storage";
 import { lifetimeStats } from "@/lib/lifetime-stats";
 import {
   currentTonnageMilestone,
@@ -34,6 +34,7 @@ export function TonnageMilestoneWatcher() {
   const [state] = useAppState();
   const [hit, setHit] = useState<TonnageMilestone | null>(null);
   const initialised = useRef(false);
+  const lastHydration = useRef(getHydrationCount());
 
   const totalKg = useMemo(
     () => lifetimeStats(state.sessions, state.completedDates)?.totalVolumeKg ?? 0,
@@ -44,7 +45,12 @@ export function TonnageMilestoneWatcher() {
   useEffect(() => {
     const seen = readSeen();
     const reached = milestone?.kg ?? 0;
-    const first = !initialised.current;
+    // A remote hydration means history arrived, not that the athlete just
+    // crossed a mark live — mark it silently exactly like first observation.
+    const hydration = getHydrationCount();
+    const hydrated = hydration !== lastHydration.current;
+    lastHydration.current = hydration;
+    const first = !initialised.current || hydrated;
     initialised.current = true;
     // Total dropped below the celebrated mark (account restore, deletions) —
     // reset so re-crossing celebrates instead of staying silent forever.

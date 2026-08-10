@@ -32,7 +32,7 @@ export function MonthRankCard({ state }: { state: AppState }) {
         </div>
 
         <div className="flex items-baseline gap-2 mt-1.5">
-          <p className="display text-2xl font-extrabold text-grit leading-none">
+          <p className="display text-2xl font-extrabold text-grit leading-none whitespace-nowrap">
             {rank.volumeKg.toLocaleString()} kg
           </p>
           <p className="label-cap text-[9px]" style={{ color: rank.rank === 1 ? "#22c55e" : undefined }}>

@@ -40,10 +40,10 @@ export function TrainingRhythmCard({ state }: { state: AppState }) {
     <section className="px-5 mb-6">
       <div className="bg-grit-card border border-grit rounded-2xl p-4">
         <div className="flex items-baseline justify-between">
-          <p className="label-cap text-[10px] text-accent-red flex items-center gap-1.5">
+          <p className="label-cap text-[10px] text-accent-red flex items-center gap-1.5 whitespace-nowrap">
             <AudioWaveform size={12} /> Your rhythm
           </p>
-          <p className="label-cap text-[9px] text-grit-dim">avg kg per session · 12 weeks</p>
+          <p className="label-cap text-[9px] text-grit-dim whitespace-nowrap">avg kg · 12 weeks</p>
         </div>
 
         <div

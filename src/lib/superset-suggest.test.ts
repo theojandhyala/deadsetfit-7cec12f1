@@ -34,6 +34,24 @@ describe("supersetPairs", () => {
     expect(pairs).toHaveLength(0);
   });
 
+  it("never drafts lower-body or core work into an upper pair", () => {
+    // "Calf Raise" contains "raise" (a push word) — the exclusion must win,
+    // by name and by muscle group alike.
+    expect(
+      supersetPairs([
+        { name: "Calf Raise", muscle: "LEGS" },
+        { name: "Barbell Row", muscle: "BACK" },
+      ]),
+    ).toHaveLength(0);
+    expect(
+      supersetPairs([
+        { name: "Standing Raise", muscle: "calves" },
+        { name: "Cable Crunch", muscle: "CORE" },
+        { name: "Barbell Row", muscle: "BACK" },
+      ]),
+    ).toHaveLength(0);
+  });
+
   it("falls back to muscle group when the name says nothing", () => {
     const pairs = supersetPairs([
       { name: "Pec Deck", muscle: "CHEST" },

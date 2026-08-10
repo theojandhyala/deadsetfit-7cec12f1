@@ -26,11 +26,11 @@ export function ProteinSpreadCard({ state }: { state: AppState }) {
   return (
     <div className="bg-grit-card border border-grit rounded-2xl p-4 mt-3">
       <div className="flex items-baseline justify-between">
-        <p className="label-cap text-[10px] text-accent-red flex items-center gap-1.5">
+        <p className="label-cap text-[10px] text-accent-red flex items-center gap-1.5 whitespace-nowrap">
           <Beef size={12} /> Protein spread
         </p>
-        <p className="label-cap text-[9px] text-grit-dim">
-          {spread.thresholdG} g+ per meal · {spread.daysAnalyzed} days
+        <p className="label-cap text-[9px] text-grit-dim whitespace-nowrap">
+          {spread.thresholdG} g+ · {spread.daysAnalyzed} days
         </p>
       </div>
 

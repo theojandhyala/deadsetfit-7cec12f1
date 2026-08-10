@@ -161,9 +161,18 @@ export function setState(updater: (s: AppState) => AppState) {
   write(next);
 }
 
+/** Bumped on every remote hydration so watchers can tell "history arrived"
+ *  apart from "the athlete just did something" and skip retroactive
+ *  celebrations. */
+let hydrationCount = 0;
+export function getHydrationCount(): number {
+  return hydrationCount;
+}
+
 /** Replace local state from a remote payload without pushing it back.
  *  (Writes localStorage directly — never touches the push pipeline.) */
 export function hydrateFromRemote(remote: Partial<AppState>, userId?: string) {
+  hydrationCount += 1;
   const current = read();
   const merged = { ...DEFAULT_STATE, ...current, ...remote } as AppState;
   if (!remote.profile && current.profile) merged.profile = current.profile;
