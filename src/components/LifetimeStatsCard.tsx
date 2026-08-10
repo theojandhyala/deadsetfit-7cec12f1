@@ -1,9 +1,10 @@
-import { useMemo } from "react";
-import { Trophy } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Trophy, Share2 } from "lucide-react";
 
 import { lifetimeStats, avgWeeklyVolume } from "@/lib/lifetime-stats";
 import { nextTonnageMilestone } from "@/lib/tonnage-milestones";
 import { isoDay } from "@/lib/calc";
+import { StoryShareCard } from "@/components/StoryShareCard";
 import type { AppState } from "@/lib/types";
 
 /**
@@ -16,6 +17,7 @@ export function LifetimeStatsCard({ state }: { state: AppState }) {
     () => lifetimeStats(state.sessions, state.completedDates),
     [state.sessions, state.completedDates],
   );
+  const [sharing, setSharing] = useState(false);
 
   if (!stats) return null;
 
@@ -25,9 +27,27 @@ export function LifetimeStatsCard({ state }: { state: AppState }) {
     <section className="px-5 mb-6">
     <div className="bg-grit-card border border-grit rounded-2xl p-4 relative overflow-hidden">
       <div className="absolute -left-10 -bottom-10 h-28 w-28 rounded-full bg-accent-red/10 blur-2xl" />
-      <p className="label-cap text-[10px] text-accent-red flex items-center gap-1.5">
-        <Trophy size={12} /> Your story{sinceYear ? ` · since ${sinceYear}` : ""}
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="label-cap text-[10px] text-accent-red flex items-center gap-1.5">
+          <Trophy size={12} /> Your story{sinceYear ? ` · since ${sinceYear}` : ""}
+        </p>
+        <button
+          type="button"
+          onClick={() => setSharing(true)}
+          className="icon-btn -mr-2 -mt-1 text-grit-dim"
+          aria-label="Share your story card"
+        >
+          <Share2 size={14} />
+        </button>
+      </div>
+      {sharing && (
+        <StoryShareCard
+          stats={stats}
+          displayName={state.profile?.displayName || state.profile?.username || "DEADSET ATHLETE"}
+          username={state.profile?.username}
+          onClose={() => setSharing(false)}
+        />
+      )}
 
       <div className="flex items-baseline gap-2 mt-1.5">
         <p className="display text-3xl font-extrabold text-grit leading-none">
