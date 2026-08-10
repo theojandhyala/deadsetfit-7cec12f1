@@ -15,6 +15,7 @@ import { LifetimeStatsCard } from "@/components/LifetimeStatsCard";
 import { SessionRecordsCard } from "@/components/SessionRecordsCard";
 import { TrainingRhythmCard } from "@/components/TrainingRhythmCard";
 import { FreshStimulusCard } from "@/components/FreshStimulusCard";
+import { DataFreshnessCard } from "@/components/DataFreshnessCard";
 import { ProgressionBoard } from "@/components/ProgressionBoard";
 import { ProIntelligence } from "@/components/ProIntelligence";
 import { bodyweightTrend } from "@/lib/pro-intelligence";
@@ -417,6 +418,9 @@ function ProgressPage() {
       <SessionRecordsCard state={state} />
       <TrainingRhythmCard state={state} />
       <FreshStimulusCard state={state} />
+
+      {/* Quiet-data nudges — only speaks when a used stream goes stale */}
+      <DataFreshnessCard state={state} />
 
       {/* Lifetime story — Wrapped-style totals, tonnage in real-world objects */}
       <LifetimeStatsCard state={state} />
