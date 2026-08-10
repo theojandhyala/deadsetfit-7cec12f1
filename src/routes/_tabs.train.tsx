@@ -32,6 +32,7 @@ import { usePro } from "@/hooks/usePro";
 import { useCountUp } from "@/hooks/useCountUp";
 import { WeeklyReportCard } from "@/components/WeeklyReportCard";
 import { WhatsNewCard } from "@/components/WhatsNewCard";
+import { WeekPaceCard } from "@/components/WeekPaceCard";
 import { TrainingAutopilot } from "@/components/TrainingAutopilot";
 import { openPaywall } from "@/lib/paywall-events";
 import type { DayKey, Schedule, Program } from "@/lib/types";
@@ -410,6 +411,7 @@ function TrainPage() {
         <TodayReadiness state={state} schedule={schedule} />
         <div className="px-5">
           <TrainingInsight />
+          <WeekPaceCard state={state} />
           <WeeklyMission state={state} />
         </div>
         <WeeklyReportCard />

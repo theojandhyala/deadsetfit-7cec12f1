@@ -17,6 +17,7 @@ import { TrainingRhythmCard } from "@/components/TrainingRhythmCard";
 import { FreshStimulusCard } from "@/components/FreshStimulusCard";
 import { DataFreshnessCard } from "@/components/DataFreshnessCard";
 import { ReportHistoryCard } from "@/components/ReportHistoryCard";
+import { ThrowbackCard } from "@/components/ThrowbackCard";
 import { ProgressionBoard } from "@/components/ProgressionBoard";
 import { ProIntelligence } from "@/components/ProIntelligence";
 import { bodyweightTrend } from "@/lib/pro-intelligence";
@@ -410,9 +411,19 @@ function ProgressPage() {
         <TrainingHeatmap state={state} />
       </section>
 
+      {/* ——— The intelligence stack: every card below is deterministic,
+          data-gated (renders nothing until it can be honest) and carries
+          its own section wrapper so empty states leave no gap. ——— */}
+      <section className="px-5 mb-3">
+        <div className="deadset-section-title">
+          <h2 className="display text-xl font-extrabold uppercase text-grit leading-none">
+            Training intelligence
+          </h2>
+        </div>
+      </section>
+
       {/* Rep-zone mix — right KIND of sets for the goal (Volume Optimizer
-          answers "enough sets"; this answers "the right reps"). Each card
-          brings its own section so an empty state leaves no gap. */}
+          answers "enough sets"; this answers "the right reps"). */}
       <RepZoneCard state={state} />
 
       {/* Whole-workout records + weekday rhythm — each renders only with data */}
@@ -425,6 +436,9 @@ function ProgressPage() {
 
       {/* Quiet-data nudges — only speaks when a used stream goes stale */}
       <DataFreshnessCard state={state} />
+
+      {/* The receipts: same lift, months apart */}
+      <ThrowbackCard state={state} />
 
       {/* Lifetime story — Wrapped-style totals, tonnage in real-world objects */}
       <LifetimeStatsCard state={state} />
