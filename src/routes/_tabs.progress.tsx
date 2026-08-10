@@ -20,6 +20,7 @@ import { ReportHistoryCard } from "@/components/ReportHistoryCard";
 import { ThrowbackCard } from "@/components/ThrowbackCard";
 import { MonthRankCard } from "@/components/MonthRankCard";
 import { TimeOfDayCard } from "@/components/TimeOfDayCard";
+import { IntelligenceUnlocksCard } from "@/components/IntelligenceUnlocksCard";
 import { ProgressionBoard } from "@/components/ProgressionBoard";
 import { ProIntelligence } from "@/components/ProIntelligence";
 import { bodyweightTrend } from "@/lib/pro-intelligence";
@@ -423,6 +424,10 @@ function ProgressPage() {
           </h2>
         </div>
       </section>
+
+      {/* New lifters see which engines are live and what unlocks the rest;
+          vanishes once (nearly) all of them are on. */}
+      <IntelligenceUnlocksCard state={state} />
 
       {/* Rep-zone mix — right KIND of sets for the goal (Volume Optimizer
           answers "enough sets"; this answers "the right reps"). */}
