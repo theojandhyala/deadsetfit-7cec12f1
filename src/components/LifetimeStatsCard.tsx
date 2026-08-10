@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Trophy } from "lucide-react";
 
 import { lifetimeStats } from "@/lib/lifetime-stats";
+import { nextTonnageMilestone } from "@/lib/tonnage-milestones";
 import type { AppState } from "@/lib/types";
 
 /**
@@ -39,6 +40,27 @@ export function LifetimeStatsCard({ state }: { state: AppState }) {
           floor.
         </p>
       )}
+
+      {(() => {
+        const next = nextTonnageMilestone(stats.totalVolumeKg);
+        if (!next) return null;
+        return (
+          <div className="mt-2.5">
+            <div className="flex items-baseline justify-between">
+              <p className="label-cap text-[8px] text-grit-dim">
+                Next: {next.milestone.label} {next.milestone.emoji}
+              </p>
+              <p className="label-cap text-[8px] text-accent-red">{next.pct}%</p>
+            </div>
+            <div className="h-1.5 rounded-full bg-black/40 mt-1 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-accent-red"
+                style={{ width: `${Math.max(2, next.pct)}%` }}
+              />
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="grid grid-cols-4 gap-2 mt-3">
         {[
