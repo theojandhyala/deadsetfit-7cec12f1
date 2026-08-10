@@ -18,6 +18,7 @@ import { FreshStimulusCard } from "@/components/FreshStimulusCard";
 import { DataFreshnessCard } from "@/components/DataFreshnessCard";
 import { ReportHistoryCard } from "@/components/ReportHistoryCard";
 import { ThrowbackCard } from "@/components/ThrowbackCard";
+import { MonthRankCard } from "@/components/MonthRankCard";
 import { ProgressionBoard } from "@/components/ProgressionBoard";
 import { ProIntelligence } from "@/components/ProIntelligence";
 import { bodyweightTrend } from "@/lib/pro-intelligence";
@@ -433,6 +434,9 @@ function ProgressPage() {
 
       {/* Eight completed weeks graded side by side */}
       <ReportHistoryCard state={state} />
+
+      {/* Last completed month ranked against every month ever trained */}
+      <MonthRankCard state={state} />
 
       {/* Quiet-data nudges — only speaks when a used stream goes stale */}
       <DataFreshnessCard state={state} />

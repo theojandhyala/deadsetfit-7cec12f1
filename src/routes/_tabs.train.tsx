@@ -33,6 +33,8 @@ import { useCountUp } from "@/hooks/useCountUp";
 import { WeeklyReportCard } from "@/components/WeeklyReportCard";
 import { WhatsNewCard } from "@/components/WhatsNewCard";
 import { WeekPaceCard } from "@/components/WeekPaceCard";
+import { StreakChaseCard } from "@/components/StreakChaseCard";
+import { SupersetHint } from "@/components/SupersetHint";
 import { TrainingAutopilot } from "@/components/TrainingAutopilot";
 import { openPaywall } from "@/lib/paywall-events";
 import type { DayKey, Schedule, Program } from "@/lib/types";
@@ -412,6 +414,7 @@ function TrainPage() {
         <div className="px-5">
           <TrainingInsight />
           <WeekPaceCard state={state} />
+          <StreakChaseCard state={state} />
           <WeeklyMission state={state} />
         </div>
         <WeeklyReportCard />
@@ -630,6 +633,21 @@ function TrainPage() {
                 ))}
             </>
           )}
+
+          {/* Antagonist pairs from whichever plan is active today */}
+          <SupersetHint
+            exercises={
+              activeProgram
+                ? (programDay?.items ?? []).map((it) => ({
+                    name: it.name,
+                    muscle: it.primary_muscles?.[0],
+                  }))
+                : (day?.exerciseIds ?? [])
+                    .map((id) => getExercise(id, state.savedExercises))
+                    .filter((ex): ex is NonNullable<typeof ex> => Boolean(ex))
+                    .map((ex) => ({ name: ex.name, muscle: ex.muscleGroup }))
+            }
+          />
         </div>
       </div>
 
