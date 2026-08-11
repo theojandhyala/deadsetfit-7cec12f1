@@ -61,6 +61,39 @@ export function longestStreak(completedDates: string[]): number {
 // "hours trained" forever — clamp each session to a plausible ceiling.
 const MAX_SESSION_MS = 4 * 3_600_000;
 
+const WEEK_MS = 7 * 86_400_000;
+
+/**
+ * Average working volume per ACTIVE week over the trailing window — the pace
+ * figure behind "N weeks to your next tonnage milestone". Weeks without any
+ * training don't drag the average; null under two active weeks.
+ */
+export function avgWeeklyVolume(
+  sessions: WorkoutSession[],
+  todayIso: string,
+  weeks = 6,
+): number | null {
+  const today = new Date(`${todayIso}T00:00:00Z`).getTime();
+  if (!Number.isFinite(today)) return null;
+  const totals = new Array<number>(weeks).fill(0);
+  for (const s of sessions ?? []) {
+    if (!s.endedAt) continue;
+    const at = new Date(`${s.date}T00:00:00Z`).getTime();
+    if (!Number.isFinite(at) || at > today) continue;
+    const idx = Math.floor((today - at) / WEEK_MS);
+    if (idx < 0 || idx >= weeks) continue;
+    for (const ex of s.exercises) {
+      for (const set of ex.sets) {
+        if (set.kind === "warmup" || set.reps <= 0) continue;
+        totals[idx] += set.weight * set.reps;
+      }
+    }
+  }
+  const active = totals.filter((t) => t > 0);
+  if (active.length < 2) return null;
+  return active.reduce((a, b) => a + b, 0) / active.length;
+}
+
 export function lifetimeStats(
   sessions: WorkoutSession[],
   completedDates: string[],

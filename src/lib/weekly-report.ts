@@ -50,6 +50,9 @@ function totalsFor(state: AppState, start: Date, end: Date): WeekTotals {
     days.add(day);
     for (const ex of s.exercises) {
       for (const set of ex.sets) {
+        // Warm-ups aren't working volume — same rule the live logger applies
+        // when it computes a session's totalVolume.
+        if (set.kind === "warmup" || set.reps <= 0) continue;
         volume += set.weight * set.reps;
         sets += 1;
       }
@@ -164,6 +167,41 @@ export function currentWeekReport(state: AppState, now = new Date()): WeeklyRepo
     grade,
     headline,
   };
+}
+
+export interface WeekGrade {
+  weekStart: string;
+  grade: WeeklyReport["grade"];
+  sessions: number;
+}
+
+/**
+ * Grades for the last `weeks` COMPLETED weeks, oldest first. Weeks before the
+ * athlete's first-ever session are dropped — a two-week-old account gets two
+ * grades, not six retroactive Fs.
+ */
+export function gradeHistory(state: AppState, weeks = 8, now = new Date()): WeekGrade[] {
+  let firstSession: string | null = null;
+  for (const s of state.sessions) {
+    if (!s.endedAt) continue;
+    const day = s.date.slice(0, 10);
+    if (!firstSession || day < firstSession) firstSession = day;
+  }
+  if (!firstSession) return [];
+
+  const plannedDays = state.profile?.daysPerWeek ?? 3;
+  const thisMonday = mondayOf(now);
+  const out: WeekGrade[] = [];
+  for (let i = weeks; i >= 1; i--) {
+    const start = new Date(thisMonday);
+    start.setDate(start.getDate() - 7 * i);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    if (isoDay(end) < firstSession) continue;
+    const totals = totalsFor(state, start, end);
+    out.push({ weekStart: isoDay(start), grade: gradeFor(totals, plannedDays), sessions: totals.sessions });
+  }
+  return out;
 }
 
 export const GRADE_COLORS: Record<WeeklyReport["grade"], string> = {

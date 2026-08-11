@@ -1,10 +1,14 @@
-import { useEffect, useRef, useState } from "react";
-import { Flame } from "lucide-react";
-import { useAppState, getHydrationCount } from "@/lib/storage";
-import { calculateStreak } from "@/lib/calc";
-import { currentMilestone, type StreakMilestone } from "@/lib/streak-milestones";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Dumbbell } from "lucide-react";
 
-const SEEN_KEY = "deadset_streak_milestone_seen";
+import { useAppState, getHydrationCount } from "@/lib/storage";
+import { lifetimeStats } from "@/lib/lifetime-stats";
+import {
+  currentTonnageMilestone,
+  type TonnageMilestone,
+} from "@/lib/tonnage-milestones";
+
+const SEEN_KEY = "deadset_tonnage_milestone_seen";
 
 function readSeen(): number {
   try {
@@ -13,46 +17,48 @@ function readSeen(): number {
     return 0;
   }
 }
-function writeSeen(days: number) {
+function writeSeen(kg: number) {
   try {
-    localStorage.setItem(SEEN_KEY, String(days));
+    localStorage.setItem(SEEN_KEY, String(kg));
   } catch {
     /* ignore */
   }
 }
 
 /**
- * Fires a one-time celebration when the training streak crosses a new milestone.
- * Existing streaks are marked silently on first load (no retroactive spam).
+ * One-time celebration when lifetime tonnage crosses a milestone. Mirrors
+ * StreakMilestoneWatcher: existing progress is marked silently on first load,
+ * only a genuine live crossing celebrates.
  */
-export function StreakMilestoneWatcher() {
+export function TonnageMilestoneWatcher() {
   const [state] = useAppState();
-  const [hit, setHit] = useState<StreakMilestone | null>(null);
+  const [hit, setHit] = useState<TonnageMilestone | null>(null);
   const initialised = useRef(false);
   const lastHydration = useRef(getHydrationCount());
 
-  const streak = calculateStreak(state.completedDates);
-  const milestone = currentMilestone(streak);
+  const totalKg = useMemo(
+    () => lifetimeStats(state.sessions, state.completedDates)?.totalVolumeKg ?? 0,
+    [state.sessions, state.completedDates],
+  );
+  const milestone = currentTonnageMilestone(totalKg);
 
   useEffect(() => {
     const seen = readSeen();
-    const reached = milestone?.days ?? 0;
-    // A remote hydration means history arrived, not a live crossing —
-    // mark it silently exactly like first observation.
+    const reached = milestone?.kg ?? 0;
+    // A remote hydration means history arrived, not that the athlete just
+    // crossed a mark live — mark it silently exactly like first observation.
     const hydration = getHydrationCount();
     const hydrated = hydration !== lastHydration.current;
     lastHydration.current = hydration;
     const first = !initialised.current || hydrated;
     initialised.current = true;
-    // Streak fell below the last celebrated milestone (broke and rebuilding) —
-    // reset so re-reaching it celebrates again rather than staying silent forever.
+    // Total dropped below the celebrated mark (account restore, deletions) —
+    // reset so re-crossing celebrates instead of staying silent forever.
     if (reached < seen) {
       writeSeen(reached);
       return;
     }
     if (milestone && reached > seen) {
-      // On first observation, existing progress is marked silently (no retro spam);
-      // a genuine new crossing while the app is open celebrates.
       if (!first) setHit(milestone);
       writeSeen(reached);
     }
@@ -92,18 +98,19 @@ export function StreakMilestoneWatcher() {
             boxShadow: "0 0 30px rgba(230,50,34,.6)",
           }}
         >
-          <Flame size={26} strokeWidth={2.5} className="text-white" />
+          <Dumbbell size={26} strokeWidth={2.5} className="text-white" />
         </div>
-        <p className="label-cap text-[10px] tracking-[0.28em] text-accent-red">Streak milestone</p>
+        <p className="label-cap text-[10px] tracking-[0.28em] text-accent-red">
+          Lifetime tonnage
+        </p>
         <h2 className="display text-4xl font-extrabold uppercase text-grit leading-none mt-1">
-          {hit.days} days
+          {hit.label}
         </h2>
-        <p className="display text-lg font-extrabold uppercase text-accent-red mt-1">{hit.label}</p>
         <p className="text-xs text-[#b7a9a4] mt-3 mb-5">
-          {hit.days} straight days on the grind. Keep the fire lit.
+          You&apos;ve now lifted {hit.flavor} — every kilo of it logged, rep by rep.
         </p>
         <button onClick={() => setHit(null)} className="btn-grit w-full rounded-xl">
-          Keep Going
+          Keep Lifting
         </button>
       </div>
     </div>

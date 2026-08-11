@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import {
   Apple,
+  BarChart3,
   Brain,
   Camera,
   ChevronLeft,
@@ -111,6 +112,19 @@ function GuidePage() {
           ]}
           to="/progress"
           cta="Open Progress"
+        />
+
+        <GuideSection
+          icon={<BarChart3 size={18} />}
+          title="The intelligence stack"
+          body="Everything you log feeds a set of engines that read your training back to you — no AI, just your own numbers. Each card appears only once there's enough data to be honest, so keep logging and they switch on one by one."
+          bullets={[
+            "Progress: session records, weekday rhythm, when you lift best, weekly grades, month rankings and your lifetime story.",
+            "Diet insights: measured maintenance calories, training-day calorie cycling, protein spread and hydration.",
+            "Train: week pace, streak record chase and superset time-savers on today's plan.",
+          ]}
+          to="/progress"
+          cta="See your intelligence"
         />
 
         <GuideSection

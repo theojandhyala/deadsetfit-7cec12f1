@@ -79,3 +79,31 @@ describe("tonnageEquivalent", () => {
     expect(tonnageEquivalent(300_000)).toEqual({ count: 2, label: "blue whales" });
   });
 });
+
+describe("avgWeeklyVolume", () => {
+  const mk = (date: string, weight: number) =>
+    session({
+      id: date,
+      date,
+      startedAt: `${date}T10:00:00Z`,
+      endedAt: `${date}T11:00:00Z`,
+      exercises: [
+        {
+          exerciseId: "e1",
+          name: "Lift",
+          primary_muscles: [],
+          targetSets: 1,
+          targetReps: "10",
+          sets: [{ weight, reps: 10 }],
+        },
+      ],
+    });
+
+  it("averages active weeks only and needs two of them", async () => {
+    const { avgWeeklyVolume } = await import("./lifetime-stats");
+    expect(avgWeeklyVolume([mk("2026-07-28", 100)], "2026-07-31")).toBeNull();
+    // Weeks: 0 (Jul 25-31) has 1000, week 2 (Jul 11-17) has 3000, week 1 empty.
+    const v = avgWeeklyVolume([mk("2026-07-28", 100), mk("2026-07-14", 300)], "2026-07-31");
+    expect(v).toBe(2000);
+  });
+});

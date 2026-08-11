@@ -12,6 +12,15 @@ import { ProBanner } from "@/components/ProBanner";
 import { TrainingHeatmap } from "@/components/TrainingHeatmap";
 import { RepZoneCard } from "@/components/RepZoneCard";
 import { LifetimeStatsCard } from "@/components/LifetimeStatsCard";
+import { SessionRecordsCard } from "@/components/SessionRecordsCard";
+import { TrainingRhythmCard } from "@/components/TrainingRhythmCard";
+import { FreshStimulusCard } from "@/components/FreshStimulusCard";
+import { DataFreshnessCard } from "@/components/DataFreshnessCard";
+import { ReportHistoryCard } from "@/components/ReportHistoryCard";
+import { ThrowbackCard } from "@/components/ThrowbackCard";
+import { MonthRankCard } from "@/components/MonthRankCard";
+import { TimeOfDayCard } from "@/components/TimeOfDayCard";
+import { IntelligenceUnlocksCard } from "@/components/IntelligenceUnlocksCard";
 import { ProgressionBoard } from "@/components/ProgressionBoard";
 import { ProIntelligence } from "@/components/ProIntelligence";
 import { bodyweightTrend } from "@/lib/pro-intelligence";
@@ -405,10 +414,42 @@ function ProgressPage() {
         <TrainingHeatmap state={state} />
       </section>
 
+      {/* ——— The intelligence stack: every card below is deterministic,
+          data-gated (renders nothing until it can be honest) and carries
+          its own section wrapper so empty states leave no gap. ——— */}
+      <section className="px-5 mb-3">
+        <div className="deadset-section-title">
+          <h2 className="display text-xl font-extrabold uppercase text-grit leading-none">
+            Training intelligence
+          </h2>
+        </div>
+      </section>
+
+      {/* New lifters see which engines are live and what unlocks the rest;
+          vanishes once (nearly) all of them are on. */}
+      <IntelligenceUnlocksCard state={state} />
+
       {/* Rep-zone mix — right KIND of sets for the goal (Volume Optimizer
-          answers "enough sets"; this answers "the right reps"). Each card
-          brings its own section so an empty state leaves no gap. */}
+          answers "enough sets"; this answers "the right reps"). */}
       <RepZoneCard state={state} />
+
+      {/* Whole-workout records + weekday rhythm — each renders only with data */}
+      <SessionRecordsCard state={state} />
+      <TrainingRhythmCard state={state} />
+      <TimeOfDayCard state={state} />
+      <FreshStimulusCard state={state} />
+
+      {/* Eight completed weeks graded side by side */}
+      <ReportHistoryCard state={state} />
+
+      {/* Last completed month ranked against every month ever trained */}
+      <MonthRankCard state={state} />
+
+      {/* Quiet-data nudges — only speaks when a used stream goes stale */}
+      <DataFreshnessCard state={state} />
+
+      {/* The receipts: same lift, months apart */}
+      <ThrowbackCard state={state} />
 
       {/* Lifetime story — Wrapped-style totals, tonnage in real-world objects */}
       <LifetimeStatsCard state={state} />

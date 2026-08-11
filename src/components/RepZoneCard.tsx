@@ -38,8 +38,8 @@ export function RepZoneCard({ state }: { state: AppState }) {
         <p className="label-cap text-[10px] text-accent-red flex items-center gap-1.5">
           <Crosshair size={12} /> Rep-zone mix
         </p>
-        <p className="label-cap text-[9px] text-grit-dim">
-          {mix.totalSets.toLocaleString()} sets · 4 weeks
+        <p className="label-cap text-[9px] text-grit-dim whitespace-nowrap">
+          {mix.totalSets.toLocaleString()} sets · 4 wks
         </p>
       </div>
 
@@ -55,13 +55,13 @@ export function RepZoneCard({ state }: { state: AppState }) {
         )}
       </div>
 
-      <div className="flex justify-between mt-2">
+      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
         {ZONE_ORDER.map((z) => (
           <div key={z} className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full" style={{ background: ZONE_BG[z] }} />
-            <p className="label-cap text-[8px] text-grit-dim">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: ZONE_BG[z] }} />
+            <p className="label-cap text-[8px] text-grit-dim whitespace-nowrap">
               {ZONE_NAME[z]} {mix.pct[z]}%
-              {z === mix.targetZone ? " · goal" : ""}
+              {z === mix.targetZone ? " ★" : ""}
             </p>
           </div>
         ))}

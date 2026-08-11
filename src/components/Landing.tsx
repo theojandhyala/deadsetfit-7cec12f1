@@ -3,6 +3,7 @@ import { useState } from "react";
 import { isNativeIos } from "@/lib/platform";
 import {
   ArrowRight,
+  BrainCircuit,
   CalendarDays,
   Check,
   ChevronDown,
@@ -294,6 +295,16 @@ const featureGroups = [
     Icon: Trophy,
     label: "Community",
     items: ["Friends and activity", "Ranked leagues", "Challenges", "Shareable progress"],
+  },
+  {
+    Icon: BrainCircuit,
+    label: "Intelligence",
+    items: [
+      "Maintenance calories, measured",
+      "Weekday rhythm and week pace",
+      "Session and month records",
+      "Lifetime tonnage milestones",
+    ],
   },
 ];
 
