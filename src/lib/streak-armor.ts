@@ -13,21 +13,31 @@ export interface StreakArmorResult {
   refilled: boolean;
 }
 
+/** Longest recent gap the armor will bridge (misses Sat+Sun, opens Monday). */
+const MAX_BRIDGE_DAYS = 2;
+
 /**
- * Monthly refill + single-missed-day rescue for Pro users.
+ * Monthly refill + missed-day rescue for Pro users.
  *
- * A shield is consumed only when yesterday is missing but the day before
- * was completed — i.e. an active streak would otherwise break. The saved
- * day is appended to completedDates so every streak/grit/consistency
- * computation keeps working untouched; usedDates records the audit trail.
+ * Shields bridge the gap between today/yesterday and the most recent
+ * completed day, up to MAX_BRIDGE_DAYS and only while shields last — so the
+ * most common miss (skip Saturday, rest Sunday, open the app Monday) is
+ * rescued with two shields instead of silently resetting a 40-day streak
+ * while three shields sit unused. Rescued days are appended to
+ * completedDates so every streak/grit computation keeps working untouched;
+ * usedDates records the audit trail.
  *
  * Returns null when nothing changed.
  */
-export function runStreakArmor(state: AppState, isPro: boolean): StreakArmorResult | null {
+export function runStreakArmor(
+  state: AppState,
+  isPro: boolean,
+  now = new Date(),
+): StreakArmorResult | null {
   if (!isPro) return null;
 
   const armor = state.streakArmor ?? DEFAULT_ARMOR;
-  const month = isoDay().slice(0, 7);
+  const month = isoDay(now).slice(0, 7);
   let shields = armor.shields;
   let lastRefillMonth = armor.lastRefillMonth;
   let refilled = false;
@@ -38,23 +48,33 @@ export function runStreakArmor(state: AppState, isPro: boolean): StreakArmorResu
     refilled = true;
   }
 
-  const yesterdayDate = new Date();
-  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-  const yesterday = isoDay(yesterdayDate);
-  const dayBeforeDate = new Date();
-  dayBeforeDate.setDate(dayBeforeDate.getDate() - 2);
-  const dayBefore = isoDay(dayBeforeDate);
+  const dayAt = (offset: number) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - offset);
+    return isoDay(d);
+  };
 
   const completed = new Set(state.completedDates);
   let completedDates = state.completedDates;
   let usedDates = armor.usedDates;
   let consumedDate: string | null = null;
 
-  if (!completed.has(yesterday) && completed.has(dayBefore) && shields > 0) {
-    completedDates = [...state.completedDates, yesterday];
-    usedDates = [...usedDates, yesterday];
-    shields -= 1;
-    consumedDate = yesterday;
+  // Find the gap: walk back from yesterday over missing days (bounded), and
+  // rescue only if a completed day sits just beyond it — i.e. there is an
+  // actual streak to save, and enough shields to bridge the whole gap.
+  const gap: string[] = [];
+  let offset = 1;
+  while (gap.length < MAX_BRIDGE_DAYS && !completed.has(dayAt(offset))) {
+    gap.push(dayAt(offset));
+    offset += 1;
+  }
+  const anchored = gap.length > 0 && completed.has(dayAt(offset));
+  if (anchored && shields >= gap.length) {
+    completedDates = [...state.completedDates, ...gap];
+    usedDates = [...usedDates, ...gap];
+    shields -= gap.length;
+    // Most recent rescued day headlines the toast.
+    consumedDate = gap[0];
   }
 
   if (!refilled && !consumedDate) return null;

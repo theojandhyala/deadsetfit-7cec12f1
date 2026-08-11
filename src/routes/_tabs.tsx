@@ -153,14 +153,29 @@ function TabsLayout() {
   }, [ready, state]);
 
   // Streak Armor: monthly shield refill + auto-rescue of a missed day (Pro).
+  // Waits for remote hydration first — a laptop with a stale cached blob must
+  // not burn a shield rescuing a day the athlete actually trained on their
+  // phone two seconds before the sync lands.
   useEffect(() => {
     if (!ready || proLoading || !isPro || !state.profile) return;
-    const result = runStreakArmor(getState(), isPro);
-    if (!result) return;
-    set(() => result.next);
-    if (result.consumedDate) {
-      emitGritEarned(calculateStreak(result.next.completedDates), "STREAK ARMOR USED", "streak");
-    }
+    let disposed = false;
+    (async () => {
+      const {
+        data: { session },
+      } = await withTimeout(supabase.auth.getSession(), { data: { session: null }, error: null });
+      const uid = session?.user?.id;
+      if (uid) await waitForRemoteState(uid);
+      if (disposed) return;
+      const result = runStreakArmor(getState(), isPro);
+      if (!result) return;
+      set(() => result.next);
+      if (result.consumedDate) {
+        emitGritEarned(calculateStreak(result.next.completedDates), "STREAK ARMOR USED", "streak");
+      }
+    })();
+    return () => {
+      disposed = true;
+    };
   }, [ready, proLoading, isPro, state.profile, set, state.completedDates]);
 
   // Apple Watch / Health import — native iOS only, once per app open.

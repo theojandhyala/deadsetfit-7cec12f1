@@ -285,7 +285,7 @@ export interface PublicStats {
   };
 }
 
-export function buildPublicStats(state: AppState): PublicStats {
+export function buildPublicStats(state: AppState, now = new Date()): PublicStats {
   const stats = computeFifaStats(state);
   const topPRs = buildHeadlinePRs(state);
   const total = topPRs.reduce((sum, lift) => sum + lift.value, 0);
@@ -298,9 +298,9 @@ export function buildPublicStats(state: AppState): PublicStats {
     HYP: stats.HYP,
     CON: stats.CON,
     DIE: stats.DIE,
-    streak: calculateStreak(state.completedDates),
+    streak: calculateStreak(state.completedDates, now),
     topPRs,
-    weekly: getWeeklyCompetitionStats(state),
+    weekly: getWeeklyCompetitionStats(state, now),
     strengthToWeight: bodyWeight > 0 ? Math.round((total / bodyWeight) * 100) / 100 : 0,
     goal: state.profile?.goal,
     experience: state.profile?.experience,

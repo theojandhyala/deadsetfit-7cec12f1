@@ -222,10 +222,13 @@ export function isoDay(date = new Date()) {
   return `${y}-${m}-${d}`;
 }
 
-export function calculateStreak(completedDates: string[]) {
+export function calculateStreak(completedDates: string[], now = new Date()) {
   if (completedDates.length === 0) return 0;
   const set = new Set(completedDates);
-  const d = new Date();
+  // `now` lets the SERVER evaluate with the CLIENT's wall clock: an Auckland
+  // athlete's "today" is a future day to a UTC server, which would silently
+  // shave a day off every leaderboard streak. Defaults keep client calls as-is.
+  const d = new Date(now);
   // A streak survives until the current day is over — if today isn't logged
   // yet, count back from yesterday instead of zeroing out every morning.
   if (!set.has(isoDay(d))) d.setDate(d.getDate() - 1);
@@ -311,7 +314,7 @@ export interface GritScoreBreakdown {
   decay: number;
   total: number;
 }
-export function calculateGritScore(state: AppState): GritScoreBreakdown {
+export function calculateGritScore(state: AppState, now = new Date()): GritScoreBreakdown {
   const p = state.profile;
   if (!p)
     return {
@@ -325,8 +328,8 @@ export function calculateGritScore(state: AppState): GritScoreBreakdown {
       total: 0,
     };
 
-  const streak = calculateStreak(state.completedDates);
-  const weekAgo = new Date();
+  const streak = calculateStreak(state.completedDates, now);
+  const weekAgo = new Date(now);
   weekAgo.setDate(weekAgo.getDate() - 7);
   // Local-day boundary — session/food dates are local isoDay strings, so a
   // UTC-sliced boundary would make the 7-day window off by one.
@@ -358,14 +361,22 @@ export function calculateGritScore(state: AppState): GritScoreBreakdown {
   const checkIns = (state.checkIns || []).filter((c) => c.date >= weekAgoISO).length;
   const measurements = (state.measurements || []).filter((m) => m.date >= weekAgoISO).length;
 
-  // Decay: any activity in last 48h?
+  // Decay: any activity in last 48h? Dates are LOCAL day strings — parse them
+  // as local midnight (bare "YYYY-MM-DD" parses as UTC, which docks athletes
+  // west of UTC up to ~27h early) and measure from the END of that day, the
+  // most faithful reading a date-only record allows.
+  const DAY_MS = 86_400_000;
+  const localDayEnd = (d: string) => {
+    const t = new Date(`${d}T00:00:00`).getTime();
+    return Number.isFinite(t) ? t + DAY_MS : 0;
+  };
   const lastActivity = Math.max(
-    ...(state.completedDates || []).map((d) => new Date(d).getTime()),
-    ...(state.sessions || []).map((s) => new Date(s.date).getTime()),
-    ...(state.foodLog || []).map((f) => new Date(f.date).getTime()),
+    ...(state.completedDates || []).map(localDayEnd),
+    ...(state.sessions || []).map((s) => localDayEnd(s.date.slice(0, 10))),
+    ...(state.foodLog || []).map((f) => localDayEnd(f.date)),
     0,
   );
-  const decay = Date.now() - lastActivity > 48 * 3600_000 ? 100 : 0;
+  const decay = now.getTime() - lastActivity > 48 * 3600_000 ? 100 : 0;
 
   const raw =
     streak * 15 +

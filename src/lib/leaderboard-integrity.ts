@@ -159,9 +159,17 @@ export function assessLeaderboardStats(options: {
   // history in one request and must not be treated as a spike.
   //
   // "Has a baseline" means stats were actually derived before — not merely that a
-  // row exists. `public_stats` defaults to `{}`, so testing for presence treated
-  // every brand-new account as established and flagged its first honest sync.
-  const established = (previousStats?.topPRs ?? []).some((pr) => Number(pr?.value ?? 0) > 0);
+  // row exists (`public_stats` defaults to `{}`, so a bare presence test would
+  // flag every brand-new account's first honest sync). It must ALSO not mean
+  // "has PRs": a PR-less account would otherwise be exempt from the grit rate
+  // limit forever, and could jump 0 → 1000 in one fabricated-streak sync.
+  // (previousGrit alone is NOT a baseline: legacy accounts carried grit_points
+  // from before server derivation existed, and their first derived sync is a
+  // restore. Any actual prior derivation always wrote overall/streak.)
+  const established =
+    (previousStats?.topPRs ?? []).some((pr) => Number(pr?.value ?? 0) > 0) ||
+    Number(previousStats?.streak ?? 0) > 0 ||
+    previousStats?.overall != null;
   if (established && grit > previousGrit + MAX_GRIT_JUMP) flags.push("grit_jumped_too_fast");
 
   if (accountAgeDays !== undefined) {
@@ -169,9 +177,15 @@ export function assessLeaderboardStats(options: {
     if (grit > ceiling) flags.push("grit_exceeds_account_age");
   }
 
-  // A streak cannot exceed the number of days actually logged.
+  // A streak cannot exceed the number of days actually logged — nor the age of
+  // the account itself (+2 days of timezone slack). Days can only be completed
+  // through the app, so a 67-day streak on a 31-day-old account is fabricated
+  // even on a first sync, where the jump rate-limit doesn't apply.
   const streak = Number(stats.streak ?? 0);
   if (completedDates && streak > completedDates.length) flags.push("streak_exceeds_history");
+  if (accountAgeDays !== undefined && streak > Math.max(0, accountAgeDays) + 2) {
+    flags.push("streak_exceeds_history");
+  }
 
   const unique = [...new Set(flags)];
   const verified = unique.length === 0;
