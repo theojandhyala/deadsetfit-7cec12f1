@@ -411,7 +411,12 @@ function LiveWorkoutPage() {
           exerciseId: e.exerciseId,
           name: e.name,
           primary_muscles: e.primary_muscles,
-          targetSets: Math.max(1, e.sets.length || e.targetSets),
+          // Working sets only — repeating a session with 3 warm-ups + 1 drop
+          // must not inflate the new plan to 7 "required" sets.
+          targetSets: Math.max(
+            1,
+            e.sets.filter((s) => s.kind !== "warmup" && s.kind !== "drop").length || e.targetSets,
+          ),
           targetReps: e.targetReps,
           plannedWeightKg: e.plannedWeightKg,
           restSeconds: e.restSeconds,
@@ -473,7 +478,11 @@ function LiveWorkoutPage() {
   const [finished, setFinished] = useState(false);
   const [finishedSessionId, setFinishedSessionId] = useState<string | null>(null);
   const [share, setShare] = useState(false);
-  const [resting, setResting] = useState(false);
+  // A rest PERIOD, not a boolean: each logged set starts a new period (id
+  // bumps → timer restarts) with the duration captured from the exercise that
+  // triggered it. Keyed this way, swiping to another exercise mid-rest can't
+  // remount the timer and reset the countdown.
+  const [rest, setRest] = useState<{ id: number; seconds: number } | null>(null);
   const restPref = state.restTimerSeconds ?? 90;
 
   const totals = useMemo(() => {
@@ -494,9 +503,16 @@ function LiveWorkoutPage() {
 
   // Planned counts never lag behind reality: an exercise's plan is at least
   // as long as what's already logged (extra sets stay visible after remounts).
+  // Working sets only, matching the numerator — warm-ups must not grow the
+  // denominator or a finished exercise reads 50% forever.
   const plannedSets = useMemo(
     () =>
-      session?.exercises.reduce((sum, e) => sum + Math.max(e.targetSets, e.sets.length), 0) ?? 0,
+      session?.exercises.reduce(
+        (sum, e) =>
+          sum +
+          Math.max(e.targetSets, e.sets.filter((s) => s.kind !== "warmup" && s.kind !== "drop").length),
+        0,
+      ) ?? 0,
     [session],
   );
 
@@ -526,12 +542,19 @@ function LiveWorkoutPage() {
     [state, activeExercise, session],
   );
 
-  // Pre-logged defaults: allocated weight from the schedule → last session
-  // containing the exercise → smart suggestion → bodyweight (0).
+  // Pre-logged defaults: what was already logged THIS session (survives any
+  // remount — an in-flight weight change must never silently revert to the
+  // plan) → allocated weight from the schedule → last session containing the
+  // exercise → smart suggestion → bodyweight (0).
   const defaults = useMemo(() => {
     const ex = session?.exercises[activeIdx];
     if (!session || !ex) return { weight: 0, reps: 8 };
     const repsGuess = Number(String(ex.targetReps).match(/\d+/)?.[0] ?? 8);
+    const working = ex.sets.filter((s) => s.kind !== "warmup" && s.kind !== "drop");
+    const lastLogged = working[working.length - 1];
+    if (lastLogged && lastLogged.weight > 0) {
+      return { weight: lastLogged.weight, reps: lastLogged.reps };
+    }
     if (ex.plannedWeightKg != null) return { weight: ex.plannedWeightKg, reps: repsGuess };
     const hist = prefillFromHistory(state, session.id, ex.exerciseId);
     if (hist.weight)
@@ -631,7 +654,8 @@ function LiveWorkoutPage() {
   }
 
   const current = session.exercises[activeIdx];
-  const currentRestSeconds = current.restSeconds ?? restPref;
+  // restPref === 0 is the global "auto-rest off" switch — see logSet.
+  const currentRestSeconds = restPref === 0 ? 0 : (current.restSeconds ?? restPref);
   const progressionLabel =
     current.progression === "DOUBLE"
       ? "Double progression"
@@ -691,9 +715,13 @@ function LiveWorkoutPage() {
       }
     }
     // Auto rest-timer after each working/drop set (not warm-ups) unless the
-    // lifter has turned it off (restTimerSeconds === 0).
-    const exerciseRest = ex.restSeconds ?? restPref;
-    if (exerciseRest > 0 && kind !== "warmup") setResting(true);
+    // lifter has turned it off. restTimerSeconds === 0 is a global kill-switch
+    // and must beat any per-exercise restSeconds — otherwise "Turn off
+    // auto-rest" appears to do nothing on exercises with their own rest.
+    const exerciseRest = restPref === 0 ? 0 : (ex.restSeconds ?? restPref);
+    if (exerciseRest > 0 && kind !== "warmup") {
+      setRest((r) => ({ id: (r?.id ?? 0) + 1, seconds: exerciseRest }));
+    }
   }
 
   function undoLastSet() {
@@ -739,13 +767,25 @@ function LiveWorkoutPage() {
     // after the first tap getState() already reflects endedAt. Without this,
     // a fast double-tap fires grit, the feed post and the Health export twice.
     if (getState().sessions.find((s) => s.id === session!.id)?.endedAt) return;
-    const day = isoDay();
-    const endedAt = new Date().toISOString();
+    let day = isoDay();
+    let endedAt = new Date().toISOString();
     set((st) => {
       const live = st.sessions.find((s) => s.id === session!.id);
       // endedAt guard: a double-tap on Finish must not duplicate log entries,
       // grit awards, or Health exports.
       if (!live || live.endedAt) return st;
+      // A session resumed across midnight (phone died mid-workout, finished
+      // the next day) belongs to the day it was TRAINED: credit that day's
+      // streak and date the logs to match, and clamp the stored duration so
+      // the Health export and finish screen don't report a day-long workout.
+      if (live.date && live.date.slice(0, 10) !== day) {
+        day = live.date.slice(0, 10);
+        const started = new Date(live.startedAt).getTime();
+        const MAX_SESSION_MS = 4 * 3_600_000;
+        if (Number.isFinite(started) && Date.now() - started > MAX_SESSION_MS) {
+          endedAt = new Date(started + MAX_SESSION_MS).toISOString();
+        }
+      }
       let totalVolume = 0;
       let prCount = 0;
       live.exercises.forEach((e) =>
@@ -853,7 +893,11 @@ function LiveWorkoutPage() {
 
       <div className="flex gap-2 overflow-x-auto px-4 py-3 border-b border-grit">
         {session.exercises.map((e, i) => {
-          const done = e.targetSets > 0 && e.sets.length >= e.targetSets;
+          // Tapping the warm-up ramp must not tick an exercise "done".
+          const workingLogged = e.sets.filter(
+            (s) => s.kind !== "warmup" && s.kind !== "drop",
+          ).length;
+          const done = e.targetSets > 0 && workingLogged >= e.targetSets;
           const active = i === activeIdx;
           return (
             <button
@@ -1012,15 +1056,15 @@ function LiveWorkoutPage() {
       {videoQuery && (
         <VideoModal query={videoQuery} title={videoTitle} onClose={() => setVideoQuery(null)} />
       )}
-      {resting && currentRestSeconds > 0 && (
+      {rest && rest.seconds > 0 && (
         <RestTimer
-          key={session.exercises[activeIdx]?.sets.length ?? 0}
-          seconds={currentRestSeconds}
+          key={rest.id}
+          seconds={rest.seconds}
           nextExercise={current.name}
-          onDone={() => setResting(false)}
+          onDone={() => setRest(null)}
           onDisable={() => {
             set((s) => ({ ...s, restTimerSeconds: 0 }));
-            setResting(false);
+            setRest(null);
           }}
         />
       )}
@@ -1199,7 +1243,9 @@ function SetLogger({
             aria-hidden={progressionLocked || undefined}
           >
             {ghost.map((g, i) => {
-              const mine = exercise.sets[i];
+              // Ghost list is working sets only — compare like against like,
+              // or today's warm-up ramp would "fail" against last week's top set.
+              const mine = exercise.sets.filter((s) => s.kind !== "warmup")[i];
               const beaten = mine ? beatsGhost(mine, g) : false;
               return (
                 <span
@@ -1485,7 +1531,11 @@ function FinishedScreen({
   share: boolean;
   onCloseShare: () => void;
 }) {
-  const setsLogged = session.exercises.reduce((s, e) => s + e.sets.length, 0);
+  // Working sets only, matching the live header and the feed post.
+  const setsLogged = session.exercises.reduce(
+    (s, e) => s + e.sets.filter((cs) => cs.kind !== "warmup").length,
+    0,
+  );
   const durationMin = Math.max(
     1,
     Math.round(

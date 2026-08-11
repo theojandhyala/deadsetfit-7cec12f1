@@ -309,6 +309,17 @@ function daysSince(iso: string | undefined): number | undefined {
 
 async function syncProfileProUntil(userId: string, status: SubscriptionStatus) {
   if (!status.isPro || !status.currentPeriodEnd) return;
+  // EXTEND, never overwrite: pro_until may already hold months of earned
+  // referral credit — buying a monthly subscription must not truncate a
+  // 2027 expiry down to next month's period end.
+  const { data: existing } = await supabaseAdmin
+    .from("profiles")
+    .select("pro_until")
+    .eq("id", userId)
+    .maybeSingle();
+  const current = existing?.pro_until ? new Date(existing.pro_until).getTime() : 0;
+  const incoming = new Date(status.currentPeriodEnd).getTime();
+  if (Number.isFinite(current) && current >= incoming) return;
   const { error } = await supabaseAdmin
     .from("profiles")
     .update({ pro_until: status.currentPeriodEnd })
@@ -720,7 +731,15 @@ const handlers: Record<string, Handler> = {
 
   async saveUserState(data, req) {
     const { supabase, userId } = await requireAuth(req);
-    const d = z.object({ data: z.string().max(2_000_000) }).parse(data);
+    const d = z
+      .object({
+        data: z.string().max(2_000_000),
+        // Client's Date.getTimezoneOffset() — lets the server evaluate streak
+        // and weekly windows on the CLIENT's calendar day instead of UTC's.
+        // Bounded to real-world offsets; worthless for cheating (±14h at most).
+        tzOffsetMinutes: z.number().int().min(-840).max(840).optional(),
+      })
+      .parse(data);
     let parsed: unknown;
     try {
       parsed = JSON.parse(d.data);
@@ -738,8 +757,15 @@ const handlers: Record<string, Handler> = {
     // a derive failure (e.g. a malformed blob) must never fail the state sync.
     try {
       const state = parsed as AppState;
-      const grit = Math.max(0, Math.min(1000, Math.round(calculateGritScore(state).total)));
-      const stats = buildPublicStats(state);
+      // Shift "now" so this UTC server sees the client's wall clock: without
+      // this, an Auckland athlete's just-finished session is a "future" day,
+      // shaving a day off their stored streak and weekly stats.
+      const clientNow = new Date(Date.now() - (d.tzOffsetMinutes ?? 0) * 60_000);
+      const grit = Math.max(
+        0,
+        Math.min(1000, Math.round(calculateGritScore(state, clientNow).total)),
+      );
+      const stats = buildPublicStats(state, clientNow);
 
       // The values are derived server-side, but they are derived FROM the blob the
       // client just uploaded — which contains manually entered PRs. So they are
@@ -1589,7 +1615,19 @@ const handlers: Record<string, Handler> = {
       if (error.code === "23505") throw new Error("Already redeemed");
       throw new Error(error.message);
     }
-    const month = new Date(Date.now() + 30 * 86400_000).toISOString();
+    // EXTEND the redeemer's Pro rather than overwrite it — an annual
+    // subscriber redeeming a friend's code must not have pro_until truncated
+    // to 30 days out. Same base-then-add rule the referrer path below uses.
+    const { data: redeemerProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("pro_until")
+      .eq("id", userId)
+      .maybeSingle();
+    const redeemerBase =
+      redeemerProfile?.pro_until && new Date(redeemerProfile.pro_until) > new Date()
+        ? new Date(redeemerProfile.pro_until)
+        : new Date();
+    const month = new Date(redeemerBase.getTime() + 30 * 86400_000).toISOString();
     // Admin client: pro_until / referred_by are DB-protected against direct
     // authenticated writes (see the profiles column-guard trigger).
     await supabaseAdmin

@@ -239,7 +239,12 @@ function ProgressPage() {
     state.sessions.forEach((s) => {
       if (new Date(s.startedAt).getTime() < cutoff) return;
       s.exercises.forEach((e) => {
-        const vol = e.sets.reduce((a, x) => a + x.weight * x.reps, 0);
+        // Warm-ups aren't working volume — and they'd skew the split toward
+        // barbell lifts, which have ramps, over cable work, which doesn't.
+        const vol = e.sets.reduce(
+          (a, x) => a + (x.kind === "warmup" ? 0 : x.weight * x.reps),
+          0,
+        );
         const parts = e.primary_muscles?.length ? e.primary_muscles : ["OTHER"];
         parts.forEach((p) => {
           map[p.toUpperCase()] = (map[p.toUpperCase()] || 0) + vol / parts.length;
@@ -309,8 +314,10 @@ function ProgressPage() {
     state.sessions.forEach((s) => {
       const wk = bucket(s.startedAt);
       if (!wk) return;
+      // Warm-ups excluded — keeps this chart consistent with the VOLUME stat
+      // on the same screen, which sums session.totalVolume.
       wk.sessionVol += s.exercises.reduce(
-        (a, e) => a + e.sets.reduce((b, x) => b + x.weight * x.reps, 0),
+        (a, e) => a + e.sets.reduce((b, x) => b + (x.kind === "warmup" ? 0 : x.weight * x.reps), 0),
         0,
       );
     });

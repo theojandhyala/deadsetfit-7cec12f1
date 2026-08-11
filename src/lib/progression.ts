@@ -74,7 +74,10 @@ export function suggestNextWeight(
   for (const session of sessions) {
     const ex = session.exercises.find((e) => e.exerciseId === exerciseId);
     if (!ex) continue;
-    const working = ex.sets.filter((s) => s.weight > 0);
+    // Warm-up ramps (10/6/3-rep steps) and drop sets must not gate progression:
+    // judging "all sets hit target reps" against a 3-rep warm-up freezes the
+    // move-up suggestion forever for anyone who uses the ramp.
+    const working = ex.sets.filter((s) => s.weight > 0 && s.kind !== "warmup" && s.kind !== "drop");
     if (working.length === 0) continue;
     const top = Math.max(...working.map((s) => s.weight));
     const target = minTargetReps(targetReps);
@@ -151,8 +154,12 @@ export function ghostSets(
     .sort((a, b) => b.date.localeCompare(a.date));
   for (const session of sessions) {
     const ex = session.exercises.find((e) => e.exerciseId === exerciseId);
-    if (ex && ex.sets.length > 0) {
-      return ex.sets.map((s) => ({ weight: s.weight, reps: s.reps }));
+    if (!ex) continue;
+    // Race working sets only — a ghost that opens with a 40 kg warm-up makes
+    // set 1 "beaten" before the lifter has done anything real.
+    const working = ex.sets.filter((s) => s.kind !== "warmup");
+    if (working.length > 0) {
+      return working.map((s) => ({ weight: s.weight, reps: s.reps }));
     }
   }
   return [];

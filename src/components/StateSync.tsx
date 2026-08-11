@@ -35,6 +35,10 @@ export function StateSync() {
   useEffect(() => {
     let cancelled = false;
     let activeUserId: string | null = null;
+    // Monotonic pull generation: any await inside pull() may resolve after a
+    // user switch, and a stale pull must never clear/hydrate/enable for the
+    // wrong account.
+    let pullSeq = 0;
     setSyncIssueHandler((msg) => toast.error(msg, { id: "sync-issue" }));
 
     function prepareLocalState(userId: string) {
@@ -46,9 +50,28 @@ export function StateSync() {
       if (owner && owner !== userId) clearLocalState();
     }
 
-    async function pull(userId: string) {
+    async function pull(userId: string, attempt = 0) {
+      const seq = ++pullSeq;
+      const stale = () => cancelled || seq !== pullSeq || activeUserId !== userId;
       prepareLocalState(userId);
       beginRemoteStateLoad(userId);
+      // A load we couldn't complete is NOT license to sync: with a whole-row
+      // upsert on the server, enabling push before we know what the row holds
+      // lets a fresh device's near-empty state destroy the user's history.
+      // Retry instead, with backoff; sync stays off until a load resolves.
+      const retryLater = () => {
+        if (stale() || attempt >= 5) {
+          if (attempt >= 5) {
+            toast.error("Can't reach your cloud backup — changes will stay on this device.", {
+              id: "sync-issue",
+            });
+          }
+          return;
+        }
+        setTimeout(() => {
+          if (!stale()) void pull(userId, attempt + 1);
+        }, 5000 * (attempt + 1));
+      };
       try {
         const res = await Promise.race([
           load(),
@@ -56,11 +79,12 @@ export function StateSync() {
             setTimeout(() => resolve(LOAD_TIMEOUT), 4000),
           ),
         ]);
-        if (cancelled) return;
+        if (stale()) return;
         if ("__loadTimeout" in res) {
-          // Slow/flaky network — do NOT treat as an empty account (that would
-          // push stale local over newer remote we simply couldn't fetch).
-          // Enable sync so the user's own later edits still save; skip auto-push.
+          // Slow/flaky network — do NOT treat as an empty account, and do NOT
+          // enable sync on an unhydrated device. Try again shortly.
+          retryLater();
+          return;
         } else if (res.data) {
           // A foreign/unowned local blob must not merge into this account's
           // remote — clear it first so hydrate is clean.
@@ -72,7 +96,8 @@ export function StateSync() {
             getLocalStateOwner() === userId &&
             (await reconcilePendingRemoteState(async (json) => {
               await save({ data: { data: json } });
-            }));
+            }, userId));
+          if (stale()) return;
           if (!localIsNewer) {
             try {
               hydrateFromRemote(JSON.parse(res.data), userId);
@@ -84,18 +109,26 @@ export function StateSync() {
           // Genuinely empty account: back up local ONLY if it already belongs
           // to this user — never push unowned (possibly another user's) state.
           const local = getState();
-          if (local.profile && getLocalStateOwner() === userId) {
+          const owner = getLocalStateOwner();
+          if (local.profile && owner === userId) {
             await save({ data: { data: JSON.stringify(local) } }).catch(() => {});
+            if (stale()) return;
+          } else if (!owner && (local.sessions?.length || local.logs?.length || local.checkIns?.length)) {
+            // Unowned blob WITH history: this is a previous user's leftover
+            // (fresh onboarding has no sessions/photos yet) — never adopt it
+            // into a brand-new account.
+            clearLocalState();
           }
           setLocalStateOwner(userId);
         }
         enableRemoteSync(async (json) => {
           await save({ data: { data: json } });
-        });
+        }, userId);
       } catch (e) {
         console.warn("state pull failed", e);
+        if (!stale()) retryLater();
       } finally {
-        if (!cancelled) finishRemoteStateLoad(userId);
+        if (!cancelled && seq === pullSeq) finishRemoteStateLoad(userId);
       }
     }
 

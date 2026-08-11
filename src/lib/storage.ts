@@ -30,6 +30,9 @@ function reportSyncIssue(message: string) {
 let remoteSyncEnabled = false;
 let pushTimer: ReturnType<typeof setTimeout> | null = null;
 let pushSaver: ((json: string) => Promise<void>) | null = null;
+/** Account the current saver is allowed to upload for — pushes are refused
+ *  when the on-device blob's owner no longer matches. */
+let syncOwnerId: string | null = null;
 let syncUserId: string | null = null;
 let syncReady = false;
 
@@ -50,11 +53,24 @@ function bumpVersion() {
 }
 
 function parseFromStorage(): AppState {
+  let raw: string | null = null;
   try {
-    const raw = localStorage.getItem(KEY);
+    raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULT_STATE;
     return { ...DEFAULT_STATE, ...JSON.parse(raw) } as AppState;
   } catch {
+    // Unreadable blob: quarantine the raw bytes before the next write
+    // overwrites them — otherwise a transient parse failure destroys the only
+    // copy AND uploads an empty state over the server row.
+    if (raw) {
+      try {
+        if (!localStorage.getItem(`${KEY}_corrupt`)) {
+          localStorage.setItem(`${KEY}_corrupt`, raw);
+        }
+      } catch {
+        /* quota — nothing more we can do */
+      }
+    }
     return DEFAULT_STATE;
   }
 }
@@ -85,18 +101,24 @@ function write(state: AppState) {
   cachedVersion = stateVersion;
   listeners.forEach((l) => l());
   if (remoteSyncEnabled && pushSaver) {
-    if (pushTimer) clearTimeout(pushTimer);
+    // Last line of defense against cross-account uploads: if the blob on this
+    // device no longer belongs to the account sync was enabled for (another
+    // tab switched users, a stale pull rewrote it), never push it.
+    if (syncOwnerId && getLocalStateOwner() !== syncOwnerId) return;
     const saver = pushSaver;
     const json = serialized;
     if (json.length > MAX_SYNC_BYTES) {
-      // Server rejects oversized blobs. Skip the push (and don't stash a second
-      // oversized copy under PENDING_SYNC_KEY, which would amplify the quota
-      // problem) — data stays safe on-device; cloud backup pauses until trimmed.
+      // Server rejects oversized blobs. Leave any previously scheduled
+      // (legal-sized) push running, and stash this blob so the next sign-in
+      // knows local is newer than remote — pausing backup must never mean
+      // "hydrate an old remote over weeks of local training".
+      markPendingRemoteState(json);
       reportSyncIssue(
         "Your data is too large to back up to the cloud — remove some progress photos to re-enable sync.",
       );
       return;
     }
+    if (pushTimer) clearTimeout(pushTimer);
     pushTimer = setTimeout(() => {
       saver(json)
         .then(() => {
@@ -115,8 +137,22 @@ function markPendingRemoteState(json: string) {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(PENDING_SYNC_KEY, json);
+    // Tag the stash with its owner so it can never be flushed into a
+    // different account's row after a user switch on this device.
+    const owner = getLocalStateOwner();
+    if (owner) localStorage.setItem(`${PENDING_SYNC_KEY}_owner`, owner);
+    else localStorage.removeItem(`${PENDING_SYNC_KEY}_owner`);
   } catch {
     /* ignore */
+  }
+}
+
+function pendingStateOwner(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(`${PENDING_SYNC_KEY}_owner`);
+  } catch {
+    return null;
   }
 }
 
@@ -137,6 +173,7 @@ function clearPendingRemoteState(json?: string) {
       if (current && current !== json) return;
     }
     localStorage.removeItem(PENDING_SYNC_KEY);
+    localStorage.removeItem(`${PENDING_SYNC_KEY}_owner`);
   } catch {
     /* ignore */
   }
@@ -191,6 +228,18 @@ export function hydrateFromRemote(remote: Partial<AppState>, userId?: string) {
       localStorage.setItem(KEY, JSON.stringify(merged));
       if (userId) localStorage.setItem(OWNER_KEY, userId);
     } catch (e) {
+      // Quota failure mid-hydrate: the disk still holds the PREVIOUS user's
+      // blob under the NEW session. Remove both keys so a later cold read
+      // can't misattribute stale data; the in-memory copy stays correct.
+      try {
+        localStorage.removeItem(KEY);
+        localStorage.removeItem(OWNER_KEY);
+      } catch {
+        /* ignore */
+      }
+      reportSyncIssue(
+        "This device's storage is full — your data is safe in the cloud, but free up space to keep it on-device.",
+      );
       console.warn("hydrate write failed", e);
     }
   }
@@ -207,6 +256,7 @@ export function clearLocalState() {
     // The pending stash is part of this state — leaving it behind would flush
     // the previous user's unsynced data into the next account's remote.
     localStorage.removeItem(PENDING_SYNC_KEY);
+    localStorage.removeItem(`${PENDING_SYNC_KEY}_owner`);
   }
   bumpVersion();
   listeners.forEach((l) => l());
@@ -220,14 +270,21 @@ export function clearLocalState() {
  *  Returns true when a pending blob exists (pushed or still stashed). */
 export async function reconcilePendingRemoteState(
   saver: (json: string) => Promise<void>,
+  userId?: string,
 ): Promise<boolean> {
   const pending = readPendingRemoteState();
   if (!pending) return false;
-  if (pending.length > MAX_SYNC_BYTES) {
-    // A stashed oversized blob would fail forever — drop it and let the
-    // remote hydrate proceed.
+  // A stash tagged with a different owner (or untagged, so unattributable)
+  // must never reach this account's row — drop it.
+  if (userId && pendingStateOwner() !== userId) {
     clearPendingRemoteState(pending);
     return false;
+  }
+  if (pending.length > MAX_SYNC_BYTES) {
+    // Oversized: it can't be pushed, but it IS the newest copy of this
+    // user's data. Keep it and report local-is-newer so an older remote
+    // doesn't hydrate over weeks of on-device training.
+    return true;
   }
   try {
     await saver(pending);
@@ -294,15 +351,19 @@ function registerUnloadFlush() {
   });
 }
 
-export function enableRemoteSync(saver: (json: string) => Promise<void>) {
+export function enableRemoteSync(saver: (json: string) => Promise<void>, ownerId?: string) {
   remoteSyncEnabled = true;
   pushSaver = saver;
+  syncOwnerId = ownerId ?? null;
   registerUnloadFlush();
   const pending = readPendingRemoteState();
   if (pending) {
-    if (pending.length > MAX_SYNC_BYTES) {
-      // A previously-stashed oversized blob would fail forever — drop it.
+    if (ownerId && pendingStateOwner() !== ownerId) {
+      // Another account's (or unattributable) leftovers — never flush them
+      // into this account's row.
       clearPendingRemoteState(pending);
+    } else if (pending.length > MAX_SYNC_BYTES) {
+      // Can't be pushed; keep it as the local-is-newer marker.
     } else {
       saver(pending)
         .then(() => clearPendingRemoteState(pending))
@@ -314,6 +375,8 @@ export function enableRemoteSync(saver: (json: string) => Promise<void>) {
 /** Force-flush any pending push immediately and also push current state. */
 export async function flushRemoteState() {
   if (!remoteSyncEnabled || !pushSaver) return;
+  // Same cross-account guard as the debounced push.
+  if (syncOwnerId && getLocalStateOwner() !== syncOwnerId) return;
   if (pushTimer) {
     clearTimeout(pushTimer);
     pushTimer = null;
@@ -334,8 +397,19 @@ export async function flushRemoteState() {
 }
 
 export function disableRemoteSync() {
+  // A debounced push may still be in flight conceptually — stash the current
+  // state (owner-tagged) before dropping the timer, so a finish-workout
+  // followed by an immediate sign-out survives to the next same-user login.
+  if (remoteSyncEnabled && pushTimer && (!syncOwnerId || getLocalStateOwner() === syncOwnerId)) {
+    try {
+      markPendingRemoteState(JSON.stringify(read()));
+    } catch {
+      /* best-effort */
+    }
+  }
   remoteSyncEnabled = false;
   pushSaver = null;
+  syncOwnerId = null;
   if (pushTimer) {
     clearTimeout(pushTimer);
     pushTimer = null;

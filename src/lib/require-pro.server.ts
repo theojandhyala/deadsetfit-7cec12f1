@@ -15,9 +15,15 @@ export const requirePro = createMiddleware({ type: "function" })
       .limit(1)
       .maybeSingle();
 
+    // Must match src/lib/entitlements.ts exactly — a cancelled subscription
+    // still unlocks Pro through the end of the period already paid for.
+    // Diverging here would lock athletes out during their cancellation grace.
     const isPro =
       data !== null &&
-      ["active", "trialing", "past_due"].includes(data.status) &&
+      (["active", "trialing", "past_due"].includes(data.status) ||
+        (data.status === "canceled" &&
+          !!data.current_period_end &&
+          new Date(data.current_period_end) > new Date())) &&
       (!data.current_period_end || new Date(data.current_period_end) > new Date());
 
     if (!isPro) throw new Error("Pro subscription required");
