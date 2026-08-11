@@ -53,8 +53,8 @@ export function TimeOfDayCard({ state }: { state: AppState }) {
                     }}
                   />
                 </div>
-                <span className="label-cap text-[8px] text-grit-dim w-16 text-right shrink-0">
-                  {s.sessions ? `${s.avgVolumeKg.toLocaleString()} kg` : "—"}
+                <span className="label-cap text-[8px] text-grit-dim w-16 text-right shrink-0 whitespace-nowrap">
+                  {s.sessions ? s.avgVolumeKg.toLocaleString() : "—"}
                 </span>
               </div>
             );

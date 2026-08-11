@@ -599,7 +599,8 @@ function PlanPage() {
             <div className="mt-5 grid grid-cols-3 border-y border-white/10 bg-black/25">
               <WeekStat label="Training" value={`${trainingDays} days`} />
               <WeekStat label="Volume" value={`${weeklySets} sets`} />
-              <WeekStat label="Duration" value={`~${weeklyMinutes} min`} />
+              {/* Compact unit — "~78 min" truncated to "~78 M…" on 390px phones */}
+              <WeekStat label="Duration" value={`~${weeklyMinutes}m`} />
             </div>
 
             <div className="mt-4 flex items-center justify-between gap-3 text-xs text-grit-dim">

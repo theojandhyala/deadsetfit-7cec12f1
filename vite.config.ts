@@ -42,6 +42,13 @@ export default defineConfig({
           if (id.includes("/@tanstack/")) return "vendor-tanstack";
           if (id.includes("/@supabase/")) return "vendor-supabase";
           if (id.includes("/lucide-react/")) return "vendor-icons";
+          // recharts drags the whole d3 family — only two lazy routes chart,
+          // so keep ~140 kB of it out of the startup path.
+          if (id.includes("/recharts/") || id.includes("/d3-") || id.includes("/victory-vendor/")) {
+            return "vendor-charts";
+          }
+          // Stripe only matters on the upgrade/checkout path.
+          if (id.includes("/@stripe/")) return "vendor-stripe";
           if (id.includes("/react/") || id.includes("/react-dom/") || id.includes("/scheduler/")) {
             return "vendor-react";
           }

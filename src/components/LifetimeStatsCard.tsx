@@ -74,11 +74,11 @@ export function LifetimeStatsCard({ state }: { state: AppState }) {
         return (
           <div className="mt-2.5">
             <div className="flex items-baseline justify-between">
-              <p className="label-cap text-[8px] text-grit-dim">
+              <p className="label-cap text-[8px] text-grit-dim whitespace-nowrap overflow-hidden text-ellipsis pr-2">
                 Next: {next.milestone.label} {next.milestone.emoji}
-                {eta ? ` · ~${eta} wk${eta === 1 ? "" : "s"} at this pace` : ""}
+                {eta ? ` · ~${eta} wk${eta === 1 ? "" : "s"}` : ""}
               </p>
-              <p className="label-cap text-[8px] text-accent-red">{next.pct}%</p>
+              <p className="label-cap text-[8px] text-accent-red shrink-0">{next.pct}%</p>
             </div>
             <div className="h-1.5 rounded-full bg-black/40 mt-1 overflow-hidden">
               <div

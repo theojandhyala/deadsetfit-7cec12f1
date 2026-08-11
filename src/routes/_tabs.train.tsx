@@ -64,7 +64,14 @@ function dayHype(
   label: string,
   isToday: boolean,
 ): { eyebrow: string; line: string } {
-  const focus = (label || "REST").split(" — ")[0];
+  // Case-insensitive, and "Push Day"/"Rest Day" reduce to their focus word.
+  // Exact match only — a custom "Rest-Pause Arms" is a training day, and
+  // "Chest/Back" must not read as chest-only.
+  const focus = (label || "REST")
+    .split(/ — | - /)[0]
+    .trim()
+    .toUpperCase()
+    .replace(/\s+DAY$/, "");
   const isRest = focus === "REST" || !focus;
   const dayName = DAY_FULL[dayKey].toUpperCase();
   if (isRest) {
