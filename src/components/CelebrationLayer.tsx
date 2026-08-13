@@ -1,49 +1,98 @@
-import { useEffect, useRef, useState } from "react";
-import { Flame } from "lucide-react";
-import { onGritEarned, type GritAnimationEvent } from "@/lib/grit-events";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Flame, Share2 } from "lucide-react";
+import { onGritEarned, type GritAnimationEvent, type PRShareDetails } from "@/lib/grit-events";
 import { maybeNudge } from "@/lib/upgrade-prompts";
 import { RankEmblem } from "@/components/RankEmblem";
+import { PRShareCard } from "@/components/PRShareCard";
+import { useAppState } from "@/lib/storage";
 
 /**
  * Full-screen takeover for the moments that deserve more than a toast:
  * PR detections and rank-ups. Complements GritEarnedLayer (small bursts).
  * Auto-dismisses; tap skips.
+ *
+ * A PR that carries share details holds longer and offers a share card — the
+ * lift is at its most postable in the seconds right after it lands.
  */
 export function CelebrationLayer() {
+  const [state] = useAppState();
   const [event, setEvent] = useState<GritAnimationEvent | null>(null);
+  const [sharePr, setSharePr] = useState<PRShareDetails | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const nudgeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The nudge fires on a delay; it must not stack on top of the share card.
+  const sharingRef = useRef(false);
+
+  const clearTimers = useCallback(() => {
+    if (timer.current) clearTimeout(timer.current);
+    if (nudgeTimer.current) clearTimeout(nudgeTimer.current);
+    timer.current = null;
+    nudgeTimer.current = null;
+  }, []);
 
   useEffect(
     () =>
       onGritEarned((e) => {
         if (e.kind !== "pr" && e.kind !== "rank") return;
         setEvent(e);
-        if (timer.current) clearTimeout(timer.current);
-        timer.current = setTimeout(() => setEvent(null), e.kind === "rank" ? 3600 : 2200);
+        clearTimers();
+        const hold = e.kind === "rank" ? 3600 : e.pr ? 6000 : 2200;
+        timer.current = setTimeout(() => setEvent(null), hold);
         // High-intent moment: after the celebration, a capped Pro nudge can ride along.
-        if (e.kind === "pr") setTimeout(() => maybeNudge("pr"), 2400);
+        if (e.kind === "pr") {
+          nudgeTimer.current = setTimeout(
+            () => {
+              if (!sharingRef.current) maybeNudge("pr");
+            },
+            e.pr ? 6200 : 2400,
+          );
+        }
       }),
-    [],
+    [clearTimers],
   );
-  useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current);
-    },
-    [],
-  );
+  useEffect(() => () => clearTimers(), [clearTimers]);
+
+  function openShare(pr: PRShareDetails) {
+    sharingRef.current = true;
+    clearTimers();
+    setSharePr(pr);
+    setEvent(null);
+  }
+
+  function closeShare() {
+    sharingRef.current = false;
+    setSharePr(null);
+  }
+
+  if (sharePr) {
+    const profile = state.profile;
+    return (
+      <PRShareCard
+        pr={sharePr}
+        displayName={profile?.displayName || profile?.username || "Athlete"}
+        username={profile?.username}
+        onClose={closeShare}
+      />
+    );
+  }
 
   if (!event) return null;
   const isRank = event.kind === "rank";
+  const pr = event.pr;
 
   return (
-    <button
-      type="button"
-      aria-label="Dismiss celebration"
-      onClick={() => setEvent(null)}
-      className="fixed inset-0 z-[105] flex items-center justify-center cursor-default"
+    <div
+      className="fixed inset-0 z-[105] flex items-center justify-center"
       // No backdrop-filter: composites as solid black while scrolling in WKWebView/iOS Safari.
       style={{ background: "rgba(5,5,5,0.92)" }}
     >
+      {/* Tap anywhere to skip — behind the content so the share button stays clickable. */}
+      <button
+        type="button"
+        aria-label="Dismiss celebration"
+        onClick={() => setEvent(null)}
+        className="absolute inset-0 cursor-default"
+      />
       <span
         className="celebrate-flash pointer-events-none absolute inset-0"
         style={{
@@ -62,7 +111,7 @@ export function CelebrationLayer() {
       {isRank && (
         <span className="rank-ceremony-rays pointer-events-none absolute h-[70vmin] w-[70vmin]" />
       )}
-      <span className="celebrate-overlay relative flex flex-col items-center px-8 text-center">
+      <div className="celebrate-overlay pointer-events-none relative flex flex-col items-center px-8 text-center">
         {isRank && event.rankPoints != null ? (
           <span className="rank-ceremony-emblem">
             <RankEmblem
@@ -97,7 +146,17 @@ export function CelebrationLayer() {
             +{event.amount} GRIT
           </span>
         )}
-      </span>
-    </button>
+        {pr && (
+          <button
+            type="button"
+            onClick={() => openShare(pr)}
+            className="pointer-events-auto mt-7 flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-accent-red px-7 text-sm font-extrabold uppercase tracking-widest text-white shadow-[0_0_40px_rgba(230,50,34,0.45)]"
+          >
+            <Share2 size={17} />
+            Share this PR
+          </button>
+        )}
+      </div>
+    </div>
   );
 }

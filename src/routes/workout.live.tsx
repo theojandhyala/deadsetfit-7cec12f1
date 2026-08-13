@@ -672,6 +672,10 @@ function LiveWorkoutPage() {
     // double-tap (which reads the same render-closure state twice) can't award
     // and count the same PR twice. Warm-up and drop sets never PR.
     let awardedPR = false;
+    // Captured for the share card: the record this set beat, read from the same
+    // fresh state that decided the PR, before the new set is written into it.
+    let prPreviousBest = 0;
+    let prIsBodyweight = false;
     set((st) => {
       const { bestWeight, bestBwReps } = bestsFor(st, ex.exerciseId);
       const definition = getExercise(ex.exerciseId, st.savedExercises);
@@ -684,6 +688,10 @@ function LiveWorkoutPage() {
         supportsBodyweight,
         specialSet: !!kind,
       });
+      if (awardedPR) {
+        prIsBodyweight = weight <= 0;
+        prPreviousBest = prIsBodyweight ? bestBwReps : bestWeight;
+      }
       const newSet: CompletedSet = {
         weight,
         reps,
@@ -709,7 +717,15 @@ function LiveWorkoutPage() {
       const key = `${ex.exerciseId}:${weight}:${reps}`;
       if (!prAwardedRef.current.has(key)) {
         prAwardedRef.current.add(key);
-        emitGritEarned(25, `NEW PR — ${ex.name.toUpperCase()}`, "pr");
+        emitGritEarned(25, `NEW PR — ${ex.name.toUpperCase()}`, "pr", {
+          pr: {
+            exercise: ex.name,
+            weight,
+            reps,
+            ...(prPreviousBest > 0 ? { previousBest: prPreviousBest } : {}),
+            ...(prIsBodyweight ? { bodyweight: true } : {}),
+          },
+        });
       }
     }
     // Superset movements rotate immediately and rest only after a full round.

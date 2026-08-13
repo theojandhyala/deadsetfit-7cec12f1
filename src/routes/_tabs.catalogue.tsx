@@ -7,6 +7,8 @@ import { getExercise } from "@/lib/exercises";
 import { calculateStreak } from "@/lib/calc";
 import { topSetHistory } from "@/lib/progression";
 import { WeeklyRecapCard, type WeeklyRecap } from "@/components/WeeklyRecapCard";
+import { PRShareCard } from "@/components/PRShareCard";
+import type { PRShareDetails } from "@/lib/grit-events";
 
 // Tiny inline progression chart — top-set weight over recent sessions.
 function Sparkline({ values }: { values: number[] }) {
@@ -99,6 +101,7 @@ function CataloguePage() {
   const streak = calculateStreak(state.completedDates);
   const sessions = state.sessions.filter((s) => s.endedAt).length;
   const [recap, setRecap] = useState<WeeklyRecap | null>(null);
+  const [sharePr, setSharePr] = useState<PRShareDetails | null>(null);
 
   function buildWeeklyRecap(): WeeklyRecap {
     const now = new Date();
@@ -370,6 +373,22 @@ function CataloguePage() {
                     </p>
                     <p className="label-cap text-[8px] text-grit-dim">kg</p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSharePr({
+                        exercise: pr.name,
+                        weight: pr.value,
+                        reps: pr.reps ?? 0,
+                        // No delta here: the wall keeps the record, not the
+                        // number it beat, and a guessed one would overstate it.
+                      })
+                    }
+                    aria-label={`Share ${pr.name} PR`}
+                    className="icon-btn min-h-[44px] min-w-[44px] flex items-center justify-center text-grit-dim"
+                  >
+                    <Share2 size={16} />
+                  </button>
                 </div>
               </div>
             ))}
@@ -408,6 +427,14 @@ function CataloguePage() {
       )}
 
       {recap && <WeeklyRecapCard recap={recap} onClose={() => setRecap(null)} />}
+      {sharePr && (
+        <PRShareCard
+          pr={sharePr}
+          displayName={state.profile?.displayName || state.profile?.username || "Athlete"}
+          username={state.profile?.username}
+          onClose={() => setSharePr(null)}
+        />
+      )}
     </div>
   );
 }
