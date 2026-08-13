@@ -13,6 +13,7 @@ import {
   Crown,
   Dumbbell,
   Lock,
+  Link2,
   Plus,
   Play,
   RefreshCw,
@@ -529,6 +530,20 @@ function PlanPage() {
     }));
   }
 
+  function toggleSuperset(exerciseId: string) {
+    const index = selected.exerciseIds.indexOf(exerciseId);
+    const nextId = selected.exerciseIds[index + 1];
+    if (index < 0 || !nextId) return;
+    const linked = !!selected.exerciseConfig?.[exerciseId]?.supersetWithNext;
+    updateExercise(exerciseId, { supersetWithNext: linked ? undefined : true });
+    const nextExercise = getExercise(nextId, state.savedExercises);
+    toast.success(
+      linked
+        ? "Superset removed"
+        : `Superset linked with ${nextExercise?.name ?? "the next exercise"}`,
+    );
+  }
+
   function copyTo(target: DayKey) {
     saveSchedule({
       ...schedule,
@@ -845,6 +860,11 @@ function PlanPage() {
                             <span className="min-w-0 flex-1 truncate font-semibold text-grit">
                               {exercise.name}
                             </span>
+                            {config?.supersetWithNext && (
+                              <span className="inline-flex shrink-0 items-center gap-1 text-[9px] font-black uppercase text-accent-red">
+                                <Link2 size={10} /> Superset
+                              </span>
+                            )}
                             <span className="shrink-0 font-bold text-grit-dim">
                               {sets} x {reps}
                               {config?.weightKg ? ` @ ${config.weightKg}kg` : ""}
@@ -1297,6 +1317,29 @@ function PlanPage() {
                           />
                         </label>
                       </div>
+                    )}
+                    {index < selected.exerciseIds.length - 1 && (
+                      <button
+                        type="button"
+                        onClick={() => toggleSuperset(exerciseId)}
+                        aria-pressed={!!config.supersetWithNext}
+                        className={
+                          "mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-3 text-[10px] font-black uppercase press " +
+                          (config.supersetWithNext
+                            ? "border-accent-red/50 bg-accent-red/10 text-accent-red"
+                            : "border-dashed border-white/10 text-grit-dim")
+                        }
+                      >
+                        <Link2 size={14} />
+                        {config.supersetWithNext
+                          ? `Superset with ${
+                              getExercise(
+                                selected.exerciseIds[index + 1]!,
+                                state.savedExercises,
+                              )?.name ?? "next exercise"
+                            }`
+                          : "Link with next exercise"}
+                      </button>
                     )}
                   </div>
                 );

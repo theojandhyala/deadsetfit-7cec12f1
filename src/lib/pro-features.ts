@@ -2,6 +2,7 @@
 // upgrade page, the onboarding pro step, and any promo surface.
 export const COMPARE_ROWS: { label: string; free: boolean | string; pro: boolean | string }[] = [
   { label: "Workout logging", free: true, pro: true },
+  { label: "Superset programming", free: true, pro: true },
   { label: "Basic programs", free: true, pro: true },
   { label: "Social feed & kudos", free: true, pro: true },
   { label: "Challenges (basic)", free: true, pro: true },

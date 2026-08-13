@@ -279,7 +279,13 @@ const featureGroups = [
   {
     Icon: Dumbbell,
     label: "Training",
-    items: ["Fast set logging", "Automatic PR detection", "Warm-up ramps", "Plate calculator"],
+    items: [
+      "Fast set logging",
+      "Automatic PR detection",
+      "Superset programming",
+      "Warm-up ramps",
+      "Plate calculator",
+    ],
   },
   {
     Icon: HeartPulse,

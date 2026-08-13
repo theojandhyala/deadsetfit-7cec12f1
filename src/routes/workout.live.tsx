@@ -12,6 +12,7 @@ import {
   TrendingUp,
   Ghost,
   Pencil,
+  Link2,
 } from "lucide-react";
 import { useAppState, getState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
@@ -33,6 +34,12 @@ import { exportSessionToHealth } from "@/lib/health";
 import { shareWorkoutToFeed } from "@/lib/auto-share";
 import { emitGritEarned } from "@/lib/grit-events";
 import { isPersonalRecord } from "@/lib/workout-pr";
+import {
+  buildSupersetIds,
+  completedWorkingSets,
+  nextStepAfterWorkingSet,
+  supersetPosition,
+} from "@/lib/workout-flow";
 import { VideoModal } from "@/components/VideoModal";
 import { ShareCard } from "@/components/ShareCard";
 import { GritEarnedLayer } from "@/components/GritEarnedLayer";
@@ -123,11 +130,12 @@ function buildSession(
   const sched = getScheduleForState(state);
   const d = sched?.[dayKey];
   if (!d || d.exerciseIds.length === 0) return null;
+  const supersetIds = buildSupersetIds(d.exerciseIds, d.exerciseConfig);
   return {
     ...base,
     label: d.label,
     programId: null,
-    exercises: d.exerciseIds.map<WorkoutSessionExercise>((eid) => {
+    exercises: d.exerciseIds.map<WorkoutSessionExercise>((eid, index) => {
       const ex = getExercise(eid, state.savedExercises);
       const cfg = d.exerciseConfig?.[eid];
       const prescription = autopilotByExercise.get(eid);
@@ -148,6 +156,7 @@ function buildSession(
         progression: cfg?.progression,
         tempo: cfg?.tempo,
         note: cfg?.note,
+        supersetId: supersetIds[index],
         sets: [],
       };
     }),
@@ -411,7 +420,7 @@ function LiveWorkoutPage() {
           exerciseId: e.exerciseId,
           name: e.name,
           primary_muscles: e.primary_muscles,
-          targetSets: Math.max(1, e.sets.length || e.targetSets),
+          targetSets: Math.max(1, completedWorkingSets(e.sets) || e.targetSets),
           targetReps: e.targetReps,
           plannedWeightKg: e.plannedWeightKg,
           restSeconds: e.restSeconds,
@@ -419,6 +428,7 @@ function LiveWorkoutPage() {
           progression: e.progression,
           tempo: e.tempo,
           note: e.note,
+          supersetId: e.supersetId,
           sets: [],
         })),
       };
@@ -473,7 +483,7 @@ function LiveWorkoutPage() {
   const [finished, setFinished] = useState(false);
   const [finishedSessionId, setFinishedSessionId] = useState<string | null>(null);
   const [share, setShare] = useState(false);
-  const [resting, setResting] = useState(false);
+  const [rest, setRest] = useState<{ seconds: number; nextIndex: number } | null>(null);
   const restPref = state.restTimerSeconds ?? 90;
 
   const totals = useMemo(() => {
@@ -496,7 +506,16 @@ function LiveWorkoutPage() {
   // as long as what's already logged (extra sets stay visible after remounts).
   const plannedSets = useMemo(
     () =>
-      session?.exercises.reduce((sum, e) => sum + Math.max(e.targetSets, e.sets.length), 0) ?? 0,
+      session?.exercises.reduce(
+        (sum, e) => sum + Math.max(e.targetSets, completedWorkingSets(e.sets)),
+        0,
+      ) ?? 0,
+    [session],
+  );
+  const completedPlanSets = useMemo(
+    () =>
+      session?.exercises.reduce((sum, exercise) => sum + completedWorkingSets(exercise.sets), 0) ??
+      0,
     [session],
   );
 
@@ -631,7 +650,7 @@ function LiveWorkoutPage() {
   }
 
   const current = session.exercises[activeIdx];
-  const currentRestSeconds = current.restSeconds ?? restPref;
+  const currentSuperset = supersetPosition(session.exercises, activeIdx);
   const progressionLabel =
     current.progression === "DOUBLE"
       ? "Double progression"
@@ -641,7 +660,10 @@ function LiveWorkoutPage() {
           ? "Manual progression"
           : null;
   const totalEx = session.exercises.length;
-  const progress = Math.min(100, Math.round((totals.sets / Math.max(1, plannedSets)) * 100));
+  const progress = Math.min(
+    100,
+    Math.round((completedPlanSets / Math.max(1, plannedSets)) * 100),
+  );
 
   function logSet(weight: number, reps: number, kind?: "warmup" | "drop") {
     const ex = session!.exercises[activeIdx];
@@ -690,10 +712,19 @@ function LiveWorkoutPage() {
         emitGritEarned(25, `NEW PR — ${ex.name.toUpperCase()}`, "pr");
       }
     }
-    // Auto rest-timer after each working/drop set (not warm-ups) unless the
-    // lifter has turned it off (restTimerSeconds === 0).
+    // Superset movements rotate immediately and rest only after a full round.
+    // Warm-ups stay on the current movement; drops keep the normal rest flow.
+    if (kind === "warmup") return;
     const exerciseRest = ex.restSeconds ?? restPref;
-    if (exerciseRest > 0 && kind !== "warmup") setResting(true);
+    const step =
+      kind === "drop"
+        ? { nextIndex: activeIdx, shouldRest: true }
+        : nextStepAfterWorkingSet(session!.exercises, activeIdx);
+    if (!step.shouldRest || exerciseRest <= 0) {
+      setActiveIdx(step.nextIndex);
+      return;
+    }
+    setRest({ seconds: exerciseRest, nextIndex: step.nextIndex });
   }
 
   function undoLastSet() {
@@ -853,7 +884,7 @@ function LiveWorkoutPage() {
 
       <div className="flex gap-2 overflow-x-auto px-4 py-3 border-b border-grit">
         {session.exercises.map((e, i) => {
-          const done = e.targetSets > 0 && e.sets.length >= e.targetSets;
+          const done = e.targetSets > 0 && completedWorkingSets(e.sets) >= e.targetSets;
           const active = i === activeIdx;
           return (
             <button
@@ -899,6 +930,12 @@ function LiveWorkoutPage() {
             <p className="text-xs text-[#8a8a8a] mt-1">
               {current.targetSets} × {current.targetReps}
             </p>
+            {currentSuperset && (
+              <p className="mt-2 flex items-center gap-1.5 text-[10px] font-black uppercase text-accent-red">
+                <Link2 size={13} />
+                Superset · movement {currentSuperset.position} of {currentSuperset.total}
+              </p>
+            )}
             {(current.targetRir != null ||
               current.tempo ||
               current.restSeconds ||
@@ -1012,15 +1049,19 @@ function LiveWorkoutPage() {
       {videoQuery && (
         <VideoModal query={videoQuery} title={videoTitle} onClose={() => setVideoQuery(null)} />
       )}
-      {resting && currentRestSeconds > 0 && (
+      {rest && rest.seconds > 0 && (
         <RestTimer
           key={session.exercises[activeIdx]?.sets.length ?? 0}
-          seconds={currentRestSeconds}
-          nextExercise={current.name}
-          onDone={() => setResting(false)}
+          seconds={rest.seconds}
+          nextExercise={session.exercises[rest.nextIndex]?.name}
+          onDone={() => {
+            setActiveIdx(rest.nextIndex);
+            setRest(null);
+          }}
           onDisable={() => {
             set((s) => ({ ...s, restTimerSeconds: 0 }));
-            setResting(false);
+            setActiveIdx(rest.nextIndex);
+            setRest(null);
           }}
         />
       )}

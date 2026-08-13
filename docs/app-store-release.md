@@ -1,6 +1,6 @@
 # DEADSET App Store Release Brief
 
-Updated: July 26, 2026
+Updated: August 13, 2026
 
 ## Positioning
 
@@ -40,7 +40,7 @@ PLAN THE WHOLE WEEK
 
 - Build three-, four-, five-, or six-day schedules
 - Choose from the exercise catalogue or create your own movements
-- Set exercises, sets, reps, rest, tempo, RIR, and progression rules
+- Set exercises, sets, reps, supersets, rest, tempo, RIR, and progression rules
 - Edit any day whenever your training changes
 - Opt into iPhone reminders that follow the selected training days and time
 
@@ -48,7 +48,7 @@ LOG WITHOUT LOSING FOCUS
 
 - See your previous performance before each set
 - Log weight, reps, RPE, warmups, drop sets, and AMRAPs
-- Use rest timers, plate loading, and warm-up ramps
+- Use superset-aware rest timers, plate loading, and warm-up ramps
 - Resume an interrupted session without losing the workout
 
 SEE REAL PROGRESS
@@ -157,12 +157,15 @@ Also verify in a release-signed build on a physical iPhone:
 
 These cannot be completed only in the repository:
 
-- Keep the managed Lovable Google and Apple OAuth project active and run
-  `npm run appstore:strict` immediately before archiving.
+- Keep the first-party DEADSET Google OAuth client, Apple Services ID, and authentication broker
+  active, then run `npm run appstore:strict` immediately before archiving. Lovable is not part of
+  the current authentication path.
 - Verify Google and Apple signup and returning login on a physical iPhone through
   the HTTPS callback bridge and `org.deadsetfit.app://auth/callback`.
 - Confirm Sign in with Apple token revocation during account deletion.
-- Configure the App Store product and native purchase path before selling Pro inside iOS.
+- Decide the iOS Pro business model before charging native users. The current iOS build unlocks all
+  features and suppresses checkout; StoreKit in-app purchase is required before selling digital Pro
+  features inside the iOS app.
 - Complete App Store Connect privacy answers, age rating, category, support URL, screenshots, review
   account, and export-compliance questions.
 - Confirm Cloudflare production secrets for Supabase, Stripe, and webhooks.

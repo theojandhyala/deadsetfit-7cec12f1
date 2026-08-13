@@ -51,7 +51,13 @@ export default tseslint.config(
     },
   },
   {
-    files: ["src/components/ui/**/*.{ts,tsx}", "src/hooks/usePro.tsx"],
+    files: [
+      "src/components/ui/**/*.{ts,tsx}",
+      "src/hooks/usePro.tsx",
+      // TanStack Router route modules intentionally export the route plus
+      // colocated components and helpers; they are not refresh boundaries.
+      "src/routes/**/*.{ts,tsx}",
+    ],
     rules: {
       "react-refresh/only-export-components": "off",
     },

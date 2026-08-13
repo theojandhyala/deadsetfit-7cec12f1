@@ -42,6 +42,16 @@ export default defineConfig({
           if (id.includes("/@tanstack/")) return "vendor-tanstack";
           if (id.includes("/@supabase/")) return "vendor-supabase";
           if (id.includes("/lucide-react/")) return "vendor-icons";
+          if (
+            id.includes("/recharts/") ||
+            id.includes("/d3-") ||
+            id.includes("/victory-vendor/")
+          ) {
+            return "vendor-charts";
+          }
+          if (id.includes("/@radix-ui/")) return "vendor-radix";
+          if (id.includes("/leaflet/") || id.includes("/react-leaflet/")) return "vendor-maps";
+          if (id.includes("/@stripe/") || id.includes("/stripe/")) return "vendor-stripe";
           if (id.includes("/react/") || id.includes("/react-dom/") || id.includes("/scheduler/")) {
             return "vendor-react";
           }

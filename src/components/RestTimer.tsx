@@ -79,6 +79,11 @@ export function RestTimer({
           <div>
             <div className="label-cap text-accent-red text-[10px]">REST</div>
             <div className="display text-4xl font-extrabold text-grit leading-none">{left}s</div>
+            {nextExercise && (
+              <div className="mt-1 max-w-40 truncate text-[10px] font-bold uppercase text-grit-dim">
+                Next · {nextExercise}
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <button

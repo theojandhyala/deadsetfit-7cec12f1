@@ -52,6 +52,7 @@ const SLIDES: Slide[] = [
     body: "Open Plan to see every training day. Choose a day, set its focus, then add or reorder the exercises you actually want to do.",
     tips: [
       "Set working sets and rep targets before training",
+      "Link adjacent exercises into timed supersets",
       "Adjust rest, tempo, RIR and private cues",
       "Use Programs when you want a proven starting point",
     ],
@@ -64,7 +65,7 @@ const SLIDES: Slide[] = [
     body: "Tap the centre + or Start Workout. Enter a working weight once, then tick sets as you complete them.",
     tips: [
       "Previous performance and targets stay together",
-      "Rest timers, warm-up ramps and drop sets are built in",
+      "Superset rounds, rest timers, warm-up ramps and drop sets are built in",
       "Personal records are detected automatically",
     ],
   },

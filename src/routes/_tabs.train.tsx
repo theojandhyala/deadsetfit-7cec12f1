@@ -12,6 +12,7 @@ import {
   Lock,
   Users,
   ChevronRight,
+  Link2,
 } from "lucide-react";
 
 import { VideoModal } from "@/components/VideoModal";
@@ -149,6 +150,7 @@ function TrainPage() {
         id: item.id,
         name: item.name,
         target: `${item.sets} × ${item.reps}`,
+        superset: false,
       }))
     : (day?.exerciseIds ?? []).flatMap((id) => {
         const exercise = getExercise(id, state.savedExercises);
@@ -161,6 +163,7 @@ function TrainPage() {
             target: `${config?.sets ?? day?.sets ?? exercise.sets} × ${
               config?.reps ?? day?.reps ?? exercise.reps
             }${config?.weightKg ? ` @ ${config.weightKg}kg` : ""}`,
+            superset: !!config?.supersetWithNext,
           },
         ];
       });
@@ -203,6 +206,9 @@ function TrainPage() {
                         <span className="min-w-0 flex-1 truncate font-bold text-grit">
                           {exercise.name}
                         </span>
+                        {exercise.superset && (
+                          <Link2 size={11} className="shrink-0 text-accent-red" aria-label="Superset" />
+                        )}
                         <span className="shrink-0 text-grit-dim">{exercise.target}</span>
                       </div>
                     ))}
@@ -608,6 +614,11 @@ function TrainPage() {
                           {pr && (
                             <span className="text-[10px] px-2 py-0.5 bg-accent-red text-white uppercase font-bold tracking-wider">
                               PR {pr}KG
+                            </span>
+                          )}
+                          {config?.supersetWithNext && (
+                            <span className="inline-flex items-center gap-1 border border-accent-red/40 px-2 py-0.5 text-[10px] font-bold uppercase text-accent-red">
+                              <Link2 size={10} /> Superset
                             </span>
                           )}
                         </div>

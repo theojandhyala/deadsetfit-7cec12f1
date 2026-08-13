@@ -101,6 +101,8 @@ export interface ExercisePlan {
   tempo?: string;
   /** Private coaching cue shown during the live workout. */
   note?: string;
+  /** Runs this exercise directly into the next movement before resting. */
+  supersetWithNext?: boolean;
 }
 
 export interface DaySchedule {
@@ -205,6 +207,8 @@ export interface WorkoutSessionExercise {
   progression?: ExercisePlan["progression"];
   tempo?: string;
   note?: string;
+  /** Stable within a session; exercises sharing an id are performed as one round. */
+  supersetId?: string;
   sets: CompletedSet[];
 }
 
