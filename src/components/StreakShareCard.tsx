@@ -98,13 +98,14 @@ export function StreakShareCard({
       ctx.fillText(`@${username}`, W / 2, 1480);
     }
 
-    // CTA
+    // CTA — kept above y≈1660: TikTok/Reels overlay the caption and
+    // username strip below that, which would hide the domain.
     ctx.font = "700 44px Arial, sans-serif";
     ctx.fillStyle = "#f5f5f0";
-    ctx.fillText("THINK YOU CAN OUTLAST ME?", W / 2, 1700);
+    ctx.fillText("THINK YOU CAN OUTLAST ME?", W / 2, 1580);
     ctx.font = "700 40px Arial, sans-serif";
     ctx.fillStyle = "#8a8a8a";
-    ctx.fillText("DEADSETFIT.ORG", W / 2, 1770);
+    ctx.fillText("DEADSETFIT.ORG", W / 2, 1645);
 
     setDataUrl(c.toDataURL("image/png"));
   }, [streak, displayName, username]);

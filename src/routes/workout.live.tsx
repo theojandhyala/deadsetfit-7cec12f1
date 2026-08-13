@@ -1542,6 +1542,7 @@ function FinishedScreen({
   share: boolean;
   onCloseShare: () => void;
 }) {
+  const [state] = useAppState();
   const setsLogged = session.exercises.reduce((s, e) => s + e.sets.length, 0);
   const durationMin = Math.max(
     1,
@@ -1588,7 +1589,14 @@ function FinishedScreen({
           </button>
         </div>
       </div>
-      {share && <ShareCard session={session} onClose={onCloseShare} />}
+      {share && (
+        <ShareCard
+          session={session}
+          displayName={state.profile?.displayName || state.profile?.username || undefined}
+          username={state.profile?.username}
+          onClose={onCloseShare}
+        />
+      )}
       <GritEarnedLayer />
     </div>
   );
