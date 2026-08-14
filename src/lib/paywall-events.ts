@@ -1,5 +1,3 @@
-import { isNativeIos } from "./platform";
-
 export type PaywallFeature =
   | "streak-armor"
   | "advanced-analytics"
@@ -30,9 +28,6 @@ const EVENT_NAME = "deadset:paywall";
 
 export function openPaywall(feature: PaywallFeature) {
   if (typeof window === "undefined") return;
-  // Nothing is gated on native iOS (every feature is free there), so a paywall
-  // must never surface — belt-and-braces for App Store Guideline 3.1.1.
-  if (isNativeIos()) return;
   window.dispatchEvent(
     new CustomEvent<PaywallEvent>(EVENT_NAME, {
       detail: { id: crypto.randomUUID(), feature },

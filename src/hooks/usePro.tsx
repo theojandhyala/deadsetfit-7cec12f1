@@ -4,17 +4,12 @@ import { getStripeEnvironment, isPaymentsConfigured } from "@/lib/stripe";
 import { getSubscriptionStatus } from "@/lib/payments.functions";
 import { withTimeout } from "@/lib/account-restore";
 import { isNativeIos } from "@/lib/platform";
+import { getAppleEntitlement, onAppleEntitlementChanged } from "@/lib/storekit";
 
 const PRO_CACHE_KEY = "deadset_pro_status_v1";
 
 type ProState = {
-  /**
-   * ENTITLEMENT — drives every feature gate.
-   * On native iOS this is always true: Pro can't be sold in the app (no IAP),
-   * so gating features there would mean charging outside the App Store
-   * (Guideline 3.1.1) and hiding advertised features from review (2.3).
-   * Every feature is simply free on iOS.
-   */
+  /** ENTITLEMENT — drives every feature gate across StoreKit and Stripe. */
   isPro: boolean;
   /** Actual paid subscription — identity/badging and billing surfaces only. */
   isPaidPro: boolean;
@@ -26,7 +21,7 @@ type ProState = {
   refresh: () => Promise<void>;
 };
 
-type CachedProState = Omit<ProState, "loading" | "refresh" | "isPaidPro"> & { checkedAt: number };
+type CachedProState = Omit<ProState, "loading" | "refresh"> & { checkedAt: number };
 
 const ProContext = createContext<ProState | null>(null);
 
@@ -80,6 +75,7 @@ async function rejectOnTimeout<T>(
 export function ProProvider({ children }: { children: ReactNode }) {
   const cached = typeof window !== "undefined" ? readCachedPro() : null;
   const [isPro, setIsPro] = useState(cached?.isPro ?? false);
+  const [isPaidPro, setIsPaidPro] = useState(cached?.isPaidPro ?? false);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<string | null>(cached?.status ?? null);
   const [priceId, setPriceId] = useState<string | null>(cached?.priceId ?? null);
@@ -90,14 +86,11 @@ export function ProProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    // Native iOS never queries subscription/purchase state: there is nothing to
-    // buy in the app and every feature is already unlocked, so the app makes no
-    // payment-related requests at all (App Store Guideline 3.1.1).
-    if (isNativeIos() || !isPaymentsConfigured()) {
-      setLoading(false);
-      return;
-    }
     try {
+      const nativeIos = isNativeIos();
+      const apple = nativeIos
+        ? await getAppleEntitlement().catch(() => ({ active: false as const }))
+        : { active: false as const };
       const {
         data: { session },
       } = await withTimeout(
@@ -105,8 +98,9 @@ export function ProProvider({ children }: { children: ReactNode }) {
         { data: { session: null }, error: null },
         3500,
       );
-      if (!session) {
+      if (!session && !apple.active) {
         setIsPro(false);
+        setIsPaidPro(false);
         setStatus(null);
         setPriceId(null);
         setCurrentPeriodEnd(null);
@@ -115,13 +109,28 @@ export function ProProvider({ children }: { children: ReactNode }) {
         setLoading(false);
         return;
       }
-      const env = getStripeEnvironment();
-      const data = await rejectOnTimeout(
-        getSubscriptionStatus({ data: { environment: env } }),
-        6500,
-        "Subscription check timed out",
-      );
+
+      let webSubscription: Awaited<ReturnType<typeof getSubscriptionStatus>> | null = null;
+      if (session && isPaymentsConfigured()) {
+        webSubscription = await rejectOnTimeout(
+          getSubscriptionStatus({ data: { environment: getStripeEnvironment() } }),
+          6500,
+          "Subscription check timed out",
+        ).catch(() => null);
+      }
+
+      const data = {
+        isPro: apple.active || webSubscription?.isPro === true,
+        isPaidPro: apple.active || webSubscription?.isPro === true,
+        status: apple.active ? "active" : (webSubscription?.status ?? null),
+        priceId: apple.active ? (apple.productId ?? null) : (webSubscription?.priceId ?? null),
+        currentPeriodEnd: apple.active
+          ? (apple.expirationDate ?? null)
+          : (webSubscription?.currentPeriodEnd ?? null),
+        cancelAtPeriodEnd: apple.active ? false : (webSubscription?.cancelAtPeriodEnd ?? false),
+      };
       setIsPro(data.isPro);
+      setIsPaidPro(data.isPaidPro);
       setStatus(data.status);
       setPriceId(data.priceId);
       setCurrentPeriodEnd(data.currentPeriodEnd);
@@ -145,6 +154,12 @@ export function ProProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     refresh();
+    let appleListener: { remove: () => Promise<void> } | undefined;
+    if (isNativeIos()) {
+      onAppleEntitlementChanged(() => refresh()).then((listener) => {
+        appleListener = listener;
+      });
+    }
     const { data } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT") {
         // Supabase can emit SIGNED_OUT during transient token/storage failures.
@@ -156,6 +171,7 @@ export function ProProvider({ children }: { children: ReactNode }) {
     });
     const onExplicitLogout = () => {
       setIsPro(false);
+      setIsPaidPro(false);
       setStatus(null);
       setPriceId(null);
       setCurrentPeriodEnd(null);
@@ -176,19 +192,16 @@ export function ProProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("deadset:explicit-logout", onExplicitLogout);
       document.removeEventListener("visibilitychange", onVisible);
+      void appleListener?.remove();
     };
   }, [refresh]);
-
-  // On native iOS every feature is free (see ProState.isPro), and we must not
-  // flash a locked state while the subscription check is in flight either.
-  const iosFree = isNativeIos();
 
   return (
     <ProContext.Provider
       value={{
-        isPro: isPro || iosFree,
-        isPaidPro: isPro,
-        loading: iosFree ? false : loading,
+        isPro,
+        isPaidPro,
+        loading,
         status,
         priceId,
         currentPeriodEnd,
@@ -205,8 +218,7 @@ export function usePro(): ProState {
   const ctx = useContext(ProContext);
   if (!ctx)
     return {
-      // No provider: still unlock everything on iOS so no gate can ever appear there.
-      isPro: isNativeIos(),
+      isPro: false,
       isPaidPro: false,
       loading: false,
       status: null,

@@ -409,7 +409,10 @@ function Pricing() {
               <div>
                 <p className="text-sm font-bold text-[#f0c85a]">DEADSET Pro</p>
                 {nativeIos ? (
-                  <p className="display mt-3 text-4xl font-bold">Coming soon</p>
+                  <>
+                    <p className="display mt-3 text-4xl font-bold">Monthly or yearly</p>
+                    <p className="mt-2 text-sm text-white/55">Local App Store pricing</p>
+                  </>
                 ) : (
                   <>
                     <p className="display mt-3 text-5xl font-bold">
@@ -436,7 +439,7 @@ function Pricing() {
               to="/auth"
               className="mt-8 inline-flex min-h-12 items-center justify-center rounded-lg bg-[#f0c85a] px-5 text-sm font-bold text-[#17130a] hover:bg-[#f6d676]"
             >
-              {nativeIos ? "Start training" : "Try Pro"}
+              {nativeIos ? "See Pro plans" : "Try Pro"}
             </Link>
           </div>
         </div>

@@ -109,7 +109,6 @@ function ProfilePage() {
     cancelAtPeriodEnd,
     refresh: refreshPro,
   } = usePro();
-  const nativeIos = isNativeIos();
   const manualPRKey = state.manualPRs ? JSON.stringify(state.manualPRs) : "";
 
   useEffect(() => {
@@ -602,9 +601,7 @@ function ProfilePage() {
               <Stat
                 label="Training Days"
                 v={
-                  p.trainingDays?.length
-                    ? describeDays(p.trainingDays)
-                    : `${p.daysPerWeek} / week`
+                  p.trainingDays?.length ? describeDays(p.trainingDays) : `${p.daysPerWeek} / week`
                 }
               />
               <Stat label="Current Weight" v={`${p.weightKg} kg`} />
@@ -632,89 +629,88 @@ function ProfilePage() {
                 <Stat label="Priority Muscles" v={p.focusMuscles.join(" · ")} />
               ) : null}
               {p.sleepQuality && <Stat label="Sleep" v={SLEEP_LABEL[p.sleepQuality]} />}
-              {p.motivation && <Stat label="Why You Train" v={MOTIVATION_LABEL[p.motivation] ?? p.motivation} />}
+              {p.motivation && (
+                <Stat label="Why You Train" v={MOTIVATION_LABEL[p.motivation] ?? p.motivation} />
+              )}
               {p.targetWeightKg && <Stat label="Target Weight" v={`${p.targetWeightKg} kg`} />}
             </>
           )}
         </div>
       </section>
 
-      {/* DEADSET Pro — web only. On iOS every feature is already unlocked, so
-          there is no subscription to advertise or manage (Guideline 3.1.1). */}
-      {!nativeIos && (
-        <section className="px-5 mb-6">
-          <div
-            className={`border p-5 relative overflow-hidden ${isPro ? "border-pro pro-glow" : "border-accent-red"}`}
-            style={{
-              background: isPro
-                ? "linear-gradient(135deg, #1c180c 0%, #2b2108 55%, #0d0a04 100%)"
-                : "linear-gradient(135deg, #1a1a1a 0%, #2a0d0a 100%)",
-            }}
+      {/* DEADSET Pro uses StoreKit on iPhone and Stripe on the website. */}
+      <section className="px-5 mb-6">
+        <div
+          className={`border p-5 relative overflow-hidden ${isPro ? "border-pro pro-glow" : "border-accent-red"}`}
+          style={{
+            background: isPro
+              ? "linear-gradient(135deg, #1c180c 0%, #2b2108 55%, #0d0a04 100%)"
+              : "linear-gradient(135deg, #1a1a1a 0%, #2a0d0a 100%)",
+          }}
+        >
+          {isPro && (
+            <div className="absolute top-4 right-4">
+              <ProBadge size="md" />
+            </div>
+          )}
+          <Crown size={20} className={isPro ? "text-pro mb-2" : "text-accent-red mb-2"} />
+          <p
+            className={`display text-2xl font-extrabold uppercase ${isPro ? "text-pro-gradient" : "text-grit"}`}
           >
-            {isPro && (
-              <div className="absolute top-4 right-4">
-                <ProBadge size="md" />
+            DEADSET Pro
+          </p>
+          {isPro ? (
+            <>
+              <p className="label-cap text-[10px] text-pro/90 mt-0.5">Membership active</p>
+              <div className="grid grid-cols-1 gap-1.5 mt-3 mb-4">
+                {[
+                  "Weekly Review + PR Roadmap",
+                  "Streak Armor — never lose your streak",
+                  "Progression intelligence + Ghost Mode",
+                  "Full Weekly Leagues + H2H challenges",
+                  "Advanced analytics & strength standards",
+                  "Unlimited custom programs + featured plans",
+                ].map((perk) => (
+                  <div key={perk} className="flex items-center gap-2 text-xs text-grit">
+                    <Check size={13} className="text-pro shrink-0" strokeWidth={3} />
+                    <span>{perk}</span>
+                  </div>
+                ))}
               </div>
-            )}
-            <Crown size={20} className={isPro ? "text-pro mb-2" : "text-accent-red mb-2"} />
-            <p
-              className={`display text-2xl font-extrabold uppercase ${isPro ? "text-pro-gradient" : "text-grit"}`}
-            >
-              DEADSET Pro
+              {(currentPeriodEnd || cancelAtPeriodEnd) && (
+                <p className="text-[11px] text-[#8a8a8a] mb-4">
+                  {cancelAtPeriodEnd
+                    ? `Cancels ${currentPeriodEnd ? new Date(currentPeriodEnd).toLocaleDateString() : "at period end"}.`
+                    : currentPeriodEnd
+                      ? `Renews ${new Date(currentPeriodEnd).toLocaleDateString()}.`
+                      : ""}
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-xs text-[#8a8a8a] mt-1 mb-4">
+              Streak Armor, H2H challenges, full leagues, advanced analytics, featured programs.
             </p>
-            {isPro ? (
-              <>
-                <p className="label-cap text-[10px] text-pro/90 mt-0.5">Membership active</p>
-                <div className="grid grid-cols-1 gap-1.5 mt-3 mb-4">
-                  {[
-                    "Weekly Review + PR Roadmap",
-                    "Streak Armor — never lose your streak",
-                    "Progression intelligence + Ghost Mode",
-                    "Full Weekly Leagues + H2H challenges",
-                    "Advanced analytics & strength standards",
-                    "Unlimited custom programs + featured plans",
-                  ].map((perk) => (
-                    <div key={perk} className="flex items-center gap-2 text-xs text-grit">
-                      <Check size={13} className="text-pro shrink-0" strokeWidth={3} />
-                      <span>{perk}</span>
-                    </div>
-                  ))}
-                </div>
-                {(currentPeriodEnd || cancelAtPeriodEnd) && (
-                  <p className="text-[11px] text-[#8a8a8a] mb-4">
-                    {cancelAtPeriodEnd
-                      ? `Cancels ${currentPeriodEnd ? new Date(currentPeriodEnd).toLocaleDateString() : "at period end"}.`
-                      : currentPeriodEnd
-                        ? `Renews ${new Date(currentPeriodEnd).toLocaleDateString()}.`
-                        : ""}
-                  </p>
-                )}
-              </>
-            ) : (
-              <p className="text-xs text-[#8a8a8a] mt-1 mb-4">
-                Streak Armor, H2H challenges, full leagues, advanced analytics, featured programs.
-              </p>
-            )}
-            {isPro ? (
-              <div className="grid grid-cols-2 gap-2">
-                <Link to="/upgrade" className="btn-ghost w-full inline-flex justify-center">
-                  Manage Pro
-                </Link>
-                <button onClick={() => void refreshPro()} className="btn-grit w-full">
-                  Refresh
-                </button>
-              </div>
-            ) : (
-              <Link to="/upgrade" className="btn-grit w-full inline-flex justify-center">
-                Upgrade — Go Pro
+          )}
+          {isPro ? (
+            <div className="grid grid-cols-2 gap-2">
+              <Link to="/upgrade" className="btn-ghost w-full inline-flex justify-center">
+                Manage Pro
               </Link>
-            )}
-            {isPro && proStatus && (
-              <p className="mt-3 label-cap text-[10px] text-pro/80">Status: {proStatus}</p>
-            )}
-          </div>
-        </section>
-      )}
+              <button onClick={() => void refreshPro()} className="btn-grit w-full">
+                Refresh
+              </button>
+            </div>
+          ) : (
+            <Link to="/upgrade" className="btn-grit w-full inline-flex justify-center">
+              Upgrade — Go Pro
+            </Link>
+          )}
+          {isPro && proStatus && (
+            <p className="mt-3 label-cap text-[10px] text-pro/80">Status: {proStatus}</p>
+          )}
+        </div>
+      </section>
 
       <section className="px-5 mb-6 flex flex-col gap-2">
         <Link to="/recovery" className="btn-ghost w-full inline-flex items-center justify-center">

@@ -11,5 +11,6 @@ class MyViewController: CAPBridgeViewController {
         // simply undefined, so the rest timer silently never reaches the Dynamic
         // Island and nothing anywhere reports an error.
         bridge?.registerPluginInstance(RestActivityPlugin())
+        bridge?.registerPluginInstance(StoreKitPlugin())
     }
 }

@@ -224,8 +224,8 @@ export function FeatureTour() {
   if (!show) return null;
 
   // Drop the Pro slide for users who already have Pro — and on native iOS,
-  // where every feature is free and there's no subscription to pitch.
-  const slides = isPro || isNativeIos() ? SLIDES.filter((s) => !s.pro) : SLIDES;
+  // Paid members do not need a tour slide advertising features they already own.
+  const slides = isPro ? SLIDES.filter((s) => !s.pro) : SLIDES;
   const slide = slides[Math.min(i, slides.length - 1)];
   const last = i >= slides.length - 1;
   const Icon = slide.icon;

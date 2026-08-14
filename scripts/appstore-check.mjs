@@ -110,6 +110,10 @@ const deviceReminders = existsSync("src/lib/device-reminders.ts")
   ? read("src/lib/device-reminders.ts")
   : "";
 const settingsPage = existsSync("src/routes/settings.tsx") ? read("src/routes/settings.tsx") : "";
+const storeKitPlugin = existsSync("ios/App/App/StoreKitPlugin.swift")
+  ? read("ios/App/App/StoreKitPlugin.swift")
+  : "";
+const storeKitClient = existsSync("src/lib/storekit.ts") ? read("src/lib/storekit.ts") : "";
 
 check("package.json exists", !!packageJson.name, "Project metadata is readable.");
 check(
@@ -181,23 +185,44 @@ check(
   "Opt-in local notifications follow the user's training schedule and can be configured in-app.",
 );
 check(
-  "Stripe blocked on native iOS",
-  upgradePage.includes('if (isNativeIos()) navigate({ to: "/profile", replace: true })') &&
-    upgradePage.includes("iosNative ?") &&
-    upgradePage.includes("Checkout disabled on iPhone") &&
-    profilePage.includes("!nativeIos &&") &&
-    paywallSheet.includes("isNativeIos() ?") &&
-    !paywallSheet.includes("deadsetfit.org/upgrade") &&
-    paywallEvents.includes("if (isNativeIos()) return") &&
-    upgradePrompts.includes("if (isNativeIos()) return false") &&
-    proProvider.includes("const iosFree = isNativeIos()"),
-  "Stripe checkout, upgrade prompts, and external-purchase calls to action are absent inside native iOS; Safari remains the web subscription channel.",
+  "StoreKit subscription products",
+  storeKitPlugin.includes("org.deadsetfit.pro.monthly") &&
+    storeKitPlugin.includes("org.deadsetfit.pro.annual") &&
+    storeKitClient.includes("org.deadsetfit.pro.monthly") &&
+    storeKitClient.includes("org.deadsetfit.pro.annual"),
+  "Native and web layers use the same two immutable App Store product identifiers.",
 );
 check(
-  "web-only subscription terms",
-  /Web subscriptions are processed by\s+Stripe/.test(termsPage) &&
-    !termsPage.includes("Subscriptions made via the Apple App Store"),
-  "Terms describe the Stripe web subscription actually offered by DEADSET and do not claim an unavailable Apple subscription.",
+  "verified Apple entitlement",
+  storeKitPlugin.includes("Transaction.currentEntitlements") &&
+    storeKitPlugin.includes("case .verified") &&
+    proProvider.includes("getAppleEntitlement") &&
+    !proProvider.includes("iosFree"),
+  "Only StoreKit-verified, unexpired, non-revoked purchases unlock Pro on iPhone.",
+);
+check(
+  "Apple purchase recovery",
+  storeKitPlugin.includes("AppStore.sync()") &&
+    storeKitPlugin.includes("showManageSubscriptions") &&
+    upgradePage.includes("Restore Purchases") &&
+    upgradePage.includes("Subscribe with Apple"),
+  "The iPhone paywall can purchase, restore, and manage Apple subscriptions.",
+);
+check(
+  "Stripe isolated from native checkout",
+  upgradePage.includes("startApplePurchase") &&
+    upgradePage.includes("iosNative ?") &&
+    !paywallSheet.includes("deadsetfit.org/upgrade") &&
+    !storeKitPlugin.toLowerCase().includes("stripe"),
+  "Native checkout uses StoreKit; Stripe remains the website payment channel.",
+);
+check(
+  "Apple subscription terms",
+  termsPage.includes("processed by Apple") &&
+    termsPage.includes("renew automatically") &&
+    termsPage.includes("App Store account") &&
+    /processed by\s+Stripe/.test(termsPage),
+  "Terms describe both Apple in-app subscriptions and Stripe website subscriptions.",
 );
 check(
   "camera usage string",

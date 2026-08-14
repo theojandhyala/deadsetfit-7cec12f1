@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { BarChart3, Crown, Gauge, Swords, X } from "lucide-react";
 import { usePro } from "@/hooks/usePro";
-import { isNativeIos } from "@/lib/platform";
 
 const DISMISS_KEY = "deadset_pro_banner_dismissed_session";
 
@@ -18,8 +17,7 @@ export function ProBanner() {
     }
   }, []);
 
-  // App Store 3.1.1: no external-purchase CTA on iOS.
-  if (loading || isPro || dismissed || isNativeIos()) return null;
+  if (loading || isPro || dismissed) return null;
 
   function dismiss() {
     try {

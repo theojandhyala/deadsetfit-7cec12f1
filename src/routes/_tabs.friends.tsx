@@ -986,7 +986,7 @@ function Invite() {
     setBusy(true);
     try {
       await _redeem({ data: { code: code.trim() } });
-      toast.success(isNativeIos() ? "Code applied — you're connected!" : "Both got 30 days Pro!");
+      toast.success("Both got 30 days Pro!");
       setCode("");
       if (codeRef.current) codeRef.current.value = "";
       setInfo(await _info());
@@ -1022,23 +1022,20 @@ function Invite() {
 
   return (
     <div className="px-5 pb-6 space-y-4">
-      {/* Pro status — web only. On iOS every feature is already free, so there
-          is no subscription to show or earn (App Store Guideline 3.1.1). */}
-      {!isNativeIos() && (
-        <div className="bg-grit-card border border-grit p-5">
-          <p className="label-cap text-accent-red mb-1">DEADSET PRO</p>
-          {info.proUntil && new Date(info.proUntil) > new Date() ? (
-            <>
-              <p className="display font-extrabold text-grit text-3xl leading-none">ACTIVE</p>
-              <p className="text-xs text-[#8a8a8a] mt-1">
-                Until {new Date(info.proUntil).toLocaleDateString()}
-              </p>
-            </>
-          ) : (
-            <p className="text-sm text-[#8a8a8a]">Free tier. Earn Pro by inviting mates.</p>
-          )}
-        </div>
-      )}
+      {/* Referral Pro time is account-based and follows the member across devices. */}
+      <div className="bg-grit-card border border-grit p-5">
+        <p className="label-cap text-accent-red mb-1">DEADSET PRO</p>
+        {info.proUntil && new Date(info.proUntil) > new Date() ? (
+          <>
+            <p className="display font-extrabold text-grit text-3xl leading-none">ACTIVE</p>
+            <p className="text-xs text-[#8a8a8a] mt-1">
+              Until {new Date(info.proUntil).toLocaleDateString()}
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-[#8a8a8a]">Free tier. Earn Pro by inviting mates.</p>
+        )}
+      </div>
 
       {/* Username */}
       <div className="bg-grit-card border border-grit p-5">
@@ -1071,11 +1068,7 @@ function Invite() {
       <div className="bg-grit-card border border-accent-red p-5">
         <div className="flex items-center gap-2 mb-2">
           <Gift size={14} className="text-accent-red" />
-          <p className="label-cap text-accent-red">
-            {isNativeIos()
-              ? "Invite a mate to train with you"
-              : "Invite a mate, both get 30 days Pro"}
-          </p>
+          <p className="label-cap text-accent-red">Invite a mate, both get 30 days Pro</p>
         </div>
         <div className="display font-extrabold text-grit text-4xl leading-none my-3 tracking-wider">
           {info.code}
@@ -1105,13 +1098,8 @@ function Invite() {
             <div className="mt-3">
               <div className="flex items-center justify-between text-xs mb-1.5">
                 <span className="text-[#8a8a8a]">
-                  Invited <span className="text-grit font-bold">{count}</span>
-                  {!isNativeIos() && (
-                    <>
-                      {" "}
-                      · earned <span className="text-grit font-bold">{count * 30}</span> Pro days
-                    </>
-                  )}
+                  Invited <span className="text-grit font-bold">{count}</span> · earned{" "}
+                  <span className="text-grit font-bold">{count * 30}</span> Pro days
                 </span>
                 {cur && <span className="label-cap text-[9px] text-accent-red">{labels[cur]}</span>}
               </div>

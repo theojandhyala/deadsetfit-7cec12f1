@@ -1,8 +1,7 @@
 // Smart, frequency-capped "Go Pro" nudges.
 // Fires at genuine high-intent moments (a fresh PR, a weekly check-in) but a
 // single shared cap keeps it persistent without being spammy. Suppressed
-// entirely on native iOS (App Store 3.1.1 — no external-purchase prompts).
-import { isNativeIos } from "./platform";
+// The native prompt leads only to Apple's in-app purchase screen.
 
 const NUDGE_AT_KEY = "deadset_upgrade_nudge_at";
 const MIN_INTERVAL_MS = 20 * 3_600_000; // ~once per day at most
@@ -34,7 +33,6 @@ const COPY: Record<NudgeTrigger, { title: string; message: string }> = {
 };
 
 function canShow(now: number): boolean {
-  if (isNativeIos()) return false;
   try {
     const last = Number(localStorage.getItem(NUDGE_AT_KEY) || "0");
     return now - last >= MIN_INTERVAL_MS;

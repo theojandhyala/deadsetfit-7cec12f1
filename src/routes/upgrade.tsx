@@ -39,6 +39,14 @@ import {
 import { isNativeIos } from "@/lib/platform";
 import { COMPARE_ROWS } from "@/lib/pro-features";
 import { ProBadge } from "@/components/ProBadge";
+import {
+  APPLE_PRO_PRODUCTS,
+  getAppleProducts,
+  manageApplePro,
+  purchaseApplePro,
+  restoreApplePro,
+  type AppleProduct,
+} from "@/lib/storekit";
 
 export const Route = createFileRoute("/upgrade")({
   head: () => ({ meta: [{ title: "DEADSET — Go Pro" }] }),
@@ -128,7 +136,7 @@ const PRO_FEATURES = [
 
 function UpgradePage() {
   const navigate = useNavigate();
-  const { isPro, loading } = usePro();
+  const { isPro, loading, refresh } = usePro();
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [plan, setPlan] = useState<"monthly" | "yearly">("yearly");
   const [currency, setCurrency] = useState<SupportedCurrency>("usd");
@@ -140,16 +148,18 @@ function UpgradePage() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [iosNative, setIosNative] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
-
-  // The whole upgrade surface is web-only. On native iOS every feature is free,
-  // so this page has nothing to offer and must not exist (Guideline 3.1.1).
-  useEffect(() => {
-    if (isNativeIos()) navigate({ to: "/profile", replace: true });
-  }, [navigate]);
+  const [appleProducts, setAppleProducts] = useState<AppleProduct[]>([]);
+  const [appleLoading, setAppleLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    setIosNative(isNativeIos());
+    const nativeIos = isNativeIos();
+    setIosNative(nativeIos);
+    if (nativeIos) {
+      getAppleProducts()
+        .then(setAppleProducts)
+        .catch(() => setCheckoutError("Subscriptions are temporarily unavailable from Apple."));
+    }
     withTimeout(supabase.auth.getSession(), { data: { session: null }, error: null }, 3500)
       .then(({ data: { session }, error }) => {
         if (cancelled) return;
@@ -169,6 +179,10 @@ function UpgradePage() {
   }, [navigate]);
 
   const priceLabels = CURRENCY_META[currency];
+  const appleMonthly = appleProducts.find((product) => product.id === APPLE_PRO_PRODUCTS.monthly);
+  const appleYearly = appleProducts.find((product) => product.id === APPLE_PRO_PRODUCTS.yearly);
+  const monthlyLabel = iosNative ? (appleMonthly?.displayPrice ?? "—") : priceLabels.monthly;
+  const yearlyLabel = iosNative ? (appleYearly?.displayPrice ?? "—") : priceLabels.yearly;
   const priceId = priceIdFor(plan, currency);
 
   const checkoutReturnUrl = `${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`;
@@ -216,6 +230,48 @@ function UpgradePage() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not open billing portal");
       setBillingLoading(false);
+    }
+  };
+
+  const startApplePurchase = async () => {
+    if (!user) {
+      navigate({ to: "/auth" });
+      return;
+    }
+    setAppleLoading(true);
+    setCheckoutError(null);
+    try {
+      const productId = plan === "yearly" ? APPLE_PRO_PRODUCTS.yearly : APPLE_PRO_PRODUCTS.monthly;
+      const result = await purchaseApplePro(productId, user.id);
+      if (result.pending)
+        toast.message("Purchase pending approval", {
+          description: "Pro unlocks as soon as Apple approves it.",
+        });
+      else if (!result.cancelled && result.active) {
+        await refresh();
+        toast.success("DEADSET Pro unlocked");
+      }
+    } catch (error) {
+      setCheckoutError(
+        error instanceof Error ? error.message : "Apple purchase could not be completed",
+      );
+    } finally {
+      setAppleLoading(false);
+    }
+  };
+
+  const restoreApplePurchase = async () => {
+    setAppleLoading(true);
+    setCheckoutError(null);
+    try {
+      const result = await restoreApplePro();
+      await refresh();
+      if (result.active) toast.success("Purchases restored");
+      else toast.message("No active DEADSET Pro purchase was found");
+    } catch (error) {
+      setCheckoutError(error instanceof Error ? error.message : "Purchases could not be restored");
+    } finally {
+      setAppleLoading(false);
     }
   };
 
@@ -279,7 +335,7 @@ function UpgradePage() {
             </span>
             <p className="label-cap text-[9px] text-grit-dim mt-2">Yearly</p>
             <p className="display text-3xl font-extrabold text-white leading-none mt-1">
-              {priceLabels.yearly}
+              {yearlyLabel}
             </p>
             <p className="text-[10px] mt-1" style={{ color: "#8A8A8A" }}>
               per year
@@ -291,7 +347,7 @@ function UpgradePage() {
           >
             <p className="label-cap text-[9px] text-grit-dim mt-1">Monthly</p>
             <p className="display text-3xl font-extrabold text-white leading-none mt-1">
-              {priceLabels.monthly}
+              {monthlyLabel}
             </p>
             <p className="text-[10px] mt-1" style={{ color: "#8A8A8A" }}>
               per month · cancel anytime
@@ -417,7 +473,15 @@ function UpgradePage() {
         <Link to="/train" className="btn-ghost mt-3 px-8">
           Go to training
         </Link>
-        {!iosNative && (
+        {iosNative ? (
+          <button
+            onClick={() => void manageApplePro()}
+            className="mt-3 text-xs uppercase tracking-widest"
+            style={{ color: "#8a8a8a" }}
+          >
+            Manage subscription
+          </button>
+        ) : (
           <button
             onClick={openBillingPortal}
             disabled={billingLoading}
@@ -625,19 +689,94 @@ function UpgradePage() {
           )}
 
           {iosNative ? (
-            <div
-              className="deadset-3d-panel mb-6 p-5 text-center"
-              style={{ background: "#141414", border: "1.5px solid #262626" }}
-            >
-              <Crown size={24} className="mx-auto mb-3" style={{ color: "#e63222" }} />
-              <p className="display text-xl font-extrabold uppercase text-white">
-                Pro is coming to iPhone
+            <>
+              <div className="flex flex-col gap-3 mb-5">
+                {[
+                  {
+                    key: "yearly" as const,
+                    product: appleYearly,
+                    label: "Yearly",
+                    note: "Best value · billed annually",
+                  },
+                  {
+                    key: "monthly" as const,
+                    product: appleMonthly,
+                    label: "Monthly",
+                    note: "Flexible · cancel anytime",
+                  },
+                ].map((option) => (
+                  <button
+                    key={option.key}
+                    type="button"
+                    onClick={() => setPlan(option.key)}
+                    disabled={!option.product || appleLoading}
+                    className="deadset-3d-panel deadset-lift w-full text-left p-4 press disabled:opacity-60"
+                    style={{
+                      background: plan === option.key ? "rgba(230,50,34,0.1)" : "#141414",
+                      border: `2px solid ${plan === option.key ? "#e63222" : "#262626"}`,
+                    }}
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="font-bold text-white text-sm uppercase tracking-wider">
+                          {option.label}
+                        </p>
+                        <p className="text-[10px] mt-1" style={{ color: "#8A8A8A" }}>
+                          {option.note}
+                        </p>
+                      </div>
+                      <p className="display text-2xl font-extrabold text-white">
+                        {option.product?.displayPrice ?? (
+                          <Loader2 size={18} className="animate-spin" />
+                        )}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {checkoutError && (
+                <div className="mb-3 rounded-lg border border-accent-red/50 bg-accent-red/10 p-3 text-center">
+                  <p className="text-xs text-accent-red">{checkoutError}</p>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={startApplePurchase}
+                disabled={appleLoading || appleProducts.length === 0}
+                className="btn-grit w-full py-4 text-base rounded-2xl disabled:opacity-60"
+              >
+                {appleLoading ? (
+                  <Loader2 size={16} className="inline mr-2 animate-spin" />
+                ) : (
+                  <Crown size={16} className="inline mr-2" />
+                )}
+                Subscribe with Apple
+              </button>
+              <button
+                type="button"
+                onClick={restoreApplePurchase}
+                disabled={appleLoading}
+                className="btn-ghost mt-3 w-full py-3 text-xs rounded-2xl disabled:opacity-60"
+              >
+                Restore Purchases
+              </button>
+              <p
+                className="mt-4 text-center text-[10px] leading-relaxed"
+                style={{ color: "#8a8a8a" }}
+              >
+                Payment is charged to your Apple Account. Subscription renews automatically unless
+                cancelled at least 24 hours before the end of the current period. Manage or cancel
+                in your App Store account.
               </p>
-              <p className="mt-2 text-sm leading-relaxed" style={{ color: "#8A8A8A" }}>
-                DEADSET Pro isn’t available on iPhone yet. Keep training free — every core feature
-                stays unlocked.
-              </p>
-            </div>
+              <div
+                className="mt-3 flex justify-center gap-4 text-[10px] uppercase tracking-wider"
+                style={{ color: "#8a8a8a" }}
+              >
+                <Link to="/terms">Terms</Link>
+                <Link to="/privacy">Privacy</Link>
+              </div>
+            </>
           ) : (
             <>
               {/* Plan selector */}
@@ -750,22 +889,6 @@ function UpgradePage() {
               </p>
             </>
           )}
-        </div>
-      ) : iosNative ? (
-        <div className="px-5 pb-12">
-          <div className="deadset-3d-panel border border-grit bg-grit-card p-5 text-center">
-            <p className="label-cap text-xs text-accent-red">Checkout disabled on iPhone</p>
-            <p className="mt-2 text-sm text-grit-dim">
-              Apple requires in-app purchase for native iOS subscriptions.
-            </p>
-          </div>
-          <button
-            onClick={() => setShowCheckout(false)}
-            className="mt-4 w-full text-center text-[11px] uppercase tracking-widest press"
-            style={{ color: "#8A8A8A" }}
-          >
-            ← Back to plans
-          </button>
         </div>
       ) : (
         <div className="px-2 pb-12">

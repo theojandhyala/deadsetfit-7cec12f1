@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		00B4D17EC3B2C37AFDCB3718 /* RestActivityPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D0504D4790907242FD0024 /* RestActivityPlugin.swift */; };
+		A11E4C0A2E0B11F0AA010101 /* StoreKitPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E4C092E0B11F0AA010100 /* StoreKitPlugin.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		316C2D96387D8DBFE8B2CADA /* RestActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9774CA8A1B7939BB8417C6C0 /* RestActivityAttributes.swift */; };
 		341E5676EB8D09FFD5859E8F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 90732EDC0FD9422339C4BA5E /* Assets.xcassets */; };
@@ -53,6 +54,7 @@
 
 /* Begin PBXFileReference section */
 		09D0504D4790907242FD0024 /* RestActivityPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RestActivityPlugin.swift; sourceTree = "<group>"; };
+		A11E4C092E0B11F0AA010100 /* StoreKitPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitPlugin.swift; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* DeadSet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeadSet.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -148,6 +150,7 @@
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				50B271D01FEDC1A000F3C39B /* public */,
 				09D0504D4790907242FD0024 /* RestActivityPlugin.swift */,
+				A11E4C092E0B11F0AA010100 /* StoreKitPlugin.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -287,6 +290,7 @@
 				DD5E4C0C2E0B11F0AA010003 /* MyViewController.swift in Sources */,
 				808D7B97039BA0A8513C1A7F /* RestActivityAttributes.swift in Sources */,
 				00B4D17EC3B2C37AFDCB3718 /* RestActivityPlugin.swift in Sources */,
+				A11E4C0A2E0B11F0AA010101 /* StoreKitPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -458,7 +462,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 127;
 				DEVELOPMENT_TEAM = 89JWMU95AH;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
@@ -483,7 +487,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 127;
 				DEVELOPMENT_TEAM = 89JWMU95AH;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
@@ -507,7 +511,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = "";
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 127;
 				DEVELOPMENT_TEAM = 89JWMU95AH;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = DeadSetRestActivity/Info.plist;
@@ -532,7 +536,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = "";
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 127;
 				DEVELOPMENT_TEAM = 89JWMU95AH;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = DeadSetRestActivity/Info.plist;

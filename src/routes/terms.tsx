@@ -19,7 +19,7 @@ export const Route = createFileRoute("/terms")({
 
 function TermsPage() {
   return (
-    <LegalShell title="Terms of Service" updated="June 3, 2026">
+    <LegalShell title="Terms of Service" updated="August 14, 2026">
       <p>
         By creating an account or using DEADSET, you agree to these Terms. If you do not agree, do
         not use the app.
@@ -69,10 +69,12 @@ function TermsPage() {
 
       <H>6. Subscriptions & payments</H>
       <p>
-        DEADSET Pro may be sold as a recurring subscription. Web subscriptions are processed by
-        Stripe and can be managed or cancelled from your DEADSET account on the website. Stripe
-        subscriptions renew automatically until cancelled. The iPhone app does not sell
-        subscriptions or process payments.
+        DEADSET Pro may be sold as a monthly or annual auto-renewing subscription. Purchases made in
+        the iPhone app are processed by Apple and charged to your Apple Account when confirmed. They
+        renew automatically unless cancelled at least 24 hours before the end of the current period
+        and can be managed in your App Store account. Purchases made on the website are processed by
+        Stripe and can be managed from your DEADSET account. Prices and billing periods are shown
+        before purchase. Pro access remains available through the paid period.
       </p>
 
       <H>7. Termination</H>

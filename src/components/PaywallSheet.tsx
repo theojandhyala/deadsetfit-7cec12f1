@@ -300,13 +300,21 @@ export function PaywallSheet() {
         </ul>
 
         {isNativeIos() ? (
-          // App Store Guideline 3.1.1: no price, no external-purchase CTA on iOS.
           <>
-            <p className="mt-6 text-sm text-grit-dim leading-relaxed">
-              This is a DEADSET Pro feature. Pro isn't available on iPhone yet.
-            </p>
-            <button onClick={close} className="btn-grit w-full mt-4 py-3.5">
-              Got it
+            <button
+              onClick={() => {
+                close();
+                navigate({ to: "/upgrade" });
+              }}
+              className="btn-grit w-full mt-6 py-3.5"
+            >
+              View Pro options
+            </button>
+            <button
+              onClick={close}
+              className="w-full mt-2 py-2 label-cap text-[10px] text-grit-dim press"
+            >
+              Not now
             </button>
           </>
         ) : (
