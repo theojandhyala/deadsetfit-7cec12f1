@@ -212,6 +212,7 @@ check(
   "Stripe isolated from native checkout",
   upgradePage.includes("startApplePurchase") &&
     upgradePage.includes("iosNative ?") &&
+    proProvider.includes("!nativeIos && session && isPaymentsConfigured()") &&
     !paywallSheet.includes("deadsetfit.org/upgrade") &&
     !storeKitPlugin.toLowerCase().includes("stripe"),
   "Native checkout uses StoreKit; Stripe remains the website payment channel.",

@@ -111,7 +111,7 @@ export function ProProvider({ children }: { children: ReactNode }) {
       }
 
       let webSubscription: Awaited<ReturnType<typeof getSubscriptionStatus>> | null = null;
-      if (session && isPaymentsConfigured()) {
+      if (!nativeIos && session && isPaymentsConfigured()) {
         webSubscription = await rejectOnTimeout(
           getSubscriptionStatus({ data: { environment: getStripeEnvironment() } }),
           6500,
