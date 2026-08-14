@@ -238,6 +238,15 @@ check(
   infoPlist.includes("NSCameraUsageDescription"),
   "Info.plist declares NSCameraUsageDescription (required — camera is used for check-in photos).",
 );
+// The nearby-athletes city fill calls navigator.geolocation. WKWebView only
+// raises the permission prompt when the host app declares a purpose string, and
+// App Privacy declares Coarse Location — a binary without this contradicts it.
+check(
+  "location usage string",
+  !/navigator\.geolocation/.test(friendsPage) ||
+    infoPlist.includes("NSLocationWhenInUseUsageDescription"),
+  "Info.plist declares NSLocationWhenInUseUsageDescription for the optional city lookup.",
+);
 check(
   "photo library usage string",
   infoPlist.includes("NSPhotoLibraryUsageDescription"),
