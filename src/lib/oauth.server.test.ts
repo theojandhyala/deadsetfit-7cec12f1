@@ -8,6 +8,8 @@ const env: OAuthBrokerEnv = {
   GOOGLE_OAUTH_CLIENT_ID: "google-client-id.apps.googleusercontent.com",
   GOOGLE_OAUTH_CLIENT_SECRET: "google-client-secret",
   APPLE_OAUTH_CLIENT_ID: "org.deadsetfit.web",
+  APPLE_TEAM_ID: "89JWMU95AH",
+  APPLE_KEY_ID: "test-apple-key",
 };
 
 let keyPair: CryptoKeyPair;
@@ -22,6 +24,8 @@ function toBase64Url(bytes: Uint8Array) {
 function encodeSegment(value: unknown) {
   return toBase64Url(new TextEncoder().encode(JSON.stringify(value)));
 }
+
+const sessionAccessToken = `x.${encodeSegment({ sub: "user-1" })}.x`;
 
 async function signIdToken(claims: Record<string, unknown>) {
   const body = `${encodeSegment({ alg: "RS256", kid: "test-key", typ: "JWT" })}.${encodeSegment(claims)}`;
@@ -82,11 +86,14 @@ function stubBackends(
       // The code exchange must return a token whose nonce matches this attempt.
       return Response.json({ id_token: googleIdToken });
     }
+    if (url.includes("appleid.apple.com/auth/token")) {
+      return Response.json({ refresh_token: "apple-refresh-token" });
+    }
     if (url.includes("grant_type=id_token")) {
       return (
         overrides.providerGrantResponse ??
         Response.json({
-          access_token: "access",
+          access_token: sessionAccessToken,
           refresh_token: "refresh",
           expires_in: 3600,
           token_type: "bearer",
@@ -99,12 +106,15 @@ function stubBackends(
     if (url.includes("/auth/v1/admin/generate_link")) {
       return Response.json({ hashed_token: "hashed-token-1" });
     }
+    if (url.includes("/rest/v1/oauth_credentials")) {
+      return new Response(null, { status: 201 });
+    }
     if (url.includes("/auth/v1/verify")) {
       if (overrides.verifyStatus && overrides.verifyStatus >= 400) {
         return Response.json({ msg: "nope" }, { status: overrides.verifyStatus });
       }
       return Response.json({
-        access_token: "access",
+        access_token: sessionAccessToken,
         refresh_token: "refresh",
         expires_in: 3600,
         token_type: "bearer",
@@ -140,7 +150,9 @@ async function completeFlow(
 
   const backends = stubBackends(stubs);
   const body = new URLSearchParams(
-    provider === "google" ? { state, code: "auth-code" } : { state, id_token: idToken },
+    provider === "google"
+      ? { state, code: "auth-code" }
+      : { state, code: "apple-auth-code", id_token: idToken },
   );
   const response = await handleOAuthRequest(
     new Request(`https://deadsetfit.org/api/auth/${provider}/callback`, {
@@ -170,6 +182,15 @@ beforeAll(async () => {
   )) as CryptoKeyPair;
   const publicJwk = await crypto.subtle.exportKey("jwk", keyPair.publicKey);
   jwks = { keys: [{ ...publicJwk, kid: "test-key", alg: "RS256", use: "sig" }] };
+  const appleKeyPair = await crypto.subtle.generateKey(
+    { name: "ECDSA", namedCurve: "P-256" },
+    true,
+    ["sign", "verify"],
+  );
+  const applePkcs8 = new Uint8Array(
+    await crypto.subtle.exportKey("pkcs8", appleKeyPair.privateKey),
+  );
+  env.APPLE_PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----\n${Buffer.from(applePkcs8).toString("base64")}\n-----END PRIVATE KEY-----`;
 });
 
 afterEach(() => {
@@ -191,7 +212,7 @@ describe("OAuth broker", () => {
     expect(authorize.searchParams.get("prompt")).toBe("select_account");
   });
 
-  it("asks Apple for an id_token via form_post so no client secret is needed", async () => {
+  it("asks Apple for an authorization code and id_token via form_post", async () => {
     const authorize = await startAuthorize("apple", { state: "client-state", flow: "web" });
 
     expect(authorize.origin).toBe("https://appleid.apple.com");
@@ -242,7 +263,7 @@ describe("OAuth broker", () => {
     });
 
     const fragment = fragmentOf(response);
-    expect(fragment.get("access_token")).toBe("access");
+    expect(fragment.get("access_token")).toBe(sessionAccessToken);
     expect(fragment.get("refresh_token")).toBe("refresh");
     expect(fragment.get("state")).toBe("client-state");
   });
@@ -263,7 +284,7 @@ describe("OAuth broker", () => {
       byte.toString(16).padStart(2, "0"),
     ).join("");
     expect(authorize.searchParams.get("nonce")).toBe(hashedNonce);
-    expect(fragmentOf(response).get("access_token")).toBe("access");
+    expect(fragmentOf(response).get("access_token")).toBe(sessionAccessToken);
   });
 
   it("treats an existing email as a link, not a failure", async () => {
@@ -282,7 +303,7 @@ describe("OAuth broker", () => {
       },
     );
 
-    expect(fragmentOf(response).get("access_token")).toBe("access");
+    expect(fragmentOf(response).get("access_token")).toBe(sessionAccessToken);
   });
 
   it("returns the native flow through the HTTPS deep-link bridge", async () => {

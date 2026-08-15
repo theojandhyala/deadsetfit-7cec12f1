@@ -101,17 +101,21 @@ the project it names is the one sign-in will write to.
      **Verify**. `public/_redirects` already serves it at
      `/.well-known/apple-developer-domain-association.txt`, which is where Apple
      looks.
-3. Point the worker at the Services ID:
+3. Create a Sign in with Apple key for the primary App ID, download its `.p8`
+   file, and point the worker at the Services ID and revocation credentials:
 
    ```bash
    npx wrangler secret put APPLE_OAUTH_CLIENT_ID --name deadset
+   npx wrangler secret put APPLE_TEAM_ID --name deadset
+   npx wrangler secret put APPLE_KEY_ID --name deadset
+   npx wrangler secret put APPLE_PRIVATE_KEY --name deadset
    ```
 
-   (value: `org.deadsetfit.web`)
-
-No Apple client-secret JWT is needed: the broker asks for
-`response_type=code id_token` with `response_mode=form_post`, so Apple hands
-back a verifiable identity token directly. Nothing to rotate every six months.
+   The client ID is `org.deadsetfit.web`. The team and key IDs come from the
+   Apple Developer account; paste the complete `.p8` contents as the private
+   key. The broker generates five-minute client-secret JWTs at request time,
+   exchanges Apple's authorization code, and retains the service-only refresh
+   token so account deletion can revoke the Apple authorization.
 
 ### 3. Verify
 
@@ -142,6 +146,9 @@ npm run appstore:strict
 | `GOOGLE_OAUTH_CLIENT_ID`                   | secret           | Google web client                                                        |
 | `GOOGLE_OAUTH_CLIENT_SECRET`               | secret           | Google code→id_token exchange                                            |
 | `APPLE_OAUTH_CLIENT_ID`                    | secret           | Apple Services ID (`org.deadsetfit.web`)                                 |
+| `APPLE_TEAM_ID`                            | secret           | Apple Developer team ID                                                  |
+| `APPLE_KEY_ID`                             | secret           | Sign in with Apple key ID                                                |
+| `APPLE_PRIVATE_KEY`                        | secret           | Complete Sign in with Apple `.p8` private key                            |
 | `OAUTH_STATE_SECRET`                       | secret, optional | HMAC key for direct-path signed state                                    |
 | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | existing         | Active Supabase project and public client key                            |
 | `SUPABASE_SERVICE_ROLE_KEY`                | secret           | Admin session minting; must belong to the same project as `SUPABASE_URL` |

@@ -84,6 +84,14 @@ const restTimer = existsSync("src/components/RestTimer.tsx")
 const restTimerLib = existsSync("src/lib/rest-timer.ts") ? read("src/lib/rest-timer.ts") : "";
 const oauthClient = existsSync("src/auth/oauth.ts") ? read("src/auth/oauth.ts") : "";
 const oauthServer = existsSync("src/lib/oauth.server.ts") ? read("src/lib/oauth.server.ts") : "";
+const appleOAuthServer = existsSync("src/lib/apple-oauth.server.ts")
+  ? read("src/lib/apple-oauth.server.ts")
+  : "";
+const appleCredentialMigration = existsSync(
+  "supabase/migrations/20260815153000_apple_oauth_revocation.sql",
+)
+  ? read("supabase/migrations/20260815153000_apple_oauth_revocation.sql")
+  : "";
 const worker = existsSync("src/cloudflare-worker.ts") ? read("src/cloudflare-worker.ts") : "";
 const nativeAuthBridge = existsSync("auth/native-callback.html")
   ? read("auth/native-callback.html")
@@ -278,6 +286,17 @@ check(
     profilePage.includes("onClick={deleteAccount}") &&
     rpcServer.includes("async deleteMyAccount"),
   "Users can initiate account deletion in-app and the API removes their account.",
+);
+check(
+  "Sign in with Apple revocation",
+  appleOAuthServer.includes("exchangeAppleAuthorizationCode") &&
+    appleOAuthServer.includes("revokeAppleRefreshToken") &&
+    oauthServer.includes("storeAppleRefreshToken") &&
+    rpcServer.includes("revokeAppleRefreshToken") &&
+    appleCredentialMigration.includes("oauth_credentials") &&
+    appleCredentialMigration.includes("enable row level security") &&
+    appleCredentialMigration.includes("revoke all"),
+  "Apple authorization codes are exchanged, the service-only revocation credential is retained, and account deletion revokes it.",
 );
 check(
   "social safety controls",

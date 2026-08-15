@@ -364,7 +364,7 @@ function ProfilePage() {
     const ok = await askConfirm({
       title: "Delete your account?",
       message:
-        "This erases your profile, posts, comments, follows, PRs and training history. It cannot be undone.",
+        "This erases your profile, posts, comments, follows, PRs and training history. It cannot be undone. Account deletion does not cancel an active App Store subscription; manage Pro first if you need to cancel billing.",
       confirmLabel: "Delete forever",
       danger: true,
       typedWord: "DELETE",

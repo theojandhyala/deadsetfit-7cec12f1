@@ -162,10 +162,10 @@ These cannot be completed only in the repository:
   the current authentication path.
 - Verify Google and Apple signup and returning login on a physical iPhone through
   the HTTPS callback bridge and `org.deadsetfit.app://auth/callback`.
-- Confirm Sign in with Apple token revocation during account deletion.
-- Decide the iOS Pro business model before charging native users. The current iOS build unlocks all
-  features and suppresses checkout; StoreKit in-app purchase is required before selling digital Pro
-  features inside the iOS app.
+- Confirm the first-party Apple code exchange, service-only refresh-token storage, and Sign in with
+  Apple revocation during account deletion on a physical iPhone.
+- Confirm both StoreKit products load, purchase, restore and open Apple's subscription-management
+  screen in the submitted build. Stripe must remain unavailable inside the iOS app.
 - Complete App Store Connect privacy answers, age rating, category, support URL, screenshots, review
   account, and export-compliance questions.
 - Confirm Cloudflare production secrets for Supabase, Stripe, and webhooks.

@@ -18,6 +18,10 @@
  */
 
 import { verifyIdToken, type VerifiedIdentity } from "./id-token.server";
+import {
+  appleOAuthConfigured,
+  exchangeAppleAuthorizationCode,
+} from "./apple-oauth.server";
 
 export type OAuthProvider = "google" | "apple";
 
@@ -28,6 +32,9 @@ export interface OAuthBrokerEnv {
   GOOGLE_OAUTH_CLIENT_ID?: string;
   GOOGLE_OAUTH_CLIENT_SECRET?: string;
   APPLE_OAUTH_CLIENT_ID?: string;
+  APPLE_TEAM_ID?: string;
+  APPLE_KEY_ID?: string;
+  APPLE_PRIVATE_KEY?: string;
   OAUTH_STATE_SECRET?: string;
 }
 
@@ -192,6 +199,7 @@ function decodeJwtPayload(value: string) {
     return JSON.parse(new TextDecoder().decode(fromBase64Url(payload))) as {
       ref?: string;
       role?: string;
+      sub?: string;
     };
   } catch {
     return null;
@@ -228,7 +236,7 @@ function firstPartyProviderConfigured(provider: OAuthProvider, env: OAuthBrokerE
   if (provider === "google") {
     return Boolean(env.GOOGLE_OAUTH_CLIENT_ID?.trim() && env.GOOGLE_OAUTH_CLIENT_SECRET?.trim());
   }
-  return Boolean(env.APPLE_OAUTH_CLIENT_ID?.trim() && serviceRoleCanBelongToProject(env));
+  return appleOAuthConfigured(env) && serviceRoleCanBelongToProject(env);
 }
 
 export function providerConfigured(provider: OAuthProvider, env: OAuthBrokerEnv) {
@@ -255,10 +263,9 @@ function authorizationUrl(provider: OAuthProvider, state: string, nonce: string,
   const url = new URL(APPLE_AUTHORIZE_URL);
   url.searchParams.set("client_id", id);
   url.searchParams.set("redirect_uri", callbackUri("apple"));
-  // Asking for an id_token here means the broker never needs Apple's
-  // six-month client-secret JWT: the callback already carries a verifiable
-  // identity token. form_post is required by Apple whenever name/email or an
-  // id_token is requested.
+  // The id_token provides the identity while the code is exchanged for a
+  // revocable refresh token. form_post is required by Apple whenever
+  // name/email or an id_token is requested.
   url.searchParams.set("response_type", "code id_token");
   url.searchParams.set("response_mode", "form_post");
   url.searchParams.set("scope", "name email");
@@ -325,6 +332,25 @@ function supabaseAdminEnv(env: OAuthBrokerEnv) {
     throw new OAuthFailure("Sign in is not configured.", "Supabase service role is unavailable");
   }
   return { url, publishableKey, serviceRoleKey };
+}
+
+async function storeAppleRefreshToken(
+  userId: string,
+  refreshToken: string,
+  env: OAuthBrokerEnv,
+) {
+  const { url, serviceRoleKey } = supabaseAdminEnv(env);
+  const response = await fetch(`${url}/rest/v1/oauth_credentials?on_conflict=user_id,provider`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+      Prefer: "resolution=merge-duplicates",
+    },
+    body: JSON.stringify({ user_id: userId, provider: "apple", refresh_token: refreshToken }),
+  });
+  if (!response.ok) throw new Error(`credential storage HTTP ${response.status}`);
 }
 
 async function readError(response: Response) {
@@ -604,11 +630,27 @@ async function handleCallback(provider: OAuthProvider, request: Request, env: OA
       );
     }
 
-    return successRedirect(
-      state,
-      provider,
-      await supabaseSession(provider, idToken, state.nonce, env),
-    );
+    const session = await supabaseSession(provider, idToken, state.nonce, env);
+    if (provider === "apple") {
+      const code = params.get("code");
+      if (!code) throw new OAuthFailure("Apple sign-in could not be completed. Please try again.");
+      try {
+        const refreshToken = await exchangeAppleAuthorizationCode(
+          code,
+          callbackUri("apple"),
+          env,
+        );
+        const userId = decodeJwtPayload(session.access_token)?.sub;
+        if (!userId) throw new Error("Supabase session carried no user id");
+        await storeAppleRefreshToken(userId, refreshToken, env);
+      } catch (error) {
+        throw new OAuthFailure(
+          "Apple sign-in could not be completed. Please try again.",
+          error instanceof Error ? error.message : "Apple credential retention failed",
+        );
+      }
+    }
+    return successRedirect(state, provider, session);
   } catch (error) {
     return failureRedirect(state, error, `${provider} callback`);
   }

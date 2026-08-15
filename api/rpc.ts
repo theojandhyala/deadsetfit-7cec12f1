@@ -13,6 +13,7 @@ import { currentWeekStart } from "../src/lib/competition";
 import { getRank } from "../src/lib/rank";
 import type { AppState } from "../src/lib/types";
 import type { Database } from "../src/integrations/supabase/types";
+import { revokeAppleRefreshToken } from "../src/lib/apple-oauth.server";
 
 interface AuthCtx {
   supabase: SupabaseClient<Database>;
@@ -1832,6 +1833,30 @@ const handlers: Record<string, Handler> = {
     const admin = supabaseAdmin as any;
     const failures: string[] = [];
 
+    const { data: appleCredential, error: credentialError } = await admin
+      .from("oauth_credentials")
+      .select("refresh_token")
+      .eq("user_id", userId)
+      .eq("provider", "apple")
+      .maybeSingle();
+    if (credentialError && credentialError.code !== "42P01") {
+      throw new Error("We could not verify your sign-in connection. Please try deletion again.");
+    }
+    if (appleCredential?.refresh_token) {
+      try {
+        await revokeAppleRefreshToken(appleCredential.refresh_token, process.env);
+      } catch (error) {
+        console.error("Apple authorization revocation failed", {
+          userId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw new Error(
+          "We could not disconnect Sign in with Apple, so your account was not deleted. Please try again.",
+          { cause: error },
+        );
+      }
+    }
+
     /** Supabase returns { error } rather than throwing, so a try/catch around
      *  these calls catches nothing — every failure has to be read off the
      *  result. A missing table means there is no data to erase, which is not a
@@ -1897,7 +1922,7 @@ const handlers: Record<string, Handler> = {
     if (failures.length > 0) {
       console.error("deleteMyAccount incomplete", { userId, failures });
       throw new Error(
-        "We could not finish deleting your data, so your account is untouched. Please try again — if it keeps failing, contact support and it will be erased manually.",
+        "We could not finish deleting your account. Please try again — if it keeps failing, contact support so we can complete the deletion manually.",
       );
     }
 
