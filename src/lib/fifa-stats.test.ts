@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildHeadlinePRs } from "./fifa-stats";
+import { buildHeadlinePRs, buildPublicStats } from "./fifa-stats";
 import type { AppState } from "./types";
 
 function state(partial: Partial<AppState>): AppState {
@@ -70,5 +70,44 @@ describe("headline PRs distinguish measured from estimated", () => {
 
     expect(squat(prs).value).toBe(0);
     expect(squat(prs).estimated).toBe(false);
+  });
+});
+
+describe("buildPublicStats badges", () => {
+  function withSessions(count: number): AppState {
+    const sessions = Array.from({ length: count }, (_, i) => ({
+      id: `s${i}`,
+      date: `2026-07-${String((i % 28) + 1).padStart(2, "0")}`,
+      dayKey: "MON",
+      label: "Push",
+      programId: null,
+      startedAt: `2026-07-${String((i % 28) + 1).padStart(2, "0")}T10:00:00`,
+      endedAt: `2026-07-${String((i % 28) + 1).padStart(2, "0")}T11:00:00`,
+      totalVolume: 100,
+      prCount: 0,
+      exercises: [],
+    })) as AppState["sessions"];
+    return state({ sessions });
+  }
+
+  it("publishes a badge summary a card can render", () => {
+    const badges = buildPublicStats(withSessions(1)).badges;
+    expect(badges?.total).toBeGreaterThanOrEqual(60);
+    expect(badges?.earned).toBeGreaterThan(0);
+    expect(badges?.top?.[0]).toHaveProperty("icon");
+  });
+
+  it("earns nothing on an empty account", () => {
+    expect(buildPublicStats(state({})).badges?.earned).toBe(0);
+    expect(buildPublicStats(state({})).badges?.top).toEqual([]);
+  });
+
+  it("shows at most six badges, rarest first", () => {
+    const top = buildPublicStats(withSessions(60)).badges?.top ?? [];
+    expect(top.length).toBeLessThanOrEqual(6);
+    const rank: Record<string, number> = { LEGENDARY: 4, EPIC: 3, RARE: 2, COMMON: 1 };
+    for (let i = 1; i < top.length; i++) {
+      expect(rank[top[i - 1].rarity]).toBeGreaterThanOrEqual(rank[top[i].rarity]);
+    }
   });
 });

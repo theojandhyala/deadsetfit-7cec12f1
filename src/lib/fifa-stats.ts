@@ -1,6 +1,7 @@
 import type { AppState, SetLog } from "./types";
 import { bestSetFor, maxRepsFor, calculateStreak, calculateGritScore } from "./calc";
 import { getWeeklyCompetitionStats, type WeeklyCompetitionStats } from "./competition";
+import { achievements } from "./achievements";
 
 // === PR Catalog — used for the "Personal Records" editor + FIFA stat math ===
 export type PRKind = "1RM" | "REPS" | "TIME";
@@ -272,6 +273,13 @@ export interface PublicStats {
   weekly: WeeklyCompetitionStats;
   /** Big Three total divided by body weight. */
   strengthToWeight: number;
+  /** Badge wall summary, so an athlete's card can show what they've earned. */
+  badges?: {
+    earned: number;
+    total: number;
+    /** The rarest few, for display on a card. */
+    top: { id: string; label: string; icon: string; rarity: string }[];
+  };
   goal?: string;
   experience?: string;
   weightKg?: number;
@@ -285,8 +293,23 @@ export interface PublicStats {
   };
 }
 
+const RARITY_RANK: Record<string, number> = {
+  LEGENDARY: 4,
+  EPIC: 3,
+  RARE: 2,
+  COMMON: 1,
+};
+
 export function buildPublicStats(state: AppState): PublicStats {
   const stats = computeFifaStats(state);
+  const allBadges = achievements(state);
+  const earned = allBadges.filter((b) => b.unlocked);
+  // Rarest first — a card has room for a handful, and they should be the ones
+  // worth bragging about.
+  const topBadges = [...earned]
+    .sort((a, b) => (RARITY_RANK[b.rarity] ?? 0) - (RARITY_RANK[a.rarity] ?? 0))
+    .slice(0, 6)
+    .map((b) => ({ id: b.id, label: b.label, icon: b.icon, rarity: b.rarity }));
   const topPRs = buildHeadlinePRs(state);
   const total = topPRs.reduce((sum, lift) => sum + lift.value, 0);
   const bodyWeight = state.profile?.weightKg ?? 0;
@@ -302,6 +325,7 @@ export function buildPublicStats(state: AppState): PublicStats {
     topPRs,
     weekly: getWeeklyCompetitionStats(state),
     strengthToWeight: bodyWeight > 0 ? Math.round((total / bodyWeight) * 100) / 100 : 0,
+    badges: { earned: earned.length, total: allBadges.length, top: topBadges },
     goal: state.profile?.goal,
     experience: state.profile?.experience,
     weightKg: state.profile?.weightKg,

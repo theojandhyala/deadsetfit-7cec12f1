@@ -7,6 +7,7 @@ import { askConfirm, askText } from "@/lib/confirm";
 import { getAthleteCard, toggleFollow } from "@/lib/social.functions";
 import { blockUser, unblockUser, isBlocked, reportContent } from "@/lib/account.functions";
 import { FifaCard } from "@/components/FifaCard";
+import { RARITY_COLOR, type AchievementRarity } from "@/lib/achievements";
 import { gritBadge, badgeColor } from "@/lib/calc";
 
 export const Route = createFileRoute("/_tabs/athlete/$id")({
@@ -128,6 +129,12 @@ function AthletePage() {
     const found = topPRs.find((p) => p.id === h.id);
     return { id: h.id, label: h.label, unit: h.unit, value: found?.value ?? 0 };
   });
+  const badgeWall =
+    (stats.badges as {
+      earned?: number;
+      total?: number;
+      top?: { id: string; label: string; icon: string; rarity: string }[];
+    } | null) || null;
   const badge = gritBadge(Number(card.grit_points ?? 0));
   const badgeC = badgeColor(badge);
 
@@ -161,9 +168,35 @@ function AthletePage() {
         />
       </section>
 
+      {badgeWall?.top?.length ? (
+        <section className="px-5 mb-5">
+          <div className="deadset-section-title mb-2">
+            <h2 className="display text-lg font-extrabold uppercase leading-none text-grit">
+              Badges
+            </h2>
+            <span className="label-cap text-[10px] text-grit-dim">
+              {badgeWall.earned ?? 0}/{badgeWall.total ?? 0}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {badgeWall.top.map((b) => (
+              <div
+                key={b.id}
+                className="flex items-center gap-1.5 border px-2 py-1.5"
+                style={{ borderColor: RARITY_COLOR[b.rarity as AchievementRarity] ?? "#262626" }}
+                title={b.label}
+              >
+                <span className="text-base">{b.icon}</span>
+                <span className="label-cap text-[9px] text-grit">{b.label}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       {/* Follow + counts */}
       {!card.isMe && (
-        <section className="px-5 mb-5">
+      <section className="px-5 mb-5">
           {(card as { followsMe?: boolean }).followsMe && (
             <div className="mb-2 inline-flex items-center gap-1 label-cap text-[10px] text-grit-dim border border-grit rounded px-2 py-0.5">
               Follows you
