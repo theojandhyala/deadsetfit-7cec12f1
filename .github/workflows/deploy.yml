@@ -37,20 +37,29 @@ jobs:
       - name: Verify bundle targets the expected backend
         run: node scripts/check-bundle-config.mjs
 
-      - name: Create Pages project if needed
-        run: |
-          mv wrangler.jsonc wrangler.jsonc.bak
-          npx wrangler pages project create deadsetfit --production-branch=main || true
-          mv wrangler.jsonc.bak wrangler.jsonc
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
+      # Cloudflare returns 10429 (rate limited) when several deploys land close
+      # together, which failed a run whose build and tests had already passed.
+      # Retry with backoff rather than leaving main built but not served. The
+      # project is created on first use by `pages deploy`, so there is no
+      # separate create step burning a call against the same limit.
       - name: Deploy to Cloudflare Pages
         run: |
           mv wrangler.jsonc wrangler.jsonc.bak
-          npx wrangler pages deploy dist/client --project-name=deadsetfit --branch=main --commit-dirty=true
+          deployed=0
+          for attempt in 1 2 3 4 5; do
+            if npx wrangler pages deploy dist/client --project-name=deadsetfit --branch=main --commit-dirty=true; then
+              deployed=1
+              break
+            fi
+            wait=$((attempt * 60))
+            echo "Pages deploy attempt $attempt failed; retrying in ${wait}s"
+            sleep "$wait"
+          done
           mv wrangler.jsonc.bak wrangler.jsonc
+          if [ "$deployed" -ne 1 ]; then
+            echo "Pages deploy failed after 5 attempts"
+            exit 1
+          fi
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
