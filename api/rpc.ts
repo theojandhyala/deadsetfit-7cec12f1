@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { createStripeClient, getStripeErrorMessage } from "../src/lib/stripe.server";
 import { supabaseAdmin } from "../src/integrations/supabase/client.server";
+import { generateInviteCode, rankCrews } from "../src/lib/crews";
 import { gritLevel, calculateGritScore } from "../src/lib/calc";
 import { buildPublicStats } from "../src/lib/fifa-stats";
 import {
@@ -417,6 +418,54 @@ async function duelScores(duel: {
     challenger: scoreOverWindow(c, duel.metric, startMs, endMs),
     opponent: scoreOverWindow(o, duel.metric, startMs, endMs),
   };
+}
+
+// ─── Crews ───────────────────────────────────────────────────────────────────
+
+async function crewMembershipOf(
+  userId: string,
+): Promise<{ crew_id: string; role: string } | null> {
+  const { data } = await (supabaseAdmin as any)
+    .from("crew_members")
+    .select("crew_id, role")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return (data as { crew_id: string; role: string } | null) ?? null;
+}
+
+/** Crew roster with the public profile fields, strongest first. */
+async function crewRoster(crewId: string) {
+  const { data: rows } = await (supabaseAdmin as any)
+    .from("crew_members")
+    .select("user_id, role, joined_at")
+    .eq("crew_id", crewId);
+  const members = (rows ?? []) as { user_id: string; role: string; joined_at: string }[];
+  if (!members.length) return [];
+
+  const { data: profiles } = await supabaseAdmin
+    .from("profiles")
+    .select("id, username, display_name, avatar_url, grit_points")
+    .in(
+      "id",
+      members.map((m) => m.user_id),
+    );
+  const byId = new Map((profiles ?? []).map((p) => [p.id, p]));
+
+  return members
+    .map((m) => {
+      const p = byId.get(m.user_id);
+      return {
+        id: m.user_id,
+        role: m.role,
+        joinedAt: m.joined_at,
+        username: p?.username ?? null,
+        display_name: p?.display_name ?? null,
+        avatar_url: p?.avatar_url ?? null,
+        grit_points: p?.grit_points ?? 0,
+        level: gritLevel(p?.grit_points ?? 0),
+      };
+    })
+    .sort((a, b) => b.grit_points - a.grit_points);
 }
 
 // Flip any of a pair's expired active duels to completed (with final scores) so
@@ -2113,6 +2162,172 @@ const handlers: Record<string, Handler> = {
         .sort((a, b) => b.count - a.count),
       engagement,
     };
+  },
+
+  // === Crews ===
+  // A crew is the gym or team an athlete trains with: joined by short code,
+  // ranked internally, and stacked against other crews.
+  async createCrew(data, req) {
+    const { userId } = await requireAuth(req);
+    const d = z
+      .object({
+        name: z.string().trim().min(2).max(30),
+        tag: z
+          .string()
+          .trim()
+          .toUpperCase()
+          .regex(/^[A-Z0-9]{2,6}$/, "Tag must be 2-6 letters or numbers"),
+      })
+      .parse(data);
+
+    const existing = await crewMembershipOf(userId);
+    if (existing) throw new Error("You're already in a crew. Leave it before starting another.");
+
+    // Retry on the unique index rather than trusting one random draw.
+    let lastError: unknown = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const invite = generateInviteCode();
+      const { data: crew, error } = await (supabaseAdmin as any)
+        .from("crews")
+        .insert({ name: d.name, tag: d.tag, invite_code: invite, owner_id: userId })
+        .select("id, name, tag, invite_code, owner_id, created_at")
+        .single();
+      if (!error && crew) {
+        const { error: joinError } = await (supabaseAdmin as any)
+          .from("crew_members")
+          .insert({ crew_id: crew.id, user_id: userId, role: "owner" });
+        if (joinError) {
+          // Never leave an ownerless crew behind if the membership fails.
+          await (supabaseAdmin as any).from("crews").delete().eq("id", crew.id);
+          throw new Error(joinError.message);
+        }
+        return { crew };
+      }
+      lastError = error;
+      const message = String((error as { message?: string } | null)?.message ?? "");
+      if (/tag/i.test(message)) throw new Error("That crew tag is taken. Pick another.");
+      if (!/invite_code/i.test(message)) break;
+    }
+    throw new Error(
+      (lastError as { message?: string } | null)?.message ?? "Could not create the crew",
+    );
+  },
+
+  async joinCrew(data, req) {
+    const { userId } = await requireAuth(req);
+    const d = z.object({ code: z.string().trim().toUpperCase().min(4).max(10) }).parse(data);
+
+    const existing = await crewMembershipOf(userId);
+    if (existing) throw new Error("You're already in a crew. Leave it before joining another.");
+
+    const { data: crew } = await (supabaseAdmin as any)
+      .from("crews")
+      .select("id, name, tag, invite_code, owner_id, created_at")
+      .ilike("invite_code", d.code)
+      .maybeSingle();
+    if (!crew) throw new Error("No crew with that code");
+
+    const { error } = await (supabaseAdmin as any)
+      .from("crew_members")
+      .insert({ crew_id: crew.id, user_id: userId, role: "member" });
+    if (error) throw new Error(error.message);
+    return { crew };
+  },
+
+  async leaveCrew(_data, req) {
+    const { userId } = await requireAuth(req);
+    const membership = await crewMembershipOf(userId);
+    if (!membership) return { left: false };
+
+    await (supabaseAdmin as any)
+      .from("crew_members")
+      .delete()
+      .eq("crew_id", membership.crew_id)
+      .eq("user_id", userId);
+
+    // An owner walking out must not strand the crew: hand it to the longest
+    // standing member, or retire it when nobody is left.
+    if (membership.role === "owner") {
+      const { data: remaining } = await (supabaseAdmin as any)
+        .from("crew_members")
+        .select("user_id")
+        .eq("crew_id", membership.crew_id)
+        .order("joined_at", { ascending: true })
+        .limit(1);
+      const heir = (remaining ?? [])[0]?.user_id as string | undefined;
+      if (heir) {
+        await (supabaseAdmin as any)
+          .from("crews")
+          .update({ owner_id: heir })
+          .eq("id", membership.crew_id);
+        await (supabaseAdmin as any)
+          .from("crew_members")
+          .update({ role: "owner" })
+          .eq("crew_id", membership.crew_id)
+          .eq("user_id", heir);
+      } else {
+        await (supabaseAdmin as any).from("crews").delete().eq("id", membership.crew_id);
+      }
+    }
+    return { left: true };
+  },
+
+  async getMyCrew(_data, req) {
+    const { userId } = await requireAuth(req);
+    const membership = await crewMembershipOf(userId);
+    if (!membership) return { crew: null, members: [] };
+
+    const { data: crew } = await (supabaseAdmin as any)
+      .from("crews")
+      .select("id, name, tag, invite_code, owner_id, created_at")
+      .eq("id", membership.crew_id)
+      .maybeSingle();
+    if (!crew) return { crew: null, members: [] };
+
+    const members = await crewRoster(membership.crew_id);
+    return { crew, role: membership.role, members };
+  },
+
+  // The crew ladder: crews ranked by the grit their members have banked.
+  async getCrewLadder(data, req) {
+    await requireAuth(req);
+    const d = z.object({ limit: z.number().int().min(1).max(50).optional() }).parse(data ?? {});
+    const { data: crews } = await (supabaseAdmin as any)
+      .from("crews")
+      .select("id, name, tag, created_at")
+      .limit(200);
+    if (!crews?.length) return { crews: [] };
+
+    const { data: memberships } = await (supabaseAdmin as any)
+      .from("crew_members")
+      .select("crew_id, user_id");
+    const byCrew = new Map<string, string[]>();
+    for (const m of (memberships ?? []) as { crew_id: string; user_id: string }[]) {
+      const list = byCrew.get(m.crew_id) ?? [];
+      list.push(m.user_id);
+      byCrew.set(m.crew_id, list);
+    }
+
+    const allIds: string[] = [
+      ...new Set(((memberships ?? []) as { user_id: string }[]).map((m) => m.user_id)),
+    ];
+    const gritById = new Map<string, number>();
+    if (allIds.length) {
+      const { data: profiles } = await supabaseAdmin
+        .from("profiles")
+        .select("id, grit_points")
+        .in("id", allIds);
+      for (const p of profiles ?? []) gritById.set(p.id, p.grit_points ?? 0);
+    }
+
+    const ranked = rankCrews(
+      crews as { id: string; name: string; tag: string }[],
+      byCrew,
+      gritById,
+      d.limit ?? 25,
+    );
+
+    return { crews: ranked };
   },
 };
 

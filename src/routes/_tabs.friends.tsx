@@ -30,6 +30,7 @@ import { restoreSupabaseSession, supabase } from "@/integrations/supabase/client
 import { withTimeout } from "@/lib/account-restore";
 import { getInviteUrl } from "@/lib/referral";
 import { isNativeIos } from "@/lib/platform";
+import { CrewPanel } from "@/components/CrewPanel";
 import { NotificationsBell } from "@/components/NotificationsBell";
 import { blockUser, reportContent } from "@/lib/account.functions";
 import { askConfirm, askText } from "@/lib/confirm";
@@ -77,7 +78,7 @@ export const Route = createFileRoute("/_tabs/friends")({
   component: FriendsPage,
 });
 
-type Tab = "FRIENDS" | "FEED" | "ARENA" | "INVITE";
+type Tab = "FRIENDS" | "CREW" | "FEED" | "ARENA" | "INVITE";
 
 function FriendsPage() {
   const navigate = useNavigate();
@@ -166,7 +167,7 @@ function FriendsPage() {
         <NotificationsBell />
       </header>
       <div className="px-5 mt-3 flex gap-2 border-b border-grit overflow-x-auto">
-        {(["FRIENDS", "FEED", "ARENA", "INVITE"] as Tab[]).map((t) => (
+        {(["FRIENDS", "CREW", "FEED", "ARENA", "INVITE"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -183,6 +184,7 @@ function FriendsPage() {
       <div className="pt-4">
         {tab === "FEED" && <Feed userId={session.userId} />}
         {tab === "FRIENDS" && <Friends />}
+        {tab === "CREW" && <CrewPanel />}
         {tab === "ARENA" && <League userId={session.userId} />}
         {tab === "INVITE" && <Invite />}
       </div>
