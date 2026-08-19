@@ -45,6 +45,7 @@ import { ShareCard } from "@/components/ShareCard";
 import { GritEarnedLayer } from "@/components/GritEarnedLayer";
 import { RestTimer } from "@/components/RestTimer";
 import { FormCoaching } from "@/components/FormCoaching";
+import { SessionReflection } from "@/components/SessionReflection";
 import type {
   AppState,
   WorkoutSession,
@@ -1584,6 +1585,10 @@ function FinishedScreen({
             </p>
           </div>
         )}
+
+        <div className="mt-3">
+          <SessionReflection sessionId={session.id} />
+        </div>
 
         <div className="mt-auto pt-6 grid grid-cols-2 gap-3">
           <button onClick={onClose} className="btn-ghost">

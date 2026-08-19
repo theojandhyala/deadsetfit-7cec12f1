@@ -212,6 +212,9 @@ export interface WorkoutSessionExercise {
   sets: CompletedSet[];
 }
 
+/** How the session felt, worst to best. */
+export type SessionFeel = 1 | 2 | 3 | 4 | 5;
+
 export interface WorkoutSession {
   id: string;
   date: string;
@@ -223,6 +226,10 @@ export interface WorkoutSession {
   exercises: WorkoutSessionExercise[];
   totalVolume: number;
   prCount: number;
+  /** Post-session reflection: how it went, in the athlete's own words. */
+  note?: string;
+  /** Post-session rating, used to spot when training is drifting. */
+  feel?: SessionFeel;
 }
 
 export interface ChallengeRecord {

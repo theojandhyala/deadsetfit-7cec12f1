@@ -13,6 +13,7 @@ import { TrainingHeatmap } from "@/components/TrainingHeatmap";
 import { RepZoneCard } from "@/components/RepZoneCard";
 import { LifetimeStatsCard } from "@/components/LifetimeStatsCard";
 import { SessionRecordsCard } from "@/components/SessionRecordsCard";
+import { SessionFeelCard } from "@/components/SessionFeelCard";
 import { TrainingRhythmCard } from "@/components/TrainingRhythmCard";
 import { FreshStimulusCard } from "@/components/FreshStimulusCard";
 import { DataFreshnessCard } from "@/components/DataFreshnessCard";
@@ -434,6 +435,7 @@ function ProgressPage() {
       <RepZoneCard state={state} />
 
       {/* Whole-workout records + weekday rhythm — each renders only with data */}
+      <SessionFeelCard state={state} />
       <SessionRecordsCard state={state} />
       <TrainingRhythmCard state={state} />
       <TimeOfDayCard state={state} />
