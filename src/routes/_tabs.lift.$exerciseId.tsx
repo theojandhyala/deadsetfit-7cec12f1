@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { ChevronLeft, Trophy } from "lucide-react";
+import { FormCoaching } from "@/components/FormCoaching";
 import {
   LineChart,
   Line,
@@ -139,6 +140,10 @@ function LiftDetailPage() {
             <span className="text-xs text-grit-dim ml-1">kg</span>
           </p>
         </div>
+      </section>
+
+      <section className="px-5 mb-4">
+        <FormCoaching exerciseId={exerciseId} name={name} />
       </section>
 
       <div className="px-5 mb-4 flex gap-2">

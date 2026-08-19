@@ -44,6 +44,7 @@ import { VideoModal } from "@/components/VideoModal";
 import { ShareCard } from "@/components/ShareCard";
 import { GritEarnedLayer } from "@/components/GritEarnedLayer";
 import { RestTimer } from "@/components/RestTimer";
+import { FormCoaching } from "@/components/FormCoaching";
 import type {
   AppState,
   WorkoutSession,
@@ -1008,6 +1009,11 @@ function LiveWorkoutPage() {
             <p className="mt-1 text-xs leading-relaxed text-grit">{current.note}</p>
           </div>
         )}
+
+        {/* Form cues, collapsed: reachable between sets without leaving the workout. */}
+        <div className="mb-3">
+          <FormCoaching exerciseId={current.exerciseId} name={current.name} compact />
+        </div>
 
         <SetLogger
           key={`${session.id}:${activeIdx}`}
