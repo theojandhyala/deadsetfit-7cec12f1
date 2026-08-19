@@ -44,17 +44,28 @@ jobs:
       # separate create step burning a call against the same limit.
       - name: Deploy to Cloudflare Pages
         run: |
+          # Without pipefail the `if` below reads tee's exit status, not
+          # wrangler's, and a failed deploy would report success.
+          set -o pipefail
           mv wrangler.jsonc wrangler.jsonc.bak
           deployed=0
           for attempt in 1 2 3 4 5; do
-            if npx wrangler pages deploy dist/client --project-name=deadsetfit --branch=main --commit-dirty=true; then
+            if npx wrangler pages deploy dist/client --project-name=deadsetfit --branch=main --commit-dirty=true 2>&1 | tee deploy.log; then
               deployed=1
               break
             fi
+            # A dead or under-permissioned token fails identically five times in
+            # a row; only throttling is worth waiting out. Retrying auth errors
+            # just buries the real cause under fifteen minutes of backoff.
+            if grep -qE "code: (9109|10000)" deploy.log; then
+              echo "::error::Cloudflare rejected the API token (9109/10000). Replace the CLOUDFLARE_API_TOKEN secret — it is expired, revoked, or missing Pages:Edit. Not retrying."
+              break
+            fi
             wait=$((attempt * 60))
-            echo "Pages deploy attempt $attempt failed; retrying in ${wait}s"
+            echo "Pages deploy attempt $attempt failed (throttled); retrying in ${wait}s"
             sleep "$wait"
           done
+          rm -f deploy.log
           mv wrangler.jsonc.bak wrangler.jsonc
           if [ "$deployed" -ne 1 ]; then
             echo "Pages deploy failed after 5 attempts"
