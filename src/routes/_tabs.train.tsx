@@ -13,9 +13,11 @@ import {
   Users,
   ChevronRight,
   Link2,
+  Info,
 } from "lucide-react";
 
 import { VideoModal } from "@/components/VideoModal";
+import { GritSheet } from "@/components/GritSheet";
 import { Reminders } from "@/components/Reminders";
 import { DailyQuests } from "@/components/DailyQuests";
 import { Big3Card } from "@/components/Big3Card";
@@ -102,6 +104,7 @@ export const Route = createFileRoute("/_tabs/train")({
 function TrainPage() {
   const [state] = useAppState();
   const [selectedDay, setSelectedDay] = useState<DayKey>(todayKey());
+  const [gritOpen, setGritOpen] = useState(false);
   const [videoState, setVideoState] = useState<{
     videoId?: string;
     query?: string;
@@ -221,16 +224,23 @@ function TrainPage() {
                 )}
               </div>
               <div className="flex flex-col items-end gap-1.5 shrink-0">
-                <Link
-                  to="/profile"
+                {/* Opens the explainer rather than the profile: the question
+                    this tile provokes is "what is this number", and the avatar
+                    already routes to the profile. */}
+                <button
+                  type="button"
+                  onClick={() => setGritOpen(true)}
+                  aria-label="What is grit?"
                   className="deadset-glass-strip rounded-2xl px-3 py-2 text-right"
                 >
-                  <p className="label-cap text-[8px]">GRIT</p>
+                  <p className="label-cap flex items-center justify-end gap-1 text-[8px]">
+                    GRIT <Info size={9} className="text-grit-dim" />
+                  </p>
                   <p className="display text-2xl font-black text-grit leading-none">
                     {gritDisplay}
                   </p>
                   <p className="text-[10px] text-grit-dim mt-1">{streak}d streak</p>
-                </Link>
+                </button>
                 {armorLocked ? (
                   <button
                     onClick={() => openPaywall("streak-armor")}
@@ -661,6 +671,8 @@ function TrainPage() {
           />
         </div>
       </div>
+
+      {gritOpen && <GritSheet state={state} onClose={() => setGritOpen(false)} />}
 
       {videoState && (
         <VideoModal

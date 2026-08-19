@@ -359,13 +359,24 @@ export function calculateGritScore(state: AppState): GritScoreBreakdown {
   const measurements = (state.measurements || []).filter((m) => m.date >= weekAgoISO).length;
 
   // Decay: any activity in last 48h?
+  //
+  // Check-ins and measurements count. They award grit above, and leaving them
+  // out meant logging a check-in scored 50 and took the 100-point idle penalty
+  // in the same breath — the athlete did the thing the app asked for and
+  // watched the number stay at zero.
   const lastActivity = Math.max(
     ...(state.completedDates || []).map((d) => new Date(d).getTime()),
     ...(state.sessions || []).map((s) => new Date(s.date).getTime()),
     ...(state.foodLog || []).map((f) => new Date(f.date).getTime()),
+    ...(state.checkIns || []).map((c) => new Date(c.date).getTime()),
+    ...(state.measurements || []).map((m) => new Date(m.date).getTime()),
     0,
   );
-  const decay = Date.now() - lastActivity > 48 * 3600_000 ? 100 : 0;
+  // A brand-new account has nothing to decay from. Without this, someone who
+  // signed up a minute ago is told they have been idle for 48 hours and shown
+  // a -100 penalty before they have had the chance to log anything.
+  const hasEverLogged = lastActivity > 0;
+  const decay = hasEverLogged && Date.now() - lastActivity > 48 * 3600_000 ? 100 : 0;
 
   const raw =
     streak * 15 +
