@@ -41,9 +41,11 @@ function DisclaimerPage() {
 
       <H>Not medical, nutritional or coaching advice</H>
       <p>
-        PR estimates, macro suggestions, and program recommendations in DEADSET are algorithmic and
-        informational only. They do not constitute medical, nutritional, psychological, or
-        licensed-coaching advice.
+        PR estimates, macro suggestions, program recommendations, and the technique and form cues
+        shown alongside exercises in DEADSET are general information only. They do not constitute
+        medical, nutritional, psychological, or licensed-coaching advice, and they cannot account
+        for your body, your injury history, or what is happening in front of you. If a movement
+        hurts, stop, and get eyes on it from a qualified coach.
       </p>
 
       <H>Limitation of liability</H>

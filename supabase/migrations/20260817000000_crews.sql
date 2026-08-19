@@ -77,3 +77,12 @@ create policy "athlete leaves or owner removes" on public.crew_members for delet
       where c.id = crew_members.crew_id and c.owner_id = auth.uid()
     )
   );
+
+-- A crew name and tag are user-authored and shown on the public ladder, so a
+-- crew has to be reportable exactly like a post or a profile. Without this the
+-- app would ship a user-generated surface with no report path, which is what
+-- App Review Guideline 1.2 asks for.
+alter table public.user_reports
+  add column if not exists reported_crew_id uuid references public.crews(id) on delete cascade;
+
+create index if not exists user_reports_crew_idx on public.user_reports (reported_crew_id);

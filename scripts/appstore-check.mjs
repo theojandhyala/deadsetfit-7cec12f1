@@ -315,6 +315,21 @@ check(
     rpcServer.includes("async blockUser"),
   "User-generated social content has report and block controls on both client and server.",
 );
+// Crew names and tags are athlete-authored and shown on the public ladder, so
+// they are a user-generated surface in their own right. Guideline 1.2 wants a
+// report path for every such surface, and blocking has to hold inside a crew.
+const crewPanel = existsSync("src/components/CrewPanel.tsx")
+  ? read("src/components/CrewPanel.tsx")
+  : "";
+check(
+  "crew safety controls",
+  !crewPanel ||
+    (crewPanel.includes("reportContent") &&
+      rpcServer.includes("crewId") &&
+      rpcServer.includes("reported_crew_id") &&
+      rpcServer.includes("blockedUserIds(supabaseAdmin, viewerId)")),
+  "Crews are reportable and crew rosters respect blocks.",
+);
 check(
   "Google and Apple auth",
   authClient.includes('continueWithProvider("google")') &&

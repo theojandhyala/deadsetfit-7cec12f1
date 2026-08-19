@@ -434,13 +434,18 @@ async function crewMembershipOf(
 }
 
 /** Crew roster with the public profile fields, strongest first. */
-async function crewRoster(crewId: string) {
+async function crewRoster(crewId: string, viewerId?: string) {
   const { data: rows } = await (supabaseAdmin as any)
     .from("crew_members")
     .select("user_id, role, joined_at")
     .eq("crew_id", crewId);
-  const members = (rows ?? []) as { user_id: string; role: string; joined_at: string }[];
+  let members = (rows ?? []) as { user_id: string; role: string; joined_at: string }[];
   if (!members.length) return [];
+  // Blocking has to hold inside a shared crew too, or the block is cosmetic.
+  if (viewerId) {
+    const hidden = await blockedUserIds(supabaseAdmin, viewerId);
+    members = members.filter((m) => m.user_id === viewerId || !hidden.has(m.user_id));
+  }
 
   const { data: profiles } = await supabaseAdmin
     .from("profiles")
@@ -2053,15 +2058,21 @@ const handlers: Record<string, Handler> = {
       .object({
         userId: z.string().uuid().optional(),
         postId: z.string().uuid().optional(),
+        // A crew name and tag are user-authored and public on the ladder, so a
+        // crew is reportable like any other content.
+        crewId: z.string().uuid().optional(),
         reason: z.string().min(1).max(500),
       })
       .parse(data);
-    if (!d.userId && !d.postId) throw new Error("Provide userId or postId");
+    if (!d.userId && !d.postId && !d.crewId) {
+      throw new Error("Provide userId, postId or crewId");
+    }
     if (d.userId === userId) throw new Error("Can't report yourself");
-    const { error } = await supabase.from("user_reports").insert({
+    const { error } = await (supabase as any).from("user_reports").insert({
       reporter_id: userId,
       reported_user_id: d.userId ?? null,
       reported_post_id: d.postId ?? null,
+      reported_crew_id: d.crewId ?? null,
       reason: d.reason,
     });
     if (error) throw new Error(error.message);
@@ -2307,7 +2318,7 @@ const handlers: Record<string, Handler> = {
       .maybeSingle();
     if (!crew) return { crew: null, members: [] };
 
-    const members = await crewRoster(membership.crew_id);
+    const members = await crewRoster(membership.crew_id, userId);
     const week = {
       weekStart: currentWeekStart(),
       volumeKg: members.reduce((sum, m) => sum + m.weekVolumeKg, 0),

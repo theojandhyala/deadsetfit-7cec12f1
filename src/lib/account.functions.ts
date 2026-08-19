@@ -14,5 +14,5 @@ export const isBlocked = ({ data }: { data: { userId: string } }) =>
 export const reportContent = ({
   data,
 }: {
-  data: { userId?: string; postId?: string; reason: string };
+  data: { userId?: string; postId?: string; crewId?: string; reason: string };
 }) => callRpc<{ ok: boolean }>("reportContent", data);

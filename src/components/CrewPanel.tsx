@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Users, Copy, LogOut, Plus, Crown, Shield, RefreshCw } from "lucide-react";
+import { Users, Copy, LogOut, Plus, Crown, Shield, RefreshCw, Flag } from "lucide-react";
 import { toast } from "sonner";
 import {
   createCrew,
@@ -12,7 +12,8 @@ import {
   type CrewMember,
   type CrewWeek,
 } from "@/lib/crew.functions";
-import { askConfirm } from "@/lib/confirm";
+import { askConfirm, askText } from "@/lib/confirm";
+import { reportContent } from "@/lib/account.functions";
 import { crewInviteUrl } from "@/lib/crew-invite";
 
 function errorText(e: unknown, fallback: string) {
@@ -88,6 +89,24 @@ export function CrewPanel() {
       toast.error(errorText(e, "Couldn't join that crew"));
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function onReportCrew() {
+    if (!crew) return;
+    const reason = await askText({
+      title: "Report this crew",
+      message:
+        "Tell us what's wrong with this crew's name or tag. Reports are reviewed and offending crews are removed.",
+      placeholder: "What's the problem?",
+      confirmLabel: "Send report",
+    });
+    if (!reason || typeof reason !== "string" || !reason.trim()) return;
+    try {
+      await reportContent({ data: { crewId: crew.id, reason: reason.trim() } });
+      toast.success("Reported. Thanks — we'll review it.");
+    } catch (e) {
+      toast.error(errorText(e, "Couldn't send the report"));
     }
   }
 
@@ -170,9 +189,23 @@ export function CrewPanel() {
                 {role === "owner" ? " · you own this crew" : ""}
               </p>
             </div>
-            <button onClick={onLeave} disabled={busy} className="icon-btn text-grit-dim">
-              <LogOut size={16} />
-            </button>
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                onClick={onReportCrew}
+                aria-label="Report this crew"
+                className="icon-btn tap-44 text-grit-dim"
+              >
+                <Flag size={15} />
+              </button>
+              <button
+                onClick={onLeave}
+                disabled={busy}
+                aria-label="Leave crew"
+                className="icon-btn tap-44 text-grit-dim"
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
           </div>
 
           <button
