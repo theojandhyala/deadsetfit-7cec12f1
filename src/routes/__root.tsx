@@ -22,10 +22,12 @@ import { ProProvider } from "../hooks/usePro";
 import { ProWelcome } from "../components/ProWelcome";
 import { UpgradeNudge } from "../components/UpgradeNudge";
 import { ReferralRedeemer } from "../components/ReferralRedeemer";
+import { CrewInviteRedeemer } from "../components/CrewInviteRedeemer";
 import { StreakMilestoneWatcher } from "../components/StreakMilestoneWatcher";
 import { AchievementWatcher } from "../components/AchievementWatcher";
 import { TonnageMilestoneWatcher } from "../components/TonnageMilestoneWatcher";
 import { captureAttribution } from "../lib/attribution";
+import { capturePendingCrew } from "../lib/crew-invite";
 import { WeeklyRecapNudge } from "../components/WeeklyRecapNudge";
 import { DeviceReminderSync } from "../components/DeviceReminderSync";
 
@@ -182,6 +184,7 @@ function RootComponent() {
   // Record where this visitor came from (referrer/UTM) for admin analytics.
   useEffect(() => {
     if (!isAuthRoute) captureAttribution();
+    capturePendingCrew();
   }, [isAuthRoute]);
 
   return (
@@ -201,6 +204,7 @@ function RootComponent() {
         {!isAuthRoute && <WeeklyRecapNudge />}
         {!isAuthRoute && <DeviceReminderSync />}
         <ReferralRedeemer />
+        <CrewInviteRedeemer />
         <ConfirmSheet />
         <Toaster />
       </ProProvider>

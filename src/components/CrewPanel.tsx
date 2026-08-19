@@ -13,6 +13,7 @@ import {
   type CrewWeek,
 } from "@/lib/crew.functions";
 import { askConfirm } from "@/lib/confirm";
+import { crewInviteUrl } from "@/lib/crew-invite";
 
 function errorText(e: unknown, fallback: string) {
   return e instanceof Error ? e.message : fallback;
@@ -112,12 +113,25 @@ export function CrewPanel() {
     }
   }
 
-  function copyCode() {
+  async function shareInvite() {
     if (!crew) return;
-    navigator.clipboard
-      ?.writeText(crew.invite_code)
-      .then(() => toast.success("Code copied — send it to your gym"))
-      .catch(() => toast.error("Couldn't copy"));
+    const url = crewInviteUrl(crew.invite_code);
+    const text = `Join ${crew.name} on DEADSET — code ${crew.invite_code}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "DEADSET", text, url });
+        return;
+      }
+    } catch (e) {
+      // Cancelling the share sheet is not a failure worth a fallback.
+      if (e instanceof Error && e.name === "AbortError") return;
+    }
+    try {
+      await navigator.clipboard?.writeText(url);
+      toast.success("Invite link copied — send it to your gym");
+    } catch {
+      toast.error("Couldn't copy the link");
+    }
   }
 
   if (loading) {
@@ -162,10 +176,10 @@ export function CrewPanel() {
           </div>
 
           <button
-            onClick={copyCode}
+            onClick={shareInvite}
             className="btn-ghost mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 text-xs"
           >
-            <Copy size={14} /> Invite code: <span className="text-white">{crew.invite_code}</span>
+            <Copy size={14} /> Invite: <span className="text-white">{crew.invite_code}</span>
           </button>
 
           {week && (
