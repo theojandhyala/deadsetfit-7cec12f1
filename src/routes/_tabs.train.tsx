@@ -241,31 +241,37 @@ function TrainPage() {
                   </p>
                   <p className="text-[10px] text-grit-dim mt-1">{streak}d streak</p>
                 </button>
+                {/* The label sits under the shields rather than beside them:
+                    everyone needs to know what they are, but a wide cluster
+                    steals width from the exercise names on the left. */}
                 {armorLocked ? (
                   <button
                     onClick={() => openPaywall("streak-armor")}
-                    className="press relative flex items-center gap-1 pr-1 tap-44"
+                    className="press tap-44 relative flex flex-col items-end gap-0.5"
                     aria-label="Unlock Streak Armor"
                   >
-                    {[0, 1, 2].map((i) => (
-                      <Shield key={i} size={14} className="text-grit-dim" />
-                    ))}
-                    <Lock size={10} className="absolute -top-1 -right-0.5 text-grit-dim" />
+                    <span className="flex items-center gap-1">
+                      {[0, 1, 2].map((i) => (
+                        <Shield key={i} size={14} className="text-grit-dim" />
+                      ))}
+                      <Lock size={10} className="absolute -top-1 -right-0.5 text-grit-dim" />
+                    </span>
+                    <span className="label-cap text-[8px] text-grit-dim">ARMOR</span>
                   </button>
                 ) : (
-                  <div className="flex items-center gap-1">
-                    {isPro && (
-                      <span className="label-cap text-[8px] text-grit-dim mr-0.5">ARMOR</span>
-                    )}
-                    {[0, 1, 2].map((i) => (
-                      <Shield
-                        key={i}
-                        size={14}
-                        className={
-                          i < armorShields ? "text-accent-red fill-current" : "text-grit-dim"
-                        }
-                      />
-                    ))}
+                  <div className="flex flex-col items-end gap-0.5">
+                    <span className="flex items-center gap-1">
+                      {[0, 1, 2].map((i) => (
+                        <Shield
+                          key={i}
+                          size={14}
+                          className={
+                            i < armorShields ? "text-accent-red fill-current" : "text-grit-dim"
+                          }
+                        />
+                      ))}
+                    </span>
+                    <span className="label-cap text-[8px] text-grit-dim">ARMOR</span>
                   </div>
                 )}
                 {armorSavedDate && (
@@ -396,7 +402,7 @@ function TrainPage() {
               <span className="mt-1 block truncate text-[11px] font-semibold text-grit-dim">
                 {todayFood.length
                   ? `${todayNutrition.calories} kcal · ${Math.round(todayNutrition.protein)}g protein today`
-                  : "Log meals, calories, protein and water"}
+                  : "Track meals, macros and water"}
               </span>
             </span>
             <ChevronRight
