@@ -23,6 +23,7 @@ import { ProWelcome } from "../components/ProWelcome";
 import { UpgradeNudge } from "../components/UpgradeNudge";
 import { ReferralRedeemer } from "../components/ReferralRedeemer";
 import { StreakMilestoneWatcher } from "../components/StreakMilestoneWatcher";
+import { AchievementWatcher } from "../components/AchievementWatcher";
 import { TonnageMilestoneWatcher } from "../components/TonnageMilestoneWatcher";
 import { captureAttribution } from "../lib/attribution";
 import { WeeklyRecapNudge } from "../components/WeeklyRecapNudge";
@@ -195,6 +196,7 @@ function RootComponent() {
         {!isAuthRoute && <ProWelcome />}
         {!isAuthRoute && <UpgradeNudge />}
         {!isAuthRoute && <StreakMilestoneWatcher />}
+        {!isAuthRoute && <AchievementWatcher />}
         {!isAuthRoute && <TonnageMilestoneWatcher />}
         {!isAuthRoute && <WeeklyRecapNudge />}
         {!isAuthRoute && <DeviceReminderSync />}

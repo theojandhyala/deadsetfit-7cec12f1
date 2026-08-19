@@ -1,200 +1,147 @@
-import { useMemo } from "react";
-import { Trophy as TrophyIcon } from "lucide-react";
-import { calculateStreak, calculateGritScore } from "@/lib/calc";
+import { useMemo, useState } from "react";
+import { Trophy as TrophyIcon, ChevronDown } from "lucide-react";
+import {
+  achievements,
+  CATEGORY_ORDER,
+  RARITY_COLOR,
+  type Achievement,
+  type AchievementCategory,
+} from "@/lib/achievements";
 import type { AppState } from "@/lib/types";
 
-interface TrophyItem {
-  id: string;
-  label: string;
-  desc: string;
-  icon: string;
-  unlocked: boolean;
-  /** Pro-exclusive badge — only earnable with a Pro feature */
-  pro?: boolean;
-}
-
-/** ELITE challenge targets (mirrors the Pro tier in the challenges catalog). */
-const ELITE_TARGETS: Record<string, number> = {
-  "elite-pushups-100": 100,
-  "elite-plank-10min": 600,
-  "elite-pullups-21": 21,
-  "elite-wallsit-5min": 300,
-  "elite-squats-500": 1800,
+const CATEGORY_LABEL: Record<AchievementCategory, string> = {
+  CONSISTENCY: "Consistency",
+  TONNAGE: "Tonnage",
+  STRENGTH: "Strength",
+  VARIETY: "Variety",
+  DEDICATION: "Dedication",
+  NUTRITION: "Nutrition",
 };
 
+/** Locked badges show how close they are; unlocked ones show their rarity. */
+function BadgeTile({ a }: { a: Achievement }) {
+  const pct = a.target > 0 ? Math.min(100, Math.round((a.progress / a.target) * 100)) : 0;
+  const color = RARITY_COLOR[a.rarity];
+  return (
+    <div
+      className="deadset-3d-panel relative flex flex-col items-center bg-grit-card p-2.5 text-center"
+      style={{
+        border: `1px solid ${a.unlocked ? color : "#262626"}`,
+        opacity: a.unlocked ? 1 : 0.55,
+        boxShadow: a.unlocked ? `0 0 18px ${color}22` : "none",
+      }}
+    >
+      <span className="mb-1 text-2xl" style={{ filter: a.unlocked ? "none" : "grayscale(1)" }}>
+        {a.unlocked ? a.icon : "🔒"}
+      </span>
+      <p className="label-cap text-[9px] leading-tight text-grit">{a.label}</p>
+      <p className="mt-0.5 text-[9px] leading-tight text-grit-dim">{a.desc}</p>
+      {a.unlocked ? (
+        <span className="label-cap mt-1.5 text-[7px]" style={{ color }}>
+          {a.rarity}
+        </span>
+      ) : (
+        <div className="mt-1.5 w-full">
+          <div className="h-1 w-full bg-[#1a1a1a]">
+            <div className="h-full" style={{ width: `${pct}%`, background: color }} />
+          </div>
+          <p className="mt-1 text-[8px] text-grit-dim">
+            {a.progress.toLocaleString()} / {a.target.toLocaleString()}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function TrophyCase({ state }: { state: AppState }) {
-  const trophies = useMemo<TrophyItem[]>(() => {
-    const sessions = state.sessions || [];
-    const completed = sessions.filter((s) => s.endedAt);
-    const sessionCount = completed.length;
-    const totalVolume = completed.reduce((a, s) => a + (s.totalVolume || 0), 0);
-    const totalPRs = completed.reduce((a, s) => a + (s.prCount || 0), 0);
-    const daysTrained = new Set(completed.map((s) => s.date)).size;
-    const streak = calculateStreak(state.completedDates);
-    const grit = calculateGritScore(state).total;
+  const all = useMemo(() => achievements(state), [state]);
+  const [open, setOpen] = useState(false);
 
-    return [
-      {
-        id: "first-rep",
-        label: "FIRST REP",
-        desc: "Logged your first session",
-        icon: "🥇",
-        unlocked: sessionCount >= 1,
-      },
-      {
-        id: "ten-sessions",
-        label: "WARMED UP",
-        desc: "10 sessions logged",
-        icon: "🔥",
-        unlocked: sessionCount >= 10,
-      },
-      {
-        id: "fifty-sessions",
-        label: "REGULAR",
-        desc: "50 sessions logged",
-        icon: "💯",
-        unlocked: sessionCount >= 50,
-      },
-      {
-        id: "hundred-sessions",
-        label: "CENTURION",
-        desc: "100 sessions",
-        icon: "🏆",
-        unlocked: sessionCount >= 100,
-      },
-      {
-        id: "ten-tons",
-        label: "10 TONNES",
-        desc: "10,000kg total volume",
-        icon: "🏋️",
-        unlocked: totalVolume >= 10000,
-      },
-      {
-        id: "hundred-tons",
-        label: "100 TONNES",
-        desc: "100,000kg lifted",
-        icon: "🦣",
-        unlocked: totalVolume >= 100000,
-      },
-      {
-        id: "first-pr",
-        label: "PR HUNTER",
-        desc: "Set your first PR",
-        icon: "⚡",
-        unlocked: totalPRs >= 1,
-      },
-      {
-        id: "ten-prs",
-        label: "RECORD BREAKER",
-        desc: "10 PRs broken",
-        icon: "🎯",
-        unlocked: totalPRs >= 10,
-      },
-      {
-        id: "week-streak",
-        label: "WEEK ON",
-        desc: "7-day streak",
-        icon: "🔥",
-        unlocked: streak >= 7,
-      },
-      {
-        id: "month-streak",
-        label: "UNSTOPPABLE",
-        desc: "30-day streak",
-        icon: "👑",
-        unlocked: streak >= 30,
-      },
-      {
-        id: "month-trained",
-        label: "MONTH IN",
-        desc: "30 days trained",
-        icon: "📅",
-        unlocked: daysTrained >= 30,
-      },
-      {
-        id: "deadset-elite",
-        label: "DEADSET ELITE",
-        desc: "Hit 1,000 Grit — the cap",
-        icon: "💎",
-        unlocked: grit >= 1000,
-      },
-      // === Pro-exclusive badges ===
-      {
-        id: "armored",
-        label: "ARMORED",
-        desc: "Streak saved by Streak Armor",
-        icon: "🛡️",
-        unlocked: (state.streakArmor?.usedDates.length ?? 0) >= 1,
-        pro: true,
-      },
-      {
-        id: "elite-challenger",
-        label: "ELITE CHALLENGER",
-        desc: "Beat an ELITE challenge",
-        icon: "🏅",
-        unlocked: (state.challengeRecords ?? []).some(
-          (r) =>
-            ELITE_TARGETS[r.challengeId] !== undefined && r.value >= ELITE_TARGETS[r.challengeId],
-        ),
-        pro: true,
-      },
-      {
-        id: "pr-machine",
-        label: "PR MACHINE",
-        desc: "25 PRs broken",
-        icon: "🚀",
-        unlocked: totalPRs >= 25,
-        pro: true,
-      },
-      {
-        id: "quarter-ton",
-        label: "QUARTER MILLION",
-        desc: "250,000kg lifted",
-        icon: "🗿",
-        unlocked: totalVolume >= 250000,
-        pro: true,
-      },
-    ];
-  }, [state]);
+  const unlockedCount = all.filter((a) => a.unlocked).length;
+  const byCategory = useMemo(() => {
+    const map = new Map<AchievementCategory, Achievement[]>();
+    for (const a of all) {
+      const list = map.get(a.category) ?? [];
+      list.push(a);
+      map.set(a.category, list);
+    }
+    return map;
+  }, [all]);
 
-  const unlockedCount = trophies.filter((t) => t.unlocked).length;
+  // Collapsed, the wall leads with what was just earned and what is closest —
+  // the two things that actually pull someone back to training.
+  const highlights = useMemo(() => {
+    const unlocked = all.filter((a) => a.unlocked).slice(-3);
+    const closest = all
+      .filter((a) => !a.unlocked && a.progress > 0)
+      .sort((x, y) => y.progress / y.target - x.progress / x.target)
+      .slice(0, 6 - unlocked.length);
+    return [...unlocked, ...closest].slice(0, 6);
+  }, [all]);
 
   return (
     <section className="px-5 mb-6">
-      <div className="flex items-center justify-between mb-2">
+      <div className="mb-2 flex items-center justify-between">
         <p className="label-cap flex items-center gap-1.5">
           <TrophyIcon size={12} className="text-accent-red" /> Trophy Case
         </p>
-        <span className="text-[10px] text-grit-dim label-cap">
-          {unlockedCount}/{trophies.length}
+        <span className="label-cap text-[10px] text-grit-dim">
+          {unlockedCount}/{all.length}
         </span>
       </div>
-      <div className="grid grid-cols-3 gap-2">
-        {trophies.map((t) => (
-          <div
-            key={t.id}
-            className="bg-grit-card border p-2.5 flex flex-col items-center text-center relative"
-            style={{
-              borderColor: t.unlocked ? "#3a1410" : t.pro ? "#2a1a3a" : "#262626",
-              opacity: t.unlocked ? 1 : 0.45,
-            }}
-          >
-            {t.pro && (
-              <span className="absolute top-1 right-1 label-cap text-[7px] text-accent-red border border-accent-red/40 rounded px-1">
-                PRO
-              </span>
-            )}
-            <span
-              className="text-2xl mb-1"
-              style={{ filter: t.unlocked ? "none" : "grayscale(1)" }}
-            >
-              {t.unlocked ? t.icon : "🔒"}
-            </span>
-            <p className="label-cap text-[9px] text-grit leading-tight">{t.label}</p>
-            <p className="text-[9px] text-grit-dim mt-0.5 leading-tight">{t.desc}</p>
-          </div>
-        ))}
+
+      <div className="mb-2 h-1.5 w-full bg-[#1a1a1a]">
+        <div
+          className="h-full bg-accent-red transition-[width] duration-500"
+          style={{ width: `${Math.round((unlockedCount / all.length) * 100)}%` }}
+        />
       </div>
+
+      {!open ? (
+        <>
+          <div className="grid grid-cols-3 gap-2">
+            {highlights.map((a) => (
+              <BadgeTile key={a.id} a={a} />
+            ))}
+          </div>
+          <button
+            onClick={() => setOpen(true)}
+            className="btn-ghost mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 text-xs"
+          >
+            See all {all.length} badges <ChevronDown size={14} />
+          </button>
+        </>
+      ) : (
+        <>
+          {CATEGORY_ORDER.map((cat) => {
+            const list = byCategory.get(cat) ?? [];
+            if (!list.length) return null;
+            const done = list.filter((a) => a.unlocked).length;
+            return (
+              <div key={cat} className="mb-4">
+                <div className="mb-1.5 flex items-center justify-between">
+                  <p className="label-cap text-[10px] text-grit">{CATEGORY_LABEL[cat]}</p>
+                  <span className="text-[9px] text-grit-dim">
+                    {done}/{list.length}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {list.map((a) => (
+                    <BadgeTile key={a.id} a={a} />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+          <button
+            onClick={() => setOpen(false)}
+            className="btn-ghost mt-1 flex min-h-[44px] w-full items-center justify-center text-xs"
+          >
+            Show less
+          </button>
+        </>
+      )}
     </section>
   );
 }
