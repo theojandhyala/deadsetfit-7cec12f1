@@ -126,7 +126,7 @@ export function RankedArena({ state, compact = false }: RankedArenaProps) {
             </div>
             <button
               onClick={() => setShareOpen(true)}
-              className="shrink-0 w-9 h-9 rounded-xl border bg-white/[.03] flex items-center justify-center transition active:scale-95"
+              className="shrink-0 w-9 h-9 rounded-xl border bg-white/[.03] flex items-center justify-center transition active:scale-95 tap-44"
               style={{ borderColor: `${rank.color}4d`, color: rank.color }}
               aria-label="Share rank"
             >
@@ -150,7 +150,7 @@ export function RankedArena({ state, compact = false }: RankedArenaProps) {
               <button
                 type="button"
                 onClick={() => setLadderOpen((v) => !v)}
-                className="label-cap text-[10px] text-grit-dim press"
+                className="label-cap tap-44 text-[10px] text-grit-dim press"
               >
                 {ladderOpen ? "Collapse" : "Full ladder"}
               </button>

@@ -161,7 +161,7 @@ export function TrainingAutopilot({
               key={item.value}
               type="button"
               onClick={() => setStrategy(item.value)}
-              className="min-h-9 rounded-lg px-1 text-[9px] font-black uppercase transition"
+              className="min-h-11 rounded-lg px-1 text-[9px] font-black uppercase transition"
               style={{
                 color: strategy === item.value ? "#fff" : "#8a8a8a",
                 background:

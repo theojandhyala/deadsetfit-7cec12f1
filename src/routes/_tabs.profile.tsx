@@ -401,7 +401,7 @@ function ProfilePage() {
         <button
           onClick={() => (editing ? save() : setEditing(true))}
           disabled={savingProfile}
-          className="label-cap text-accent-red disabled:opacity-50 mt-1"
+          className="label-cap tap-44 mt-1 text-accent-red disabled:opacity-50"
         >
           {editing ? (savingProfile ? "..." : "Save") : "Edit"}
         </button>
@@ -411,7 +411,7 @@ function ProfilePage() {
       <section className="px-5 mb-5 relative">
         <button
           onClick={() => fileRef.current?.click()}
-          className="absolute top-1 right-7 z-10 bg-accent-red rounded-full p-1.5 shadow"
+          className="absolute top-1 right-7 z-10 bg-accent-red rounded-full p-1.5 shadow tap-44"
           aria-label="Change photo"
         >
           <Pencil size={10} />
@@ -456,7 +456,7 @@ function ProfilePage() {
                   <button
                     onClick={() => setShowStreakShare(true)}
                     aria-label="Share streak"
-                    className="text-accent-red press"
+                    className="text-accent-red press tap-44"
                   >
                     <Share2 size={12} />
                   </button>
@@ -740,11 +740,11 @@ function ProfilePage() {
 
       <section className="px-5 pb-10 flex flex-col items-center gap-2">
         <div className="flex justify-center gap-4 label-cap text-[10px] text-grit-dim">
-          <Link to="/privacy">Privacy</Link>
+          <Link to="/privacy" className="tap-44">Privacy</Link>
           <span>·</span>
-          <Link to="/terms">Terms</Link>
+          <Link to="/terms" className="tap-44">Terms</Link>
           <span>·</span>
-          <Link to="/disclaimer">Disclaimer</Link>
+          <Link to="/disclaimer" className="tap-44">Disclaimer</Link>
         </div>
         <p className="label-cap text-[10px] text-grit-dim">DEADSET — made by Theo Jandhyala</p>
       </section>

@@ -207,7 +207,7 @@ function CataloguePage() {
         <Link
           to="/progress"
           aria-label="Back"
-          className="w-9 h-9 -ml-1 flex items-center justify-center rounded-full border border-grit bg-grit-card text-grit-dim press"
+          className="tap-44 -ml-1 flex h-9 w-9 items-center justify-center rounded-full border border-grit bg-grit-card text-grit-dim press"
         >
           <ChevronLeft size={18} />
         </Link>

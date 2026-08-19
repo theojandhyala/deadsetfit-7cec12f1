@@ -117,7 +117,7 @@ export function DailyQuests() {
       <div className="bg-grit-card border border-grit">
         <button
           onClick={() => setExpanded((v) => !v)}
-          className="w-full flex items-center justify-between px-3 py-2.5 border-b border-grit"
+          className="flex min-h-11 w-full items-center justify-between border-b border-grit px-3 py-2.5"
         >
           <p className="label-cap text-[10px] flex items-center gap-1.5">
             <Trophy size={12} className="text-accent-red" /> DAILY QUESTS

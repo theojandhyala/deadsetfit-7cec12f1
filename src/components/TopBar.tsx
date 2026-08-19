@@ -67,7 +67,7 @@ export function TopBar() {
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-5"
+      className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between gap-2 px-4"
       style={{
         // No backdrop-filter: fixed bars with backdrop blur intermittently
         // composite as solid BLACK while scrolling in WKWebView/iOS Safari.
@@ -81,11 +81,13 @@ export function TopBar() {
       }}
     >
       {/* Logo */}
-      <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center gap-2">
         <span className="h-7 w-[3px] bg-accent-red" />
         <span
           className="display block text-xl font-black leading-none"
-          style={{ fontStyle: "italic", letterSpacing: "0.08em" }}
+          // Italic overhang needs the trailing space, or the glyph visually
+          // touches whatever sits next to it.
+          style={{ fontStyle: "italic", letterSpacing: "0.04em", paddingRight: "2px" }}
         >
           <span style={{ color: "#ffffff" }}>DEAD</span>
           <span style={{ color: "#e63222" }}>SET</span>
@@ -93,41 +95,50 @@ export function TopBar() {
       </div>
 
       {/* Right: score + avatar */}
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-1.5">
         {/* Was an unlabelled grey circle — the app's only always-visible route
             into the guide, and effectively invisible. It now says "Help". */}
         <Link
           to="/guide"
           aria-label="How DEADSET works"
-          className="flex h-11 items-center gap-1 rounded-md px-2.5 press"
+          className="flex h-11 min-w-11 items-center justify-center gap-1 rounded-md px-2 press"
           style={{
             background: "rgba(255,255,255,0.025)",
             border: "1px solid rgba(255,255,255,0.11)",
             color: "#c9c9c9",
           }}
         >
-          <CircleHelp size={15} />
-          <span className="text-[10px] font-bold uppercase tracking-wider">Help</span>
+          <CircleHelp size={16} />
+          <span className="hidden text-[10px] font-bold uppercase tracking-wider min-[400px]:inline">
+            Help
+          </span>
         </Link>
         {/* XP pill */}
         <div
-          className={`flex items-center gap-1.5 rounded-md px-3 py-2 ${scorePop ? "grit-score-pop" : ""}`}
+          className={`flex items-center gap-1.5 rounded-md px-2.5 py-2 ${scorePop ? "grit-score-pop" : ""}`}
           style={{
             background: "linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.015))",
             border: "1px solid rgba(255,255,255,0.11)",
             boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
           }}
         >
-          <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color }}>
+          <span
+            className="h-2 w-2 shrink-0 rounded-full"
+            style={{ background: color }}
+            aria-hidden="true"
+          />
+          <span
+            className="hidden text-[10px] font-bold uppercase tracking-wider min-[400px]:inline"
+            style={{ color }}
+          >
             {badge}
           </span>
-          <span className="text-[10px] font-bold" style={{ color: "#8A8A8A" }}>
-            {score}
-          </span>
+          <span className="text-[11px] font-bold text-white">{score}</span>
+          <span className="sr-only">{badge}</span>
         </div>
 
         {/* Avatar with progress ring */}
-        <Link to="/profile" aria-label={`Profile · ${score} XP`}>
+        <Link to="/profile" aria-label={`Profile · ${score} XP`} className="tap-44">
           <div className="relative" style={{ width: size, height: size }}>
             <svg width={size} height={size} className="-rotate-90 absolute inset-0">
               <circle

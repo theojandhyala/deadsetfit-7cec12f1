@@ -426,7 +426,7 @@ function SettingsPage() {
             step={250}
             value={waterTarget}
             onChange={(e) => set((s) => ({ ...s, waterTargetMl: Number(e.target.value) }))}
-            className="w-full accent-[hsl(var(--accent-red))]"
+            className="h-11 w-full cursor-pointer accent-[hsl(var(--accent-red))]"
           />
         </div>
       </section>

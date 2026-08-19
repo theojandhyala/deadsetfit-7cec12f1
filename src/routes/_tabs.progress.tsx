@@ -665,7 +665,7 @@ function ProgressPage() {
                 </p>
                 <button
                   onClick={() => openPaywall("advanced-analytics")}
-                  className="w-full rounded-lg py-2.5 font-display font-extrabold uppercase tracking-wide text-[#14110a] text-sm"
+                  className="min-h-11 w-full rounded-lg py-2.5 font-display text-sm font-extrabold uppercase tracking-wide text-[#14110a]"
                   style={{ background: "linear-gradient(180deg, #f8d566, #eab212)" }}
                 >
                   Unlock With Pro
@@ -739,7 +739,7 @@ function ProgressPage() {
                       <span className="font-bold text-grit">{w.weight} kg</span>
                       <button
                         onClick={() => deleteWeight(w.date)}
-                        className="text-[#8A8A8A] hover:text-[#e63222]"
+                        className="text-[#8A8A8A] hover:text-[#e63222] tap-44"
                         aria-label="Delete entry"
                       >
                         <Trash2 size={12} />
@@ -800,7 +800,7 @@ function ProgressPage() {
                     </span>
                     <button
                       onClick={() => deleteMeasurement(m.date)}
-                      className="text-[#8A8A8A] hover:text-[#e63222]"
+                      className="text-[#8A8A8A] hover:text-[#e63222] tap-44"
                       aria-label="Delete entry"
                     >
                       <Trash2 size={12} />

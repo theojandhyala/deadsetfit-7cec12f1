@@ -234,7 +234,7 @@ function TrainPage() {
                 {armorLocked ? (
                   <button
                     onClick={() => openPaywall("streak-armor")}
-                    className="press relative flex items-center gap-1 pr-1"
+                    className="press relative flex items-center gap-1 pr-1 tap-44"
                     aria-label="Unlock Streak Armor"
                   >
                     {[0, 1, 2].map((i) => (
@@ -464,7 +464,7 @@ function TrainPage() {
                 {selectedDay === todayKey() ? "Today" : DAY_FULL[selectedDay]}
               </h2>
             </div>
-            <Link to="/plan" className="label-cap text-[10px]" style={{ color: "#8a8a8a" }}>
+            <Link to="/plan" className="label-cap text-[10px] tap-44" style={{ color: "#8a8a8a" }}>
               Edit full week
             </Link>
           </div>

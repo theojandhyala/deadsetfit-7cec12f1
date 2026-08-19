@@ -189,7 +189,7 @@ function LeaderboardPage() {
               key={item.key}
               onClick={() => setCategory(item.key)}
               aria-pressed={category === item.key}
-              className={`shrink-0 border px-3 py-2 text-[10px] font-black uppercase transition-colors ${
+              className={`flex min-h-11 shrink-0 items-center border px-3 text-[10px] font-black uppercase transition-colors ${
                 category === item.key
                   ? "border-accent-red bg-accent-red/10 text-accent-red"
                   : "border-grit text-grit-dim"

@@ -82,7 +82,7 @@ export function ProgressionBoard() {
         {locked && (
           <button
             onClick={() => openPaywall("progression")}
-            className="mt-3 w-full text-center label-cap text-[10px] text-accent-red press"
+            className="mt-3 w-full text-center label-cap text-[10px] text-accent-red press tap-44"
           >
             Unlock progression intelligence →
           </button>

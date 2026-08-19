@@ -761,7 +761,7 @@ function PlanPage() {
             <button
               onClick={() => void rebalanceWeek()}
               disabled={proLoading}
-              className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-grit-dim disabled:opacity-50"
+              className="tap-44 flex items-center gap-1.5 text-[10px] font-bold uppercase text-grit-dim disabled:opacity-50"
             >
               {!isPro ? <Lock size={12} /> : <Sparkles size={12} className="text-amber-300" />}
               Rebalance
