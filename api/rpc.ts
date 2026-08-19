@@ -930,8 +930,9 @@ const handlers: Record<string, Handler> = {
   // === Social: feed ===
   async getFeed(data, req) {
     const { supabase, userId } = await requireAuth(req);
+    const requested = (data as { scope?: string } | undefined)?.scope;
     const scope =
-      (data as { scope?: string } | undefined)?.scope === "following" ? "following" : "global";
+      requested === "following" ? "following" : requested === "crew" ? "crew" : "global";
     const { data: blocks } = await supabase
       .from("user_blocks")
       .select("blocker_id, blocked_id")
@@ -955,6 +956,19 @@ const handlers: Record<string, Handler> = {
       const allowed = (follows ?? []).map((f) => f.following_id as string);
       allowed.push(userId);
       query = query.in("user_id", allowed);
+    } else if (scope === "crew") {
+      // Scope to the viewer's crew. Someone with no crew sees an empty feed
+      // rather than silently falling back to global, which would read as a
+      // broken filter.
+      const membership = await crewMembershipOf(userId);
+      const { data: mates } = membership
+        ? await (supabaseAdmin as any)
+            .from("crew_members")
+            .select("user_id")
+            .eq("crew_id", membership.crew_id)
+        : { data: [] };
+      const allowed = ((mates ?? []) as { user_id: string }[]).map((m) => m.user_id);
+      query = query.in("user_id", allowed.length ? allowed : ["00000000-0000-0000-0000-000000000000"]);
     }
     if (hidden.size > 0) query = query.not("user_id", "in", `(${Array.from(hidden).join(",")})`);
     const { data: posts, error } = await query;

@@ -1,6 +1,6 @@
 import { callRpc } from "./rpc-client";
 
-export type FeedScope = "global" | "following";
+export type FeedScope = "global" | "following" | "crew";
 
 export const getFeed = (scope: FeedScope = "global") => callRpc<any[]>("getFeed", { scope });
 

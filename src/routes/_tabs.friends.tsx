@@ -365,7 +365,7 @@ function Feed({ userId }: { userId: string }) {
   return (
     <div className="px-5 pb-6">
       <div className="flex gap-1 mb-4 p-1 bg-grit-card border border-grit rounded-xl">
-        {(["following", "global"] as FeedScope[]).map((s) => (
+        {(["following", "crew", "global"] as FeedScope[]).map((s) => (
           <button
             key={s}
             onClick={() => setScope(s)}
@@ -373,7 +373,7 @@ function Feed({ userId }: { userId: string }) {
               scope === s ? "bg-accent-red text-white" : "text-grit-dim"
             }`}
           >
-            {s === "following" ? "Following" : "Global"}
+            {s === "following" ? "Following" : s === "crew" ? "Crew" : "Global"}
           </button>
         ))}
       </div>
@@ -466,7 +466,9 @@ function Feed({ userId }: { userId: string }) {
         <div className="bg-grit-card border border-grit p-6 text-center text-sm text-[#8a8a8a]">
           {scope === "following"
             ? "No posts from people you follow yet. Follow athletes in the Friends tab to fill this feed."
-            : "Feed is empty. Be the first to post."}
+            : scope === "crew"
+              ? "Nothing from your crew yet. Join or start one in the Crew tab, then get them posting."
+              : "Feed is empty. Be the first to post."}
         </div>
       )}
 
