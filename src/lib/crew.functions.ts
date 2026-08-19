@@ -18,6 +18,18 @@ export type CrewMember = {
   avatar_url: string | null;
   grit_points: number;
   level: string;
+  weekVolumeKg: number;
+  weekSessions: number;
+  weekPRs: number;
+};
+
+export type CrewWeek = {
+  weekStart: string;
+  volumeKg: number;
+  sessions: number;
+  prs: number;
+  /** Members who trained at least once this week. */
+  active: number;
 };
 
 export type CrewLadderRow = {
@@ -38,7 +50,9 @@ export const joinCrew = ({ data }: { data: { code: string } }) =>
 export const leaveCrew = () => callRpc<{ left: boolean }>("leaveCrew");
 
 export const getMyCrew = () =>
-  callRpc<{ crew: Crew | null; role?: string; members: CrewMember[] }>("getMyCrew");
+  callRpc<{ crew: Crew | null; role?: string; members: CrewMember[]; week?: CrewWeek }>(
+    "getMyCrew",
+  );
 
 export const getCrewLadder = ({ data }: { data?: { limit?: number } } = {}) =>
   callRpc<{ crews: CrewLadderRow[] }>("getCrewLadder", data ?? {});

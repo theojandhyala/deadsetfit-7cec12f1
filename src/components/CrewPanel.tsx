@@ -10,6 +10,7 @@ import {
   type Crew,
   type CrewLadderRow,
   type CrewMember,
+  type CrewWeek,
 } from "@/lib/crew.functions";
 import { askConfirm } from "@/lib/confirm";
 
@@ -25,6 +26,7 @@ export function CrewPanel() {
   const [crew, setCrew] = useState<Crew | null>(null);
   const [role, setRole] = useState<string | undefined>();
   const [members, setMembers] = useState<CrewMember[]>([]);
+  const [week, setWeek] = useState<CrewWeek | null>(null);
   const [ladder, setLadder] = useState<CrewLadderRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -40,6 +42,7 @@ export function CrewPanel() {
       setCrew(mine.crew);
       setRole(mine.role);
       setMembers(mine.members ?? []);
+      setWeek(mine.week ?? null);
       const board = await getCrewLadder({ data: { limit: 10 } });
       setLadder(board.crews ?? []);
     } catch (e) {
@@ -165,7 +168,51 @@ export function CrewPanel() {
             <Copy size={14} /> Invite code: <span className="text-white">{crew.invite_code}</span>
           </button>
 
-          <div className="mt-4 divide-y divide-[#1f1f1f]">
+          {week && (
+            <div className="mt-4 border border-grit bg-[#101010] p-3">
+              <div className="flex items-baseline justify-between">
+                <p className="label-cap text-[10px] text-accent-red">This week</p>
+                <p className="text-[10px] text-grit-dim">
+                  {week.active}/{members.length} training
+                </p>
+              </div>
+              <p className="display mt-1 text-3xl font-extrabold leading-none text-white">
+                {week.volumeKg.toLocaleString()}
+                <span className="ml-1 text-xs text-grit-dim">kg moved</span>
+              </p>
+              <p className="mt-1 text-[10px] text-grit-dim">
+                {week.sessions} {week.sessions === 1 ? "session" : "sessions"} · {week.prs} PRs
+              </p>
+              {week.volumeKg > 0 && (
+                <div className="mt-3 space-y-1.5">
+                  {members
+                    .filter((m) => m.weekVolumeKg > 0)
+                    .sort((a, b) => b.weekVolumeKg - a.weekVolumeKg)
+                    .map((m) => (
+                      <div key={m.id} className="flex items-center gap-2">
+                        <span className="w-20 shrink-0 truncate text-[10px] text-grit-dim">
+                          {m.display_name || m.username || "Athlete"}
+                        </span>
+                        <div className="h-2 flex-1 bg-[#1a1a1a]">
+                          <div
+                            className="h-full bg-accent-red"
+                            style={{
+                              width: `${Math.max(3, Math.round((m.weekVolumeKg / week.volumeKg) * 100))}%`,
+                            }}
+                          />
+                        </div>
+                        <span className="w-14 text-right text-[10px] text-white">
+                          {m.weekVolumeKg.toLocaleString()}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <p className="label-cap mt-4 mb-1 text-[10px] text-grit-dim">All time</p>
+          <div className="divide-y divide-[#1f1f1f]">
             {members.map((m, i) => (
               <div key={m.id} className="flex items-center gap-3 py-2">
                 <span className="w-5 text-right text-xs text-grit-dim">{i + 1}</span>

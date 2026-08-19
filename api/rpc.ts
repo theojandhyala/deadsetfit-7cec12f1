@@ -10,7 +10,7 @@ import {
   rankable,
   type LeaderboardStats,
 } from "../src/lib/leaderboard-integrity";
-import { currentWeekStart } from "../src/lib/competition";
+import { currentWeekStart, type WeeklyCompetitionStats } from "../src/lib/competition";
 import { getRank } from "../src/lib/rank";
 import type { AppState } from "../src/lib/types";
 import type { Database } from "../src/integrations/supabase/types";
@@ -444,16 +444,22 @@ async function crewRoster(crewId: string) {
 
   const { data: profiles } = await supabaseAdmin
     .from("profiles")
-    .select("id, username, display_name, avatar_url, grit_points")
+    .select("id, username, display_name, avatar_url, grit_points, public_stats")
     .in(
       "id",
       members.map((m) => m.user_id),
     );
   const byId = new Map((profiles ?? []).map((p) => [p.id, p]));
 
+  // Only this week's stats count toward the crew week: a member's blob carries
+  // the week it was computed for, so a stale one contributes nothing rather
+  // than inflating the total with last week's work.
+  const thisWeek = currentWeekStart();
   return members
     .map((m) => {
       const p = byId.get(m.user_id);
+      const weekly = (p?.public_stats as { weekly?: WeeklyCompetitionStats } | null)?.weekly;
+      const fresh = weekly && weekly.weekStart === thisWeek ? weekly : null;
       return {
         id: m.user_id,
         role: m.role,
@@ -463,6 +469,9 @@ async function crewRoster(crewId: string) {
         avatar_url: p?.avatar_url ?? null,
         grit_points: p?.grit_points ?? 0,
         level: gritLevel(p?.grit_points ?? 0),
+        weekVolumeKg: Math.round(fresh?.volumeKg ?? 0),
+        weekSessions: fresh?.sessions ?? 0,
+        weekPRs: fresh?.prs ?? 0,
       };
     })
     .sort((a, b) => b.grit_points - a.grit_points);
@@ -2285,7 +2294,15 @@ const handlers: Record<string, Handler> = {
     if (!crew) return { crew: null, members: [] };
 
     const members = await crewRoster(membership.crew_id);
-    return { crew, role: membership.role, members };
+    const week = {
+      weekStart: currentWeekStart(),
+      volumeKg: members.reduce((sum, m) => sum + m.weekVolumeKg, 0),
+      sessions: members.reduce((sum, m) => sum + m.weekSessions, 0),
+      prs: members.reduce((sum, m) => sum + m.weekPRs, 0),
+      // Anyone who trained at all this week counts as showing up.
+      active: members.filter((m) => m.weekSessions > 0).length,
+    };
+    return { crew, role: membership.role, members, week };
   },
 
   // The crew ladder: crews ranked by the grit their members have banked.
