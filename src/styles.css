@@ -833,7 +833,13 @@
    * control, so a dense row keeps its layout while becoming reliably tappable
    * with a thumb. Pointer events pass through the overlay to the button.
    */
-  .tap-44 {
+  /*
+   * Only establish a containing block when the control does not already
+   * position itself. Without this guard the rule overrides `absolute` on
+   * pinned buttons — which tore the profile's change-photo pencil out of the
+   * card corner and dropped it against the page edge.
+   */
+  .tap-44:not([class~="absolute"]):not([class~="fixed"]):not([class~="sticky"]) {
     position: relative;
   }
 
