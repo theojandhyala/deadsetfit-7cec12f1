@@ -166,6 +166,207 @@
 }
 
 @layer utilities {
+  .deadset-landing,
+  .deadset-landing .display {
+    letter-spacing: 0;
+  }
+
+  .landing-hero {
+    background: #070708;
+  }
+
+  .landing-hero-lines {
+    pointer-events: none;
+    background-image:
+      linear-gradient(
+        90deg,
+        transparent calc(50% - 0.5px),
+        rgba(255, 255, 255, 0.055) 50%,
+        transparent calc(50% + 0.5px)
+      ),
+      linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    background-size:
+      100% 100%,
+      100% 96px;
+    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.4), transparent 82%);
+    -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.4), transparent 82%);
+  }
+
+  .landing-device-stage {
+    perspective: 1400px;
+    transform-style: preserve-3d;
+  }
+
+  .landing-phone {
+    position: absolute;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 46px;
+    background: #171719;
+    padding: 9px;
+    box-shadow:
+      0 42px 90px rgba(0, 0, 0, 0.62),
+      0 0 0 1px rgba(255, 255, 255, 0.035) inset;
+  }
+
+  .landing-phone-screen {
+    height: 100%;
+    overflow: hidden;
+    border-radius: 38px;
+    background: #000;
+  }
+
+  .landing-phone-main {
+    z-index: 3;
+    bottom: -108px;
+    left: 50%;
+    width: 310px;
+    transform: translateX(-50%) rotateY(-3deg);
+    animation: landing-phone-main 6s ease-in-out infinite;
+  }
+
+  .landing-phone-left,
+  .landing-phone-right {
+    z-index: 1;
+    bottom: -72px;
+    width: 252px;
+    opacity: 0.7;
+    filter: saturate(0.72) brightness(0.78);
+  }
+
+  .landing-phone-left {
+    left: 2%;
+    transform: rotateY(16deg) rotateZ(-4deg);
+  }
+
+  .landing-phone-right {
+    right: 1%;
+    transform: rotateY(-16deg) rotateZ(4deg);
+  }
+
+  .landing-console {
+    border-radius: 8px;
+    box-shadow:
+      0 35px 90px rgba(0, 0, 0, 0.38),
+      0 0 55px rgba(241, 58, 44, 0.07);
+  }
+
+  .landing-console::after {
+    content: "";
+    position: absolute;
+    inset: 12px;
+    pointer-events: none;
+    border: 1px solid rgba(255, 255, 255, 0.045);
+  }
+
+  .landing-console-phone {
+    position: relative;
+    top: 110px;
+    width: min(330px, 75%);
+  }
+
+  .landing-pro-mark {
+    font-family: var(--font-display);
+    letter-spacing: 0;
+    line-height: 0.8;
+  }
+
+  .landing-ticker-track {
+    animation: landing-ticker 22s linear infinite;
+  }
+
+  @keyframes landing-phone-main {
+    0%,
+    100% {
+      transform: translateX(-50%) translateY(0) rotateY(-3deg);
+    }
+    50% {
+      transform: translateX(-50%) translateY(-9px) rotateY(0deg);
+    }
+  }
+
+  @keyframes landing-ticker {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  @media (max-width: 1023px) {
+    .landing-phone-main {
+      top: 20px;
+      bottom: auto;
+      width: 280px;
+    }
+
+    .landing-phone-left,
+    .landing-phone-right {
+      bottom: 70px;
+      width: 220px;
+    }
+
+    .landing-phone-left {
+      left: max(0px, calc(50% - 330px));
+    }
+
+    .landing-phone-right {
+      right: max(0px, calc(50% - 330px));
+    }
+  }
+
+  @media (min-width: 640px) and (max-width: 1023px) {
+    .landing-phone-main {
+      top: 24px;
+      bottom: auto;
+      width: 270px;
+    }
+  }
+
+  @media (max-width: 639px) {
+    .landing-phone {
+      border-radius: 38px;
+      padding: 7px;
+    }
+
+    .landing-phone-screen {
+      border-radius: 31px;
+    }
+
+    .landing-phone-main {
+      top: 0;
+      bottom: auto;
+      width: 218px;
+    }
+
+    .landing-phone-left,
+    .landing-phone-right {
+      bottom: -85px;
+      width: 170px;
+    }
+
+    .landing-phone-left {
+      left: -40px;
+    }
+
+    .landing-phone-right {
+      right: -40px;
+    }
+
+    .landing-console-phone {
+      top: 88px;
+      width: min(280px, 78%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .landing-phone-main,
+    .landing-ticker-track {
+      animation: none;
+    }
+  }
+
   .text-grit {
     color: #f5f5f0;
   }
@@ -765,12 +966,7 @@
     }
   }
   .shimmer-red {
-    background: linear-gradient(
-      100deg,
-      #e63222 42%,
-      #ff8a7d 50%,
-      #e63222 58%
-    );
+    background: linear-gradient(100deg, #e63222 42%, #ff8a7d 50%, #e63222 58%);
     background-size: 250% 100%;
     -webkit-background-clip: text;
     background-clip: text;
@@ -975,6 +1171,139 @@
 
   .animate-subtle-pulse {
     animation: deadset-subtle-pulse 3.2s ease-in-out infinite;
+  }
+
+  /* Purposeful product motion: route changes establish place, while local
+     state changes animate only the content that actually changed. */
+  .deadset-route-shell {
+    min-height: 100%;
+    animation: deadset-route-enter 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .deadset-day-switch {
+    animation: deadset-day-switch 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .deadset-exercise-reveal {
+    animation: deadset-exercise-reveal 340ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .deadset-primary-action {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    box-shadow:
+      0 12px 30px rgba(230, 50, 34, 0.24),
+      inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  }
+
+  .deadset-primary-action::after {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    background: linear-gradient(
+      108deg,
+      transparent 22%,
+      rgba(255, 255, 255, 0.18) 46%,
+      transparent 68%
+    );
+    content: "";
+    pointer-events: none;
+    transform: translateX(-120%);
+    animation: deadset-action-sweep 3.8s ease-in-out 900ms infinite;
+  }
+
+  .deadset-day-chip {
+    position: relative;
+    overflow: hidden;
+    transition:
+      transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 180ms ease,
+      background-color 180ms ease,
+      box-shadow 180ms ease;
+  }
+
+  .deadset-day-chip-active {
+    box-shadow:
+      0 8px 22px rgba(230, 50, 34, 0.14),
+      inset 0 -2px 0 rgba(230, 50, 34, 0.9);
+    animation: deadset-chip-select 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .deadset-plan-day-active {
+    box-shadow:
+      inset 3px 0 0 #e63222,
+      inset 0 0 32px rgba(230, 50, 34, 0.035);
+    transition:
+      background-color 180ms ease,
+      box-shadow 220ms ease;
+  }
+
+  .deadset-plan-reveal {
+    transform-origin: top;
+    animation: deadset-plan-reveal 330ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .deadset-nav-item {
+    isolation: isolate;
+  }
+
+  .deadset-nav-icon {
+    display: grid;
+    width: 34px;
+    height: 30px;
+    place-items: center;
+    border-radius: 10px;
+    transition:
+      transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+      background-color 180ms ease,
+      box-shadow 180ms ease;
+  }
+
+  .deadset-nav-item-active .deadset-nav-icon {
+    background: rgba(230, 50, 34, 0.12);
+    box-shadow: 0 0 22px rgba(230, 50, 34, 0.12);
+    animation: deadset-nav-settle 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .deadset-nav-indicator {
+    transform-origin: center;
+    animation: deadset-nav-indicator-in 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .deadset-record-button {
+    position: relative;
+  }
+
+  .deadset-record-button::before {
+    position: absolute;
+    inset: -7px;
+    border: 1px solid rgba(230, 50, 34, 0.34);
+    border-radius: 999px;
+    content: "";
+    pointer-events: none;
+    animation: deadset-record-orbit 2.8s ease-out infinite;
+  }
+
+  .deadset-record-plus {
+    transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .deadset-record-link-active .deadset-record-plus {
+    transform: rotate(45deg) scale(0.92);
+  }
+
+  .deadset-record-label {
+    margin-top: -0.3rem;
+    transition: color 180ms ease;
+  }
+
+  .deadset-record-link-active .deadset-record-label {
+    color: #e63222;
+  }
+
+  .deadset-view-switch {
+    animation: deadset-view-switch 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   .deadset-wordmark {
@@ -1196,6 +1525,123 @@
     }
   }
 
+  @keyframes deadset-route-enter {
+    from {
+      opacity: 0;
+      transform: translateY(7px) scale(0.998);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes deadset-day-switch {
+    from {
+      opacity: 0;
+      transform: translateX(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes deadset-exercise-reveal {
+    from {
+      opacity: 0;
+      transform: translateX(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes deadset-action-sweep {
+    0%,
+    68% {
+      opacity: 0;
+      transform: translateX(-120%);
+    }
+    76% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(120%);
+    }
+  }
+
+  @keyframes deadset-chip-select {
+    0% {
+      transform: scale(0.96);
+    }
+    70% {
+      transform: scale(1.025);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes deadset-plan-reveal {
+    from {
+      opacity: 0;
+      transform: translateY(-7px) scaleY(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scaleY(1);
+    }
+  }
+
+  @keyframes deadset-nav-settle {
+    0% {
+      transform: translateY(3px) scale(0.88);
+    }
+    65% {
+      transform: translateY(-2px) scale(1.06);
+    }
+    100% {
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes deadset-nav-indicator-in {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) scaleX(0.25);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(-50%) scaleX(1);
+    }
+  }
+
+  @keyframes deadset-record-orbit {
+    0% {
+      opacity: 0.55;
+      transform: scale(0.86);
+    }
+    68%,
+    100% {
+      opacity: 0;
+      transform: scale(1.18);
+    }
+  }
+
+  @keyframes deadset-view-switch {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   @keyframes deadset-rise-in {
     from {
       opacity: 0;
@@ -1332,6 +1778,15 @@
     }
   }
 
+  @keyframes boot-progress {
+    0% {
+      transform: translateX(-130%);
+    }
+    100% {
+      transform: translateX(260%);
+    }
+  }
+
   @keyframes deadset-subtle-pulse {
     0%,
     100% {
@@ -1345,6 +1800,7 @@
   /* === Mobile feel: kill iOS tap delay/highlight, stabilise viewport === */
   html {
     -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
   }
   button,
   a,
@@ -1467,6 +1923,9 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
     .celebrate-overlay,
     .celebrate-flash,
     .celebrate-wave,
@@ -1482,6 +1941,14 @@
     .deadset-page > header,
     .deadset-page > section,
     .deadset-page > div,
+    .deadset-route-shell,
+    .deadset-day-switch,
+    .deadset-exercise-reveal,
+    .deadset-day-chip-active,
+    .deadset-plan-reveal,
+    .deadset-view-switch,
+    .deadset-nav-item-active .deadset-nav-icon,
+    .deadset-nav-indicator,
     .animate-slide-up,
     .animate-slide-down,
     .animate-pop-in,
@@ -1490,6 +1957,8 @@
     .xp-bar > .fill::after,
     .deadset-3d-panel::after,
     .deadset-hero-card::after,
+    .deadset-primary-action::after,
+    .deadset-record-button::before,
     .deadset-float,
     .deadset-pulse-glow {
       animation: none !important;
