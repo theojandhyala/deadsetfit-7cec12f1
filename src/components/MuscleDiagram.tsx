@@ -8,6 +8,8 @@ type Muscle = string;
 interface Props {
   primary?: Muscle[];
   secondary?: Muscle[];
+  /** Optional broad-muscle colour map used by the strength report. */
+  gradeColors?: Partial<Record<"CHEST" | "BACK" | "LEGS" | "SHOULDERS" | "ARMS" | "CORE", string>>;
   size?: number;
 }
 
@@ -75,11 +77,26 @@ function bodyPath() {
   return "M100 30 q24 0 24 26 q0 22 -16 30 q22 6 28 28 l8 50 q-2 22 -18 34 l-10 18 v60 q8 30 -2 60 q-8 30 -8 60 v50 q4 22 -4 30 h-24 q-8 -8 -4 -30 v-50 q0 -30 -8 -60 q-10 -30 -2 -60 v-60 l-10 -18 q-16 -12 -18 -34 l8 -50 q6 -22 28 -28 q-16 -8 -16 -30 q0 -26 24 -26 z";
 }
 
-export function MuscleDiagram({ primary = [], secondary = [], size = 220 }: Props) {
+const GRADE_SHAPES: Record<string, string[]> = {
+  CHEST: ["chest", "upper-chest"],
+  BACK: ["back", "lats", "mid-back", "upper-back", "traps"],
+  LEGS: ["quads", "hamstrings", "glutes", "calves", "hip-flexors"],
+  SHOULDERS: ["shoulders", "front-delts", "side-delts", "rear-delts", "rotator-cuff"],
+  ARMS: ["biceps", "triceps", "forearms", "brachialis"],
+  CORE: ["core", "obliques"],
+};
+
+export function MuscleDiagram({ primary = [], secondary = [], gradeColors, size = 220 }: Props) {
   const prim = new Set(primary.map((m) => m.toLowerCase()));
   const sec = new Set(secondary.map((m) => m.toLowerCase()));
+  const graded = new Map<string, string>();
+  for (const [group, color] of Object.entries(gradeColors ?? {})) {
+    if (!color) continue;
+    for (const shape of GRADE_SHAPES[group] ?? []) graded.set(shape, color);
+  }
 
-  const fill = (key: string) => (prim.has(key) ? ACCENT : sec.has(key) ? DIM : BASE);
+  const fill = (key: string) =>
+    graded.get(key) ?? (prim.has(key) ? ACCENT : sec.has(key) ? DIM : BASE);
 
   const render = (side: "f" | "b") =>
     Object.entries(SHAPES).flatMap(([key, def]) =>

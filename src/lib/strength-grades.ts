@@ -331,6 +331,22 @@ export function strengthReport(
   };
 }
 
+/** Strength report using only history available on or before a calendar day. */
+export function strengthReportAsOf(
+  state: AppState,
+  library: Pick<Exercise, "id" | "name">[],
+  cutoffIso: string,
+): StrengthReport {
+  return strengthReport(
+    {
+      ...state,
+      sessions: state.sessions.filter((session) => session.date.slice(0, 10) <= cutoffIso),
+      logs: (state.logs ?? []).filter((log) => log.date.slice(0, 10) <= cutoffIso),
+    },
+    library,
+  );
+}
+
 /** A 0-100 score back to the tier it sits in. */
 export function tierForScore(score: number): StrengthTier {
   const clamped = Math.max(0, Math.min(100, score));

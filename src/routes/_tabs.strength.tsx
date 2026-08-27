@@ -8,6 +8,7 @@ import { usePro } from "@/hooks/usePro";
 import { useCountUp } from "@/hooks/useCountUp";
 import { openPaywall } from "@/lib/paywall-events";
 import { formatWeight, unitOf } from "@/lib/units";
+import { MuscleDiagram } from "@/components/MuscleDiagram";
 import {
   GRADED_MUSCLES,
   TIER_BLURB,
@@ -15,8 +16,10 @@ import {
   TIERS,
   pointsToNextTier,
   strengthReport,
+  strengthReportAsOf,
   type ExerciseGrade,
   type MuscleGrade,
+  type StrengthReport,
   type StrengthTier,
 } from "@/lib/strength-grades";
 
@@ -35,6 +38,24 @@ function StrengthPage() {
     [state.savedExercises],
   );
   const report = useMemo(() => strengthReport(state, library), [state, library]);
+  const firstDay = useMemo(
+    () =>
+      state.sessions
+        .filter((s) => s.endedAt)
+        .map((s) => s.date.slice(0, 10))
+        .sort()[0] ?? null,
+    [state.sessions],
+  );
+  const baselineDay = useMemo(() => {
+    if (!firstDay) return null;
+    const date = new Date(`${firstDay}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + 89);
+    return date.toISOString().slice(0, 10);
+  }, [firstDay]);
+  const baseline = useMemo(
+    () => (baselineDay ? strengthReportAsOf(state, library, baselineDay) : null),
+    [state, library, baselineDay],
+  );
   const displayScore = useCountUp(report.score, 900);
   const locked = !proLoading && !isPro;
 
@@ -61,6 +82,8 @@ function StrengthPage() {
       ) : (
         <>
           <OverallCard tier={report.tier} score={report.score} displayScore={displayScore} />
+
+          <StrengthBodyComparison baseline={baseline} current={report} />
 
           <section className="px-5 mt-5">
             <p className="label-cap text-[10px] text-grit-dim mb-2">BY MUSCLE GROUP</p>
@@ -97,6 +120,49 @@ function StrengthPage() {
         </>
       )}
     </div>
+  );
+}
+
+function reportColors(report: StrengthReport | null) {
+  return Object.fromEntries(
+    (report?.muscles ?? []).map((grade) => [grade.muscle, TIER_COLOR[grade.tier]]),
+  );
+}
+
+function StrengthBodyComparison({
+  baseline,
+  current,
+}: {
+  baseline: StrengthReport | null;
+  current: StrengthReport;
+}) {
+  const hasBaseline = Boolean(baseline?.gradedCount);
+  return (
+    <section className="px-5 mt-5">
+      <div className="rounded-2xl border border-grit bg-grit-card p-4">
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="label-cap text-[10px] text-accent-red">STRENGTH MAP</p>
+          <p className="label-cap text-[9px] text-grit-dim">FRONT + BACK</p>
+        </div>
+        <div className={`mt-3 grid ${hasBaseline ? "grid-cols-2" : "grid-cols-1"} gap-2`}>
+          {hasBaseline && (
+            <div className="text-center">
+              <p className="label-cap text-[9px] text-grit-dim">FIRST 90 DAYS</p>
+              <MuscleDiagram gradeColors={reportColors(baseline)} size={150} />
+              <p className="display text-lg font-extrabold text-grit">{baseline!.score}</p>
+            </div>
+          )}
+          <div className="text-center">
+            <p className="label-cap text-[9px] text-grit-dim">NOW</p>
+            <MuscleDiagram gradeColors={reportColors(current)} size={150} />
+            <p className="display text-lg font-extrabold text-grit">{current.score}</p>
+          </div>
+        </div>
+        <p className="mt-2 text-center text-[10px] text-grit-dim">
+          Colour shows the real grade of each muscle—not training volume or a body transformation.
+        </p>
+      </div>
+    </section>
   );
 }
 
