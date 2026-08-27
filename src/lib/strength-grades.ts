@@ -15,9 +15,22 @@ import type { AppState, Exercise, MuscleGroup } from "./types";
  * server, no per-user cost.
  */
 
-export type StrengthTier = "BEGINNER" | "NOVICE" | "INTERMEDIATE" | "ADVANCED" | "ELITE";
+export type StrengthTier =
+  | "BEGINNER"
+  | "NOVICE"
+  | "INTERMEDIATE"
+  | "ADVANCED"
+  | "ELITE"
+  | "WORLD CLASS";
 
-export const TIERS: StrengthTier[] = ["BEGINNER", "NOVICE", "INTERMEDIATE", "ADVANCED", "ELITE"];
+export const TIERS: StrengthTier[] = [
+  "BEGINNER",
+  "NOVICE",
+  "INTERMEDIATE",
+  "ADVANCED",
+  "ELITE",
+  "WORLD CLASS",
+];
 
 export const TIER_COLOR: Record<StrengthTier, string> = {
   BEGINNER: "#8a8a8a",
@@ -25,6 +38,9 @@ export const TIER_COLOR: Record<StrengthTier, string> = {
   INTERMEDIATE: "#5bd07a",
   ADVANCED: "#fbbf24",
   ELITE: "#e63222",
+  // Deliberately off the warm ladder: the top tier should not read as "more
+  // red", it should read as a different thing entirely.
+  "WORLD CLASS": "#b06cf0",
 };
 
 /** One line for each tier, so the grade means something without a legend. */
@@ -34,6 +50,7 @@ export const TIER_BLURB: Record<StrengthTier, string> = {
   INTERMEDIATE: "Stronger than most people in a commercial gym.",
   ADVANCED: "Years of serious training. Top of most gyms.",
   ELITE: "Competitive strength. Very few people get here.",
+  "WORLD CLASS": "Numbers that win competitions. Almost nobody reaches this.",
 };
 
 /**
@@ -47,68 +64,86 @@ type StandardKind = "RATIO" | "REPS" | "SECONDS";
 interface ExerciseStandard {
   muscle: MuscleGroup;
   kind: StandardKind;
-  /** Entry thresholds for NOVICE, INTERMEDIATE, ADVANCED, ELITE. */
-  male: [number, number, number, number];
-  female: [number, number, number, number];
+  /** Entry thresholds for NOVICE, INTERMEDIATE, ADVANCED, ELITE, WORLD CLASS. */
+  male: Thresholds;
+  female: Thresholds;
 }
+
+/** One entry threshold per tier above BEGINNER. */
+type Thresholds = [number, number, number, number, number];
 
 const S = (
   muscle: MuscleGroup,
   kind: StandardKind,
-  male: [number, number, number, number],
-  female: [number, number, number, number],
+  male: Thresholds,
+  female: Thresholds,
 ): ExerciseStandard => ({ muscle, kind, male, female });
 
 export const STANDARDS: Record<string, ExerciseStandard> = {
   // CHEST
-  "bench-press": S("CHEST", "RATIO", [0.75, 1.25, 1.75, 2.0], [0.5, 0.75, 1.0, 1.25]),
-  "incline-db-press": S("CHEST", "RATIO", [0.5, 0.8, 1.1, 1.4], [0.3, 0.5, 0.7, 0.9]),
-  "cable-fly": S("CHEST", "RATIO", [0.3, 0.5, 0.7, 0.9], [0.2, 0.3, 0.45, 0.6]),
-  dips: S("CHEST", "REPS", [1, 8, 18, 30], [1, 4, 10, 20]),
-  "push-ups": S("CHEST", "REPS", [10, 25, 45, 70], [5, 15, 30, 50]),
+  "bench-press": S("CHEST", "RATIO", [0.75, 1.25, 1.75, 2, 2.3], [0.5, 0.75, 1, 1.25, 1.6]),
+  "incline-db-press": S("CHEST", "RATIO", [0.5, 0.8, 1.1, 1.4, 1.8], [0.3, 0.5, 0.7, 0.9, 1.15]),
+  "cable-fly": S("CHEST", "RATIO", [0.3, 0.5, 0.7, 0.9, 1.15], [0.2, 0.3, 0.45, 0.6, 0.8]),
+  dips: S("CHEST", "REPS", [1, 8, 18, 30, 46], [1, 4, 10, 20, 33]),
+  "push-ups": S("CHEST", "REPS", [10, 25, 45, 70, 102], [5, 15, 30, 50, 76]),
 
   // BACK
-  deadlift: S("BACK", "RATIO", [1.25, 1.75, 2.25, 2.75], [1.0, 1.25, 1.75, 2.25]),
-  "pull-ups": S("BACK", "REPS", [1, 6, 14, 24], [1, 3, 8, 15]),
-  "lat-pulldown": S("BACK", "RATIO", [0.75, 1.0, 1.3, 1.6], [0.5, 0.7, 0.9, 1.15]),
-  "seated-row": S("BACK", "RATIO", [0.7, 1.0, 1.3, 1.6], [0.45, 0.65, 0.85, 1.1]),
-  "face-pull": S("BACK", "RATIO", [0.3, 0.45, 0.6, 0.8], [0.2, 0.3, 0.4, 0.55]),
-  "inverted-row": S("BACK", "REPS", [8, 18, 32, 50], [5, 12, 22, 38]),
-  superman: S("BACK", "REPS", [15, 30, 50, 75], [15, 30, 50, 75]),
+  deadlift: S("BACK", "RATIO", [1.25, 1.75, 2.25, 2.75, 3.4], [1, 1.25, 1.75, 2.25, 2.9]),
+  "pull-ups": S("BACK", "REPS", [1, 6, 14, 24, 37], [1, 3, 8, 15, 24]),
+  "lat-pulldown": S("BACK", "RATIO", [0.75, 1, 1.3, 1.6, 2], [0.5, 0.7, 0.9, 1.15, 1.45]),
+  "seated-row": S("BACK", "RATIO", [0.7, 1, 1.3, 1.6, 2], [0.45, 0.65, 0.85, 1.1, 1.45]),
+  "face-pull": S("BACK", "RATIO", [0.3, 0.45, 0.6, 0.8, 1.05], [0.2, 0.3, 0.4, 0.55, 0.75]),
+  "inverted-row": S("BACK", "REPS", [8, 18, 32, 50, 73], [5, 12, 22, 38, 59]),
+  superman: S("BACK", "REPS", [15, 30, 50, 75, 108], [15, 30, 50, 75, 108]),
 
   // LEGS
-  squat: S("LEGS", "RATIO", [1.0, 1.5, 2.0, 2.5], [0.75, 1.0, 1.5, 2.0]),
-  rdl: S("LEGS", "RATIO", [0.9, 1.35, 1.8, 2.2], [0.7, 0.95, 1.3, 1.7]),
-  "leg-press": S("LEGS", "RATIO", [1.75, 2.5, 3.5, 4.5], [1.25, 2.0, 2.75, 3.5]),
-  "leg-curl": S("LEGS", "RATIO", [0.4, 0.6, 0.8, 1.0], [0.3, 0.45, 0.6, 0.8]),
-  "goblet-squat": S("LEGS", "RATIO", [0.4, 0.6, 0.8, 1.0], [0.3, 0.45, 0.6, 0.8]),
-  lunges: S("LEGS", "REPS", [12, 25, 45, 70], [12, 25, 45, 70]),
-  "bodyweight-squat": S("LEGS", "REPS", [20, 40, 70, 100], [20, 40, 70, 100]),
-  "split-squat": S("LEGS", "REPS", [8, 18, 32, 50], [8, 18, 32, 50]),
-  "glute-bridge": S("LEGS", "REPS", [15, 30, 50, 75], [15, 30, 50, 75]),
-  "calf-raise": S("LEGS", "REPS", [15, 30, 50, 75], [15, 30, 50, 75]),
+  squat: S("LEGS", "RATIO", [1, 1.5, 2, 2.5, 3.15], [0.75, 1, 1.5, 2, 2.65]),
+  rdl: S("LEGS", "RATIO", [0.9, 1.35, 1.8, 2.2, 2.7], [0.7, 0.95, 1.3, 1.7, 2.2]),
+  "leg-press": S("LEGS", "RATIO", [1.75, 2.5, 3.5, 4.5, 5.8], [1.25, 2, 2.75, 3.5, 4.5]),
+  "leg-curl": S("LEGS", "RATIO", [0.4, 0.6, 0.8, 1, 1.25], [0.3, 0.45, 0.6, 0.8, 1.05]),
+  "goblet-squat": S("LEGS", "RATIO", [0.4, 0.6, 0.8, 1, 1.25], [0.3, 0.45, 0.6, 0.8, 1.05]),
+  lunges: S("LEGS", "REPS", [12, 25, 45, 70, 102], [12, 25, 45, 70, 102]),
+  "bodyweight-squat": S("LEGS", "REPS", [20, 40, 70, 100, 139], [20, 40, 70, 100, 139]),
+  "split-squat": S("LEGS", "REPS", [8, 18, 32, 50, 73], [8, 18, 32, 50, 73]),
+  "glute-bridge": S("LEGS", "REPS", [15, 30, 50, 75, 108], [15, 30, 50, 75, 108]),
+  "calf-raise": S("LEGS", "REPS", [15, 30, 50, 75, 108], [15, 30, 50, 75, 108]),
 
   // SHOULDERS
-  ohp: S("SHOULDERS", "RATIO", [0.5, 0.75, 1.0, 1.25], [0.35, 0.5, 0.65, 0.85]),
-  "lateral-raise": S("SHOULDERS", "RATIO", [0.1, 0.18, 0.26, 0.35], [0.07, 0.12, 0.18, 0.25]),
-  "front-raise": S("SHOULDERS", "RATIO", [0.1, 0.18, 0.26, 0.35], [0.07, 0.12, 0.18, 0.25]),
-  "rear-delt-fly": S("SHOULDERS", "RATIO", [0.1, 0.18, 0.26, 0.35], [0.07, 0.12, 0.18, 0.25]),
-  "pike-push-up": S("SHOULDERS", "REPS", [5, 12, 22, 35], [3, 8, 15, 25]),
+  ohp: S("SHOULDERS", "RATIO", [0.5, 0.75, 1, 1.25, 1.6], [0.35, 0.5, 0.65, 0.85, 1.1]),
+  "lateral-raise": S(
+    "SHOULDERS",
+    "RATIO",
+    [0.1, 0.18, 0.26, 0.35, 0.45],
+    [0.07, 0.12, 0.18, 0.25, 0.35],
+  ),
+  "front-raise": S(
+    "SHOULDERS",
+    "RATIO",
+    [0.1, 0.18, 0.26, 0.35, 0.45],
+    [0.07, 0.12, 0.18, 0.25, 0.35],
+  ),
+  "rear-delt-fly": S(
+    "SHOULDERS",
+    "RATIO",
+    [0.1, 0.18, 0.26, 0.35, 0.45],
+    [0.07, 0.12, 0.18, 0.25, 0.35],
+  ),
+  "pike-push-up": S("SHOULDERS", "REPS", [5, 12, 22, 35, 52], [3, 8, 15, 25, 38]),
 
   // ARMS
-  "barbell-curl": S("ARMS", "RATIO", [0.35, 0.55, 0.75, 0.95], [0.2, 0.35, 0.5, 0.65]),
-  "hammer-curl": S("ARMS", "RATIO", [0.15, 0.25, 0.35, 0.45], [0.1, 0.16, 0.24, 0.32]),
-  "skull-crushers": S("ARMS", "RATIO", [0.3, 0.45, 0.65, 0.85], [0.2, 0.3, 0.42, 0.55]),
-  "tricep-pushdown": S("ARMS", "RATIO", [0.35, 0.55, 0.75, 1.0], [0.25, 0.4, 0.55, 0.7]),
-  "close-grip-push-up": S("ARMS", "REPS", [8, 20, 38, 60], [4, 12, 25, 42]),
+  "barbell-curl": S("ARMS", "RATIO", [0.35, 0.55, 0.75, 0.95, 1.2], [0.2, 0.35, 0.5, 0.65, 0.85]),
+  "hammer-curl": S("ARMS", "RATIO", [0.15, 0.25, 0.35, 0.45, 0.6], [0.1, 0.16, 0.24, 0.32, 0.4]),
+  "skull-crushers": S("ARMS", "RATIO", [0.3, 0.45, 0.65, 0.85, 1.1], [0.2, 0.3, 0.42, 0.55, 0.7]),
+  "tricep-pushdown": S("ARMS", "RATIO", [0.35, 0.55, 0.75, 1, 1.3], [0.25, 0.4, 0.55, 0.7, 0.9]),
+  "close-grip-push-up": S("ARMS", "REPS", [8, 20, 38, 60, 89], [4, 12, 25, 42, 64]),
 
   // CORE
-  plank: S("CORE", "SECONDS", [30, 60, 120, 180], [30, 60, 120, 180]),
-  "hanging-leg-raise": S("CORE", "REPS", [5, 12, 20, 30], [3, 8, 15, 25]),
-  "cable-crunch": S("CORE", "RATIO", [0.3, 0.5, 0.7, 0.95], [0.2, 0.35, 0.5, 0.65]),
-  "ab-wheel": S("CORE", "REPS", [3, 8, 15, 25], [2, 5, 12, 20]),
-  "dead-bug": S("CORE", "REPS", [10, 20, 35, 50], [10, 20, 35, 50]),
-  "bicycle-crunch": S("CORE", "REPS", [15, 30, 50, 80], [15, 30, 50, 80]),
+  plank: S("CORE", "SECONDS", [30, 60, 120, 180, 258], [30, 60, 120, 180, 258]),
+  "hanging-leg-raise": S("CORE", "REPS", [5, 12, 20, 30, 43], [3, 8, 15, 25, 38]),
+  "cable-crunch": S("CORE", "RATIO", [0.3, 0.5, 0.7, 0.95, 1.3], [0.2, 0.35, 0.5, 0.65, 0.85]),
+  "ab-wheel": S("CORE", "REPS", [3, 8, 15, 25, 38], [2, 5, 12, 20, 30]),
+  "dead-bug": S("CORE", "REPS", [10, 20, 35, 50, 70], [10, 20, 35, 50, 70]),
+  "bicycle-crunch": S("CORE", "REPS", [15, 30, 50, 80, 119], [15, 30, 50, 80, 119]),
 };
 
 export const GRADED_MUSCLES: MuscleGroup[] = ["CHEST", "BACK", "LEGS", "SHOULDERS", "ARMS", "CORE"];
@@ -152,10 +187,7 @@ export interface StrengthReport {
 }
 
 /** Where a value sits on a four-threshold ladder, as tier index + progress. */
-function placeOnLadder(
-  value: number,
-  thresholds: [number, number, number, number],
-): { index: number; progress: number } {
+function placeOnLadder(value: number, thresholds: Thresholds): { index: number; progress: number } {
   if (value <= 0) return { index: 0, progress: 0 };
   let index = 0;
   for (let i = 0; i < thresholds.length; i += 1) {
@@ -418,5 +450,59 @@ export function strengthTrend(
     overallChange: current.score - previous.score,
     movers,
     since,
+  };
+}
+
+export interface StrengthJourney {
+  start: StrengthReport;
+  now: StrengthReport;
+  /** ISO day the "start" snapshot is taken from. */
+  startedOn: string;
+  /** Muscle groups that climbed at least one tier since then. */
+  climbed: MuscleGroup[];
+  /** True once there is enough history for the comparison to mean anything. */
+  meaningful: boolean;
+}
+
+/**
+ * Then versus now.
+ *
+ * The comparison window is bounded by the athlete's own first session rather
+ * than a fixed twelve months: someone eight weeks in should see their eight
+ * weeks, not eleven months of empty body next to a full one. A comparison that
+ * flatters by choosing a favourable start date is worth nothing.
+ */
+export function strengthJourney(
+  state: AppState,
+  library: Pick<Exercise, "id" | "name">[],
+  days = 365,
+  now = new Date(),
+): StrengthJourney {
+  const finished = (state.sessions ?? []).filter((session) => session.endedAt);
+  const firstDate = finished.map((session) => session.date).sort((a, b) => a.localeCompare(b))[0];
+
+  const windowStart = new Date(now.getTime() - days * 86_400_000).toISOString().slice(0, 10);
+  // The later of "a year ago" and "the day before they started".
+  const startedOn = firstDate && firstDate > windowStart ? firstDate : windowStart;
+
+  const start = strengthReportAsOf(state, library, startedOn);
+  const current = strengthReport(state, library);
+
+  const before = new Map(start.muscles.map((muscle) => [muscle.muscle, muscle.tier]));
+  const climbed = current.muscles
+    .filter((muscle) => {
+      const then = before.get(muscle.muscle);
+      const thenIndex = then ? TIERS.indexOf(then) : -1;
+      return TIERS.indexOf(muscle.tier) > thenIndex;
+    })
+    .map((muscle) => muscle.muscle);
+
+  return {
+    start,
+    now: current,
+    startedOn,
+    climbed,
+    // One session compared against itself is not a journey.
+    meaningful: current.gradedCount > 0 && finished.length >= 2,
   };
 }

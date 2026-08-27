@@ -144,7 +144,7 @@ function LibraryPage() {
       {isLoading ? (
         <p className="text-grit-dim text-sm label-cap">Loading…</p>
       ) : (
-        <ul className="space-y-2 pb-6">
+        <ul className="stagger space-y-2 pb-6">
           {exercises.map((ex) => (
             <li key={ex.id}>
               <button

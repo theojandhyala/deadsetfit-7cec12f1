@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { ChevronLeft, Lock, Info, TrendingUp } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lock, Info, TrendingUp } from "lucide-react";
 
 import { useAppState } from "@/lib/storage";
 import { allExercises } from "@/lib/exercises";
@@ -8,16 +8,19 @@ import { usePro } from "@/hooks/usePro";
 import { useCountUp } from "@/hooks/useCountUp";
 import { openPaywall } from "@/lib/paywall-events";
 import { formatWeight, unitOf } from "@/lib/units";
+import { StrengthBodyMap, TierLegend } from "@/components/StrengthBodyMap";
 import {
   GRADED_MUSCLES,
   TIER_BLURB,
   TIER_COLOR,
   TIERS,
   pointsToNextTier,
+  strengthJourney,
   strengthReport,
   strengthTrend,
   type ExerciseGrade,
   type MuscleGrade,
+  type StrengthJourney,
   type StrengthTier,
   type StrengthTrend,
 } from "@/lib/strength-grades";
@@ -38,6 +41,7 @@ function StrengthPage() {
   );
   const report = useMemo(() => strengthReport(state, library), [state, library]);
   const trend = useMemo(() => strengthTrend(state, library, 7), [state, library]);
+  const journey = useMemo(() => strengthJourney(state, library), [state, library]);
   const displayScore = useCountUp(report.score, 900);
   const locked = !proLoading && !isPro;
 
@@ -64,6 +68,10 @@ function StrengthPage() {
       ) : (
         <>
           <OverallCard tier={report.tier} score={report.score} displayScore={displayScore} />
+
+          <BodyMapCard muscles={report.muscles} />
+
+          <JourneyCard journey={journey} />
 
           <WeekTrend trend={trend} />
 
@@ -102,6 +110,71 @@ function StrengthPage() {
         </>
       )}
     </div>
+  );
+}
+
+/** The body, coloured by grade — the thing people screenshot. */
+function BodyMapCard({ muscles }: { muscles: MuscleGrade[] }) {
+  const shown = useMemo(
+    () =>
+      [...new Set(muscles.map((muscle) => muscle.tier))].sort(
+        (a, b) => TIERS.indexOf(a) - TIERS.indexOf(b),
+      ),
+    [muscles],
+  );
+
+  return (
+    <section className="px-5 mt-4">
+      <div className="rounded-2xl border border-grit bg-grit-card p-4">
+        <p className="label-cap text-[10px] text-grit-dim">YOUR BODY, GRADED</p>
+        <div className="mt-3">
+          <StrengthBodyMap muscles={muscles} size={230} />
+        </div>
+        <div className="mt-3">
+          <TierLegend tiers={shown.length > 0 ? shown : TIERS} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** Then and now, side by side. */
+function JourneyCard({ journey }: { journey: StrengthJourney }) {
+  if (!journey.meaningful) return null;
+
+  const started = new Date(`${journey.startedOn}T00:00:00`).toLocaleDateString(undefined, {
+    month: "short",
+    year: "numeric",
+  });
+
+  return (
+    <section className="px-5 mt-4">
+      <div className="rounded-2xl border border-grit bg-grit-card p-4">
+        <div className="flex items-baseline justify-between">
+          <p className="label-cap text-[10px] text-grit-dim">YOUR PROGRESS</p>
+          <p className="label-cap text-[9px] text-grit-dim">SINCE {started.toUpperCase()}</p>
+        </div>
+
+        <div className="mt-3 flex items-center justify-center gap-2">
+          <StrengthBodyMap muscles={journey.start.muscles} size={150} label="Start" />
+          <ChevronRight size={18} className="shrink-0 text-grit-dim" />
+          <StrengthBodyMap muscles={journey.now.muscles} size={150} label="Now" />
+        </div>
+
+        {journey.climbed.length > 0 ? (
+          <p className="mt-3 text-center text-xs leading-relaxed text-grit">
+            <span className="font-bold" style={{ color: "#5bd07a" }}>
+              {journey.climbed.map((muscle) => muscle.toLowerCase()).join(", ")}
+            </span>{" "}
+            climbed a tier.
+          </p>
+        ) : (
+          <p className="mt-3 text-center text-xs leading-relaxed text-grit-dim">
+            No tier changes yet. Keep going — the body on the right is the one that moves.
+          </p>
+        )}
+      </div>
+    </section>
   );
 }
 

@@ -484,7 +484,7 @@ function GrindTab({
         ))}
       </div>
 
-      <div className="px-5 flex flex-col gap-3">
+      <div className="stagger px-5 flex flex-col gap-3">
         {filtered.length === 0 && (
           <div
             className="p-8 text-center rounded-2xl"

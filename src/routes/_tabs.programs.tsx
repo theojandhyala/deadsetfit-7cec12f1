@@ -481,7 +481,7 @@ function ProgramsPage() {
         </div>
       )}
 
-      <ul className="space-y-2 mb-6">
+      <ul className="stagger space-y-2 mb-6">
         {state.programs.map((p) => {
           const filled = DAYS.reduce((a, d) => a + p.days[d].items.length, 0);
           const trainingDays = DAYS.filter((d) => p.days[d].label !== "REST").length;
