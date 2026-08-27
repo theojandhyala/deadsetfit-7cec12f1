@@ -45,6 +45,13 @@ import {
 } from "@/lib/workout-flow";
 import { indexAfterMove, indexAfterRemoval, moveItem } from "@/lib/session-edit";
 import {
+  clearWatch,
+  drainWatchActions,
+  onWatchAction,
+  publishToWatch,
+  type WatchAction,
+} from "@/lib/watch";
+import {
   formatDistance,
   formatDuration,
   formatSet,
@@ -205,12 +212,7 @@ function buildSession(
         tempo: cfg?.tempo,
         note: cfg?.note,
         supersetId: supersetIds[index],
-        ...resolveTracking(
-          state,
-          eid,
-          ex?.name ?? eid,
-          cfg?.reps ?? d.reps ?? ex?.reps ?? "8-12",
-        ),
+        ...resolveTracking(state, eid, ex?.name ?? eid, cfg?.reps ?? d.reps ?? ex?.reps ?? "8-12"),
         sets: [],
       };
     }),
@@ -640,6 +642,54 @@ function LiveWorkoutPage() {
     return { weight: 0, reps: repsGuess };
   }, [state, session, activeIdx]);
 
+  // `applyWatchAction` closes over this render's session, but the watch
+  // subscription below is mounted once and must not be torn down and rebuilt
+  // on every state change — actions arriving in the gap would be lost. A ref
+  // refreshed each render gives the long-lived listener the current handler.
+  const applyWatchActionRef = useRef<(action: WatchAction) => void>(() => {});
+  useEffect(() => {
+    applyWatchActionRef.current = applyWatchAction;
+  });
+
+  // Keep the watch showing the current session. Publishing the whole state on
+  // every change is cheap and cannot desynchronise the way a missed diff can.
+  useEffect(() => {
+    void publishToWatch(state, session);
+  }, [state, session]);
+
+  useEffect(() => {
+    let disposed = false;
+    let unsubscribe: (() => void) | undefined;
+    const apply = (action: WatchAction) => {
+      if (!disposed) applyWatchActionRef.current(action);
+    };
+
+    // Two paths, because iOS suspends this web layer whenever the app is
+    // backgrounded — which is where a phone lives while its owner trains.
+    // Foreground sets arrive as events; sets logged with the phone in a
+    // pocket are buffered natively and collected here on resume.
+    void (async () => {
+      const buffered = await drainWatchActions();
+      buffered.forEach(apply);
+      const remove = await onWatchAction(apply);
+      if (disposed) remove();
+      else unsubscribe = remove;
+    })();
+
+    const onResume = () => {
+      void drainWatchActions().then((actions) => actions.forEach(apply));
+    };
+    document.addEventListener("resume", onResume);
+    document.addEventListener("visibilitychange", onResume);
+
+    return () => {
+      disposed = true;
+      unsubscribe?.();
+      document.removeEventListener("resume", onResume);
+      document.removeEventListener("visibilitychange", onResume);
+    };
+  }, []);
+
   if (finished && finishedSessionId) {
     const finalSession = state.sessions.find((s) => s.id === finishedSessionId);
     if (finalSession) {
@@ -742,14 +792,21 @@ function LiveWorkoutPage() {
           ? "Manual progression"
           : null;
   const totalEx = session.exercises.length;
-  const progress = Math.min(
-    100,
-    Math.round((completedPlanSets / Math.max(1, plannedSets)) * 100),
-  );
+  const progress = Math.min(100, Math.round((completedPlanSets / Math.max(1, plannedSets)) * 100));
 
   function logSet(entry: LoggedEntry) {
+    logSetAt(activeIdx, entry);
+  }
+
+  /**
+   * Record a set against one movement. Takes an index rather than reading the
+   * active one so a set logged on the Apple Watch runs through identical PR
+   * detection, grit and rest handling — two code paths for "log a set" is how
+   * a watch companion ends up awarding records the phone does not.
+   */
+  function logSetAt(index: number, entry: LoggedEntry) {
     const { weight, reps, kind, mode, seconds, meters } = entry;
-    const ex = session!.exercises[activeIdx];
+    const ex = session!.exercises[index];
     if (!ex) return;
     // Compute the PR flag INSIDE the updater against fresh state, so a rapid
     // double-tap (which reads the same render-closure state twice) can't award
@@ -769,9 +826,7 @@ function LiveWorkoutPage() {
         awardedPR = isTimedPersonalRecord({ mode, seconds, meters, kind }, bests);
         if (awardedPR) {
           timedPRLabel =
-            mode === "duration"
-              ? formatDuration(seconds ?? 0)
-              : `${Math.round(meters ?? 0)}m`;
+            mode === "duration" ? formatDuration(seconds ?? 0) : `${Math.round(meters ?? 0)}m`;
         }
       } else {
         const { bestWeight, bestBwReps } = bestsFor(st, ex.exerciseId);
@@ -805,7 +860,7 @@ function LiveWorkoutPage() {
             ? {
                 ...s,
                 exercises: s.exercises.map((e, i) =>
-                  i === activeIdx ? { ...e, sets: [...e.sets, newSet] } : e,
+                  i === index ? { ...e, sets: [...e.sets, newSet] } : e,
                 ),
               }
             : s,
@@ -838,13 +893,45 @@ function LiveWorkoutPage() {
     const exerciseRest = ex.restSeconds ?? restPref;
     const step =
       kind === "drop"
-        ? { nextIndex: activeIdx, shouldRest: true }
-        : nextStepAfterWorkingSet(session!.exercises, activeIdx);
+        ? { nextIndex: index, shouldRest: true }
+        : nextStepAfterWorkingSet(session!.exercises, index);
     if (!step.shouldRest || exerciseRest <= 0) {
       setActiveIdx(step.nextIndex);
       return;
     }
     setRest({ seconds: exerciseRest, nextIndex: step.nextIndex });
+  }
+
+  /**
+   * Apply something the athlete did on their Apple Watch.
+   *
+   * Everything routes through the same functions the phone's own buttons use,
+   * so a watch-logged set earns the same PR, the same grit and the same rest.
+   */
+  function applyWatchAction(action: WatchAction) {
+    const live = getState().sessions.find((s) => s.id === action.sessionId);
+    // The session it targets is over, or a different one has started since.
+    // Applying it anyway would write sets into the wrong workout.
+    if (!live || live.endedAt || live.id !== session?.id) return;
+    const index = live.exercises.findIndex((e) => e.exerciseId === action.exerciseId);
+
+    if (action.kind === "finish") {
+      finishWorkout();
+      return;
+    }
+    if (index < 0) return;
+
+    if (action.kind === "undoSet") {
+      mutateExercise(index, (e) => ({ ...e, sets: e.sets.slice(0, -1) }));
+      return;
+    }
+    logSetAt(index, {
+      weight: action.weight,
+      reps: action.reps,
+      ...(action.mode ? { mode: action.mode } : {}),
+      ...(action.seconds ? { seconds: action.seconds } : {}),
+      ...(action.meters ? { meters: action.meters } : {}),
+    });
   }
 
   /** Rewrite this session in place, leaving every other session untouched. */
@@ -1095,6 +1182,10 @@ function LiveWorkoutPage() {
     });
     setFinishedSessionId(session!.id);
     setFinished(true);
+    // Send the watch back to idle now rather than waiting for the next render
+    // to publish it: the app is often backgrounded the moment a workout ends,
+    // and a wrist still showing a live session is worse than a blank one.
+    void clearWatch();
     emitGritEarned(50, "WORKOUT COMPLETE", "quest");
     // Apple Health export (native iOS, user-enabled): rings + watch credit.
     if (getState().healthSync?.enabled && getState().healthSync?.exportWorkouts) {
@@ -1130,7 +1221,11 @@ function LiveWorkoutPage() {
       style={{ background: "#0a0a0a", paddingTop: "env(safe-area-inset-top)" }}
     >
       <div className="flex items-center justify-between px-4 pt-3 pb-2">
-        <button onClick={discardWorkout} className="icon-btn text-grit-dim" aria-label="Exit workout">
+        <button
+          onClick={discardWorkout}
+          className="icon-btn text-grit-dim"
+          aria-label="Exit workout"
+        >
           <X size={22} />
         </button>
         <div className="text-center">
@@ -1541,8 +1636,7 @@ function SetLogger({
     requestAnimationFrame(() => editWeightRef.current?.focus());
   }
 
-  const fmt = (w: number, r: number) =>
-    formatSet({ weight: w, reps: r }, requiresWeight);
+  const fmt = (w: number, r: number) => formatSet({ weight: w, reps: r }, requiresWeight);
 
   return (
     <div className="mt-5 bg-grit-card border border-grit rounded-2xl p-4">
@@ -2019,7 +2113,11 @@ function SetEditorSheet({
   }
 
   const label =
-    logged.kind === "warmup" ? "WARM-UP SET" : logged.kind === "drop" ? "DROP SET" : `SET ${index + 1}`;
+    logged.kind === "warmup"
+      ? "WARM-UP SET"
+      : logged.kind === "drop"
+        ? "DROP SET"
+        : `SET ${index + 1}`;
 
   return (
     <div
@@ -2195,9 +2293,17 @@ function TimedSetLogger({
   }
 
   function logDistance() {
-    const meters = Math.round(Number((distanceRef.current?.value ?? "").replace(/[^0-9.]/g, "")) || 0);
+    const meters = Math.round(
+      Number((distanceRef.current?.value ?? "").replace(/[^0-9.]/g, "")) || 0,
+    );
     if (meters <= 0) return;
-    onLog({ weight: 0, reps: 0, mode: "distance", meters, ...(elapsed ? { seconds: elapsed } : {}) });
+    onLog({
+      weight: 0,
+      reps: 0,
+      mode: "distance",
+      meters,
+      ...(elapsed ? { seconds: elapsed } : {}),
+    });
     setRunning(false);
     startedAtRef.current = null;
     setElapsed(0);
@@ -2293,7 +2399,9 @@ function TimedSetLogger({
         {!distance && (
           <button
             type="button"
-            onClick={() => onLog({ weight: addedLoad(), reps: 0, mode: "duration", seconds: target })}
+            onClick={() =>
+              onLog({ weight: addedLoad(), reps: 0, mode: "duration", seconds: target })
+            }
             className="mt-[18px] border border-dashed border-grit rounded-xl py-2.5 label-cap text-[10px] text-grit-dim press"
           >
             Log {formatDuration(target)}

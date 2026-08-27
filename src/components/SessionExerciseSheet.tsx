@@ -186,9 +186,7 @@ export function SessionExerciseSheet({
             </div>
             <div className="flex-1 overflow-auto px-5 py-2">
               {results.length === 0 ? (
-                <p className="py-8 text-center text-sm text-grit-dim">
-                  Nothing matches “{query}”.
-                </p>
+                <p className="py-8 text-center text-sm text-grit-dim">Nothing matches “{query}”.</p>
               ) : (
                 <ul className="space-y-1">
                   {results.map((exercise) => {

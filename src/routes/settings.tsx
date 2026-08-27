@@ -24,6 +24,7 @@ import { DEFAULT_STATE } from "@/lib/default-state";
 import type { AppState } from "@/lib/types";
 import { clearSessionDiagnostics, readSessionLogs } from "@/lib/session-diagnostics";
 import { connectHealth, healthSupported } from "@/lib/health";
+import { watchStatus, watchSupported, type WatchStatus } from "@/lib/watch";
 import { Watch } from "lucide-react";
 import { isNativeIos } from "@/lib/platform";
 import {
@@ -267,6 +268,10 @@ function SettingsPage() {
           Workout weights and strength rankings use kilograms consistently.
         </p>
       </section>
+
+      {/* The watch app itself — separate from Health, and worth saying so:
+          pairing Health does nothing for the wrist app, and vice versa. */}
+      {watchSupported() && <WatchAppCard />}
 
       {/* Apple Watch & Health — native iOS only */}
       {healthSupported() && (
@@ -545,5 +550,67 @@ function Toggle({
         />
       </span>
     </button>
+  );
+}
+
+/**
+ * Live status of the wrist app.
+ *
+ * Deliberately reports what is actually true rather than a single "connected"
+ * badge: "paired but not installed" and "installed but out of range" are
+ * different problems with different fixes, and collapsing them into one state
+ * is how support tickets get written.
+ */
+function WatchAppCard() {
+  const [status, setStatus] = useState<WatchStatus | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const read = () => {
+      void watchStatus().then((next) => {
+        if (!cancelled) setStatus(next);
+      });
+    };
+    read();
+    // Reachability changes when the watch goes in and out of range.
+    const id = window.setInterval(read, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, []);
+
+  if (!status?.supported) return null;
+
+  const detail = !status.paired
+    ? "No Apple Watch paired with this iPhone."
+    : !status.installed
+      ? "Install DEADSET on your watch from the Watch app on iPhone."
+      : status.reachable
+        ? "Connected. Start a workout on your phone and it appears on your wrist."
+        : "Installed. Out of range right now — sets logged on your watch will sync when it reconnects.";
+
+  const tone =
+    status.installed && status.reachable ? "#22c55e" : status.installed ? "#8a8a8a" : "#e63222";
+
+  return (
+    <section className="px-5 mb-6">
+      <p className="label-cap mb-2 flex items-center gap-1.5">
+        <Watch size={12} className="text-accent-red" /> DEADSET on Apple Watch
+      </p>
+      <div className="bg-grit-card border border-grit p-4" style={{ borderRadius: 8 }}>
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full" style={{ background: tone }} />
+          <p className="text-sm font-bold text-grit">
+            {status.installed ? (status.reachable ? "Connected" : "Out of range") : "Not installed"}
+          </p>
+        </div>
+        <p className="text-[11px] text-grit-dim mt-1.5 leading-relaxed">{detail}</p>
+        <p className="text-[10px] text-grit-dim mt-2 leading-relaxed">
+          Log sets, holds and rest from your wrist. Your phone stays the record — the watch queues
+          anything it logs while you are apart.
+        </p>
+      </div>
+    </section>
   );
 }

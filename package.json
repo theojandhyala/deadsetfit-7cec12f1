@@ -8,7 +8,7 @@
     "build": "vite build && node scripts/check-css-build.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "tsc --noEmit && eslint . && vitest run && vite build && node scripts/check-css-build.mjs",
+    "check": "tsc --noEmit && eslint . && vitest run && vite build && node scripts/check-css-build.mjs && node scripts/check-xcodeproj.mjs",
     "appstore:check": "npm run check && node scripts/appstore-check.mjs",
     "appstore:strict": "APPSTORE_STRICT=1 npm run appstore:check",
     "security:check": "npm audit",
@@ -22,7 +22,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "start": "node server.js"
+    "start": "node server.js",
+    "check:xcodeproj": "node scripts/check-xcodeproj.mjs"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",

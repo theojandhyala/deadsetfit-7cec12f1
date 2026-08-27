@@ -12,5 +12,6 @@ class MyViewController: CAPBridgeViewController {
         // Island and nothing anywhere reports an error.
         bridge?.registerPluginInstance(RestActivityPlugin())
         bridge?.registerPluginInstance(StoreKitPlugin())
+        bridge?.registerPluginInstance(WatchBridgePlugin())
     }
 }

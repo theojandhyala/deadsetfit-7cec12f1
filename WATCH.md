@@ -33,16 +33,60 @@ in your Apple Developer account. Xcode → target App → Signing & Capabilities
 will surface this automatically on the next archive (HealthKit is already in
 App.entitlements; Xcode syncs the App ID when signing).
 
-## Phase 2 (not yet built): app on the wrist
+## The app on the wrist
 
-A native watchOS SwiftUI app (see today's plan, tick sets from the wrist)
-requires a watch target that Xcode must generate:
+A native watchOS SwiftUI app, target `DeadSetWatch`, bundle
+`org.deadsetfit.app.watchkitapp`, embedded in the iOS app.
 
-1. Xcode → File → New → Target → watchOS → App ("Watch App for iOS App",
-   attach to `App`).
-2. Share data via WatchConnectivity from the Capacitor shell (a small
-   `WCSession` bridge similar to HealthKitPlugin) or an App Group.
-3. The watch UI is plain SwiftUI: plan list → tap set rows → send ticks back.
+### How it is wired
 
-Doing step 1 by editing project.pbxproj manually is error-prone; run it in
-Xcode (2 minutes), then the plugin pattern above extends naturally.
+- `ios/App/Shared/WatchProtocol.swift` — the wire contract, **compiled into
+  both targets** so phone and watch cannot drift apart.
+- `ios/App/App/WatchConnectivityHub.swift` — owns the `WCSession` on the phone,
+  activated from `AppDelegate` at launch.
+- `ios/App/App/WatchBridgePlugin.swift` — Capacitor facade (`WatchBridge`),
+  registered in `MyViewController` alongside the other app-local plugins.
+- `ios/App/DeadSetWatch/` — the watch app: exercise list, set logger with
+  Digital Crown, stopwatch for holds, distance logger, rest timer.
+- `src/lib/watch.ts` — JS bridge (no-op outside the native iOS shell).
+- `src/routes/workout.live.tsx` — publishes the live session and applies what
+  the watch sends back.
+- Settings → "DEADSET on Apple Watch" — live pairing/reachability status.
+
+### The three decisions worth knowing
+
+**The phone is the source of truth.** The watch renders published state and
+asks the phone to record sets; it never owns training data. That removes merge
+conflicts entirely, and means a watch-logged set runs through exactly the same
+PR detection, grit award and rest handling as a phone-logged one — there is one
+`logSetAt`, not two.
+
+**The session is activated in `AppDelegate`, not in the plugin.** iOS suspends
+the WKWebView the moment the app backgrounds, which is the normal state of a
+phone while its owner is training. A `WCSession` that only existed while
+JavaScript ran would drop every set logged with the phone in a pocket. The hub
+receives and buffers natively; the web layer drains the buffer on resume.
+
+**Every action carries an id, and the phone deduplicates on it.** The watch
+sends immediately when reachable and queues via `transferUserInfo` when not,
+with a fallback from the first to the second — so an action can legitimately
+arrive twice. Logging the same set twice would inflate volume and award a
+phantom PR.
+
+### Signing
+
+The watch target needs its own App ID, `org.deadsetfit.app.watchkitapp`, with
+HealthKit enabled (it runs an `HKWorkoutSession` to stay awake between sets —
+without one watchOS suspends the app as soon as the wrist drops). Automatic
+signing will create it on first archive. The bundle identifier **must** stay
+prefixed with the companion app's, and `WKCompanionAppBundleIdentifier` in
+`ios/App/DeadSetWatch/Info.plist` must stay `org.deadsetfit.app`.
+
+### Verifying the project file
+
+The watch target was added by editing `project.pbxproj` directly rather than
+through Xcode. `npm run check:xcodeproj` validates the result — balance, every
+id defined and referenced, every target registered, every file reference
+resolving to a real path — and runs as part of `npm run check`. It is not a
+substitute for opening the project once, but it turns a parse failure into a
+caught error rather than a confusing one.
