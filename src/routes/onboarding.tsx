@@ -638,7 +638,8 @@ function TrainingPreferencesStep({
     });
   }
 
-  const sessionMinutes = exerciseCount <= 3 ? 30 : exerciseCount <= 4 ? 45 : exerciseCount <= 5 ? 60 : 90;
+  const sessionMinutes =
+    exerciseCount <= 3 ? 30 : exerciseCount <= 4 ? 45 : exerciseCount <= 5 ? 60 : 90;
 
   return (
     <>

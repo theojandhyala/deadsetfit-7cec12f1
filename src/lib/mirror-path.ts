@@ -5,10 +5,11 @@
  * ends up a different shape from its twin. Writing the left side and deriving
  * the right guarantees symmetry.
  *
- * Supports the subset the body shapes use: an absolute `M`, then relative
- * `l`, `h`, `v`, `q` and `z`. Anything else is rejected rather than silently
- * mangled — a wrong mirror is worse than a missing one, because it looks
- * plausible.
+ * Supports the subset the body shapes use: `M`, `L`, `H`, `V`, `Q`, `C` and
+ * `z`, in absolute or relative form. Anything else — an elliptical arc above
+ * all, whose radii and sweep flag do not reflect by negating a number — is
+ * rejected rather than silently mangled. A wrong mirror is worse than a
+ * missing one, because it looks plausible.
  */
 const AXIS = 100;
 
@@ -38,7 +39,7 @@ export function mirrorPath(d: string, axis = AXIS): string {
         out.push("z");
         continue;
       }
-      if (!"MLHVQlhvq".includes(command)) {
+      if (!"MLHVQClhvqc".includes(command)) {
         throw new Error(`mirrorPath: unsupported command "${command}" in "${d}"`);
       }
       out.push(command);
@@ -74,12 +75,22 @@ export function mirrorPath(d: string, axis = AXIS): string {
       }
       case "q":
       case "Q": {
+        const flip = (value: number) => (command === "q" ? -value : axis * 2 - value);
         const x1 = take();
         const y1 = take();
         const x = take();
         const y = take();
-        const flip = (value: number) => (command === "q" ? -value : axis * 2 - value);
         out.push(String(flip(x1)), String(y1), String(flip(x)), String(y));
+        break;
+      }
+      case "c":
+      case "C": {
+        // Both control points and the endpoint reflect the same way, so a
+        // cubic mirrors exactly — which is why the anatomy is drawn in cubics.
+        const flip = (value: number) => (command === "c" ? -value : axis * 2 - value);
+        const values: number[] = [];
+        for (let i = 0; i < 6; i += 1) values.push(take());
+        for (let i = 0; i < 6; i += 2) out.push(String(flip(values[i]!)), String(values[i + 1]!));
         break;
       }
       default:

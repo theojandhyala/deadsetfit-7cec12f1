@@ -10,6 +10,7 @@
  *
  *   node scripts/render-cards.mjs            # writes into .render-out/
  *   node scripts/render-cards.mjs --body     # just the body diagram, large
+ *   node scripts/render-cards.mjs --diagram  # the <MuscleDiagram> that ships
  *
  * Not part of `npm run check`, and playwright/esbuild are deliberately NOT
  * dependencies: Xcode Cloud runs `npm ci` before every iOS archive, and making
@@ -27,6 +28,7 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = join(root, ".render-out");
 const bodyOnly = process.argv.includes("--body");
+const diagramOnly = process.argv.includes("--diagram");
 
 let chromium;
 try {
@@ -92,7 +94,23 @@ const browser = await chromium.launch(launchOptions);
 const page = await browser.newPage();
 await page.setContent("<canvas id=c></canvas>");
 
-if (bodyOnly) {
+if (diagramOnly) {
+  // The component the app actually renders, at the size the strength screen
+  // asks for and at the size a phone shows it. If it looks cheap here, it
+  // looks cheap on the phone.
+  const mod = await bundleModule("scripts/diagram-entry.tsx", "Diagram");
+  await page.addScriptTag({ content: mod });
+  await page.setViewportSize({ width: 900, height: 1400 });
+  await page.evaluate(() => {
+    document.body.style.background = "#0a0a0a";
+    document.body.style.margin = "0";
+    document.getElementById("c")?.remove();
+    Diagram.mount(document.body);
+  });
+  const out = join(outDir, "diagram.png");
+  await page.screenshot({ path: out, fullPage: true });
+  console.log("wrote", out);
+} else if (bodyOnly) {
   // Every muscle coloured differently, so a shape that is missing, misplaced
   // or overlapping another is impossible to miss.
   const shapes = await bundleModule("src/lib/body-shapes.ts", "Body");

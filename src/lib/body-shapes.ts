@@ -1,97 +1,112 @@
 import { mirrorPath } from "./mirror-path";
 
 /**
- * The DEADSET body: a stylised front-and-back silhouette with one shape per
- * muscle region.
+ * The DEADSET body: a stylised front-and-back figure with one shape per muscle
+ * region.
  *
- * Lives in lib rather than beside a component because two very different
- * screens draw it — the per-exercise diagram, which highlights what a movement
- * works, and the strength map, which colours every region by its grade. Two
- * copies of this anatomy would drift, and the same muscle would end up a
- * different shape depending on where you looked at it.
+ * Lives in lib rather than beside a component because three very different
+ * surfaces draw it — the per-exercise diagram, the strength map, and the
+ * shareable strength card. Three copies of this anatomy would drift, and the
+ * same muscle would end up a different shape depending on where you looked.
  *
- * Coordinates target a 200x420 viewBox per side. Not anatomically perfect —
- * tuned to read fast at thumbnail size on a phone.
+ * Coordinates target a 200x430 viewBox. Centre line is x=100, so every
+ * left-side shape is written once and its partner derived with `mirrorPath`
+ * — a bicep can never end up a different shape from its twin.
+ *
+ * The governing rule is coverage. An earlier version drew correct little
+ * bellies floating in a roomy outline, and the result looked like a clip-art
+ * mannequin with stickers on it: what you noticed was the grey gaps, not the
+ * muscle. Every shape here is sized to meet its neighbours, so a fully graded
+ * figure reads as a body made of muscle with thin dark separations, the way an
+ * anatomy chart does.
  */
-/**
- * One shape per muscle belly, drawn to sit inside the silhouette.
+
+/* -------------------------------------------------------------------------
+ * Left-side muscle bellies. x < 100 throughout; the right side is mirrored.
  *
- * A real muscle map, not a few blocks: the figure should read as covered in
- * muscle with thin gaps between bellies, the way an anatomy chart does. Large
- * bare regions are what made the earlier version look like a diagram of a
- * fridge rather than a body.
- *
- * Every left-side shape is written by hand and its partner derived with
- * `mirrorPath`, so a bicep can never end up a different shape from its twin.
- * Coordinates are tuned against the silhouette below: the torso spans roughly
- * x 60-140 at the waist, each arm x 34-65 and 135-166, each leg x 69-100 and
- * 100-131. A shape outside those renders over empty space.
- */
+ * Landmarks these are tuned against, from the silhouette at the bottom of this
+ * file: neck 48-62, deltoid cap 66-112, armpit y=116, waist narrowest x=75 at
+ * y=170, hip x=71 at y=205, crotch y=219, knee y=310, ankle y=400.
+ * ---------------------------------------------------------------------- */
 const L = {
   // --- neck and shoulders --------------------------------------------------
-  trapFront: "M97 46 q-14 6 -22 26 q-2 7 4 9 q7 2 11 -5 q4 -14 11 -22 z",
-  frontDelt: "M80 78 q-16 4 -23 20 q-4 11 -2 20 q10 4 17 -6 q5 -18 10 -32 z",
-  sideDelt: "M60 88 q-11 8 -14 24 q-2 11 2 16 q8 -1 10 -13 q2 -16 4 -26 z",
-  rearDelt: "M80 80 q-16 4 -22 20 q-4 11 -2 19 q10 4 16 -6 q5 -17 10 -31 z",
+  trapFront: "M99 50 C90 52 80 57 72 65 C68 70 70 75 76 75 C84 69 92 65 99 63 Z",
+  trapBack:
+    "M99 49 C87 53 75 59 67 68 C63 74 66 81 73 83 C81 88 88 97 92 109 C95 117 99 119 99 113 Z",
+  frontDelt: "M72 69 C61 73 53 82 51 94 C50 103 53 110 59 112 C65 107 69 96 72 85 Z",
+  sideDelt: "M50 95 C46 103 45 114 46 125 C51 128 57 123 58 115 C58 107 56 100 55 93 Z",
+  rearDelt: "M73 70 C62 74 54 83 52 95 C51 104 54 111 60 113 C66 108 70 97 73 86 Z",
 
   // --- chest ---------------------------------------------------------------
-  pecUpper: "M98 72 q-18 2 -27 10 q-5 6 -3 12 q14 5 30 2 z",
-  pecLower: "M98 93 q-19 1 -27 8 q-6 8 -4 17 q2 9 10 11 q11 2 21 -4 z",
-  serratus: "M75 114 q-7 3 -7 10 l1 13 q1 5 5 4 q4 -1 4 -8 l1 -18 z",
+  pecUpper: "M98 65 C88 66 79 70 73 77 C71 82 73 87 78 89 L98 87 Z",
+  pecLower: "M98 91 C88 91 80 93 75 97 C72 105 74 115 80 121 C87 125 94 123 98 119 Z",
+  serratus: "M75 105 C70 109 68 117 69 126 C72 129 76 126 77 120 L78 107 Z",
 
   // --- arms ----------------------------------------------------------------
-  bicep: "M62 106 q-12 5 -14 20 q-2 17 2 28 q8 3 11 -7 q3 -20 3 -39 z",
-  brachialis: "M60 142 q-8 4 -9 14 q-1 8 4 9 q6 0 7 -9 z",
-  tricepLong: "M62 104 q-12 6 -14 21 q-3 17 1 28 q8 3 11 -8 q3 -20 4 -39 z",
-  tricepLateral: "M53 114 q-7 6 -8 18 q-1 10 3 12 q5 -1 6 -10 z",
-  forearm: "M57 160 q-9 5 -11 17 l-2 24 q-1 8 4 8 q6 1 8 -8 l4 -39 z",
-  forearmOuter: "M48 170 q-5 6 -6 16 l-1 18 q0 7 4 7 q4 0 4 -8 l2 -31 z",
+  bicep:
+    "M67 116 C58 120 50 133 49 148 C48 161 53 170 60 171 C67 169 70 156 70 143 C70 130 70 119 67 116 Z",
+  brachialis: "M51 139 C45 146 41 158 42 170 C48 174 55 170 56 160 C57 151 54 143 51 139 Z",
+  tricepLong:
+    "M68 114 C61 119 57 133 57 149 C57 162 61 171 67 171 C71 168 73 155 73 141 C73 128 71 118 68 114 Z",
+  tricepLateral: "M56 120 C48 128 43 143 44 159 C48 166 56 163 57 152 C58 138 59 126 56 120 Z",
+  forearm:
+    "M63 172 C56 180 51 195 49 212 C47 225 47 238 53 242 C60 242 63 231 65 218 C67 200 67 181 63 172 Z",
+  forearmOuter:
+    "M47 176 C41 186 38 201 37 216 C36 228 38 238 44 239 C49 237 50 226 51 212 C52 195 51 183 47 176 Z",
 
   // --- torso ---------------------------------------------------------------
-  oblique: "M86 126 q-9 3 -11 14 l-1 26 q0 9 6 9 q6 0 6 -10 z",
-  hipFlexor: "M97 180 q-10 2 -12 10 q-1 7 5 8 h7 z",
+  oblique: "M81 121 C76 128 74 140 74 154 C74 169 76 181 80 189 C85 189 87 183 86 172 L85 125 Z",
+  hipFlexor: "M84 188 C79 193 77 202 80 210 C87 216 95 214 98 207 L98 189 Z",
 
   // --- back ----------------------------------------------------------------
-  rhomboid: "M97 96 q-13 4 -17 14 q-2 8 3 10 h14 z",
-  teres: "M84 110 q-8 3 -10 10 q-1 6 4 7 q6 1 8 -6 z",
-  lat: "M84 100 q-13 6 -16 22 l-2 24 q0 13 8 20 l12 13 q5 -3 3 -12 l-4 -44 q-2 -16 -6 -23 z",
-  erector: "M97 130 q-8 20 -8 38 q0 9 8 10 v-48 z",
-  lumbar: "M97 176 q-11 2 -13 11 q-1 9 6 11 h7 z",
+  rhomboid: "M98 77 C90 79 82 85 78 93 C77 100 80 105 86 105 L98 105 Z",
+  thoracic: "M98 108 C89 110 82 115 79 123 C79 131 83 135 89 135 L98 135 Z",
+  teres: "M75 93 C70 97 67 105 69 112 C74 117 81 115 83 108 C83 101 80 95 75 93 Z",
+  lat: "M70 99 C63 109 60 126 61 143 C62 158 68 168 76 174 C85 176 89 169 88 158 C86 142 83 123 79 107 Z",
+  erector: "M92 109 C88 130 87 154 88 176 C89 187 93 191 98 189 L98 109 Z",
+  lumbar: "M80 169 C76 176 74 186 76 195 C82 199 92 199 98 195 L98 171 Z",
 
   // --- hips and legs -------------------------------------------------------
-  gluteMax: "M98 188 q-15 0 -21 9 q-6 9 -5 21 q1 12 11 15 q10 2 15 -7 z",
-  gluteMed: "M79 186 q-9 3 -11 12 q-1 8 4 10 q7 1 9 -8 z",
-  quadOuter: "M77 210 q-6 20 -5 43 l2 26 q1 9 6 9 q4 0 4 -11 l1 -65 q-4 -4 -8 -2 z",
-  quadMid: "M89 212 q-4 18 -4 39 l1 26 q1 8 5 8 q4 0 4 -9 l0 -62 z",
-  quadInner: "M96 262 q-8 4 -10 14 q-1 9 4 12 q6 2 9 -6 z",
-  adductor: "M98 210 q-8 3 -10 13 l-2 32 q0 8 5 8 q5 0 6 -9 l2 -44 z",
-  hamOuter: "M77 238 q-5 20 -4 41 l1 18 q1 9 6 9 q5 0 5 -11 l1 -55 q-5 -4 -9 -2 z",
-  hamInner: "M90 240 q4 20 3 39 l-1 18 q-1 8 -5 8 q-4 0 -4 -10 l0 -53 z",
-  tibialis: "M81 300 q-3 18 -1 33 q1 10 5 10 q4 0 4 -11 l0 -32 z",
-  gastrocOuter: "M79 300 q-5 16 -3 29 q1 10 5 10 q4 0 4 -11 l1 -28 z",
-  gastrocInner: "M92 302 q4 15 3 26 q-1 10 -5 10 q-3 0 -3 -10 l0 -26 z",
-  soleus: "M80 336 q-3 14 -2 25 q1 8 4 8 q3 0 3 -9 l1 -24 z",
+  gluteMax: "M79 193 C71 199 67 212 68 225 C70 237 78 244 88 241 C95 237 98 227 98 215 L98 195 Z",
+  gluteMed: "M74 189 C68 193 65 202 68 210 C72 215 79 213 81 205 C82 198 79 191 74 189 Z",
+  quadOuter:
+    "M75 213 C68 227 66 250 67 272 C68 290 71 302 77 306 C82 304 84 292 83 276 C82 252 80 228 78 213 Z",
+  quadMid:
+    "M83 217 C80 237 79 261 80 285 C81 299 84 307 89 308 C93 305 93 293 92 277 C91 253 90 233 89 217 Z",
+  quadInner: "M89 266 C84 274 82 288 84 298 C89 305 97 303 98 294 C99 280 95 270 89 266 Z",
+  adductor: "M93 216 C89 231 88 248 89 264 C91 272 97 272 99 266 L99 216 Z",
+  hamOuter:
+    "M73 243 C68 260 67 280 68 296 C70 308 74 314 79 314 C83 310 84 295 83 279 C82 261 78 248 76 243 Z",
+  hamInner:
+    "M86 243 C83 261 82 281 83 298 C85 308 89 312 94 310 C97 304 97 290 96 274 C95 258 92 248 90 243 Z",
+  tibialis:
+    "M85 316 C81 330 79 350 80 369 C81 384 84 393 89 393 C94 391 96 378 95 362 C93 344 90 328 88 316 Z",
+  shinOuter:
+    "M73 318 C69 333 67 351 68 366 C69 380 74 387 78 383 C80 373 80 357 79 342 C78 331 76 322 73 318 Z",
+  gastrocOuter:
+    "M73 316 C68 330 67 348 69 363 C71 375 77 378 80 372 C82 360 81 343 79 329 C78 321 76 316 73 316 Z",
+  gastrocInner: "M89 314 C86 329 84 348 86 362 C88 373 95 373 97 364 C98 346 96 328 92 316 Z",
+  soleus: "M76 362 C72 374 71 387 74 396 C80 401 90 401 94 396 C96 384 95 371 91 362 Z",
 } as const;
 
 /** A muscle drawn on both sides of the body. */
 const pair = (d: string) => [d, mirrorPath(d)];
 
-/** The rectus abdominis, as the eight bellies it actually is. */
+/**
+ * The rectus abdominis, as the eight bellies it actually is.
+ *
+ * Sized to meet the obliques on the outside and its twin at the centre line,
+ * so the midsection fills rather than leaving a grey frame around a stack of
+ * small blocks.
+ */
 const abs = [0, 1, 2, 3].flatMap((row) => {
-  const y = 124 + row * 13;
-  return pair(`M88 ${y} h10 q3 0 3 3 v6 q0 3 -3 3 h-10 q-3 0 -3 -3 v-6 q0 -3 3 -3 z`);
+  const y = 121 + row * 15;
+  return pair(`M86 ${y} h11 q3 0 3 3 v7 q0 3 -3 3 h-11 q-3 0 -3 -3 v-7 q0 -3 3 -3 z`);
 });
 
 export const MUSCLE_SHAPES: Record<string, { f?: string[]; b?: string[] }> = {
   // --- shoulders -----------------------------------------------------------
-  traps: {
-    f: pair(L.trapFront),
-    // From behind the trapezius is the shape people recognise: a kite from the
-    // neck out to each shoulder and down between the blades.
-    b: [
-      "M100 58 q-10 3 -15 13 q-3 8 -2 14 l6 20 q5 6 11 6 q6 0 11 -6 l6 -20 q1 -6 -2 -14 q-5 -10 -15 -13 z",
-    ],
-  },
+  traps: { f: pair(L.trapFront), b: pair(L.trapBack) },
   "front-delts": { f: pair(L.frontDelt) },
   "side-delts": { f: pair(L.sideDelt), b: pair(L.sideDelt) },
   "rear-delts": { b: pair(L.rearDelt) },
@@ -117,7 +132,7 @@ export const MUSCLE_SHAPES: Record<string, { f?: string[]; b?: string[] }> = {
   "hip-flexors": { f: pair(L.hipFlexor) },
   lats: { b: pair(L.lat) },
   back: { b: [...pair(L.erector), ...pair(L.lumbar)] },
-  "mid-back": { b: pair(L.rhomboid) },
+  "mid-back": { b: pair(L.thoracic) },
   "upper-back": { b: pair(L.rhomboid) },
 
   // --- legs ----------------------------------------------------------------
@@ -127,7 +142,7 @@ export const MUSCLE_SHAPES: Record<string, { f?: string[]; b?: string[] }> = {
   },
   hamstrings: { b: [...pair(L.hamOuter), ...pair(L.hamInner)] },
   calves: {
-    f: pair(L.tibialis),
+    f: [...pair(L.tibialis), ...pair(L.shinOuter)],
     // Two heads and the soleus beneath, which is how a calf actually reads.
     b: [...pair(L.gastrocOuter), ...pair(L.gastrocInner), ...pair(L.soleus)],
   },
@@ -136,27 +151,48 @@ export const MUSCLE_SHAPES: Record<string, { f?: string[]; b?: string[] }> = {
 /**
  * The outline every muscle shape sits inside.
  *
- * A broad, muscular figure rather than a slim one — partly because that is the
- * brand, and partly because the muscle bellies simply do not fit on a narrow
- * body: a skinny silhouette leaves deltoids and quads hanging over the edge.
+ * Proportioned like a lifter rather than a mannequin: the deltoids are the
+ * widest point, the torso tapers to a narrow waist, and the thighs are the
+ * thickest part of the leg. That shape is doing real work — it is what makes
+ * the figure read as a physique at thumbnail size, before a single muscle is
+ * coloured in.
  *
  * Separate subpaths for head, torso, arms and legs, filled in one pass so they
  * union. A single continuous outline cannot reach every coordinate the muscles
- * are drawn against, which is exactly how the arms came to be missing.
+ * are drawn against, which is exactly how the arms once came to be missing.
  */
-const HEAD = "M100 24 m-17 0 a17 17 0 1 0 34 0 a17 17 0 1 0 -34 0 z";
+export const HEAD = "M100 30 m-19 0 a19 24 0 1 0 38 0 a19 24 0 1 0 -38 0 z";
 
+/** Neck, trapezius slope, deltoid cap, lat taper to the waist, then the hips. */
 const TORSO =
-  "M92 40 h16 v16 q30 4 42 20 q7 9 8 24 q-2 28 -18 50 q-3 16 -4 30 l-1 28 h-70 l-1 -28 q-1 -14 -4 -30 q-16 -22 -18 -50 q1 -15 8 -24 q12 -16 42 -20 z";
+  "M100 47 L92 48 L90 62 C79 65 68 70 60 79 C53 87 50 97 50 108 " +
+  "C56 112 61 114 65 118 C69 132 72 150 75 170 C74 184 72 194 71 205 " +
+  "C75 214 87 219 100 219 C113 219 125 214 129 205 C128 194 126 184 125 170 " +
+  "C128 150 131 132 135 118 C139 114 144 112 150 108 C150 97 147 87 140 79 " +
+  "C132 70 121 65 110 62 L108 48 Z";
 
+/** Upper arm, forearm and a closed fist, hanging a little clear of the ribs. */
 const LEFT_ARM =
-  "M56 80 q-13 7 -16 25 l-6 74 q-3 24 0 42 q3 8 10 7 q7 -1 8 -11 l3 -42 l10 -70 q3 -18 -6 -25 z";
+  "M54 96 C48 104 45 118 44 134 C43 151 41 167 39 184 C37 198 36 211 36 223 " +
+  "C36 235 38 244 42 251 C46 257 53 256 55 249 C57 241 58 231 59 220 " +
+  "C61 205 63 190 66 173 C69 153 70 133 70 114 C66 103 60 96 54 96 Z";
 
+/** Thigh, knee, calf, ankle and foot. */
 const LEFT_LEG =
-  "M72 200 q13 -5 26 0 l2 74 q0 42 -4 78 q-1 18 -4 25 q-2 8 -9 8 q-7 0 -9 -8 q-3 -28 -5 -72 q-2 -64 3 -105 z";
+  "M73 208 C69 223 67 243 67 264 C67 285 69 300 71 312 C71 327 72 341 73 355 " +
+  "C74 371 75 385 77 397 C78 408 80 416 85 418 C91 420 96 414 97 404 " +
+  "C98 388 98 370 98 352 C98 328 99 300 99 274 C100 248 100 228 100 210 " +
+  "C91 206 81 205 73 208 Z";
 
 export function bodySilhouette(): string {
   return [HEAD, TORSO, LEFT_ARM, mirrorPath(LEFT_ARM), LEFT_LEG, mirrorPath(LEFT_LEG)].join(" ");
 }
 
-export const BODY_CONTENT = { x: 30, y: 6, width: 140, height: 384 } as const;
+/**
+ * The box the figure actually occupies inside the 200x430 grid.
+ *
+ * Anything drawing the body scales by this, not by the viewBox: the raw grid
+ * carries a wide empty margin, and scaling by it once shrank the figure to a
+ * third of the space it was given.
+ */
+export const BODY_CONTENT = { x: 34, y: 4, width: 132, height: 418 } as const;
