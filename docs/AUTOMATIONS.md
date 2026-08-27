@@ -64,71 +64,13 @@ not reconstructable from a description of the feature.
 
 ---
 
-# The prompt
+# The brief
 
-Paste this to brief another agent — ChatGPT, a fresh Claude session, a
-contractor. It is written to be self-contained, and the constraints section is
-the part that matters: every one of those rules exists because breaking it
-costs real money or a rejection.
+The full, self-contained briefing document lives in **`docs/AGENT-BRIEF.md`**.
+Paste that whole file — it carries the constraints, the non-obvious
+architecture facts, what already exists, the verification bar, and the
+prioritised work list including a complete design for real-time rival push.
 
-```
-You are working on DEADSET, a ranked competitive iOS fitness app.
-Stack: Vite + React + TanStack Router, TypeScript, localStorage-first with
-Supabase sync, wrapped with Capacitor for iOS, plus a native watchOS SwiftUI
-companion target.
-
-HARD CONSTRAINTS — breaking any of these is worse than shipping nothing:
-
-1. NO AI, and $0 marginal cost per user. Every feature must be rule-based and
-   free to run at scale. A previous version called a model API per user with
-   no revenue behind it; it was removed for that reason. Do not reintroduce it
-   in any form, including "just one small call".
-2. NO in-app purchase UI, prices, or purchase links on native iOS. Pro is sold
-   on the web only. This is a deliberate App Store Guideline 3.1.1 position.
-3. Inputs must be DOM-owned (defaultValue + ref). A controlled `value=` freezes
-   typing in the iOS WKWebView.
-4. Brand: dark only, #E10600 red, heavy italic wordmark.
-5. Timers count down from a deadline, never by ticking. iOS suspends JS timers
-   in the background, which is where a phone spends most of a rest period.
-6. Native haptics go through src/lib/haptics.ts, which has one function per
-   MEANING (set logged, PR, rest over). Never call the plugin directly, and
-   never make two different events feel the same. navigator.vibrate does
-   nothing in iOS WKWebView — do not rely on it.
-
-ARCHITECTURE FACTS you will get wrong otherwise:
-
-- Sets that measure time or distance store `reps: 0` and a `mode` field, so
-  every existing `weight * reps` volume calculation contributes zero for them
-  automatically. Preserve this. Do not add a special case to volume maths.
-- `isWorkingSet` and `countsForRecords` in src/lib/set-tracking.ts are the
-  single source of truth for which sets count toward a plan and toward
-  records. Warm-ups and drop sets fail both; sets to failure pass both.
-- The Apple Watch is a remote control, not a second source of truth. It renders
-  what the phone publishes and asks the phone to record sets. Every watch
-  action carries an id and the phone deduplicates on it, because delivery can
-  legitimately happen twice.
-- ios/App/Shared/WatchProtocol.swift compiles into BOTH the iOS and watch
-  targets so they cannot drift. Change it once, both sides change.
-- project.pbxproj is edited by hand. Run `npm run check:xcodeproj` after any
-  change to it, and after adding any .swift file — a file on disk but not in
-  the project compiles into nothing and fails somewhere unrelated.
-
-BEFORE YOU CLAIM DONE: `npm run check` must pass (tsc, eslint, vitest, build,
-CSS check, Xcode project check), and `node scripts/appstore-check.mjs` must
-pass. New logic needs tests. Say plainly what you could not verify.
-
-WHAT TO BUILD, in priority order — read BACKLOG.md and COMPETITORS.md first:
-
-1. Live Activity / Dynamic Island for the running workout. A rest-timer Live
-   Activity already exists (ios/App/DeadSetRestActivity) — extend that pattern
-   to the session itself: current exercise, sets done, elapsed.
-2. iOS home-screen widget: current streak, today's workout, rank.
-3. Push notifications: streak-at-risk, "your rival just logged", weekly recap.
-   Local notifications only — no server push, no per-user cost.
-4. Routine folders — group programmes, the way Strong groups routines.
-5. Per-exercise history on the watch: last four sessions for the movement
-   you are on.
-
-Pick ONE, confirm scope, build it, verify it, and stop. Do not do all five
-badly.
-```
+The constraints section is the part that matters. Every rule in it exists
+because breaking it costs a rejection or an unbounded bill, and none of them
+are reconstructable from a feature request.

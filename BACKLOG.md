@@ -6,6 +6,13 @@
 
 ## Shipped
 
+- ✅ **Push notifications (local)** — streak-at-risk warnings and duel/rival
+  nudges, both scheduled on-device so they cost nothing to run and fire with
+  the app closed. Real-time "your rival just logged" needs APNs; the full
+  design is in `docs/AGENT-BRIEF.md` §6.1.
+- ✅ **Live Activity + widgets** — workout on the Lock Screen and Dynamic
+  Island; streak and rank on the Home Screen and Lock Screen.
+- ✅ **Apple Watch app** — watchOS 9+, logs sets, holds and rest from the wrist.
 - ✅ **Live session control** — add / swap / remove / reorder exercises during a
   workout, edit or delete any logged set (not just the last), per-exercise rest
   and cues editable mid-session and saved back to the plan.
@@ -65,9 +72,10 @@ not AI. Hard constraints that must not be violated:
 ## TIER 1 — Retention (make them come back daily)
 
 - **Rest timer** with auto-start between sets, haptics + sound on native.
-- **Push notifications** (native): streak-at-risk, "your rival just logged",
-  rest-day nudge, weekly recap. _Why: the single biggest retention lever for a streak app._
-- **iOS home-screen widget**: current streak + today's workout + rank.
+- ~~**Push notifications**~~ — streak-at-risk and rival nudges shipped as local
+  notifications. Still open: real-time rival push (needs APNs), rest-day nudge,
+  weekly recap.
+- ~~**iOS home-screen widget**~~ — shipped (streak, rank, week, Lock Screen).
 - **Logger depth**: supersets, drop sets, warm-up ramp sets, per-set RPE.
 - **Per-exercise history & PR timeline** graphs.
 - **"Repeat last workout"** one-tap quick start.

@@ -27,6 +27,7 @@ import { clearSessionDiagnostics, readSessionLogs } from "@/lib/session-diagnost
 import { connectHealth, healthSupported } from "@/lib/health";
 import { watchStatus, watchSupported, type WatchStatus } from "@/lib/watch";
 import { hapticSetLogged } from "@/lib/haptics";
+import { DEFAULT_STREAK_ALERT_HOUR } from "@/lib/streak-notifications";
 import { Watch } from "lucide-react";
 import { isNativeIos } from "@/lib/platform";
 import {
@@ -56,6 +57,9 @@ function SettingsPage() {
   const reminderHour = state.workoutReminderHour ?? 18;
   const reminderMinute = state.workoutReminderMinute ?? 0;
   const health = state.healthSync ?? { enabled: false, importWorkouts: true, exportWorkouts: true };
+  // Lock-screen notifications only exist in the native shell; on the web these
+  // toggles would promise something the browser cannot deliver.
+  const notificationsSupported = isNativeIos();
 
   useEffect(() => {
     let active = true;
@@ -438,6 +442,39 @@ function SettingsPage() {
           These cards appear quietly inside DEADSET while you use it.
         </p>
       </section>
+
+      {/* Notifications that arrive on the lock screen */}
+      {notificationsSupported && (
+        <section className="px-5 mb-6">
+          <p className="label-cap mb-2 flex items-center gap-1.5">
+            <Bell size={12} className="text-accent-red" /> Notifications
+          </p>
+          <div className="bg-grit-card border border-grit divide-y divide-[#262626]">
+            <Toggle
+              label="Streak at risk"
+              on={state.streakAlertsEnabled !== false}
+              onChange={(v) => {
+                set((s) => ({ ...s, streakAlertsEnabled: v }));
+                if (v) void requestWorkoutNotificationPermission();
+              }}
+            />
+            <Toggle
+              label="Rival activity"
+              on={state.rivalAlertsEnabled !== false}
+              onChange={(v) => {
+                set((s) => ({ ...s, rivalAlertsEnabled: v }));
+                if (v) void requestWorkoutNotificationPermission();
+              }}
+            />
+          </div>
+          <p className="text-[10px] text-grit-dim mt-2 leading-relaxed">
+            Streak warnings arrive at{" "}
+            {String(state.streakAlertHour ?? DEFAULT_STREAK_ALERT_HOUR).padStart(2, "0")}:00 on any
+            day you haven't logged. Rival nudges cover duels you're losing or about to lose. Both
+            are scheduled on this device — DEADSET never watches you from a server.
+          </p>
+        </section>
+      )}
 
       {/* Hydration target */}
       <section className="px-5 mb-6">

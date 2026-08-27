@@ -323,6 +323,12 @@ export interface AppState {
   restTimerSeconds?: number;
   /** Native haptics on set logs, PRs, rest and milestones. Default on. */
   hapticsEnabled?: boolean;
+  /** Evening warning when an unlogged day would end the streak. Default on. */
+  streakAlertsEnabled?: boolean;
+  /** Local hour (0-23) the streak warning fires. Default 19. */
+  streakAlertHour?: number;
+  /** Nudges when a duel rival is ahead or a duel is running out. Default on. */
+  rivalAlertsEnabled?: boolean;
   /** Auto-post finished workouts to the social feed. Explicit opt-in only. */
   autoShareWorkouts?: boolean;
   streakArmor?: StreakArmor;
