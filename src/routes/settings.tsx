@@ -6,10 +6,10 @@ import {
   Upload,
   Bell,
   Vibrate,
+  Scale,
   BellRing,
   Clock3,
   Droplets,
-  Scale,
   ClipboardList,
   Cloud,
   CloudOff,
@@ -26,7 +26,7 @@ import type { AppState } from "@/lib/types";
 import { clearSessionDiagnostics, readSessionLogs } from "@/lib/session-diagnostics";
 import { connectHealth, healthSupported } from "@/lib/health";
 import { watchStatus, watchSupported, type WatchStatus } from "@/lib/watch";
-import { hapticSetLogged } from "@/lib/haptics";
+import { hapticSelection, hapticSetLogged } from "@/lib/haptics";
 import { DEFAULT_STREAK_ALERT_HOUR } from "@/lib/streak-notifications";
 import { Watch } from "lucide-react";
 import { isNativeIos } from "@/lib/platform";
@@ -392,6 +392,46 @@ function SettingsPage() {
           </p>
         </section>
       )}
+
+      {/* Units — stored in kg either way; this only changes what is shown. */}
+      <section className="px-5 mb-6">
+        <p className="label-cap mb-2 flex items-center gap-1.5">
+          <Scale size={12} className="text-accent-red" /> Weight units
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {(["kg", "lb"] as const).map((option) => {
+            const active = (state.units ?? "kg") === option;
+            return (
+              <button
+                key={option}
+                onClick={() => {
+                  set((s) => ({ ...s, units: option }));
+                  hapticSelection();
+                }}
+                className="rounded-xl border py-3 press"
+                style={{
+                  borderColor: active ? "#e63222" : "#262626",
+                  background: active ? "rgba(230,50,34,0.08)" : "transparent",
+                }}
+              >
+                <span
+                  className="display text-lg font-extrabold uppercase"
+                  style={{ color: active ? "#e63222" : "#8a8a8a" }}
+                >
+                  {option}
+                </span>
+                <span className="label-cap block text-[9px] text-grit-dim">
+                  {option === "kg" ? "Kilograms" : "Pounds"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-[10px] text-grit-dim mt-2 leading-relaxed">
+          Your history is always stored in kilograms, so switching units never changes a single
+          logged set — only how it is shown. Plates and the bar follow your choice too.
+        </p>
+      </section>
 
       {/* Haptics */}
       <section className="px-5 mb-6">

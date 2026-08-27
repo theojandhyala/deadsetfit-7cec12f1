@@ -78,6 +78,15 @@ describe("formatting", () => {
     expect(formatDistance(2500)).toBe("2.50 km");
   });
 
+  it("shows load in the athlete's chosen unit", () => {
+    // Storage is always kilograms; only the rendering changes.
+    expect(formatSet({ weight: 100, reps: 5 }, true, "lb")).toBe("220 lb × 5");
+    expect(formatSet({ weight: 100, reps: 5 }, true, "kg")).toBe("100 kg × 5");
+    expect(formatSet({ weight: 20, reps: 0, mode: "duration", seconds: 45 }, true, "lb")).toBe(
+      "44 lb · 45s",
+    );
+  });
+
   it("writes each set in its own units", () => {
     expect(formatSet({ weight: 60, reps: 8 })).toBe("60 kg × 8");
     expect(formatSet({ weight: 0, reps: 12 }, false)).toBe("12 reps");

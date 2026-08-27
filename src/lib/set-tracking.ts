@@ -1,3 +1,4 @@
+import { toDisplay, trimNumber, type WeightUnit } from "@/lib/units";
 import type { CompletedSet, Exercise, WorkoutSession } from "@/lib/types";
 
 /**
@@ -63,17 +64,27 @@ export function formatDistance(meters: number): string {
   return `${(value / 1000).toFixed(value % 1000 === 0 ? 0 : 2)} km`;
 }
 
-/** One logged set, written the way its own units read. */
-export function formatSet(set: CompletedSet, requiresWeight = true): string {
+/**
+ * One logged set, written the way its own units read.
+ *
+ * Load is stored in kilograms and converted here, at the display boundary —
+ * the only place in the app that should know pounds exist.
+ */
+export function formatSet(
+  set: CompletedSet,
+  requiresWeight = true,
+  unit: WeightUnit = "kg",
+): string {
+  const load = (kg: number) => `${trimNumber(toDisplay(kg, unit))} ${unit}`;
   if (set.mode === "duration") {
     const time = formatDuration(set.seconds ?? 0);
-    return set.weight > 0 ? `${set.weight} kg · ${time}` : time;
+    return set.weight > 0 ? `${load(set.weight)} · ${time}` : time;
   }
   if (set.mode === "distance") {
     const distance = formatDistance(set.meters ?? 0);
     return set.seconds ? `${distance} · ${formatDuration(set.seconds)}` : distance;
   }
-  if (set.weight > 0) return `${set.weight} kg × ${set.reps}`;
+  if (set.weight > 0) return `${load(set.weight)} × ${set.reps}`;
   return requiresWeight ? `Set weight · ${set.reps} reps` : `${set.reps} reps`;
 }
 

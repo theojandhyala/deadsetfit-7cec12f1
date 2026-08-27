@@ -1,0 +1,347 @@
+import { estimate1RM } from "./calc";
+import type { AppState, Exercise, MuscleGroup } from "./types";
+
+/**
+ * Strength grading.
+ *
+ * Every movement is scored against what people of the same bodyweight and sex
+ * typically lift, then rolled up into a grade per muscle group. This is the
+ * question a lifter actually wants answered — "am I strong?" — and a raw PR
+ * list never answers it, because 100 kg means something completely different
+ * at 60 kg bodyweight than at 110.
+ *
+ * The standards below are approximations of widely published strength tables.
+ * They are deliberately rule-based and shipped in the binary: no model call, no
+ * server, no per-user cost.
+ */
+
+export type StrengthTier = "BEGINNER" | "NOVICE" | "INTERMEDIATE" | "ADVANCED" | "ELITE";
+
+export const TIERS: StrengthTier[] = ["BEGINNER", "NOVICE", "INTERMEDIATE", "ADVANCED", "ELITE"];
+
+export const TIER_COLOR: Record<StrengthTier, string> = {
+  BEGINNER: "#8a8a8a",
+  NOVICE: "#7fb3d5",
+  INTERMEDIATE: "#5bd07a",
+  ADVANCED: "#fbbf24",
+  ELITE: "#e63222",
+};
+
+/** One line for each tier, so the grade means something without a legend. */
+export const TIER_BLURB: Record<StrengthTier, string> = {
+  BEGINNER: "Just started. Everything is about to go up fast.",
+  NOVICE: "Stronger than someone who has never trained.",
+  INTERMEDIATE: "Stronger than most people in a commercial gym.",
+  ADVANCED: "Years of serious training. Top of most gyms.",
+  ELITE: "Competitive strength. Very few people get here.",
+};
+
+/**
+ * How a movement is measured against the standards.
+ * - RATIO: estimated 1RM as a multiple of bodyweight.
+ * - REPS: best reps in a single set (bodyweight movements).
+ * - SECONDS: longest hold.
+ */
+type StandardKind = "RATIO" | "REPS" | "SECONDS";
+
+interface ExerciseStandard {
+  muscle: MuscleGroup;
+  kind: StandardKind;
+  /** Entry thresholds for NOVICE, INTERMEDIATE, ADVANCED, ELITE. */
+  male: [number, number, number, number];
+  female: [number, number, number, number];
+}
+
+const S = (
+  muscle: MuscleGroup,
+  kind: StandardKind,
+  male: [number, number, number, number],
+  female: [number, number, number, number],
+): ExerciseStandard => ({ muscle, kind, male, female });
+
+export const STANDARDS: Record<string, ExerciseStandard> = {
+  // CHEST
+  "bench-press": S("CHEST", "RATIO", [0.75, 1.25, 1.75, 2.0], [0.5, 0.75, 1.0, 1.25]),
+  "incline-db-press": S("CHEST", "RATIO", [0.5, 0.8, 1.1, 1.4], [0.3, 0.5, 0.7, 0.9]),
+  "cable-fly": S("CHEST", "RATIO", [0.3, 0.5, 0.7, 0.9], [0.2, 0.3, 0.45, 0.6]),
+  dips: S("CHEST", "REPS", [1, 8, 18, 30], [1, 4, 10, 20]),
+  "push-ups": S("CHEST", "REPS", [10, 25, 45, 70], [5, 15, 30, 50]),
+
+  // BACK
+  deadlift: S("BACK", "RATIO", [1.25, 1.75, 2.25, 2.75], [1.0, 1.25, 1.75, 2.25]),
+  "pull-ups": S("BACK", "REPS", [1, 6, 14, 24], [1, 3, 8, 15]),
+  "lat-pulldown": S("BACK", "RATIO", [0.75, 1.0, 1.3, 1.6], [0.5, 0.7, 0.9, 1.15]),
+  "seated-row": S("BACK", "RATIO", [0.7, 1.0, 1.3, 1.6], [0.45, 0.65, 0.85, 1.1]),
+  "face-pull": S("BACK", "RATIO", [0.3, 0.45, 0.6, 0.8], [0.2, 0.3, 0.4, 0.55]),
+  "inverted-row": S("BACK", "REPS", [8, 18, 32, 50], [5, 12, 22, 38]),
+  superman: S("BACK", "REPS", [15, 30, 50, 75], [15, 30, 50, 75]),
+
+  // LEGS
+  squat: S("LEGS", "RATIO", [1.0, 1.5, 2.0, 2.5], [0.75, 1.0, 1.5, 2.0]),
+  rdl: S("LEGS", "RATIO", [0.9, 1.35, 1.8, 2.2], [0.7, 0.95, 1.3, 1.7]),
+  "leg-press": S("LEGS", "RATIO", [1.75, 2.5, 3.5, 4.5], [1.25, 2.0, 2.75, 3.5]),
+  "leg-curl": S("LEGS", "RATIO", [0.4, 0.6, 0.8, 1.0], [0.3, 0.45, 0.6, 0.8]),
+  "goblet-squat": S("LEGS", "RATIO", [0.4, 0.6, 0.8, 1.0], [0.3, 0.45, 0.6, 0.8]),
+  lunges: S("LEGS", "REPS", [12, 25, 45, 70], [12, 25, 45, 70]),
+  "bodyweight-squat": S("LEGS", "REPS", [20, 40, 70, 100], [20, 40, 70, 100]),
+  "split-squat": S("LEGS", "REPS", [8, 18, 32, 50], [8, 18, 32, 50]),
+  "glute-bridge": S("LEGS", "REPS", [15, 30, 50, 75], [15, 30, 50, 75]),
+  "calf-raise": S("LEGS", "REPS", [15, 30, 50, 75], [15, 30, 50, 75]),
+
+  // SHOULDERS
+  ohp: S("SHOULDERS", "RATIO", [0.5, 0.75, 1.0, 1.25], [0.35, 0.5, 0.65, 0.85]),
+  "lateral-raise": S("SHOULDERS", "RATIO", [0.1, 0.18, 0.26, 0.35], [0.07, 0.12, 0.18, 0.25]),
+  "front-raise": S("SHOULDERS", "RATIO", [0.1, 0.18, 0.26, 0.35], [0.07, 0.12, 0.18, 0.25]),
+  "rear-delt-fly": S("SHOULDERS", "RATIO", [0.1, 0.18, 0.26, 0.35], [0.07, 0.12, 0.18, 0.25]),
+  "pike-push-up": S("SHOULDERS", "REPS", [5, 12, 22, 35], [3, 8, 15, 25]),
+
+  // ARMS
+  "barbell-curl": S("ARMS", "RATIO", [0.35, 0.55, 0.75, 0.95], [0.2, 0.35, 0.5, 0.65]),
+  "hammer-curl": S("ARMS", "RATIO", [0.15, 0.25, 0.35, 0.45], [0.1, 0.16, 0.24, 0.32]),
+  "skull-crushers": S("ARMS", "RATIO", [0.3, 0.45, 0.65, 0.85], [0.2, 0.3, 0.42, 0.55]),
+  "tricep-pushdown": S("ARMS", "RATIO", [0.35, 0.55, 0.75, 1.0], [0.25, 0.4, 0.55, 0.7]),
+  "close-grip-push-up": S("ARMS", "REPS", [8, 20, 38, 60], [4, 12, 25, 42]),
+
+  // CORE
+  plank: S("CORE", "SECONDS", [30, 60, 120, 180], [30, 60, 120, 180]),
+  "hanging-leg-raise": S("CORE", "REPS", [5, 12, 20, 30], [3, 8, 15, 25]),
+  "cable-crunch": S("CORE", "RATIO", [0.3, 0.5, 0.7, 0.95], [0.2, 0.35, 0.5, 0.65]),
+  "ab-wheel": S("CORE", "REPS", [3, 8, 15, 25], [2, 5, 12, 20]),
+  "dead-bug": S("CORE", "REPS", [10, 20, 35, 50], [10, 20, 35, 50]),
+  "bicycle-crunch": S("CORE", "REPS", [15, 30, 50, 80], [15, 30, 50, 80]),
+};
+
+export const GRADED_MUSCLES: MuscleGroup[] = ["CHEST", "BACK", "LEGS", "SHOULDERS", "ARMS", "CORE"];
+
+export interface ExerciseGrade {
+  exerciseId: string;
+  name: string;
+  muscle: MuscleGroup;
+  kind: StandardKind;
+  tier: StrengthTier;
+  /** 0-100 across the whole ladder, so a bar can be drawn from one number. */
+  score: number;
+  /** Progress from this tier's floor to the next tier's, 0-1. */
+  progress: number;
+  /** What was measured: a 1RM in kg, a rep count, or seconds. */
+  value: number;
+  /** What reaching the next tier takes, in the same unit. Null at ELITE. */
+  nextAt: number | null;
+  nextTier: StrengthTier | null;
+}
+
+export interface MuscleGrade {
+  muscle: MuscleGroup;
+  tier: StrengthTier;
+  score: number;
+  /** Movements with enough history to grade. */
+  exercises: ExerciseGrade[];
+  /** The one to push to move this muscle's grade fastest. */
+  weakest: ExerciseGrade | null;
+}
+
+export interface StrengthReport {
+  muscles: MuscleGrade[];
+  /** Overall tier across every graded muscle. */
+  tier: StrengthTier;
+  score: number;
+  /** Muscles with no gradable history yet. */
+  ungraded: MuscleGroup[];
+  /** How many movements contributed. */
+  gradedCount: number;
+}
+
+/** Where a value sits on a four-threshold ladder, as tier index + progress. */
+function placeOnLadder(
+  value: number,
+  thresholds: [number, number, number, number],
+): { index: number; progress: number } {
+  if (value <= 0) return { index: 0, progress: 0 };
+  let index = 0;
+  for (let i = 0; i < thresholds.length; i += 1) {
+    if (value >= thresholds[i]!) index = i + 1;
+  }
+  if (index >= thresholds.length) return { index: thresholds.length, progress: 1 };
+  const floor = index === 0 ? 0 : thresholds[index - 1]!;
+  const ceiling = thresholds[index]!;
+  const span = Math.max(ceiling - floor, 1e-9);
+  return { index, progress: Math.max(0, Math.min(1, (value - floor) / span)) };
+}
+
+/** Personal bests per exercise, from sessions and legacy logs together. */
+export interface Bests {
+  e1rmKg: number;
+  reps: number;
+  seconds: number;
+}
+
+export function personalBests(state: AppState): Map<string, Bests> {
+  const bests = new Map<string, Bests>();
+  const touch = (id: string): Bests => {
+    let entry = bests.get(id);
+    if (!entry) bests.set(id, (entry = { e1rmKg: 0, reps: 0, seconds: 0 }));
+    return entry;
+  };
+
+  for (const session of state.sessions ?? []) {
+    if (!session.endedAt) continue;
+    for (const exercise of session.exercises) {
+      for (const set of exercise.sets) {
+        // Warm-ups and drop sets are not genuine attempts at the load, so they
+        // must not set a grade any more than they set a PR.
+        if (set.kind === "warmup" || set.kind === "drop") continue;
+        const entry = touch(exercise.exerciseId);
+        if (set.mode === "duration") {
+          entry.seconds = Math.max(entry.seconds, set.seconds ?? 0);
+          continue;
+        }
+        if (set.mode === "distance") continue;
+        if (set.weight > 0 && set.reps > 0) {
+          entry.e1rmKg = Math.max(entry.e1rmKg, estimate1RM(set.weight, set.reps));
+        } else if (set.reps > 0) {
+          entry.reps = Math.max(entry.reps, set.reps);
+        }
+      }
+    }
+  }
+
+  for (const log of state.logs ?? []) {
+    const entry = touch(log.exerciseId);
+    if (log.weight > 0 && log.reps > 0) {
+      entry.e1rmKg = Math.max(entry.e1rmKg, estimate1RM(log.weight, log.reps));
+    } else if (log.reps > 0) {
+      entry.reps = Math.max(entry.reps, log.reps);
+    }
+  }
+
+  return bests;
+}
+
+/** Grade one movement, or null when there is nothing to grade it on. */
+export function gradeExercise(
+  exerciseId: string,
+  name: string,
+  best: Bests,
+  bodyweightKg: number,
+  gender: string | null | undefined,
+): ExerciseGrade | null {
+  const standard = STANDARDS[exerciseId];
+  if (!standard) return null;
+  const thresholds = gender === "FEMALE" ? standard.female : standard.male;
+
+  let value: number;
+  if (standard.kind === "RATIO") {
+    // Without a bodyweight there is no ratio, and inventing one would grade
+    // everybody wrong rather than admitting the data is missing.
+    if (!bodyweightKg || bodyweightKg <= 0 || best.e1rmKg <= 0) return null;
+    value = best.e1rmKg / bodyweightKg;
+  } else if (standard.kind === "REPS") {
+    if (best.reps <= 0) return null;
+    value = best.reps;
+  } else {
+    if (best.seconds <= 0) return null;
+    value = best.seconds;
+  }
+
+  const { index, progress } = placeOnLadder(value, thresholds);
+  const tier = TIERS[index] ?? "ELITE";
+  const nextTier = index < thresholds.length ? (TIERS[index + 1] ?? null) : null;
+  const nextThreshold = index < thresholds.length ? thresholds[index]! : null;
+
+  return {
+    exerciseId,
+    name,
+    muscle: standard.muscle,
+    kind: standard.kind,
+    tier,
+    score: Math.round(((index + progress) / TIERS.length) * 100),
+    progress,
+    // A ratio is only meaningful back in kilograms.
+    value: standard.kind === "RATIO" ? Math.round(best.e1rmKg * 10) / 10 : value,
+    nextAt:
+      nextThreshold === null
+        ? null
+        : standard.kind === "RATIO"
+          ? Math.ceil((nextThreshold * bodyweightKg) / 2.5) * 2.5
+          : Math.ceil(nextThreshold),
+    nextTier,
+  };
+}
+
+/**
+ * Grade every muscle group from an athlete's history.
+ *
+ * A muscle's score is the mean of its graded movements rather than its best:
+ * being elite at one lift and untrained at the rest is not a strong chest, and
+ * a grade that says otherwise is flattery rather than information.
+ */
+export function strengthReport(
+  state: AppState,
+  library: Pick<Exercise, "id" | "name">[],
+): StrengthReport {
+  const bests = personalBests(state);
+  const names = new Map(library.map((exercise) => [exercise.id, exercise.name]));
+  const bodyweightKg = state.profile?.weightKg ?? 0;
+  const gender = state.profile?.gender;
+
+  const byMuscle = new Map<MuscleGroup, ExerciseGrade[]>();
+  for (const [exerciseId, best] of bests) {
+    const grade = gradeExercise(
+      exerciseId,
+      names.get(exerciseId) ?? exerciseId,
+      best,
+      bodyweightKg,
+      gender,
+    );
+    if (!grade) continue;
+    const bucket = byMuscle.get(grade.muscle) ?? [];
+    bucket.push(grade);
+    byMuscle.set(grade.muscle, bucket);
+  }
+
+  const muscles: MuscleGrade[] = [];
+  const ungraded: MuscleGroup[] = [];
+  for (const muscle of GRADED_MUSCLES) {
+    const grades = (byMuscle.get(muscle) ?? []).sort((a, b) => b.score - a.score);
+    if (grades.length === 0) {
+      ungraded.push(muscle);
+      continue;
+    }
+    const score = Math.round(grades.reduce((sum, grade) => sum + grade.score, 0) / grades.length);
+    muscles.push({
+      muscle,
+      score,
+      tier: tierForScore(score),
+      exercises: grades,
+      weakest: grades[grades.length - 1] ?? null,
+    });
+  }
+
+  const score =
+    muscles.length === 0
+      ? 0
+      : Math.round(muscles.reduce((sum, muscle) => sum + muscle.score, 0) / muscles.length);
+
+  return {
+    muscles,
+    tier: tierForScore(score),
+    score,
+    ungraded,
+    gradedCount: muscles.reduce((sum, muscle) => sum + muscle.exercises.length, 0),
+  };
+}
+
+/** A 0-100 score back to the tier it sits in. */
+export function tierForScore(score: number): StrengthTier {
+  const clamped = Math.max(0, Math.min(100, score));
+  const index = Math.min(TIERS.length - 1, Math.floor((clamped / 100) * TIERS.length));
+  return TIERS[index]!;
+}
+
+/** Points still needed to reach the next tier. Null at the top. */
+export function pointsToNextTier(score: number): { tier: StrengthTier; points: number } | null {
+  const index = TIERS.indexOf(tierForScore(score));
+  if (index >= TIERS.length - 1) return null;
+  const nextFloor = Math.ceil(((index + 1) / TIERS.length) * 100);
+  return { tier: TIERS[index + 1]!, points: Math.max(1, nextFloor - Math.round(score)) };
+}

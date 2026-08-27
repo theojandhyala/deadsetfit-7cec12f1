@@ -47,6 +47,18 @@ import {
 import { indexAfterMove, indexAfterRemoval, moveItem } from "@/lib/session-edit";
 import { BAR_TYPES, DEFAULT_BAR_KG, barLabel, usesBarbell } from "@/lib/bars";
 import {
+  formatVolume,
+  formatWeight,
+  formatWeightValue,
+  increment,
+  plateLoad,
+  toDisplay,
+  toKg,
+  trimNumber,
+  unitOf,
+  type WeightUnit,
+} from "@/lib/units";
+import {
   hapticSelection,
   hapticSetLogged,
   hapticSpecialSet,
@@ -561,6 +573,7 @@ function LiveWorkoutPage() {
   const [noting, setNoting] = useState(false);
   const [pickingBar, setPickingBar] = useState(false);
   const restPref = state.restTimerSeconds ?? 90;
+  const unit = unitOf(state);
 
   const totals = useMemo(() => {
     if (!session) return { vol: 0, sets: 0, prs: 0 };
@@ -1308,8 +1321,8 @@ function LiveWorkoutPage() {
               style={{ color: totals.vol >= lastTime.volume ? "#22c55e" : "#8a8a8a" }}
             >
               {totals.vol >= lastTime.volume
-                ? `AHEAD BY ${Math.round(totals.vol - lastTime.volume).toLocaleString()} KG`
-                : `${Math.round(lastTime.volume - totals.vol).toLocaleString()} KG TO GO`}
+                ? `AHEAD BY ${formatVolume(totals.vol - lastTime.volume, unit).toUpperCase()}`
+                : `${formatVolume(lastTime.volume - totals.vol, unit).toUpperCase()} TO GO`}
             </span>
           </div>
           <div className="mt-1.5 h-1.5 rounded-full bg-[#1a1a1a] overflow-hidden">
@@ -1480,6 +1493,7 @@ function LiveWorkoutPage() {
             key={`${session.id}:${activeIdx}`}
             exercise={current}
             bests={timedBests}
+            unit={unit}
             onLog={logSet}
             onEditSet={editSet}
             onDeleteSet={deleteSet}
@@ -1498,6 +1512,7 @@ function LiveWorkoutPage() {
               )
             }
             barKg={current.barKg ?? DEFAULT_BAR_KG}
+            unit={unit}
             history={evolution}
             suggestion={suggestion}
             ghost={ghost}
@@ -1562,6 +1577,7 @@ function LiveWorkoutPage() {
         <BarPickerSheet
           name={current.name}
           barKg={current.barKg ?? DEFAULT_BAR_KG}
+          unit={unit}
           onPick={(kg) => {
             setExerciseBar(kg);
             setPickingBar(false);
@@ -1621,6 +1637,7 @@ function SetLogger({
   defaultReps,
   requiresWeight,
   barKg,
+  unit,
   history,
   suggestion,
   ghost,
@@ -1638,6 +1655,8 @@ function SetLogger({
   requiresWeight: boolean;
   /** Bar this movement is loaded on, so plates and warm-ups match reality. */
   barKg: number;
+  /** kg or lb — display only; every stored weight stays in kilograms. */
+  unit: WeightUnit;
   history: TopSet[];
   suggestion: Suggestion | null;
   ghost: GhostSet[];
@@ -1672,7 +1691,7 @@ function SetLogger({
   const bodyweight = nextWeight <= 0;
   // Loaded from the movement's own bar: a trap bar is 5 kg heavier than the
   // Olympic default, which is enough to hand out the wrong plates.
-  const plates = !bodyweight && barKg > 0 ? plateBreakdown(nextWeight, barKg) : null;
+  const plates = !bodyweight && barKg > 0 ? plateLoad(nextWeight, barKg, unit) : null;
   // Warm-up ramp stays available until the first working set is logged, so all
   // ramp steps can be ticked off (logging one warm-up shouldn't hide the rest).
   const ramp = loggedWorking === 0 && nextWeight >= barKg + 10 ? warmupRamp(nextWeight, barKg) : [];
@@ -1687,7 +1706,9 @@ function SetLogger({
   }
 
   function saveEdit() {
-    const w = Number((editWeightRef.current?.value ?? "").replace(/[^0-9.]/g, ""));
+    // Typed in the athlete's units; every stored weight stays in kilograms.
+    const typed = Number((editWeightRef.current?.value ?? "").replace(/[^0-9.]/g, ""));
+    const w = Number.isFinite(typed) ? toKg(typed, unit) : Number.NaN;
     const r = Math.floor(Number((editRepsRef.current?.value ?? "").replace(/[^0-9]/g, "")));
     if (requiresWeight && (!Number.isFinite(w) || w <= 0)) {
       setWeightError(true);
@@ -1746,12 +1767,14 @@ function SetLogger({
                     (i === history.length - 1 ? "text-lg text-accent-red" : "text-sm text-grit")
                   }
                 >
-                  {h.weight}
+                  {formatWeightValue(h.weight, unit)}
                 </span>
                 {i < history.length - 1 && <span className="text-grit-dim text-[10px]">→</span>}
               </span>
             ))}
-            <span className="label-cap text-[8px] text-grit-dim ml-1">KG TOP SET</span>
+            <span className="label-cap text-[8px] text-grit-dim ml-1">
+              {unit.toUpperCase()} TOP SET
+            </span>
           </div>
         </button>
       )}
@@ -1796,7 +1819,9 @@ function SetLogger({
                     textDecoration: beaten ? "line-through" : undefined,
                   }}
                 >
-                  {g.weight > 0 ? `${g.weight}×${g.reps}` : `${g.reps} reps`}
+                  {g.weight > 0
+                    ? `${formatWeightValue(g.weight, unit)}×${g.reps}`
+                    : `${g.reps} reps`}
                 </span>
               );
             })}
@@ -1823,7 +1848,7 @@ function SetLogger({
                 "text-xs text-grit font-bold" + (progressionLocked ? " blur-[5px] select-none" : "")
               }
             >
-              {suggestion.weightKg}kg — {suggestion.reason}
+              {formatWeight(suggestion.weightKg, unit)} — {suggestion.reason}
             </span>
           </span>
           {progressionLocked ? (
@@ -1844,7 +1869,8 @@ function SetLogger({
               onClick={() => onLog({ weight: w.weight, reps: w.reps, kind: "warmup" })}
               className="text-[10px] text-grit-dim border border-grit rounded-full px-2 py-0.5 press hover:border-accent-red hover:text-grit"
             >
-              {w.weight}kg×{w.reps}
+              {formatWeightValue(w.weight, unit)}
+              {unit}×{w.reps}
             </button>
           ))}
         </div>
@@ -1915,7 +1941,7 @@ function SetLogger({
                 </span>
               </span>
               <span className="display text-lg font-extrabold text-grit leading-none flex items-center">
-                {done ? formatSet(doneSet!, requiresWeight) : fmt(nextWeight, nextReps)}
+                {done ? formatSet(doneSet!, requiresWeight, unit) : fmt(nextWeight, nextReps)}
                 {doneSet?.isPR && <Flame size={14} className="ml-2 text-accent-red" />}
                 {isNext && !editing && (
                   <Pencil
@@ -1972,10 +1998,10 @@ function SetLogger({
             <input
               ref={editWeightRef}
               inputMode="decimal"
-              defaultValue={nextWeight > 0 ? String(nextWeight) : ""}
-              placeholder="kg"
+              defaultValue={nextWeight > 0 ? formatWeightValue(nextWeight, unit) : ""}
+              placeholder={unit}
               className={`input-grit ${weightError ? "border-accent-red" : ""}`}
-              aria-label="Weight (kg)"
+              aria-label={`Weight (${unit})`}
             />
             <input
               ref={editRepsRef}
@@ -2034,8 +2060,16 @@ function SetLogger({
             }
             // Drop set: ~20% off the working weight, logged straight away and
             // marked (never a PR, but counts as volume).
+            // Rounded to something the athlete's own gym can actually load:
+            // 2.5 kg steps in a kilo gym, 5 lb steps in a pound one.
+            const step = increment(unit);
             const dropW =
-              nextWeight > 0 ? Math.max(2.5, Math.round((nextWeight * 0.8) / 2.5) * 2.5) : 0;
+              nextWeight > 0
+                ? Math.max(
+                    toKg(step, unit),
+                    toKg(Math.round((toDisplay(nextWeight, unit) * 0.8) / step) * step, unit),
+                  )
+                : 0;
             onLog({ weight: dropW, reps: nextReps, kind: "drop" });
           }}
           className="w-full border border-dashed border-accent-red/40 rounded-xl py-2.5 label-cap text-[10px] text-accent-red press"
@@ -2059,10 +2093,14 @@ function SetLogger({
               </span>
             ))
           )}
-          <span className="label-cap text-[9px] text-grit-dim ml-auto">BAR {plates.barKg}KG</span>
-          {plates.remainderKg > 0 && (
+          <span className="label-cap text-[9px] text-grit-dim ml-auto">
+            BAR {trimNumber(plates.bar)}
+            {unit.toUpperCase()}
+          </span>
+          {plates.remainder > 0 && (
             <span className="text-[10px] text-accent-red w-full">
-              {plates.remainderKg}kg short of {nextWeight}kg — needs microplates
+              {trimNumber(plates.remainder)}
+              {unit} short of {formatWeight(nextWeight, unit)} — needs microplates
             </span>
           )}
         </div>
@@ -2078,6 +2116,7 @@ function SetLogger({
           set={exercise.sets[editingSet]!}
           index={editingSet}
           requiresWeight={requiresWeight}
+          unit={unit}
           onSave={(patch) => {
             onEditSet(editingSet, patch);
             setEditingSet(null);
@@ -2157,11 +2196,13 @@ function NoteSheet({
 function BarPickerSheet({
   name,
   barKg,
+  unit,
   onPick,
   onClose,
 }: {
   name: string;
   barKg: number;
+  unit: WeightUnit;
   onPick: (kg: number) => void;
   onClose: () => void;
 }) {
@@ -2199,7 +2240,7 @@ function BarPickerSheet({
                     <span className="label-cap text-[9px] text-grit-dim">{bar.note}</span>
                   </span>
                   <span className="display text-sm font-extrabold text-grit">
-                    {bar.kg > 0 ? `${bar.kg}kg` : "—"}
+                    {bar.kg > 0 ? formatWeight(bar.kg, unit) : "—"}
                   </span>
                   {active && <Check size={15} className="text-accent-red" />}
                 </button>
@@ -2242,6 +2283,7 @@ function SetEditorSheet({
   set: logged,
   index,
   requiresWeight,
+  unit,
   onSave,
   onDelete,
   onClose,
@@ -2249,6 +2291,7 @@ function SetEditorSheet({
   set: CompletedSet;
   index: number;
   requiresWeight: boolean;
+  unit: WeightUnit;
   onSave: (patch: LoggedEntry) => void;
   onDelete: () => void;
   onClose: () => void;
@@ -2259,7 +2302,10 @@ function SetEditorSheet({
   const distanceRef = useRef<HTMLInputElement>(null);
 
   function save() {
-    const weight = Number((weightRef.current?.value ?? "").replace(/[^0-9.]/g, ""));
+    // Typed in the athlete's units, stored in kilograms — the conversion
+    // happens here so nothing downstream ever sees a pound value.
+    const typed = Number((weightRef.current?.value ?? "").replace(/[^0-9.]/g, ""));
+    const weight = Number.isFinite(typed) ? toKg(typed, unit) : Number.NaN;
     const reps = Math.floor(Number((repsRef.current?.value ?? "").replace(/[^0-9]/g, "")));
     const seconds = timeRef.current ? parseClock(timeRef.current.value) : undefined;
     const meters = distanceRef.current
@@ -2314,14 +2360,16 @@ function SetEditorSheet({
               />
             </label>
             <label className="block">
-              <span className="label-cap text-[9px] text-grit-dim">ADDED LOAD (KG)</span>
+              <span className="label-cap text-[9px] text-grit-dim">
+                ADDED LOAD ({unit.toUpperCase()})
+              </span>
               <input
                 ref={weightRef}
                 inputMode="decimal"
-                defaultValue={logged.weight > 0 ? String(logged.weight) : ""}
+                defaultValue={logged.weight > 0 ? formatWeightValue(logged.weight, unit) : ""}
                 placeholder="0"
                 className="input-grit mt-1 w-full"
-                aria-label="Added load in kilograms"
+                aria-label={`Added load in ${unit}`}
               />
             </label>
           </div>
@@ -2353,15 +2401,17 @@ function SetEditorSheet({
           <div className="mt-3 grid grid-cols-2 gap-2">
             <label className="block">
               <span className="label-cap text-[9px] text-grit-dim">
-                {requiresWeight ? "WEIGHT (KG)" : "ADDED LOAD (KG)"}
+                {requiresWeight
+                  ? `WEIGHT (${unit.toUpperCase()})`
+                  : `ADDED LOAD (${unit.toUpperCase()})`}
               </span>
               <input
                 ref={weightRef}
                 inputMode="decimal"
-                defaultValue={logged.weight > 0 ? String(logged.weight) : ""}
-                placeholder={requiresWeight ? "kg" : "0"}
+                defaultValue={logged.weight > 0 ? formatWeightValue(logged.weight, unit) : ""}
+                placeholder={requiresWeight ? unit : "0"}
                 className="input-grit mt-1 w-full"
-                aria-label="Weight in kilograms"
+                aria-label={`Weight in ${unit}`}
               />
             </label>
             <label className="block">
@@ -2408,12 +2458,14 @@ function SetEditorSheet({
 function TimedSetLogger({
   exercise,
   bests,
+  unit,
   onLog,
   onEditSet,
   onDeleteSet,
 }: {
   exercise: WorkoutSessionExercise;
   bests: { seconds: number; meters: number };
+  unit: WeightUnit;
   onLog: (entry: LoggedEntry) => void;
   onEditSet: (setIndex: number, patch: LoggedEntry) => void;
   onDeleteSet: (setIndex: number) => void;
@@ -2441,8 +2493,9 @@ function TimedSetLogger({
   const logged = exercise.sets.length;
   const planned = Math.max(exercise.targetSets, logged);
   const addedLoad = () => {
-    const value = Number((loadRef.current?.value ?? "").replace(/[^0-9.]/g, ""));
-    return Number.isFinite(value) && value > 0 ? value : 0;
+    const typed = Number((loadRef.current?.value ?? "").replace(/[^0-9.]/g, ""));
+    // Typed in the athlete's units; stored in kilograms like every other load.
+    return Number.isFinite(typed) && typed > 0 ? toKg(typed, unit) : 0;
   };
 
   function stopAndLog() {
@@ -2548,13 +2601,15 @@ function TimedSetLogger({
           </label>
         ) : (
           <label className="block">
-            <span className="label-cap text-[9px] text-grit-dim">ADDED LOAD (KG)</span>
+            <span className="label-cap text-[9px] text-grit-dim">
+              ADDED LOAD ({unit.toUpperCase()})
+            </span>
             <input
               ref={loadRef}
               inputMode="decimal"
               placeholder="0"
               className="input-grit mt-1 w-full"
-              aria-label="Added load in kilograms"
+              aria-label={`Added load in ${unit}`}
             />
           </label>
         )}
@@ -2622,6 +2677,7 @@ function TimedSetLogger({
           set={exercise.sets[editingSet]!}
           index={editingSet}
           requiresWeight={false}
+          unit={unit}
           onSave={(patch) => {
             onEditSet(editingSet, patch);
             setEditingSet(null);

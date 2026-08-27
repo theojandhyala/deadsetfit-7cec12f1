@@ -175,6 +175,16 @@ const FEATURE_PITCH: Record<
     ],
     icon: Medal,
   },
+  strength: {
+    title: "Strength Grades",
+    tagline: "Every muscle graded. Every lift ranked.",
+    bullets: [
+      "Lift-by-lift grades from Beginner to Elite",
+      "The exact weight that moves you up a tier",
+      "The one movement holding each muscle back",
+    ],
+    icon: TrendingUp,
+  },
   progression: {
     title: "Progression Intelligence",
     tagline: "Know the next weight before you touch the bar.",

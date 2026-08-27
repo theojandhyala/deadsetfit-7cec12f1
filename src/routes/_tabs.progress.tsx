@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useRef, useState, type RefObject } from "react";
-import { Camera, Trophy, Flame, Trash2, Lock, Image as ImageIcon } from "lucide-react";
+import { Camera, Trophy, Flame, Trash2, Lock, Gauge, Image as ImageIcon } from "lucide-react";
 
 import { useAppState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
@@ -379,6 +379,33 @@ function ProgressPage() {
       <AppleFitnessCard />
       <TrainingAutopilot />
       <PRRoadmap />
+
+      {/* Strength grades — the "how strong am I actually" question */}
+      <section className="px-5 mb-4 animate-slide-up delay-50">
+        <Link
+          to="/strength"
+          className="deadset-3d-panel deadset-lift block w-full p-4 press"
+          style={{
+            background: "linear-gradient(135deg, rgba(91,208,122,0.14), #141414)",
+            border: "1.5px solid rgba(91,208,122,0.4)",
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="min-w-0">
+              <p className="label-cap text-[10px]" style={{ color: "#5bd07a" }}>
+                Strength Grades
+              </p>
+              <p className="display text-xl font-extrabold uppercase text-white leading-none mt-0.5">
+                See your strength
+              </p>
+              <p className="text-[11px] text-grit-dim mt-1">
+                Every muscle graded Beginner → Elite for your bodyweight.
+              </p>
+            </div>
+            <Gauge size={26} style={{ color: "#5bd07a" }} />
+          </div>
+        </Link>
+      </section>
 
       {/* The Catalogue — visual journey (photos, PR wall, before/after) */}
       <section className="px-5 mb-6 animate-slide-up delay-50">

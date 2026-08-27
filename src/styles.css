@@ -2051,3 +2051,118 @@
     animation: pulseGlow 2.2s ease-in-out infinite;
   }
 }
+
+/* === Strength grading motion ============================================
+   A small, shared vocabulary rather than per-screen one-offs, so anything
+   that reveals a list feels like the same app. Every rule here is disabled
+   under prefers-reduced-motion at the bottom of this block — motion is a
+   finish, never the thing carrying the information. */
+@layer components {
+  /* Children arrive in sequence instead of all at once. The delay is capped
+     so a long list never leaves the last row waiting seconds to appear. */
+  .stagger > * {
+    animation: deadset-rise-in 460ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+  }
+  .stagger > *:nth-child(1) {
+    animation-delay: 40ms;
+  }
+  .stagger > *:nth-child(2) {
+    animation-delay: 90ms;
+  }
+  .stagger > *:nth-child(3) {
+    animation-delay: 140ms;
+  }
+  .stagger > *:nth-child(4) {
+    animation-delay: 190ms;
+  }
+  .stagger > *:nth-child(5) {
+    animation-delay: 240ms;
+  }
+  .stagger > *:nth-child(6) {
+    animation-delay: 290ms;
+  }
+  .stagger > *:nth-child(n + 7) {
+    animation-delay: 330ms;
+  }
+
+  /* A meter that fills from empty on first paint. The width itself is set
+     inline from real data; this only animates the reveal. */
+  .meter-fill {
+    transform-origin: left center;
+    animation: deadset-meter 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: 220ms;
+  }
+
+  @keyframes deadset-meter {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  /* One slow pass of light across a tier badge — enough to read as premium,
+     slow enough not to nag. */
+  .tier-sheen {
+    position: relative;
+    overflow: hidden;
+  }
+  .tier-sheen::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      100deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.14) 48%,
+      transparent 66%
+    );
+    transform: translateX(-100%);
+    animation: deadset-tier-sheen 4.8s ease-in-out 1.2s infinite;
+    pointer-events: none;
+  }
+
+  @keyframes deadset-tier-sheen {
+    0%,
+    62% {
+      transform: translateX(-100%);
+    }
+    82%,
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  /* A number that lands rather than appears. Paired with useCountUp. */
+  .figure-pop {
+    animation: deadset-figure-pop 620ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+  }
+
+  @keyframes deadset-figure-pop {
+    0% {
+      opacity: 0;
+      transform: scale(0.82);
+    }
+    60% {
+      opacity: 1;
+      transform: scale(1.04);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stagger > *,
+    .meter-fill,
+    .figure-pop {
+      animation: none;
+    }
+    .tier-sheen::after {
+      animation: none;
+      opacity: 0;
+    }
+  }
+}
