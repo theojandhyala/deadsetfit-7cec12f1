@@ -1,12 +1,7 @@
 import { useState } from "react";
 import { Sparkles, X } from "lucide-react";
 
-import {
-  WHATS_NEW,
-  WHATS_NEW_VERSION,
-  readWhatsNewSeen,
-  dismissWhatsNew,
-} from "@/lib/whats-new";
+import { WHATS_NEW, WHATS_NEW_VERSION, readWhatsNewSeen, dismissWhatsNew } from "@/lib/whats-new";
 
 /**
  * Feature discovery — new engines are useless if nobody knows they exist.

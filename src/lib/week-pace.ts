@@ -32,11 +32,7 @@ function workingVolume(s: WorkoutSession): number {
   return v;
 }
 
-export function weekPace(
-  sessions: WorkoutSession[],
-  todayIso: string,
-  weeks = 8,
-): WeekPace | null {
+export function weekPace(sessions: WorkoutSession[], todayIso: string, weeks = 8): WeekPace | null {
   const today = new Date(`${todayIso}T00:00:00Z`).getTime();
   if (!Number.isFinite(today)) return null;
   const weekdayIdx = (new Date(today).getUTCDay() + 6) % 7;

@@ -104,7 +104,14 @@ export function drawPRCard(
   ctx.fillText(exercise, W / 2, 540);
 
   // ── The number ────────────────────────────────────────────────
-  fitText(ctx, headline.value, (s) => `900 ${s}px 'Arial Black', Arial, sans-serif`, 380, W - 200, 160);
+  fitText(
+    ctx,
+    headline.value,
+    (s) => `900 ${s}px 'Arial Black', Arial, sans-serif`,
+    380,
+    W - 200,
+    160,
+  );
   ctx.fillStyle = "#ffffff";
   ctx.shadowColor = "rgba(230,50,34,0.7)";
   ctx.shadowBlur = 70;

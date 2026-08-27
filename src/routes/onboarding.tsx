@@ -42,6 +42,7 @@ import {
   detectCountry,
   type SupportedCurrency,
 } from "@/lib/currency";
+import { formatWeightValue, toKg, type WeightUnit } from "@/lib/units";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "DEADSET — Onboarding" }] }),
@@ -58,6 +59,7 @@ type Step =
   | "session"
   | "schedule"
   | "experience"
+  | "units"
   | "about"
   | "sleep"
   | "target"
@@ -98,8 +100,18 @@ function orderFor(mode: Mode | null): Step[] {
   if (!mode) return base;
   const schedule: Step[] =
     mode === "GENERATE"
-      ? ["goal", "experience", "about", "days", "equipment", "focus", "session", "schedule"]
-      : ["goal", "experience", "about", "days", "equipment", "focus", "session"];
+      ? [
+          "goal",
+          "experience",
+          "units",
+          "about",
+          "days",
+          "equipment",
+          "focus",
+          "session",
+          "schedule",
+        ]
+      : ["goal", "experience", "units", "about", "days", "equipment", "focus", "session"];
   return [...base, ...schedule, "username"];
 }
 
@@ -109,6 +121,9 @@ function Onboarding() {
   const [mode, setMode] = useState<Mode | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Partial<Profile>>({});
+  // Not part of Profile — it lives on app state — but it has to be chosen here,
+  // before the weight question, or "80" could mean either thing.
+  const [units, setUnits] = useState<WeightUnit>("kg");
   const [draftSchedule, setDraftSchedule] = useState<Schedule | null>(null);
   const savingRef = useRef(false);
   // Where to land after the final save: the web pro step can point this at
@@ -201,7 +216,7 @@ function Onboarding() {
       })
         .then(async () => {
           setLocalStateOwner(userId);
-          const nextState = { ...getState(), profile: p, schedule: sched };
+          const nextState = { ...getState(), profile: p, schedule: sched, units };
           setState(() => nextState);
           await saveFullState({ data: { data: JSON.stringify(nextState) } }).catch(() => {
             toast.warning("Setup saved locally. We'll keep trying to sync it.");
@@ -318,7 +333,18 @@ function Onboarding() {
             onPick={(v) => next({ experience: v as Experience })}
           />
         )}
-        {step === "about" && <AboutYouStep initial={draft} onSubmit={(patch) => next(patch)} />}
+        {step === "units" && (
+          <UnitsStep
+            value={units}
+            onSubmit={(chosen) => {
+              setUnits(chosen);
+              next({});
+            }}
+          />
+        )}
+        {step === "about" && (
+          <AboutYouStep unit={units} initial={draft} onSubmit={(patch) => next(patch)} />
+        )}
         {step === "sleep" && (
           <Choice
             eyebrow="Recovery is where you actually grow"
@@ -389,6 +415,7 @@ function Onboarding() {
         )}
         {step === "target" && (
           <TargetStep
+            unit={units}
             currentKg={draft.weightKg}
             goal={draft.goal}
             initial={draft.targetWeightKg}
@@ -499,22 +526,92 @@ function Choice({
   );
 }
 
+/**
+ * Kilograms or pounds.
+ *
+ * Asked before anything is weighed, because every weight after this — the
+ * athlete's own bodyweight, every load, every strength grade computed against
+ * that bodyweight — is meaningless until the number has a unit attached.
+ */
+function UnitsStep({
+  value,
+  onSubmit,
+}: {
+  value: WeightUnit;
+  onSubmit: (unit: WeightUnit) => void;
+}) {
+  const [choice, setChoice] = useState<WeightUnit>(value);
+  return (
+    <div className="stagger">
+      <h2 className="display text-3xl font-extrabold uppercase text-grit">Weight units</h2>
+      <p className="mt-2 text-sm leading-relaxed text-grit-dim">
+        How do you measure weight? Everything in DEADSET follows this — plates, the bar, your
+        bodyweight, your strength grades.
+      </p>
+
+      <div className="mt-6 grid grid-cols-2 gap-3">
+        {(["kg", "lb"] as const).map((option) => {
+          const active = choice === option;
+          return (
+            <button
+              key={option}
+              onClick={() => setChoice(option)}
+              aria-pressed={active}
+              className="rounded-2xl border py-6 press"
+              style={{
+                borderColor: active ? "#e63222" : "rgba(255,255,255,.1)",
+                background: active ? "rgba(230,50,34,.1)" : "rgba(18,18,18,.9)",
+              }}
+            >
+              <span
+                className="display block text-3xl font-extrabold uppercase"
+                style={{ color: active ? "#e63222" : "#8a8a8a" }}
+              >
+                {option}
+              </span>
+              <span className="label-cap mt-1 block text-[10px] text-grit-dim">
+                {option === "kg" ? "Kilograms" : "Pounds"}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <p className="mt-4 text-[11px] leading-relaxed text-grit-dim">
+        You can change this any time in Settings. Your history is stored in kilograms either way, so
+        switching never alters a logged set.
+      </p>
+
+      <button onClick={() => onSubmit(choice)} className="btn-grit mt-6 w-full">
+        Continue
+      </button>
+    </div>
+  );
+}
+
 function AboutYouStep({
   initial,
+  unit,
   onSubmit,
 }: {
   initial?: Partial<Profile>;
+  unit: WeightUnit;
   onSubmit: (patch: Partial<Profile>) => void;
 }) {
   const [age, setAge] = useState(initial?.age != null ? String(initial.age) : "");
-  const [weight, setWeight] = useState(initial?.weightKg != null ? String(initial.weightKg) : "");
+  const [weight, setWeight] = useState(
+    initial?.weightKg != null ? formatWeightValue(initial.weightKg, unit) : "",
+  );
   const [height, setHeight] = useState(initial?.heightCm != null ? String(initial.heightCm) : "");
   const [gender, setGender] = useState<Gender | null>(initial?.gender ?? null);
   const a = Number(age);
   const w = Number(weight);
   const h = Number(height);
   const ageOk = age !== "" && a >= 13 && a <= 90;
-  const weightOk = weight !== "" && w >= 30 && w <= 250;
+  // Bounds in the athlete's own units — 30 to 250 kg is a sane human range,
+  // but rejecting a 180 lb lifter for being "too heavy" is not.
+  const weightKg = toKg(w, unit);
+  const weightOk = weight !== "" && weightKg >= 30 && weightKg <= 250;
   const heightOk = height !== "" && h >= 120 && h <= 230;
   const valid = ageOk && weightOk && heightOk && gender !== null;
 
@@ -530,7 +627,7 @@ function AboutYouStep({
     },
     {
       label: "WEIGHT",
-      suffix: "kg",
+      suffix: unit,
       value: weight,
       set: setWeight,
       ok: weightOk,
@@ -603,7 +700,7 @@ function AboutYouStep({
       </div>
       <button
         disabled={!valid}
-        onClick={() => gender && onSubmit({ age: a, weightKg: w, heightCm: h, gender })}
+        onClick={() => gender && onSubmit({ age: a, weightKg, heightCm: h, gender })}
         className="btn-grit mt-auto disabled:opacity-40"
       >
         Continue
@@ -1316,8 +1413,8 @@ function TrainingDaysStep({
         Which days do you train?
       </h1>
       <p className="text-sm text-[#8a8a8a] mb-6">
-        Tap the days that suit your week. We'll put your workouts on exactly those
-        days and rest you on the others.
+        Tap the days that suit your week. We'll put your workouts on exactly those days and rest you
+        on the others.
       </p>
 
       <WeekdayPicker value={days} onChange={setDays} />
@@ -1417,21 +1514,25 @@ function FocusStep({
 }
 
 function TargetStep({
+  unit,
   currentKg,
   goal,
   initial,
   onSubmit,
   onSkip,
 }: {
+  unit: WeightUnit;
   currentKg?: number;
   goal?: Goal;
   initial?: number;
   onSubmit: (n: number) => void;
   onSkip: () => void;
 }) {
-  const [v, setV] = useState(initial != null ? String(initial) : "");
+  const [v, setV] = useState(initial != null ? formatWeightValue(initial, unit) : "");
   const n = Number(v);
-  const valid = Number.isFinite(n) && n >= 30 && n <= 250;
+  // Bounds are a human weight range in kilograms; the typed number is not.
+  const targetKg = toKg(n, unit);
+  const valid = Number.isFinite(n) && targetKg >= 30 && targetKg <= 250;
   const hint =
     goal === "BULK"
       ? "Where do you want the scale in 6 months?"
@@ -1443,7 +1544,7 @@ function TargetStep({
       <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">Target weight</h1>
       <p className="text-sm text-[#8a8a8a] mb-6">
         {hint}
-        {currentKg ? ` You're at ${currentKg}kg now.` : ""}
+        {currentKg ? ` You're at ${formatWeightValue(currentKg, unit)}${unit} now.` : ""}
       </p>
       <div className="flex items-center gap-3 mb-6">
         <input
@@ -1454,14 +1555,14 @@ function TargetStep({
             setV(c);
           }}
           inputMode="decimal"
-          placeholder={currentKg ? String(currentKg) : "80"}
+          placeholder={currentKg ? formatWeightValue(currentKg, unit) : "80"}
           className="input-grit text-2xl display font-extrabold"
         />
-        <span className="label-cap text-grit-dim">kg</span>
+        <span className="label-cap text-grit-dim">{unit}</span>
       </div>
       <div className="mt-auto flex flex-col gap-3">
         <button
-          onClick={() => valid && onSubmit(n)}
+          onClick={() => valid && onSubmit(targetKg)}
           disabled={!valid}
           className="btn-grit disabled:opacity-40"
         >

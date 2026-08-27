@@ -14,7 +14,7 @@ import {
 } from "@/lib/social.functions";
 
 const METRICS: { key: DuelMetric; label: string; unit: string }[] = [
-  { key: "volume", label: "Most volume", unit: "kg" },
+  { key: "volume", label: "Most volume", unit: "volume" },
   { key: "sessions", label: "Most sessions", unit: "" },
   { key: "prs", label: "Most PRs", unit: "" },
 ];

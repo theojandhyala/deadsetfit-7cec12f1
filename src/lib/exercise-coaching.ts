@@ -34,8 +34,14 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Keep the shoulder blades pinned throughout — they do not travel with the bar.",
     ],
     mistakes: [
-      { wrong: "Elbows flared straight out to the sides", fix: "Tuck to about 45° to spare the shoulder joint." },
-      { wrong: "Hips lifting off the bench to grind a rep", fix: "Drop the weight — the rep no longer counts as a bench press." },
+      {
+        wrong: "Elbows flared straight out to the sides",
+        fix: "Tuck to about 45° to spare the shoulder joint.",
+      },
+      {
+        wrong: "Hips lifting off the bench to grind a rep",
+        fix: "Drop the weight — the rep no longer counts as a bench press.",
+      },
     ],
     breathing: "Breathe in at the top, hold through the descent, breathe out as you press.",
   },
@@ -51,8 +57,14 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Control the descent — the stretch is where the chest works.",
     ],
     mistakes: [
-      { wrong: "Bench set near vertical", fix: "30° keeps the load on the upper chest instead of the front delts." },
-      { wrong: "Bouncing the bells together at the top", fix: "Stop a few inches apart and keep tension." },
+      {
+        wrong: "Bench set near vertical",
+        fix: "30° keeps the load on the upper chest instead of the front delts.",
+      },
+      {
+        wrong: "Bouncing the bells together at the top",
+        fix: "Stop a few inches apart and keep tension.",
+      },
     ],
     breathing: "In on the way down, out as you press.",
   },
@@ -68,8 +80,14 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Open back out until you feel a stretch across the chest, not the shoulder.",
     ],
     mistakes: [
-      { wrong: "Bending and straightening the elbows", fix: "That turns it into a press — keep the elbow angle locked." },
-      { wrong: "Going so heavy the shoulders roll forward", fix: "Lighten it; this is an isolation movement." },
+      {
+        wrong: "Bending and straightening the elbows",
+        fix: "That turns it into a press — keep the elbow angle locked.",
+      },
+      {
+        wrong: "Going so heavy the shoulders roll forward",
+        fix: "Lighten it; this is an isolation movement.",
+      },
     ],
     breathing: "Out as the handles come together, in as they open.",
   },
@@ -85,8 +103,14 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Press back up without locking out aggressively.",
     ],
     mistakes: [
-      { wrong: "Dropping as deep as the shoulders allow", fix: "Depth past parallel adds shoulder strain, not chest." },
-      { wrong: "Swinging the legs to generate momentum", fix: "Cross the ankles and keep them still." },
+      {
+        wrong: "Dropping as deep as the shoulders allow",
+        fix: "Depth past parallel adds shoulder strain, not chest.",
+      },
+      {
+        wrong: "Swinging the legs to generate momentum",
+        fix: "Cross the ankles and keep them still.",
+      },
     ],
     breathing: "In on the descent, out as you press up.",
   },
@@ -102,7 +126,10 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Keep the hips travelling at the same speed as the chest.",
     ],
     mistakes: [
-      { wrong: "Hips sagging or piking up", fix: "Brace harder, or drop to your knees to keep the line." },
+      {
+        wrong: "Hips sagging or piking up",
+        fix: "Brace harder, or drop to your knees to keep the line.",
+      },
       { wrong: "Only going halfway down", fix: "Reduce reps and take the full range instead." },
     ],
     breathing: "In on the way down, out on the way up.",
@@ -119,7 +146,10 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Press up and think about squeezing the triceps at the top.",
     ],
     mistakes: [
-      { wrong: "Hands so close the wrists complain", fix: "Shoulder width is close enough for the triceps." },
+      {
+        wrong: "Hands so close the wrists complain",
+        fix: "Shoulder width is close enough for the triceps.",
+      },
       { wrong: "Elbows flaring out wide", fix: "Keep them tracking backwards along the body." },
     ],
     breathing: "In down, out up.",
@@ -136,8 +166,14 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Finish standing tall — do not lean back at the top.",
     ],
     mistakes: [
-      { wrong: "Hips shooting up first, leaving the back to lift", fix: "Hips and shoulders should rise together." },
-      { wrong: "Rounding the lower back under load", fix: "Lower the weight until you can hold a flat back." },
+      {
+        wrong: "Hips shooting up first, leaving the back to lift",
+        fix: "Hips and shoulders should rise together.",
+      },
+      {
+        wrong: "Rounding the lower back under load",
+        fix: "Lower the weight until you can hold a flat back.",
+      },
     ],
     breathing: "Big breath in and brace before the pull, out at the top.",
   },
@@ -153,8 +189,14 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Lower under control all the way back to the hang.",
     ],
     mistakes: [
-      { wrong: "Kipping and swinging to get the chin up", fix: "Use a band or negatives instead — the rep should be strict." },
-      { wrong: "Stopping halfway down between reps", fix: "Full hang each rep, or you are training half a range." },
+      {
+        wrong: "Kipping and swinging to get the chin up",
+        fix: "Use a band or negatives instead — the rep should be strict.",
+      },
+      {
+        wrong: "Stopping halfway down between reps",
+        fix: "Full hang each rep, or you are training half a range.",
+      },
     ],
     breathing: "Out as you pull, in as you lower.",
   },
@@ -170,8 +212,14 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Let the bar rise fully and feel the lats stretch.",
     ],
     mistakes: [
-      { wrong: "Pulling the bar behind the neck", fix: "Front of the chest — behind the neck stresses the shoulder for nothing." },
-      { wrong: "Leaning far back and rowing it", fix: "Keep the torso mostly upright and let the lats work." },
+      {
+        wrong: "Pulling the bar behind the neck",
+        fix: "Front of the chest — behind the neck stresses the shoulder for nothing.",
+      },
+      {
+        wrong: "Leaning far back and rowing it",
+        fix: "Keep the torso mostly upright and let the lats work.",
+      },
     ],
     breathing: "Out as you pull down, in as it returns.",
   },
@@ -204,7 +252,10 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Hold for a beat before returning — this one is about control, not load.",
     ],
     mistakes: [
-      { wrong: "Going heavy and turning it into a row", fix: "Light weight, high elbows — it is for the rear delts." },
+      {
+        wrong: "Going heavy and turning it into a row",
+        fix: "Light weight, high elbows — it is for the rear delts.",
+      },
       { wrong: "Elbows dropping toward the floor", fix: "Keep them level with the shoulders." },
     ],
     breathing: "Out as you pull, in as you release.",
@@ -221,8 +272,14 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Lower until the arms are straight, holding the body line.",
     ],
     mistakes: [
-      { wrong: "Hips sagging toward the floor", fix: "Squeeze the glutes and keep one straight line." },
-      { wrong: "Only pulling halfway", fix: "Raise the bar to make it easier and take the full range." },
+      {
+        wrong: "Hips sagging toward the floor",
+        fix: "Squeeze the glutes and keep one straight line.",
+      },
+      {
+        wrong: "Only pulling halfway",
+        fix: "Raise the bar to make it easier and take the full range.",
+      },
     ],
     breathing: "Out as you pull, in as you lower.",
   },
@@ -238,7 +295,10 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Lower everything under control.",
     ],
     mistakes: [
-      { wrong: "Cranking the neck up to look ahead", fix: "Keep the chin tucked and the neck in line." },
+      {
+        wrong: "Cranking the neck up to look ahead",
+        fix: "Keep the chin tucked and the neck in line.",
+      },
       { wrong: "Bouncing the reps", fix: "Slow lift, brief hold, slow lower." },
     ],
     breathing: "Out as you lift, in as you lower.",
@@ -255,8 +315,14 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Drive up through the whole foot, knees tracking over the toes.",
     ],
     mistakes: [
-      { wrong: "Knees caving inward on the way up", fix: "Push the knees out in line with the toes." },
-      { wrong: "Heels lifting off the floor", fix: "Widen the stance slightly or work on ankle mobility." },
+      {
+        wrong: "Knees caving inward on the way up",
+        fix: "Push the knees out in line with the toes.",
+      },
+      {
+        wrong: "Heels lifting off the floor",
+        fix: "Widen the stance slightly or work on ankle mobility.",
+      },
     ],
     breathing: "In and brace at the top, out as you pass the hardest point.",
   },
@@ -272,8 +338,14 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Drive the hips forward to stand, squeezing the glutes at the top.",
     ],
     mistakes: [
-      { wrong: "Squatting it down by bending the knees", fix: "The hips travel backwards; the knees barely move." },
-      { wrong: "Letting the bar drift away from the legs", fix: "Keep it brushing the thighs the whole way." },
+      {
+        wrong: "Squatting it down by bending the knees",
+        fix: "The hips travel backwards; the knees barely move.",
+      },
+      {
+        wrong: "Letting the bar drift away from the legs",
+        fix: "Keep it brushing the thighs the whole way.",
+      },
     ],
     breathing: "In at the top, hold on the way down, out as you stand.",
   },
@@ -289,8 +361,14 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Press through the whole foot without snapping the knees straight.",
     ],
     mistakes: [
-      { wrong: "Lowering so far the lower back rounds off the pad", fix: "Shorten the range — that curl is where backs get hurt." },
-      { wrong: "Locking the knees hard at the top", fix: "Stop just short and keep tension on the muscle." },
+      {
+        wrong: "Lowering so far the lower back rounds off the pad",
+        fix: "Shorten the range — that curl is where backs get hurt.",
+      },
+      {
+        wrong: "Locking the knees hard at the top",
+        fix: "Stop just short and keep tension on the muscle.",
+      },
     ],
     breathing: "In as it comes down, out as you press.",
   },
@@ -306,8 +384,14 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Drive through the front heel to step into the next rep.",
     ],
     mistakes: [
-      { wrong: "Front knee sliding far past the toes", fix: "Take a longer step so the shin stays upright." },
-      { wrong: "Torso pitching forward", fix: "Stay tall and brace — lighten the load if you cannot." },
+      {
+        wrong: "Front knee sliding far past the toes",
+        fix: "Take a longer step so the shin stays upright.",
+      },
+      {
+        wrong: "Torso pitching forward",
+        fix: "Stay tall and brace — lighten the load if you cannot.",
+      },
     ],
     breathing: "In as you descend, out as you drive up.",
   },
@@ -323,8 +407,14 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Lower slowly — the negative is most of the work.",
     ],
     mistakes: [
-      { wrong: "Hips lifting off the pad to move the weight", fix: "Lighten it and keep the hips pinned down." },
-      { wrong: "Letting the weight drop back to the stack", fix: "Control the return; do not just release." },
+      {
+        wrong: "Hips lifting off the pad to move the weight",
+        fix: "Lighten it and keep the hips pinned down.",
+      },
+      {
+        wrong: "Letting the weight drop back to the stack",
+        fix: "Control the return; do not just release.",
+      },
     ],
     breathing: "Out as you curl, in as you lower.",
   },
@@ -340,13 +430,23 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Stand by driving through the whole foot.",
     ],
     mistakes: [
-      { wrong: "Weight drifting away from the chest", fix: "Keep it pinned close or the lower back takes the load." },
-      { wrong: "Rounding forward at the bottom", fix: "Reduce depth to where you can hold a tall chest." },
+      {
+        wrong: "Weight drifting away from the chest",
+        fix: "Keep it pinned close or the lower back takes the load.",
+      },
+      {
+        wrong: "Rounding forward at the bottom",
+        fix: "Reduce depth to where you can hold a tall chest.",
+      },
     ],
     breathing: "In at the top, out as you stand.",
   },
   "bodyweight-squat": {
-    setup: ["Feet shoulder width, toes slightly out.", "Arms out in front for balance.", "Chest up, core braced."],
+    setup: [
+      "Feet shoulder width, toes slightly out.",
+      "Arms out in front for balance.",
+      "Chest up, core braced.",
+    ],
     execution: [
       "Sit the hips back and down.",
       "Go as deep as you can with the heels down and the back flat.",
@@ -354,7 +454,10 @@ const COACHING: Record<string, ExerciseCoaching> = {
     ],
     mistakes: [
       { wrong: "Heels lifting", fix: "Widen the stance a little or reduce depth." },
-      { wrong: "Rushing the reps", fix: "Slow the descent — tempo is the only load you have here." },
+      {
+        wrong: "Rushing the reps",
+        fix: "Slow the descent — tempo is the only load you have here.",
+      },
     ],
     breathing: "In down, out up.",
   },
@@ -370,7 +473,10 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Drive up through the front heel without pushing off the back toe.",
     ],
     mistakes: [
-      { wrong: "Stance too short, so the front knee shoots forward", fix: "Step further out and keep the shin upright." },
+      {
+        wrong: "Stance too short, so the front knee shoots forward",
+        fix: "Step further out and keep the shin upright.",
+      },
       { wrong: "Pushing off the back foot", fix: "The back leg balances; the front leg lifts." },
     ],
     breathing: "In as you lower, out as you drive up.",
@@ -387,7 +493,10 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Lower under control without resting between reps.",
     ],
     mistakes: [
-      { wrong: "Arching the lower back to get higher", fix: "The height comes from the glutes, not the spine." },
+      {
+        wrong: "Arching the lower back to get higher",
+        fix: "The height comes from the glutes, not the spine.",
+      },
       { wrong: "Pushing through the toes", fix: "Drive through the heels." },
     ],
     breathing: "Out as you lift, in as you lower.",
@@ -405,7 +514,10 @@ const COACHING: Record<string, ExerciseCoaching> = {
     ],
     mistakes: [
       { wrong: "Bouncing on the tendon", fix: "Slow and controlled at both ends." },
-      { wrong: "Cutting the range short", fix: "Full stretch at the bottom, full rise at the top." },
+      {
+        wrong: "Cutting the range short",
+        fix: "Full stretch at the bottom, full rise at the top.",
+      },
     ],
     breathing: "Out as you rise, in as you lower.",
   },
@@ -421,8 +533,14 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Finish with the bar over the mid-foot, arms locked.",
     ],
     mistakes: [
-      { wrong: "Leaning back and turning it into an incline press", fix: "Brace the core and squeeze the glutes to stay upright." },
-      { wrong: "Pressing around the face in an arc", fix: "Tilt the head back out of the way and press straight." },
+      {
+        wrong: "Leaning back and turning it into an incline press",
+        fix: "Brace the core and squeeze the glutes to stay upright.",
+      },
+      {
+        wrong: "Pressing around the face in an arc",
+        fix: "Tilt the head back out of the way and press straight.",
+      },
     ],
     breathing: "In and brace at the bottom, out at the top.",
   },
@@ -438,13 +556,23 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Lower slowly — resist the whole way down.",
     ],
     mistakes: [
-      { wrong: "Swinging the weight up with the hips", fix: "Halve the weight and stop the momentum." },
-      { wrong: "Raising above shoulder height", fix: "Stop level — higher hands over to the traps." },
+      {
+        wrong: "Swinging the weight up with the hips",
+        fix: "Halve the weight and stop the momentum.",
+      },
+      {
+        wrong: "Raising above shoulder height",
+        fix: "Stop level — higher hands over to the traps.",
+      },
     ],
     breathing: "Out as you raise, in as you lower.",
   },
   "front-raise": {
-    setup: ["Light dumbbells at the thighs.", "Stand tall, core braced.", "Soft bend in the elbows."],
+    setup: [
+      "Light dumbbells at the thighs.",
+      "Stand tall, core braced.",
+      "Soft bend in the elbows.",
+    ],
     execution: [
       "Raise the weights forward to shoulder height.",
       "Keep the palms facing down or slightly in.",
@@ -468,8 +596,14 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Lower slowly back under the chest.",
     ],
     mistakes: [
-      { wrong: "Standing too upright, turning it into a lateral raise", fix: "Hinge further forward." },
-      { wrong: "Heaving the weight with the lower back", fix: "Lighten it — this is a small muscle." },
+      {
+        wrong: "Standing too upright, turning it into a lateral raise",
+        fix: "Hinge further forward.",
+      },
+      {
+        wrong: "Heaving the weight with the lower back",
+        fix: "Lighten it — this is a small muscle.",
+      },
     ],
     breathing: "Out as you open, in as you return.",
   },
@@ -485,8 +619,14 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Press back up until the arms are straight.",
     ],
     mistakes: [
-      { wrong: "Hips dropping so it becomes a push-up", fix: "Keep the hips stacked high over the hands." },
-      { wrong: "Crashing the head into the floor", fix: "Control the descent and stop just short." },
+      {
+        wrong: "Hips dropping so it becomes a push-up",
+        fix: "Keep the hips stacked high over the hands.",
+      },
+      {
+        wrong: "Crashing the head into the floor",
+        fix: "Control the descent and stop just short.",
+      },
     ],
     breathing: "In down, out up.",
   },
@@ -502,7 +642,10 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Lower slowly to a full stretch.",
     ],
     mistakes: [
-      { wrong: "Swinging the hips to launch the bar", fix: "If you have to cheat it up, the weight is wrong." },
+      {
+        wrong: "Swinging the hips to launch the bar",
+        fix: "If you have to cheat it up, the weight is wrong.",
+      },
       { wrong: "Elbows drifting forward at the top", fix: "Keep them locked to the ribs." },
     ],
     breathing: "Out as you curl, in as you lower.",
@@ -519,7 +662,10 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Lower under control to a full stretch.",
     ],
     mistakes: [
-      { wrong: "Rotating the wrists on the way up", fix: "The neutral grip is the point — keep it." },
+      {
+        wrong: "Rotating the wrists on the way up",
+        fix: "The neutral grip is the point — keep it.",
+      },
       { wrong: "Using the shoulders to swing", fix: "Pin the elbows and lighten the load." },
     ],
     breathing: "Out up, in down.",
@@ -536,7 +682,10 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Press back up until the arms are straight.",
     ],
     mistakes: [
-      { wrong: "Upper arms swinging back and forth", fix: "Only the forearm moves — that is the whole exercise." },
+      {
+        wrong: "Upper arms swinging back and forth",
+        fix: "Only the forearm moves — that is the whole exercise.",
+      },
       { wrong: "Elbows flaring wide", fix: "Keep them pointing up and roughly shoulder width." },
     ],
     breathing: "In as it lowers, out as you press.",
@@ -554,7 +703,10 @@ const COACHING: Record<string, ExerciseCoaching> = {
     ],
     mistakes: [
       { wrong: "Elbows drifting away from the body", fix: "Pin them to the ribs the whole set." },
-      { wrong: "Leaning over the bar to push with bodyweight", fix: "Stay upright and reduce the weight." },
+      {
+        wrong: "Leaning over the bar to push with bodyweight",
+        fix: "Stay upright and reduce the weight.",
+      },
     ],
     breathing: "Out as you push down, in as it returns.",
   },
@@ -570,7 +722,10 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Stop the set when the hips start to sag — not when the clock says so.",
     ],
     mistakes: [
-      { wrong: "Hips sagging toward the floor", fix: "End the set; holding a broken position trains nothing." },
+      {
+        wrong: "Hips sagging toward the floor",
+        fix: "End the set; holding a broken position trains nothing.",
+      },
       { wrong: "Holding the breath", fix: "Breathe steadily throughout." },
     ],
     breathing: "Steady breathing throughout — never hold it.",
@@ -587,8 +742,14 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Lower slowly without letting the body swing.",
     ],
     mistakes: [
-      { wrong: "Swinging back and forth between reps", fix: "Pause at the bottom and reset each rep." },
-      { wrong: "Only lifting the legs from the hip", fix: "Curl the pelvis up too, or the abs barely work." },
+      {
+        wrong: "Swinging back and forth between reps",
+        fix: "Pause at the bottom and reset each rep.",
+      },
+      {
+        wrong: "Only lifting the legs from the hip",
+        fix: "Curl the pelvis up too, or the abs barely work.",
+      },
     ],
     breathing: "Out as you raise, in as you lower.",
   },
@@ -605,7 +766,10 @@ const COACHING: Record<string, ExerciseCoaching> = {
     ],
     mistakes: [
       { wrong: "Hinging at the hips like a bow", fix: "Round the spine — the hips stay put." },
-      { wrong: "Pulling with the arms", fix: "The arms just anchor the rope; the abs move the weight." },
+      {
+        wrong: "Pulling with the arms",
+        fix: "The arms just anchor the rope; the abs move the weight.",
+      },
     ],
     breathing: "Out as you crunch, in as you rise.",
   },
@@ -621,8 +785,14 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Pull back by bracing the stomach, not by yanking the arms.",
     ],
     mistakes: [
-      { wrong: "Lower back arching as you roll out", fix: "That is your limit — shorten the range immediately." },
-      { wrong: "Piking the hips to get back", fix: "Roll back with the abs; reduce the range if you cannot." },
+      {
+        wrong: "Lower back arching as you roll out",
+        fix: "That is your limit — shorten the range immediately.",
+      },
+      {
+        wrong: "Piking the hips to get back",
+        fix: "Roll back with the abs; reduce the range if you cannot.",
+      },
     ],
     breathing: "In as you roll out, out as you pull back.",
   },
@@ -638,7 +808,10 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Return and repeat on the other side.",
     ],
     mistakes: [
-      { wrong: "Lower back arching off the floor", fix: "Shorten the reach — control beats range here." },
+      {
+        wrong: "Lower back arching off the floor",
+        fix: "Shorten the reach — control beats range here.",
+      },
       { wrong: "Rushing through the reps", fix: "Slow and deliberate; it is a control drill." },
     ],
     breathing: "Out as you extend, in as you return.",
@@ -655,8 +828,14 @@ const COACHING: Record<string, ExerciseCoaching> = {
       "Alternate smoothly and keep the extended leg off the floor.",
     ],
     mistakes: [
-      { wrong: "Hauling on the back of the head", fix: "Fingers rest at the temples; the abs do the lifting." },
-      { wrong: "Racing through reps with no rotation", fix: "Slow down and actually turn the ribcage." },
+      {
+        wrong: "Hauling on the back of the head",
+        fix: "Fingers rest at the temples; the abs do the lifting.",
+      },
+      {
+        wrong: "Racing through reps with no rotation",
+        fix: "Slow down and actually turn the ribcage.",
+      },
     ],
     breathing: "Out on each twist, in as you switch.",
   },
@@ -670,11 +849,25 @@ const PATTERNS: { match: RegExp; coaching: ExerciseCoaching }[] = [
   {
     match: /curl/i,
     coaching: {
-      setup: ["Elbows pinned at your sides.", "Stand tall with the core braced.", "Start from a full stretch."],
-      execution: ["Bend only at the elbow.", "Squeeze at the top.", "Lower slowly to full extension."],
+      setup: [
+        "Elbows pinned at your sides.",
+        "Stand tall with the core braced.",
+        "Start from a full stretch.",
+      ],
+      execution: [
+        "Bend only at the elbow.",
+        "Squeeze at the top.",
+        "Lower slowly to full extension.",
+      ],
       mistakes: [
-        { wrong: "Swinging the body to move the weight", fix: "Go lighter and keep the torso still." },
-        { wrong: "Cutting the bottom of the range", fix: "Straighten the arms fully between reps." },
+        {
+          wrong: "Swinging the body to move the weight",
+          fix: "Go lighter and keep the torso still.",
+        },
+        {
+          wrong: "Cutting the bottom of the range",
+          fix: "Straighten the arms fully between reps.",
+        },
       ],
       breathing: "Out as you lift, in as you lower.",
     },
@@ -682,11 +875,25 @@ const PATTERNS: { match: RegExp; coaching: ExerciseCoaching }[] = [
   {
     match: /press|push/i,
     coaching: {
-      setup: ["Set the shoulders back and down.", "Brace the core.", "Grip stacked over the wrists."],
-      execution: ["Lower under control.", "Press in a straight line.", "Stop just short of locking out."],
+      setup: [
+        "Set the shoulders back and down.",
+        "Brace the core.",
+        "Grip stacked over the wrists.",
+      ],
+      execution: [
+        "Lower under control.",
+        "Press in a straight line.",
+        "Stop just short of locking out.",
+      ],
       mistakes: [
-        { wrong: "Bouncing the weight at the bottom", fix: "Control the descent and press from a dead stop." },
-        { wrong: "Arching the back to grind a rep", fix: "Reduce the load and keep the ribs down." },
+        {
+          wrong: "Bouncing the weight at the bottom",
+          fix: "Control the descent and press from a dead stop.",
+        },
+        {
+          wrong: "Arching the back to grind a rep",
+          fix: "Reduce the load and keep the ribs down.",
+        },
       ],
       breathing: "In as it lowers, out as you press.",
     },
@@ -695,7 +902,11 @@ const PATTERNS: { match: RegExp; coaching: ExerciseCoaching }[] = [
     match: /row|pull|chin/i,
     coaching: {
       setup: ["Chest up, shoulders pulled down.", "Brace the core.", "Start from a full stretch."],
-      execution: ["Lead with the elbows.", "Squeeze the shoulder blades at the end of the pull.", "Return under control."],
+      execution: [
+        "Lead with the elbows.",
+        "Squeeze the shoulder blades at the end of the pull.",
+        "Return under control.",
+      ],
       mistakes: [
         { wrong: "Rocking the torso for momentum", fix: "Lock the torso and let the back work." },
         { wrong: "Shrugging the weight up", fix: "Keep the shoulders down." },
@@ -706,8 +917,16 @@ const PATTERNS: { match: RegExp; coaching: ExerciseCoaching }[] = [
   {
     match: /squat|lunge|leg|glute|calf/i,
     coaching: {
-      setup: ["Feet planted, whole foot in contact.", "Chest up, core braced.", "Knees tracking over the toes."],
-      execution: ["Descend under control.", "Take the range your mobility allows with a flat back.", "Drive up through the whole foot."],
+      setup: [
+        "Feet planted, whole foot in contact.",
+        "Chest up, core braced.",
+        "Knees tracking over the toes.",
+      ],
+      execution: [
+        "Descend under control.",
+        "Take the range your mobility allows with a flat back.",
+        "Drive up through the whole foot.",
+      ],
       mistakes: [
         { wrong: "Knees caving inward", fix: "Push them out in line with the toes." },
         { wrong: "Heels lifting off the floor", fix: "Widen the stance or reduce the depth." },
@@ -718,11 +937,22 @@ const PATTERNS: { match: RegExp; coaching: ExerciseCoaching }[] = [
   {
     match: /raise|fly|delt/i,
     coaching: {
-      setup: ["Light weight — these are small muscles.", "Soft bend in the elbows.", "Stand or sit tall."],
-      execution: ["Lead with the elbows.", "Stop at shoulder height.", "Lower slowly and resist the whole way."],
+      setup: [
+        "Light weight — these are small muscles.",
+        "Soft bend in the elbows.",
+        "Stand or sit tall.",
+      ],
+      execution: [
+        "Lead with the elbows.",
+        "Stop at shoulder height.",
+        "Lower slowly and resist the whole way.",
+      ],
       mistakes: [
         { wrong: "Swinging the weight up", fix: "Halve the load and remove the momentum." },
-        { wrong: "Changing the elbow angle mid-rep", fix: "Keep it fixed so the target muscle keeps the tension." },
+        {
+          wrong: "Changing the elbow angle mid-rep",
+          fix: "Keep it fixed so the target muscle keeps the tension.",
+        },
       ],
       breathing: "Out as you raise, in as you lower.",
     },
@@ -730,8 +960,16 @@ const PATTERNS: { match: RegExp; coaching: ExerciseCoaching }[] = [
   {
     match: /plank|crunch|ab|core|hollow/i,
     coaching: {
-      setup: ["Press the lower back toward the floor.", "Tuck the ribs down.", "Breathe normally before you start."],
-      execution: ["Move slowly and deliberately.", "Keep tension on the abs the whole set.", "Stop when the position breaks."],
+      setup: [
+        "Press the lower back toward the floor.",
+        "Tuck the ribs down.",
+        "Breathe normally before you start.",
+      ],
+      execution: [
+        "Move slowly and deliberately.",
+        "Keep tension on the abs the whole set.",
+        "Stop when the position breaks.",
+      ],
       mistakes: [
         { wrong: "Pulling on the head or neck", fix: "Hands stay light; the abs do the work." },
         { wrong: "Holding the breath", fix: "Breathe steadily throughout." },

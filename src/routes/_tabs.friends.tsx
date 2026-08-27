@@ -55,6 +55,8 @@ import {
 } from "@/lib/social.functions";
 import { RankShareCard } from "@/components/RankShareCard";
 import { toast } from "sonner";
+import { useUnit } from "@/hooks/useUnit";
+import { toKg } from "@/lib/units";
 
 export const Route = createFileRoute("/_tabs/friends")({
   head: () => ({
@@ -205,6 +207,7 @@ function FeedStat({ label, v }: { label: string; v: number | string }) {
 }
 
 function Feed({ userId }: { userId: string }) {
+  const unit = useUnit();
   const _getFeed = getFeed;
   const _createPost = createPost;
   const _toggleLike = toggleLike;
@@ -239,7 +242,9 @@ function Feed({ userId }: { userId: string }) {
     setPosting(true);
     try {
       if (postKind === "pr") {
-        const w = Number(prWeight);
+        // Typed in the athlete's units, posted in kilograms so every feed
+        // reader sees it in their own.
+        const w = toKg(Number(prWeight), unit);
         if (!prLift.trim() || !w) {
           toast.error("Lift + weight required");
           setPosting(false);
@@ -417,7 +422,7 @@ function Feed({ userId }: { userId: string }) {
                 defaultValue={prWeight}
                 onChange={(e) => setPrWeight(e.target.value)}
                 inputMode="decimal"
-                placeholder="kg"
+                placeholder={unit}
                 className="input-grit text-xs col-span-2"
               />
               <input

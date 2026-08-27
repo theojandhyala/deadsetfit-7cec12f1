@@ -16,7 +16,8 @@ export function buildSupersetIds(
   let activeGroup: string | undefined;
 
   exerciseIds.forEach((exerciseId, index) => {
-    const linksNext = !!exerciseConfig?.[exerciseId]?.supersetWithNext && index < exerciseIds.length - 1;
+    const linksNext =
+      !!exerciseConfig?.[exerciseId]?.supersetWithNext && index < exerciseIds.length - 1;
     if (activeGroup) groups[index] = activeGroup;
     if (linksNext) {
       activeGroup ??= `superset-${index + 1}`;
@@ -78,8 +79,7 @@ export function nextStepAfterWorkingSet(
     );
     const afterGroup = members.length ? members[members.length - 1]! + 1 : currentIndex + 1;
     return {
-      nextIndex:
-        incomplete ?? (afterGroup < exercises.length ? afterGroup : currentIndex),
+      nextIndex: incomplete ?? (afterGroup < exercises.length ? afterGroup : currentIndex),
       shouldRest: true,
     };
   }

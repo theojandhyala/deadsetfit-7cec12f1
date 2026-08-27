@@ -41,7 +41,8 @@ function bestByExercise(sessions: WorkoutSession[]): Map<string, BestSet> {
         if (set.kind === "warmup" || set.weight <= 0 || set.reps <= 0 || set.reps > 12) continue;
         const e1rm = estimate1RM(set.weight, set.reps);
         const cur = best.get(ex.name);
-        if (!cur || e1rm > cur.e1rm) best.set(ex.name, { weight: set.weight, reps: set.reps, e1rm });
+        if (!cur || e1rm > cur.e1rm)
+          best.set(ex.name, { weight: set.weight, reps: set.reps, e1rm });
       }
     }
   }

@@ -7,7 +7,7 @@ import { allExercises } from "@/lib/exercises";
 import { usePro } from "@/hooks/usePro";
 import { useCountUp } from "@/hooks/useCountUp";
 import { openPaywall } from "@/lib/paywall-events";
-import { formatWeight, unitOf } from "@/lib/units";
+import { formatWeight, unitOf, type WeightUnit } from "@/lib/units";
 import { StrengthBodyMap, TierLegend } from "@/components/StrengthBodyMap";
 import { StrengthShareCard } from "@/components/StrengthShareCard";
 import {
@@ -332,7 +332,7 @@ function MuscleCard({
   onUnlock,
 }: {
   grade: MuscleGrade;
-  unit: "kg" | "lb";
+  unit: WeightUnit;
   locked: boolean;
   onUnlock: () => void;
 }) {
@@ -391,7 +391,7 @@ function MuscleCard({
   );
 }
 
-function ExerciseRow({ grade, unit }: { grade: ExerciseGrade; unit: "kg" | "lb" }) {
+function ExerciseRow({ grade, unit }: { grade: ExerciseGrade; unit: WeightUnit }) {
   const color = TIER_COLOR[grade.tier];
   const measured =
     grade.kind === "RATIO"

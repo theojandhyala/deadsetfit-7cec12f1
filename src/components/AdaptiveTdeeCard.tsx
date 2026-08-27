@@ -4,6 +4,7 @@ import { Flame } from "lucide-react";
 import { adaptiveTdee } from "@/lib/adaptive-tdee";
 import { isoDay } from "@/lib/calc";
 import type { AppState } from "@/lib/types";
+import { useUnit } from "@/hooks/useUnit";
 
 /**
  * The measured alternative to the Mifflin-St Jeor guess: maintenance calories
@@ -11,7 +12,14 @@ import type { AppState } from "@/lib/types";
  * Renders nothing until there is enough data to be honest — a card that
  * guesses would be worse than no card.
  */
-export function AdaptiveTdeeCard({ state, formulaTarget }: { state: AppState; formulaTarget: number }) {
+export function AdaptiveTdeeCard({
+  state,
+  formulaTarget,
+}: {
+  state: AppState;
+  formulaTarget: number;
+}) {
+  const unit = useUnit();
   const result = useMemo(
     () => adaptiveTdee(state.foodLog, state.weights, isoDay()),
     [state.foodLog, state.weights],
@@ -23,7 +31,7 @@ export function AdaptiveTdeeCard({ state, formulaTarget }: { state: AppState; fo
   const trendLabel =
     Math.abs(trend) < 0.05
       ? "holding steady"
-      : `${trend > 0 ? "gaining" : "losing"} ${Math.abs(trend).toFixed(2)} kg/week`;
+      : `${trend > 0 ? "gaining" : "losing"} ${Math.abs(trend).toFixed(2)} ${unit}/week`;
   const delta = result.tdee - formulaTarget;
 
   return (

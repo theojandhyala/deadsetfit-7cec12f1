@@ -27,7 +27,17 @@ const EXCLUDE_WORDS = [
   "crunch",
   "ab ",
 ];
-const EXCLUDE_MUSCLES = ["leg", "quad", "hamstring", "glute", "calf", "calves", "core", "ab", "oblique"];
+const EXCLUDE_MUSCLES = [
+  "leg",
+  "quad",
+  "hamstring",
+  "glute",
+  "calf",
+  "calves",
+  "core",
+  "ab",
+  "oblique",
+];
 
 type Role = "PUSH" | "PULL" | null;
 

@@ -74,6 +74,8 @@ import {
   buildHeadlinePRs,
   type PRDef,
 } from "@/lib/fifa-stats";
+import { useUnit } from "@/hooks/useUnit";
+import { formatWeight, formatWeightValue, toKg, type WeightUnit } from "@/lib/units";
 
 export const Route = createFileRoute("/_tabs/profile")({
   head: () => ({ meta: [{ title: "DEADSET — Profile" }] }),
@@ -82,6 +84,7 @@ export const Route = createFileRoute("/_tabs/profile")({
 
 function ProfilePage() {
   const [state, set] = useAppState();
+  const unit = useUnit();
   const navigate = useNavigate();
   const persist = saveProfile;
   const deleteAcct = deleteMyAccount;
@@ -226,7 +229,12 @@ function ProfilePage() {
       .toLowerCase()
       .replace(/[^a-z0-9_]/g, "")
       .slice(0, 20);
-    const newWeight = Number(weightRef.current?.value) || p.weightKg;
+    // Typed in the athlete's units, stored in kilograms. Without the
+    // conversion a pound user setting "180" would be recorded as 180 kg and
+    // every bodyweight-relative number — strength grades included — would be
+    // wrong for them forever.
+    const typedWeight = Number(weightRef.current?.value);
+    const newWeight = typedWeight > 0 ? toKg(typedWeight, unit) : p.weightKg;
     const newHeight = Number(heightRef.current?.value) || p.heightCm;
     const newUsername = clean || p.username;
     const newEquip = equip as typeof p.equipment;
@@ -572,10 +580,10 @@ function ProfilePage() {
                   opts={["FULL_GYM", "HOME_GYM", "BODYWEIGHT"]}
                 />
               </Field>
-              <Field label="Weight (kg)">
+              <Field label={`Weight (${unit})`}>
                 <input
                   ref={weightRef}
-                  defaultValue={String(p.weightKg ?? "")}
+                  defaultValue={p.weightKg ? formatWeightValue(p.weightKg, unit) : ""}
                   inputMode="decimal"
                   className="input-grit text-right w-full"
                 />
@@ -604,11 +612,11 @@ function ProfilePage() {
                   p.trainingDays?.length ? describeDays(p.trainingDays) : `${p.daysPerWeek} / week`
                 }
               />
-              <Stat label="Current Weight" v={`${p.weightKg} kg`} />
+              <Stat label="Current Weight" v={formatWeight(p.weightKg, unit)} />
               <div className="flex justify-between items-center px-4 py-3">
                 <span className="label-cap">Start → Now</span>
                 <span className="text-sm font-bold uppercase text-grit">
-                  {startW} → {p.weightKg} kg{" "}
+                  {formatWeightValue(startW, unit)} → {formatWeight(p.weightKg, unit)}{" "}
                   <span style={{ color: delta === 0 ? "#8a8a8a" : "#e63222" }}>
                     ({delta > 0 ? "+" : ""}
                     {delta.toFixed(1)})
@@ -632,7 +640,9 @@ function ProfilePage() {
               {p.motivation && (
                 <Stat label="Why You Train" v={MOTIVATION_LABEL[p.motivation] ?? p.motivation} />
               )}
-              {p.targetWeightKg && <Stat label="Target Weight" v={`${p.targetWeightKg} kg`} />}
+              {p.targetWeightKg && (
+                <Stat label="Target Weight" v={formatWeight(p.targetWeightKg, unit)} />
+              )}
             </>
           )}
         </div>
@@ -767,8 +777,8 @@ function ProfilePage() {
   );
 }
 
-function prUnit(def: PRDef) {
-  return def.kind === "1RM" ? "kg" : def.kind === "REPS" ? "reps" : "sec";
+function prUnit(def: PRDef, weightUnit: WeightUnit) {
+  return def.kind === "1RM" ? weightUnit : def.kind === "REPS" ? "reps" : "sec";
 }
 
 function PRRow({
@@ -780,7 +790,8 @@ function PRRow({
   pr?: { value: number; reps?: number };
   onEdit: () => void;
 }) {
-  const unit = prUnit(def);
+  const weightUnit = useUnit();
+  const unit = prUnit(def, weightUnit);
   return (
     <button
       type="button"
@@ -824,7 +835,8 @@ function PREditSheet({
   const valRef = useRef<HTMLInputElement>(null);
   const repsRef = useRef<HTMLInputElement>(null);
   const [shadowVal, setShadowVal] = useState(pr ? String(pr.value) : "");
-  const unit = prUnit(def);
+  const weightUnit = useUnit();
+  const unit = prUnit(def, weightUnit);
   const n = Number(shadowVal);
   const valid = Number.isFinite(n) && n > 0;
   const isImprovement = valid && (!pr || n > pr.value);

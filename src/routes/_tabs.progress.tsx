@@ -33,6 +33,8 @@ import { AppleFitnessCard } from "@/components/AppleFitnessCard";
 import { TrainingAutopilot } from "@/components/TrainingAutopilot";
 import { ProWeeklyReview } from "@/components/ProWeeklyReview";
 import { PRRoadmap } from "@/components/PRRoadmap";
+import { useUnit } from "@/hooks/useUnit";
+import { formatVolume, formatWeight, toDisplay, toKg } from "@/lib/units";
 
 export const Route = createFileRoute("/_tabs/progress")({
   head: () => ({ meta: [{ title: "DEADSET — Progress" }] }),
@@ -41,6 +43,7 @@ export const Route = createFileRoute("/_tabs/progress")({
 
 function ProgressPage() {
   const [state, set] = useAppState();
+  const unit = useUnit();
   const { isPro, loading } = usePro();
   const analyticsLocked = loading || !isPro;
   const photoRef = useRef<HTMLInputElement>(null);
@@ -104,8 +107,12 @@ function ProgressPage() {
     return best ? best.weight : null;
   }
   function logWeight() {
-    const w = Number(weightRef.current?.value);
-    if (!w || w < 0) return;
+    const typed = Number(weightRef.current?.value);
+    if (!typed || typed < 0) return;
+    // Typed in the athlete's units; bodyweight is stored in kilograms like
+    // every other weight, or their whole history changes meaning when they
+    // switch the setting.
+    const w = toKg(typed, unit);
     // One entry per day: re-logging today replaces it (fixes typo re-entry and
     // the duplicate-key/delete-all collision on same-day rows).
     const today = isoDay();
@@ -371,7 +378,11 @@ function ProgressPage() {
           icon={<Flame size={14} />}
         />
         <Stat label="SESSIONS" value={`${totalSessions}`} sub="LOGGED" />
-        <Stat label="VOLUME" value={`${Math.round(totalVolume).toLocaleString()}`} sub="KG" />
+        <Stat
+          label="VOLUME"
+          value={`${Math.round(toDisplay(totalVolume, unit)).toLocaleString()}`}
+          sub={unit.toUpperCase()}
+        />
         <Stat label="PRS" value={`${totalPRs}`} sub="HIT" accent={totalPRs > 0} />
       </section>
 
@@ -536,9 +547,7 @@ function ProgressPage() {
                           <span className={wk.isCurrent ? "text-accent-red" : "text-white"}>
                             {wk.label}
                           </span>
-                          <span className="text-[#8A8A8A]">
-                            {Math.round(wk.volume).toLocaleString()}kg
-                          </span>
+                          <span className="text-[#8A8A8A]">{formatVolume(wk.volume, unit)}</span>
                         </div>
                         <div className="h-2 bg-[#0a0a0a]">
                           <div
@@ -584,11 +593,12 @@ function ProgressPage() {
                           </span>
                         </div>
                         <p className="text-[11px] text-grit-dim mt-1">
-                          e1RM {b.oneRm}kg · {b.standard!.ratio}× bodyweight
+                          e1RM {formatWeight(b.oneRm, unit)} · {b.standard!.ratio}× bodyweight
                           {b.standard!.nextTier && b.standard!.nextAtKg && (
                             <span>
                               {" "}
-                              · {b.standard!.nextAtKg}kg for {b.standard!.nextTier}
+                              · {formatWeight(b.standard!.nextAtKg!, unit)} for{" "}
+                              {b.standard!.nextTier}
                             </span>
                           )}
                         </p>
@@ -636,7 +646,7 @@ function ProgressPage() {
                           {c.name}
                         </p>
                         <p className="display text-lg font-extrabold text-[#e63222]">
-                          {Math.max(...c.points.map((p) => p.weight))}KG
+                          {formatWeight(Math.max(...c.points.map((p) => p.weight)), unit)}
                         </p>
                       </div>
                       <LineChart points={c.points.map((p) => p.weight)} />
@@ -657,9 +667,7 @@ function ProgressPage() {
                       <div key={name}>
                         <div className="flex justify-between text-xs uppercase font-bold tracking-wider mb-1">
                           <span className="text-white">{name}</span>
-                          <span className="text-[#8A8A8A]">
-                            {Math.round(vol).toLocaleString()}kg
-                          </span>
+                          <span className="text-[#8A8A8A]">{formatVolume(vol, unit)}</span>
                         </div>
                         <div className="h-2 bg-[#0a0a0a]">
                           <div
@@ -715,7 +723,7 @@ function ProgressPage() {
               ref={weightRef}
               inputMode="decimal"
               defaultValue=""
-              placeholder="Today's kg"
+              placeholder={`Today's ${unit}`}
               className="input-grit"
             />
             <button onClick={logWeight} className="btn-grit">
@@ -735,12 +743,14 @@ function ProgressPage() {
                   <p className="display text-lg font-extrabold leading-none" style={{ color }}>
                     {bw.perWeek > 0 ? "+" : ""}
                     {bw.perWeek}
-                    <span className="text-[10px] text-grit-dim ml-1">kg/wk</span>
+                    <span className="text-[10px] text-grit-dim ml-1">{unit}/wk</span>
                   </p>
                 </div>
                 {bw.target && (
                   <div className="text-right">
-                    <p className="label-cap text-[10px] text-grit-dim">Target {bw.target}kg</p>
+                    <p className="label-cap text-[10px] text-grit-dim">
+                      Target {formatWeight(bw.target, unit)}
+                    </p>
                     <p className="text-xs text-grit">
                       {bw.etaDate
                         ? `~${new Date(bw.etaDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
@@ -763,7 +773,7 @@ function ProgressPage() {
                   <div key={w.date} className="flex items-center justify-between py-1 text-xs">
                     <span className="text-[#8A8A8A]">{w.date}</span>
                     <div className="flex items-center gap-3">
-                      <span className="font-bold text-grit">{w.weight} kg</span>
+                      <span className="font-bold text-grit">{formatWeight(w.weight, unit)}</span>
                       <button
                         onClick={() => deleteWeight(w.date)}
                         className="text-[#8A8A8A] hover:text-[#e63222] tap-44"
@@ -874,7 +884,9 @@ function ProgressPage() {
                       />
                       <div className="text-[10px] p-1 label-cap text-center">
                         {p?.date.slice(0, 10)}
-                        {w !== null && <span className="text-grit-dim"> · {w}kg</span>}
+                        {w !== null && (
+                          <span className="text-grit-dim"> · {formatWeight(w, unit)}</span>
+                        )}
                       </div>
                     </div>
                   );
@@ -895,7 +907,7 @@ function ProgressPage() {
                     <span style={{ color: delta > 0 ? "#e63222" : "#22c55e" }}>
                       {" "}
                       · {delta > 0 ? "+" : ""}
-                      {delta}kg
+                      {formatWeight(delta, unit)}
                     </span>
                   )}
                 </p>

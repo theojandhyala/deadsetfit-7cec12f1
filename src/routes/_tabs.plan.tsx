@@ -36,6 +36,8 @@ import { listExercises } from "@/lib/library.functions";
 import { openPaywall } from "@/lib/paywall-events";
 import { useAppState } from "@/lib/storage";
 import type { DayKey, DaySchedule, Exercise, ExercisePlan, Schedule } from "@/lib/types";
+import { useUnit } from "@/hooks/useUnit";
+import { formatWeightValue, toKg } from "@/lib/units";
 
 export const Route = createFileRoute("/_tabs/plan")({
   head: () => ({ meta: [{ title: "DEADSET - Weekly Plan" }] }),
@@ -107,6 +109,7 @@ function programMuscle(muscles: string[]): Exercise["muscleGroup"] {
 }
 
 function PlanPage() {
+  const unit = useUnit();
   const [state, set] = useAppState();
   const { isPro, loading: proLoading } = usePro();
   const [selectedDay, setSelectedDay] = useState<DayKey>(todayKey());
@@ -1173,18 +1176,22 @@ function PlanPage() {
                       />
                       <PlanInput
                         key={`weight-${selectedDay}-${exerciseId}`}
-                        label="Weight kg"
-                        ariaLabel={`${exercise.name} working weight in kilograms`}
-                        defaultValue={config.weightKg ? String(config.weightKg) : ""}
+                        label={`Weight ${unit}`}
+                        ariaLabel={`${exercise.name} working weight in ${unit}`}
+                        defaultValue={
+                          config.weightKg ? formatWeightValue(config.weightKg, unit) : ""
+                        }
                         placeholder="Optional"
                         inputMode="decimal"
                         onCommit={(value) => {
-                          const weightKg = Number(value.replace(/[^0-9.]/g, ""));
+                          // Typed in the athlete's units, stored in kilograms.
+                          const typed = Number(value.replace(/[^0-9.]/g, ""));
+                          const weightKg =
+                            Number.isFinite(typed) && typed > 0 ? toKg(typed, unit) : 0;
                           updateExercise(exerciseId, {
-                            weightKg:
-                              Number.isFinite(weightKg) && weightKg > 0 ? weightKg : undefined,
+                            weightKg: weightKg > 0 ? weightKg : undefined,
                           });
-                          return Number.isFinite(weightKg) && weightKg > 0 ? String(weightKg) : "";
+                          return weightKg > 0 ? formatWeightValue(weightKg, unit) : "";
                         }}
                       />
                     </div>

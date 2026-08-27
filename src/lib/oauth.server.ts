@@ -18,10 +18,7 @@
  */
 
 import { verifyIdToken, type VerifiedIdentity } from "./id-token.server";
-import {
-  appleOAuthConfigured,
-  exchangeAppleAuthorizationCode,
-} from "./apple-oauth.server";
+import { appleOAuthConfigured, exchangeAppleAuthorizationCode } from "./apple-oauth.server";
 
 export type OAuthProvider = "google" | "apple";
 
@@ -334,11 +331,7 @@ function supabaseAdminEnv(env: OAuthBrokerEnv) {
   return { url, publishableKey, serviceRoleKey };
 }
 
-async function storeAppleRefreshToken(
-  userId: string,
-  refreshToken: string,
-  env: OAuthBrokerEnv,
-) {
+async function storeAppleRefreshToken(userId: string, refreshToken: string, env: OAuthBrokerEnv) {
   const { url, serviceRoleKey } = supabaseAdminEnv(env);
   const response = await fetch(`${url}/rest/v1/oauth_credentials?on_conflict=user_id,provider`, {
     method: "POST",
@@ -635,11 +628,7 @@ async function handleCallback(provider: OAuthProvider, request: Request, env: OA
       const code = params.get("code");
       if (!code) throw new OAuthFailure("Apple sign-in could not be completed. Please try again.");
       try {
-        const refreshToken = await exchangeAppleAuthorizationCode(
-          code,
-          callbackUri("apple"),
-          env,
-        );
+        const refreshToken = await exchangeAppleAuthorizationCode(code, callbackUri("apple"), env);
         const userId = decodeJwtPayload(session.access_token)?.sub;
         if (!userId) throw new Error("Supabase session carried no user id");
         await storeAppleRefreshToken(userId, refreshToken, env);

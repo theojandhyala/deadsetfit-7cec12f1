@@ -2,6 +2,7 @@ import { useEffect } from "react";
 
 import { hapticPersonalRecord } from "@/lib/haptics";
 import { Trophy, X } from "lucide-react";
+import { useUnit } from "@/hooks/useUnit";
 
 const PARTICLES = Array.from({ length: 56 });
 const COLORS = ["#e63222", "#f5c542", "#f5f5f0", "#ff6b35", "#ffffff"];
@@ -19,6 +20,7 @@ export function PRCelebration({
   prevBest?: number;
   onClose: () => void;
 }) {
+  const unit = useUnit();
   const delta = prevBest > 0 ? Math.round((weight - prevBest) * 10) / 10 : 0;
 
   useEffect(() => {
@@ -113,7 +115,7 @@ export function PRCelebration({
           >
             {weight}
           </span>
-          <span className="text-2xl text-grit-dim ml-2">kg</span>
+          <span className="text-2xl text-grit-dim ml-2">{unit}</span>
         </div>
         <p className="label-cap text-grit-dim mb-6">
           × {reps} {reps === 1 ? "REP" : "REPS"}

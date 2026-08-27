@@ -29,9 +29,7 @@ export function TimeOfDayCard({ state }: { state: AppState }) {
           <p className="label-cap text-[10px] text-accent-red flex items-center gap-1.5 whitespace-nowrap">
             <SunMoon size={12} /> When you lift best
           </p>
-          <p className="label-cap text-[9px] text-grit-dim whitespace-nowrap">
-            avg kg · 12 wks
-          </p>
+          <p className="label-cap text-[9px] text-grit-dim whitespace-nowrap">avg kg · 12 wks</p>
         </div>
 
         <div className="space-y-2 mt-3">

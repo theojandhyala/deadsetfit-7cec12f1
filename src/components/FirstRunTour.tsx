@@ -130,10 +130,7 @@ export function FirstRunTour({ active }: { active: boolean }) {
               Read the full guide
             </Link>
           ) : (
-            <button
-              onClick={close}
-              className="btn-ghost min-h-[48px] rounded-2xl text-xs"
-            >
+            <button onClick={close} className="btn-ghost min-h-[48px] rounded-2xl text-xs">
               Skip
             </button>
           )}

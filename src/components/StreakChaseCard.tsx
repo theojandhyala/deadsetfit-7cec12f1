@@ -11,10 +11,7 @@ import type { AppState } from "@/lib/types";
  * record not yet beaten.
  */
 export function StreakChaseCard({ state }: { state: AppState }) {
-  const chase = useMemo(
-    () => streakChase(state.completedDates, isoDay()),
-    [state.completedDates],
-  );
+  const chase = useMemo(() => streakChase(state.completedDates, isoDay()), [state.completedDates]);
 
   if (!chase) return null;
 

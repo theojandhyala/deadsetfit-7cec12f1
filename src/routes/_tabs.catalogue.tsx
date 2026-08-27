@@ -9,6 +9,8 @@ import { topSetHistory } from "@/lib/progression";
 import { WeeklyRecapCard, type WeeklyRecap } from "@/components/WeeklyRecapCard";
 import { PRShareCard } from "@/components/PRShareCard";
 import type { PRShareDetails } from "@/lib/grit-events";
+import { useUnit } from "@/hooks/useUnit";
+import { formatWeight } from "@/lib/units";
 
 // Tiny inline progression chart — top-set weight over recent sessions.
 function Sparkline({ values }: { values: number[] }) {
@@ -69,6 +71,7 @@ function fmtDate(iso: string) {
 
 function CataloguePage() {
   const [state, set] = useAppState();
+  const unit = useUnit();
   const fileRef = useRef<HTMLInputElement>(null);
   const [lightbox, setLightbox] = useState<string | null>(null);
 
@@ -188,7 +191,10 @@ function CataloguePage() {
     {
       icon: Scale,
       label: "Body change",
-      value: weightDelta == null ? "—" : `${weightDelta > 0 ? "+" : ""}${weightDelta}kg`,
+      value:
+        weightDelta == null
+          ? "—"
+          : `${weightDelta > 0 ? "+" : ""}${formatWeight(weightDelta, unit)}`,
     },
   ];
 
@@ -374,7 +380,7 @@ function CataloguePage() {
                     <p className="display text-2xl font-extrabold text-accent-red leading-none">
                       {pr.value}
                     </p>
-                    <p className="label-cap text-[8px] text-grit-dim">kg</p>
+                    <p className="label-cap text-[8px] text-grit-dim">{unit}</p>
                   </div>
                   <button
                     type="button"

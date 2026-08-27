@@ -2,6 +2,8 @@ import type { HeadlinePR } from "@/lib/fifa-stats";
 import { RankEmblem } from "@/components/RankEmblem";
 import { getRank } from "@/lib/rank";
 import { ProBadge } from "@/components/ProBadge";
+import { useUnit } from "@/hooks/useUnit";
+import { formatWeight, formatWeightValue } from "@/lib/units";
 
 const PRO_GOLD = "#f4c33a";
 
@@ -42,6 +44,7 @@ export function FifaCard({
   /** When true, the card wears the gold DEADSET Pro treatment. */
   isPro?: boolean;
 }) {
+  const unit = useUnit();
   const rank = getRank(gritPoints ?? overall ?? 0);
   const edge = isPro ? PRO_GOLD : badgeC;
   return (
@@ -105,7 +108,7 @@ export function FifaCard({
               badge,
               goal,
               experience,
-              weightKg ? `${weightKg}kg` : null,
+              weightKg ? formatWeight(weightKg, unit) : null,
               heightCm ? `${heightCm}cm` : null,
             ]
               .filter(Boolean)
@@ -116,16 +119,22 @@ export function FifaCard({
 
       {/* PR grid — 6 headline lifts */}
       <div className="grid grid-cols-3 gap-2 mt-3">
-        {prs.map((pr) => (
-          <PRTile
-            key={pr.id}
-            label={pr.label}
-            value={pr.value}
-            unit={pr.unit}
-            estimated={pr.estimated}
-            color={badgeC}
-          />
-        ))}
+        {prs.map((pr) => {
+          // `pr.unit === "kg"` is a marker meaning "this PR is a load", not an
+          // instruction to print kilograms. Loads are stored in kilograms and
+          // converted here, at the display boundary, like everywhere else.
+          const isLoad = pr.unit === "kg";
+          return (
+            <PRTile
+              key={pr.id}
+              label={pr.label}
+              value={isLoad ? Number(formatWeightValue(pr.value, unit)) : pr.value}
+              unit={isLoad ? unit : pr.unit}
+              estimated={pr.estimated}
+              color={badgeC}
+            />
+          );
+        })}
       </div>
     </div>
   );

@@ -193,7 +193,9 @@ function Hero({ campaign }: { campaign: LandingCampaign }) {
             <AppStoreBadge className="shrink-0 shadow-[0_18px_45px_rgba(0,0,0,0.32)]" />
             <div>
               <p className="text-sm font-extrabold text-white">Available now on the App Store</p>
-              <p className="mt-1 text-xs leading-5 text-white/45">Free to start · Built for iPhone</p>
+              <p className="mt-1 text-xs leading-5 text-white/45">
+                Free to start · Built for iPhone
+              </p>
             </div>
           </div>
         </div>

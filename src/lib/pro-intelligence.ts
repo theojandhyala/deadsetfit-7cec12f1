@@ -444,10 +444,7 @@ export interface StrengthGoalRoadmap {
   reached: boolean;
 }
 
-export function strengthGoalRoadmaps(
-  state: AppState,
-  now = Date.now(),
-): StrengthGoalRoadmap[] {
+export function strengthGoalRoadmaps(state: AppState, now = Date.now()): StrengthGoalRoadmap[] {
   const series = new Map(liftSeriesAll(state, 1).map((lift) => [lift.exerciseId, lift]));
   const trends = new Map(trajectories(state, now).map((trend) => [trend.exerciseId, trend]));
 

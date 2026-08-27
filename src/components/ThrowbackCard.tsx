@@ -4,6 +4,8 @@ import { History } from "lucide-react";
 import { throwback } from "@/lib/throwback";
 import { isoDay } from "@/lib/calc";
 import type { AppState } from "@/lib/types";
+import { useUnit } from "@/hooks/useUnit";
+import { formatWeight } from "@/lib/units";
 
 const AGO_LABEL: Record<number, string> = {
   365: "One year ago",
@@ -17,6 +19,7 @@ const AGO_LABEL: Record<number, string> = {
  * silence, not an anniversary card.
  */
 export function ThrowbackCard({ state }: { state: AppState }) {
+  const unit = useUnit();
   const tb = useMemo(() => throwback(state.sessions, isoDay()), [state.sessions]);
 
   if (!tb) return null;
@@ -32,22 +35,23 @@ export function ThrowbackCard({ state }: { state: AppState }) {
         <p className="text-xs text-grit-dim leading-relaxed mt-2">
           {AGO_LABEL[tb.daysAgo] ?? "Back then"}, your best {tb.exercise} set was{" "}
           <span className="text-grit">
-            {tb.thenWeight} kg × {tb.thenReps}
+            {formatWeight(tb.thenWeight, unit)} × {tb.thenReps}
           </span>{" "}
-          — an estimated 1RM of {tb.thenE1rm} kg.
+          — an estimated 1RM of {formatWeight(tb.thenE1rm, unit)}.
         </p>
 
         <div className="flex items-baseline gap-2 mt-2">
           <p className="display text-3xl font-extrabold text-grit leading-none">
-            +{tb.gainKg} kg
+            +{formatWeight(tb.gainKg, unit)}
           </p>
           <p className="label-cap text-[9px] text-grit-dim">
-            e1RM today: {tb.nowE1rm} kg
+            e1RM today: {formatWeight(tb.nowE1rm, unit)}
           </p>
         </div>
 
         <p className="text-[11px] text-grit-dim leading-relaxed mt-2">
-          Same lift, same you — just {tb.gainKg} kg stronger. Keep the receipts coming.
+          Same lift, same you — just {formatWeight(tb.gainKg, unit)} stronger. Keep the receipts
+          coming.
         </p>
       </div>
     </section>

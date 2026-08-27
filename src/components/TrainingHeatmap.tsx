@@ -34,7 +34,11 @@ export function TrainingHeatmap({ state }: { state: AppState }) {
         </p>
       </div>
 
-      <div className="flex gap-[3px]" role="img" aria-label={`Training heatmap: ${trainedDays} session days in the last 12 weeks`}>
+      <div
+        className="flex gap-[3px]"
+        role="img"
+        aria-label={`Training heatmap: ${trainedDays} session days in the last 12 weeks`}
+      >
         {columns.map((week, i) => (
           <div key={i} className="flex flex-col gap-[3px] flex-1">
             {week.map((cell) => (

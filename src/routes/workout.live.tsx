@@ -2706,6 +2706,7 @@ function FinishedScreen({
   share: boolean;
   onCloseShare: () => void;
 }) {
+  const unit = unitOf(getState());
   const [state] = useAppState();
   const setsLogged = session.exercises.reduce((s, e) => s + e.sets.length, 0);
   const durationMin = Math.max(
@@ -2738,7 +2739,7 @@ function FinishedScreen({
             <p className="label-cap text-[10px] text-grit-dim">TOTAL VOLUME</p>
             <p className="display text-3xl font-extrabold mt-1 text-grit">
               {Math.round(session.totalVolume).toLocaleString()}{" "}
-              <span className="text-sm text-grit-dim">kg</span>
+              <span className="text-sm text-grit-dim">{unit}</span>
             </p>
           </div>
         )}
