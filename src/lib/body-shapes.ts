@@ -16,88 +16,120 @@ import { mirrorPath } from "./mirror-path";
 /**
  * One shape per muscle belly, drawn to sit inside the silhouette.
  *
+ * A real muscle map, not a few blocks: the figure should read as covered in
+ * muscle with thin gaps between bellies, the way an anatomy chart does. Large
+ * bare regions are what made the earlier version look like a diagram of a
+ * fridge rather than a body.
+ *
  * Every left-side shape is written by hand and its partner derived with
  * `mirrorPath`, so a bicep can never end up a different shape from its twin.
- * Coordinates are tuned against the silhouette below: the torso spans x 65-135
- * at the waist, the arms x 38-69 and 131-162, and each leg x 73-99 and 101-127.
- * A shape outside those renders on top of empty space.
+ * Coordinates are tuned against the silhouette below: the torso spans roughly
+ * x 60-140 at the waist, each arm x 34-65 and 135-166, each leg x 69-100 and
+ * 100-131. A shape outside those renders over empty space.
  */
 const L = {
-  trapFront: "M97 46 q-13 6 -21 24 q-2 6 3 8 q6 2 10 -4 q4 -12 11 -20 z",
-  frontDelt: "M78 82 q-15 5 -20 21 q-3 11 -1 19 q10 3 16 -7 q4 -16 7 -29 z",
-  sideDelt: "M60 94 q-9 9 -10 25 q-1 10 3 14 q7 -2 8 -13 q1 -15 1 -24 z",
-  rearDelt: "M78 84 q-15 5 -20 21 q-3 11 -1 19 q10 3 16 -7 q4 -15 7 -29 z",
-  pec: "M98 76 q-16 1 -24 9 q-8 10 -7 23 q1 10 8 13 q12 3 23 -3 z",
-  bicep: "M60 108 q-11 5 -13 19 q-2 16 2 27 q7 3 10 -7 q3 -19 3 -37 z",
-  tricep: "M61 106 q-12 6 -14 21 q-3 17 1 28 q8 3 11 -8 q3 -20 4 -39 z",
-  forearm: "M55 162 q-9 5 -11 18 l-2 25 q-1 8 4 8 q6 1 8 -8 l4 -41 z",
-  oblique: "M87 124 q-9 3 -10 13 l-1 24 q0 8 6 8 q5 0 5 -9 z",
-  lat: "M82 100 q-11 6 -13 21 l-1 22 q0 12 7 19 l11 12 q5 -3 3 -11 l-3 -40 q-2 -15 -6 -23 z",
-  erector: "M97 138 q-6 20 -6 38 q0 8 6 8 v-46 z",
-  glute: "M98 186 q-14 0 -20 8 q-6 8 -5 20 q1 12 10 15 q10 2 15 -7 z",
-  quadOuter: "M78 208 q-5 21 -4 45 l2 28 q1 9 6 9 q4 0 4 -11 l1 -69 q-4 -4 -9 -2 z",
-  quadInner: "M91 210 q3 22 2 45 l-1 25 q-1 8 -5 8 q-4 0 -4 -10 l0 -66 q3 -4 8 -2 z",
-  hamOuter: "M78 236 q-4 21 -3 43 l1 18 q1 9 6 9 q5 0 5 -11 l1 -57 q-5 -4 -10 -2 z",
-  hamInner: "M91 238 q3 20 2 41 l-1 17 q-1 8 -5 8 q-4 0 -4 -10 l0 -54 z",
-  calfFront: "M81 300 q-3 18 -1 34 q1 10 5 10 q4 0 4 -11 l0 -33 z",
-  calfOuter: "M80 300 q-4 17 -2 31 q1 10 5 10 q3 0 3 -11 l1 -30 z",
-  calfInner: "M92 304 q3 15 2 27 q-1 10 -4 10 q-3 0 -3 -10 l0 -27 z",
+  // --- neck and shoulders --------------------------------------------------
+  trapFront: "M97 46 q-14 6 -22 26 q-2 7 4 9 q7 2 11 -5 q4 -14 11 -22 z",
+  frontDelt: "M80 78 q-16 4 -23 20 q-4 11 -2 20 q10 4 17 -6 q5 -18 10 -32 z",
+  sideDelt: "M60 88 q-11 8 -14 24 q-2 11 2 16 q8 -1 10 -13 q2 -16 4 -26 z",
+  rearDelt: "M80 80 q-16 4 -22 20 q-4 11 -2 19 q10 4 16 -6 q5 -17 10 -31 z",
+
+  // --- chest ---------------------------------------------------------------
+  pecUpper: "M98 72 q-18 2 -27 10 q-5 6 -3 12 q14 5 30 2 z",
+  pecLower: "M98 93 q-19 1 -27 8 q-6 8 -4 17 q2 9 10 11 q11 2 21 -4 z",
+  serratus: "M75 114 q-7 3 -7 10 l1 13 q1 5 5 4 q4 -1 4 -8 l1 -18 z",
+
+  // --- arms ----------------------------------------------------------------
+  bicep: "M62 106 q-12 5 -14 20 q-2 17 2 28 q8 3 11 -7 q3 -20 3 -39 z",
+  brachialis: "M60 142 q-8 4 -9 14 q-1 8 4 9 q6 0 7 -9 z",
+  tricepLong: "M62 104 q-12 6 -14 21 q-3 17 1 28 q8 3 11 -8 q3 -20 4 -39 z",
+  tricepLateral: "M53 114 q-7 6 -8 18 q-1 10 3 12 q5 -1 6 -10 z",
+  forearm: "M57 160 q-9 5 -11 17 l-2 24 q-1 8 4 8 q6 1 8 -8 l4 -39 z",
+  forearmOuter: "M48 170 q-5 6 -6 16 l-1 18 q0 7 4 7 q4 0 4 -8 l2 -31 z",
+
+  // --- torso ---------------------------------------------------------------
+  oblique: "M86 126 q-9 3 -11 14 l-1 26 q0 9 6 9 q6 0 6 -10 z",
+  hipFlexor: "M97 180 q-10 2 -12 10 q-1 7 5 8 h7 z",
+
+  // --- back ----------------------------------------------------------------
+  rhomboid: "M97 96 q-13 4 -17 14 q-2 8 3 10 h14 z",
+  teres: "M84 110 q-8 3 -10 10 q-1 6 4 7 q6 1 8 -6 z",
+  lat: "M84 100 q-13 6 -16 22 l-2 24 q0 13 8 20 l12 13 q5 -3 3 -12 l-4 -44 q-2 -16 -6 -23 z",
+  erector: "M97 130 q-8 20 -8 38 q0 9 8 10 v-48 z",
+  lumbar: "M97 176 q-11 2 -13 11 q-1 9 6 11 h7 z",
+
+  // --- hips and legs -------------------------------------------------------
+  gluteMax: "M98 188 q-15 0 -21 9 q-6 9 -5 21 q1 12 11 15 q10 2 15 -7 z",
+  gluteMed: "M79 186 q-9 3 -11 12 q-1 8 4 10 q7 1 9 -8 z",
+  quadOuter: "M77 210 q-6 20 -5 43 l2 26 q1 9 6 9 q4 0 4 -11 l1 -65 q-4 -4 -8 -2 z",
+  quadMid: "M89 212 q-4 18 -4 39 l1 26 q1 8 5 8 q4 0 4 -9 l0 -62 z",
+  quadInner: "M96 262 q-8 4 -10 14 q-1 9 4 12 q6 2 9 -6 z",
+  adductor: "M98 210 q-8 3 -10 13 l-2 32 q0 8 5 8 q5 0 6 -9 l2 -44 z",
+  hamOuter: "M77 238 q-5 20 -4 41 l1 18 q1 9 6 9 q5 0 5 -11 l1 -55 q-5 -4 -9 -2 z",
+  hamInner: "M90 240 q4 20 3 39 l-1 18 q-1 8 -5 8 q-4 0 -4 -10 l0 -53 z",
+  tibialis: "M81 300 q-3 18 -1 33 q1 10 5 10 q4 0 4 -11 l0 -32 z",
+  gastrocOuter: "M79 300 q-5 16 -3 29 q1 10 5 10 q4 0 4 -11 l1 -28 z",
+  gastrocInner: "M92 302 q4 15 3 26 q-1 10 -5 10 q-3 0 -3 -10 l0 -26 z",
+  soleus: "M80 336 q-3 14 -2 25 q1 8 4 8 q3 0 3 -9 l1 -24 z",
 } as const;
 
 /** A muscle drawn on both sides of the body. */
 const pair = (d: string) => [d, mirrorPath(d)];
 
+/** The rectus abdominis, as the eight bellies it actually is. */
+const abs = [0, 1, 2, 3].flatMap((row) => {
+  const y = 124 + row * 13;
+  return pair(`M88 ${y} h10 q3 0 3 3 v6 q0 3 -3 3 h-10 q-3 0 -3 -3 v-6 q0 -3 3 -3 z`);
+});
+
 export const MUSCLE_SHAPES: Record<string, { f?: string[]; b?: string[] }> = {
   // --- shoulders -----------------------------------------------------------
   traps: {
     f: pair(L.trapFront),
-    // The trapezius is the shape people recognise from behind: a kite from the
+    // From behind the trapezius is the shape people recognise: a kite from the
     // neck out to each shoulder and down between the blades.
     b: [
-      "M100 52 q-11 3 -17 16 q-3 9 -2 16 l6 21 q6 6 13 6 q7 0 13 -6 l6 -21 q1 -7 -2 -16 q-6 -13 -17 -16 z",
+      "M100 58 q-10 3 -15 13 q-3 8 -2 14 l6 20 q5 6 11 6 q6 0 11 -6 l6 -20 q1 -6 -2 -14 q-5 -10 -15 -13 z",
     ],
   },
   "front-delts": { f: pair(L.frontDelt) },
   "side-delts": { f: pair(L.sideDelt), b: pair(L.sideDelt) },
   "rear-delts": { b: pair(L.rearDelt) },
   shoulders: { f: pair(L.frontDelt), b: pair(L.rearDelt) },
-  "rotator-cuff": { b: pair("M78 96 q-9 4 -11 14 q-1 7 4 9 q7 1 10 -7 z") },
+  "rotator-cuff": { b: pair(L.teres) },
 
   // --- chest ---------------------------------------------------------------
-  chest: { f: pair(L.pec) },
-  "upper-chest": { f: pair("M98 74 q-15 1 -22 8 q-5 6 -4 12 q11 4 26 1 z") },
+  chest: { f: pair(L.pecLower) },
+  "upper-chest": { f: pair(L.pecUpper) },
 
   // --- arms ----------------------------------------------------------------
   biceps: { f: pair(L.bicep) },
-  brachialis: { f: pair("M60 142 q-9 4 -10 15 q-1 8 4 9 q6 0 8 -9 z") },
-  triceps: { b: pair(L.tricep) },
-  forearms: { f: pair(L.forearm), b: pair(L.forearm) },
+  brachialis: { f: pair(L.brachialis) },
+  triceps: { b: [...pair(L.tricepLong), ...pair(L.tricepLateral)] },
+  forearms: {
+    f: [...pair(L.forearm), ...pair(L.forearmOuter)],
+    b: [...pair(L.forearm), ...pair(L.forearmOuter)],
+  },
 
   // --- torso ---------------------------------------------------------------
-  // Eight bellies rather than one block: a segmented rectus abdominis is the
-  // difference between a body map and a diagram of a fridge.
-  core: {
-    f: [0, 1, 2, 3].flatMap((row) => {
-      const y = 122 + row * 13;
-      const left = `M88 ${y} h10 q3 0 3 3 v6 q0 3 -3 3 h-10 q-3 0 -3 -3 v-6 q0 -3 3 -3 z`;
-      return pair(left);
-    }),
-  },
+  core: { f: [...abs, ...pair(L.serratus)] },
   obliques: { f: pair(L.oblique) },
-  "hip-flexors": { f: pair("M97 176 q-9 2 -11 10 q-1 6 4 7 h7 z") },
+  "hip-flexors": { f: pair(L.hipFlexor) },
   lats: { b: pair(L.lat) },
-  back: { b: pair(L.lat) },
-  "mid-back": { b: pair("M97 126 q-11 3 -13 14 q-1 9 5 11 h8 z") },
-  "upper-back": { b: pair("M97 100 q-13 4 -16 16 q-1 8 5 10 h11 z") },
+  back: { b: [...pair(L.erector), ...pair(L.lumbar)] },
+  "mid-back": { b: pair(L.rhomboid) },
+  "upper-back": { b: pair(L.rhomboid) },
 
   // --- legs ----------------------------------------------------------------
-  glutes: { b: pair(L.glute) },
-  quads: { f: [...pair(L.quadOuter), ...pair(L.quadInner)] },
+  glutes: { b: [...pair(L.gluteMax), ...pair(L.gluteMed)] },
+  quads: {
+    f: [...pair(L.quadOuter), ...pair(L.quadMid), ...pair(L.quadInner), ...pair(L.adductor)],
+  },
   hamstrings: { b: [...pair(L.hamOuter), ...pair(L.hamInner)] },
   calves: {
-    f: pair(L.calfFront),
-    // Two heads from behind, which is how a calf actually reads.
-    b: [...pair(L.calfOuter), ...pair(L.calfInner)],
+    f: pair(L.tibialis),
+    // Two heads and the soleus beneath, which is how a calf actually reads.
+    b: [...pair(L.gastrocOuter), ...pair(L.gastrocInner), ...pair(L.soleus)],
   },
 };
 
