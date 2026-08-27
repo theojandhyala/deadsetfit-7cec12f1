@@ -431,10 +431,16 @@ export interface WarmupSet {
   pct: number;
 }
 
-/** Suggested warm-up sets leading into a working weight (kg). */
-export function warmupRamp(workingKg: number): WarmupSet[] {
-  if (!Number.isFinite(workingKg) || workingKg <= BAR_KG) return [];
-  const round = (n: number) => Math.max(BAR_KG, Math.round(n / 2.5) * 2.5);
+/**
+ * Suggested warm-up sets leading into a working weight (kg).
+ *
+ * Ramps from the bar actually being used: an EZ bar ramp that never goes below
+ * 20 kg is asking for warm-ups heavier than the bar can be unloaded to.
+ */
+export function warmupRamp(workingKg: number, barKg = BAR_KG): WarmupSet[] {
+  const floor = barKg > 0 ? barKg : 2.5;
+  if (!Number.isFinite(workingKg) || workingKg <= floor) return [];
+  const round = (n: number) => Math.max(floor, Math.round(n / 2.5) * 2.5);
   const steps = [
     { pct: 0.4, reps: 10 },
     { pct: 0.6, reps: 6 },

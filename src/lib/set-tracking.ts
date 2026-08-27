@@ -77,6 +77,30 @@ export function formatSet(set: CompletedSet, requiresWeight = true): string {
   return requiresWeight ? `Set weight · ${set.reps} reps` : `${set.reps} reps`;
 }
 
+/**
+ * Does this set count toward the plan's working sets?
+ *
+ * Warm-ups obviously do not. Drop sets do not either — they hang off a working
+ * set rather than being one. A set taken to failure *is* a working set that
+ * happens to carry a marker, so it counts: it is the set you planned, done as
+ * hard as it goes.
+ */
+export function isWorkingSet(set: Pick<CompletedSet, "kind">): boolean {
+  return set.kind !== "warmup" && set.kind !== "drop";
+}
+
+/**
+ * Is this set eligible to set a record?
+ *
+ * Warm-ups and drop sets are not — neither is a genuine attempt at the load.
+ * A set to failure is: benching 100 × 8 to failure when your best was 100 × 7
+ * is a record by any honest reading, and refusing it would quietly punish the
+ * athletes training hardest.
+ */
+export function countsForRecords(set: Pick<CompletedSet, "kind">): boolean {
+  return set.kind !== "warmup" && set.kind !== "drop";
+}
+
 /** Sets that measure time or distance never carry load × reps volume. */
 export function setVolume(set: CompletedSet): number {
   if (set.mode || set.kind === "warmup") return 0;
@@ -106,7 +130,7 @@ export function timedBestsFor(
     for (const exercise of session.exercises) {
       if (exercise.exerciseId !== exerciseId) continue;
       for (const set of exercise.sets) {
-        if (set.kind) continue;
+        if (!countsForRecords(set)) continue;
         if (set.mode === "duration") seconds = Math.max(seconds, set.seconds ?? 0);
         if (set.mode === "distance") meters = Math.max(meters, set.meters ?? 0);
       }
@@ -120,7 +144,7 @@ export function isTimedPersonalRecord(
   set: Pick<CompletedSet, "mode" | "seconds" | "meters" | "kind">,
   bests: TimedBests,
 ): boolean {
-  if (set.kind) return false;
+  if (!countsForRecords(set)) return false;
   if (set.mode === "duration") return (set.seconds ?? 0) > bests.seconds;
   if (set.mode === "distance") return (set.meters ?? 0) > bests.meters;
   return false;

@@ -1,6 +1,7 @@
 import { calculateStreak } from "./calc";
 import { longestStreak } from "./lifetime-stats";
 import type { AppState, WorkoutSession } from "./types";
+import { countsForRecords } from "./set-tracking";
 
 export type AchievementCategory =
   | "CONSISTENCY"
@@ -96,7 +97,7 @@ function bestMatching(sessions: WorkoutSession[], match: RegExp): number {
       if (!match.test(e.name)) continue;
       for (const set of e.sets) {
         // Warm-ups, drop sets and timed efforts are not a lift's true best.
-        if (set.kind || set.mode) continue;
+        if (set.mode || !countsForRecords(set)) continue;
         if (set.weight > best) best = set.weight;
       }
     }
@@ -134,7 +135,9 @@ export function achievementFacts(state: AppState): AchievementFacts {
         setsHere += 1;
         totalReps += set.reps || 0;
         // Added load on a hold is not a heaviest-set candidate.
-        if (!set.kind && !set.mode && set.weight > heaviestSetKg) heaviestSetKg = set.weight;
+        if (!set.mode && countsForRecords(set) && set.weight > heaviestSetKg) {
+          heaviestSetKg = set.weight;
+        }
       }
     }
     totalSets += setsHere;

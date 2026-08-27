@@ -31,7 +31,9 @@ struct RootView: View {
             }
         }
         .task { await keepAlive.requestAuthorization() }
-        .onChange(of: connector.displayState.isLive) { _, live in
+        // Single-parameter onChange: the two-parameter form is watchOS 10, and
+        // this target supports watchOS 9.
+        .onChange(of: connector.displayState.isLive) { live in
             // Hold the app awake for exactly as long as there is a workout.
             if live { keepAlive.start() } else { keepAlive.stop() }
         }

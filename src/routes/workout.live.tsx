@@ -16,6 +16,7 @@ import {
   ListPlus,
   Timer,
   StickyNote,
+  Dumbbell,
 } from "lucide-react";
 import { useAppState, getState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
@@ -44,6 +45,14 @@ import {
   supersetPosition,
 } from "@/lib/workout-flow";
 import { indexAfterMove, indexAfterRemoval, moveItem } from "@/lib/session-edit";
+import { BAR_TYPES, DEFAULT_BAR_KG, barLabel, usesBarbell } from "@/lib/bars";
+import {
+  hapticSelection,
+  hapticSetLogged,
+  hapticSpecialSet,
+  hapticUndo,
+  hapticWorkoutComplete,
+} from "@/lib/haptics";
 import {
   clearWatch,
   drainWatchActions,
@@ -57,6 +66,8 @@ import {
   formatSet,
   isTimedPersonalRecord,
   parseDurationTarget,
+  countsForRecords,
+  isWorkingSet,
   setVolume,
   timedBestsFor,
   trackingModeFor,
@@ -87,7 +98,7 @@ type WorkoutSource = "auto" | "program" | "schedule";
 type LoggedEntry = {
   weight: number;
   reps: number;
-  kind?: "warmup" | "drop";
+  kind?: CompletedSet["kind"];
   mode?: "duration" | "distance";
   seconds?: number;
   meters?: number;
@@ -211,6 +222,7 @@ function buildSession(
         progression: cfg?.progression,
         tempo: cfg?.tempo,
         note: cfg?.note,
+        barKg: cfg?.barKg,
         supersetId: supersetIds[index],
         ...resolveTracking(state, eid, ex?.name ?? eid, cfg?.reps ?? d.reps ?? ex?.reps ?? "8-12"),
         sets: [],
@@ -238,9 +250,12 @@ function bestsFor(state: AppState, exerciseId: string): { bestWeight: number; be
   state.sessions.forEach((s) =>
     s.exercises.forEach((e) => {
       if (e.exerciseId !== exerciseId) return;
-      // Warm-ups, drop sets and timed efforts never count toward a lift's
-      // load x reps best (and so never PR against it).
-      e.sets.forEach((cs) => cs.kind || cs.mode || consider(cs.weight, cs.reps));
+      // Timed efforts have no load x reps pair, and warm-ups and drops are not
+      // genuine attempts at the load — neither should move a lift's best.
+      e.sets.forEach((cs) => {
+        if (cs.mode || !countsForRecords(cs)) return;
+        consider(cs.weight, cs.reps);
+      });
     }),
   );
   return { bestWeight, bestBwReps };
@@ -543,6 +558,7 @@ function LiveWorkoutPage() {
   const [rest, setRest] = useState<{ seconds: number; nextIndex: number } | null>(null);
   const [managing, setManaging] = useState(false);
   const [noting, setNoting] = useState(false);
+  const [pickingBar, setPickingBar] = useState(false);
   const restPref = state.restTimerSeconds ?? 90;
 
   const totals = useMemo(() => {
@@ -837,7 +853,9 @@ function LiveWorkoutPage() {
           bestWeight,
           bestBodyweightReps: bestBwReps,
           supportsBodyweight,
-          specialSet: !!kind,
+          // A set to failure is still a genuine attempt at the load, so it can
+          // set a record; warm-ups and drops cannot.
+          specialSet: !countsForRecords({ kind }),
         });
         if (awardedPR) {
           prIsBodyweight = weight <= 0;
@@ -867,6 +885,9 @@ function LiveWorkoutPage() {
         ),
       };
     });
+    if (kind) hapticSpecialSet();
+    else if (!awardedPR) hapticSetLogged();
+
     if (awardedPR) {
       // Undo + re-tick must not farm the award twice.
       const key = `${ex.exerciseId}:${weight}:${reps}:${seconds ?? 0}:${meters ?? 0}`;
@@ -956,6 +977,7 @@ function LiveWorkoutPage() {
   function undoLastSet() {
     const ex = session!.exercises[activeIdx];
     if (!ex || ex.sets.length === 0) return;
+    hapticUndo();
     mutateExercise(activeIdx, (e) => ({ ...e, sets: e.sets.slice(0, -1) }));
   }
 
@@ -982,6 +1004,7 @@ function LiveWorkoutPage() {
   }
 
   function deleteSet(setIndex: number) {
+    hapticUndo();
     mutateExercise(activeIdx, (e) => ({
       ...e,
       sets: e.sets.filter((_, i) => i !== setIndex),
@@ -994,6 +1017,15 @@ function LiveWorkoutPage() {
     if (!ex) return;
     mutateExercise(activeIdx, (e) => ({ ...e, restSeconds: seconds }));
     persistToPlan(ex.exerciseId, { restSeconds: seconds });
+  }
+
+  /** Which bar this movement is loaded on — drives plate and warm-up maths. */
+  function setExerciseBar(barKg: number) {
+    const ex = session!.exercises[activeIdx];
+    if (!ex) return;
+    mutateExercise(activeIdx, (e) => ({ ...e, barKg }));
+    persistToPlan(ex.exerciseId, { barKg });
+    hapticSelection();
   }
 
   /** A cue written mid-session, kept on the plan so it shows up next time. */
@@ -1150,9 +1182,9 @@ function LiveWorkoutPage() {
       live.exercises.forEach((e) => {
         let best: CompletedSet | null = null;
         e.sets.forEach((cs) => {
-          // Only true load x reps working sets set the best: a timed hold has
-          // no weight-and-reps pair to write into the lift log.
-          if (cs.weight <= 0 || cs.kind || cs.mode) return;
+          // Only true load x reps attempts set the best: a timed hold has no
+          // weight-and-reps pair to write into the lift log.
+          if (cs.weight <= 0 || cs.mode || !countsForRecords(cs)) return;
           if (
             !best ||
             cs.weight > best.weight ||
@@ -1186,6 +1218,7 @@ function LiveWorkoutPage() {
     // to publish it: the app is often backgrounded the moment a workout ends,
     // and a wrist still showing a live session is worse than a blank one.
     void clearWatch();
+    hapticWorkoutComplete();
     emitGritEarned(50, "WORKOUT COMPLETE", "quest");
     // Apple Health export (native iOS, user-enabled): rings + watch credit.
     if (getState().healthSync?.enabled && getState().healthSync?.exportWorkouts) {
@@ -1376,6 +1409,16 @@ function LiveWorkoutPage() {
                   ? "no rest"
                   : `${current.restSeconds ?? restPref}s rest`}
               </button>
+              {usesBarbell(current.name) && (
+                <button
+                  onClick={() => setPickingBar(true)}
+                  className="flex items-center gap-1 rounded-md border border-grit px-2 py-1 text-[9px] font-black uppercase text-grit-dim press"
+                  aria-label="Change the bar for this exercise"
+                >
+                  <Dumbbell size={11} />
+                  {barLabel(current.barKg)}
+                </button>
+              )}
               <button
                 onClick={() => setNoting(true)}
                 className="flex items-center gap-1 rounded-md border border-grit px-2 py-1 text-[9px] font-black uppercase text-grit-dim press"
@@ -1442,6 +1485,7 @@ function LiveWorkoutPage() {
                 ) ?? false
               )
             }
+            barKg={current.barKg ?? DEFAULT_BAR_KG}
             history={evolution}
             suggestion={suggestion}
             ghost={ghost}
@@ -1502,6 +1546,17 @@ function LiveWorkoutPage() {
           onClose={() => setManaging(false)}
         />
       )}
+      {pickingBar && (
+        <BarPickerSheet
+          name={current.name}
+          barKg={current.barKg ?? DEFAULT_BAR_KG}
+          onPick={(kg) => {
+            setExerciseBar(kg);
+            setPickingBar(false);
+          }}
+          onClose={() => setPickingBar(false)}
+        />
+      )}
       {noting && (
         <NoteSheet
           name={current.name}
@@ -1553,6 +1608,7 @@ function SetLogger({
   defaultWeight,
   defaultReps,
   requiresWeight,
+  barKg,
   history,
   suggestion,
   ghost,
@@ -1568,6 +1624,8 @@ function SetLogger({
   defaultWeight: number;
   defaultReps: number;
   requiresWeight: boolean;
+  /** Bar this movement is loaded on, so plates and warm-ups match reality. */
+  barKg: number;
   history: TopSet[];
   suggestion: Suggestion | null;
   ghost: GhostSet[];
@@ -1593,17 +1651,19 @@ function SetLogger({
   const logged = exercise.sets.length;
   // Working rows keep their plan even when warm-up/drop sets are interleaved:
   // reserve targetSets working rows PLUS however many special sets are logged.
-  const loggedWorking = exercise.sets.filter((s) => !s.kind).length;
+  const loggedWorking = exercise.sets.filter(isWorkingSet).length;
   const plannedWorking = Math.max(exercise.targetSets + extraSets, loggedWorking);
   const planned = plannedWorking + (logged - loggedWorking);
   const nextWeight = override?.weight ?? defaultWeight;
   const nextReps = override?.reps ?? defaultReps;
   const progressionLocked = proLoading || !isProUser;
   const bodyweight = nextWeight <= 0;
-  const plates = !bodyweight && nextWeight >= 20 ? plateBreakdown(nextWeight) : null;
+  // Loaded from the movement's own bar: a trap bar is 5 kg heavier than the
+  // Olympic default, which is enough to hand out the wrong plates.
+  const plates = !bodyweight && barKg > 0 ? plateBreakdown(nextWeight, barKg) : null;
   // Warm-up ramp stays available until the first working set is logged, so all
   // ramp steps can be ticked off (logging one warm-up shouldn't hide the rest).
-  const ramp = loggedWorking === 0 && nextWeight >= 30 ? warmupRamp(nextWeight) : [];
+  const ramp = loggedWorking === 0 && nextWeight >= barKg + 10 ? warmupRamp(nextWeight, barKg) : [];
 
   function applySuggestion() {
     if (progressionLocked) {
@@ -1826,13 +1886,20 @@ function SetLogger({
                 </span>
                 <span
                   className="label-cap text-[10px]"
-                  style={{ color: doneSet?.kind === "drop" ? "#e63222" : "#8a8a8a" }}
+                  style={{
+                    color:
+                      doneSet?.kind === "drop" || doneSet?.kind === "failure"
+                        ? "#e63222"
+                        : "#8a8a8a",
+                  }}
                 >
                   {doneSet?.kind === "drop"
                     ? "DROP"
                     : doneSet?.kind === "warmup"
                       ? "WARM-UP"
-                      : `SET ${done ? exercise.sets.slice(0, i + 1).filter((s) => !s.kind).length : loggedWorking + (i - logged) + 1}`}
+                      : // Failure is a marker on a working set, so it keeps its
+                        // number — it is the set you planned, taken to the end.
+                        `SET ${done ? exercise.sets.slice(0, i + 1).filter(isWorkingSet).length : loggedWorking + (i - logged) + 1}${doneSet?.kind === "failure" ? " · TO FAILURE" : ""}`}
                 </span>
               </span>
               <span className="display text-lg font-extrabold text-grit leading-none flex items-center">
@@ -1923,13 +1990,28 @@ function SetLogger({
         </div>
       )}
 
-      <div className="mt-2 grid grid-cols-2 gap-2">
+      <div className="mt-2 grid grid-cols-3 gap-2">
         <button
           type="button"
           onClick={() => setExtraSets((n) => n + 1)}
           className="w-full border border-dashed border-grit rounded-xl py-2.5 label-cap text-[10px] text-grit-dim press"
         >
           + Extra set
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (requiresWeight && nextWeight <= 0) {
+              openWeightEditor();
+              return;
+            }
+            // Same load and reps as the working set, marked. It still counts
+            // toward the plan and can still set a record — you did the work.
+            onLog({ weight: nextWeight, reps: nextReps, kind: "failure" });
+          }}
+          className="w-full border border-dashed border-accent-red/40 rounded-xl py-2.5 label-cap text-[10px] text-accent-red press"
+        >
+          + To failure
         </button>
         <button
           type="button"
@@ -2048,6 +2130,74 @@ function NoteSheet({
         <button onClick={() => onSave(ref.current?.value ?? "")} className="btn-grit mt-3 w-full">
           Save cue
         </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Which bar this movement is loaded on.
+ *
+ * Setting it fixes two things at once: the plate breakdown stops assuming an
+ * Olympic bar, and the warm-up ramp stops suggesting weights lighter than the
+ * bar you are holding.
+ */
+function BarPickerSheet({
+  name,
+  barKg,
+  onPick,
+  onClose,
+}: {
+  name: string;
+  barKg: number;
+  onPick: (kg: number) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end bg-black/70"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Bar for ${name}`}
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[80vh] w-full overflow-auto rounded-t-2xl border-t border-grit bg-grit-card p-5"
+        style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <p className="label-cap text-[10px] text-accent-red">BAR — {name.toUpperCase()}</p>
+          <button onClick={onClose} className="icon-btn text-grit-dim" aria-label="Close">
+            <X size={18} />
+          </button>
+        </div>
+        <ul className="mt-3 space-y-1.5">
+          {BAR_TYPES.map((bar) => {
+            const active = bar.kg === barKg;
+            return (
+              <li key={bar.id}>
+                <button
+                  onClick={() => onPick(bar.kg)}
+                  className="flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left press"
+                  style={{ borderColor: active ? "#e63222" : "#262626" }}
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-bold text-grit">{bar.name}</span>
+                    <span className="label-cap text-[9px] text-grit-dim">{bar.note}</span>
+                  </span>
+                  <span className="display text-sm font-extrabold text-grit">
+                    {bar.kg > 0 ? `${bar.kg}kg` : "—"}
+                  </span>
+                  {active && <Check size={15} className="text-accent-red" />}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        <p className="mt-3 text-[11px] leading-relaxed text-grit-dim">
+          Saved on your plan for this movement — plate maths and warm-ups use it from now on.
+        </p>
       </div>
     </div>
   );

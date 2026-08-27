@@ -29,7 +29,6 @@ struct SessionView: View {
                 }
             }
             .navigationTitle(state.label.isEmpty ? "DEADSET" : state.label)
-            .navigationBarTitleDisplayMode(.inline)
         }
         .confirmDestructive(
             isPresented: $finishing,

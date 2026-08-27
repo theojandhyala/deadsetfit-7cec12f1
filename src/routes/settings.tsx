@@ -5,6 +5,7 @@ import {
   Download,
   Upload,
   Bell,
+  Vibrate,
   BellRing,
   Clock3,
   Droplets,
@@ -25,6 +26,7 @@ import type { AppState } from "@/lib/types";
 import { clearSessionDiagnostics, readSessionLogs } from "@/lib/session-diagnostics";
 import { connectHealth, healthSupported } from "@/lib/health";
 import { watchStatus, watchSupported, type WatchStatus } from "@/lib/watch";
+import { hapticSetLogged } from "@/lib/haptics";
 import { Watch } from "lucide-react";
 import { isNativeIos } from "@/lib/platform";
 import {
@@ -386,6 +388,29 @@ function SettingsPage() {
           </p>
         </section>
       )}
+
+      {/* Haptics */}
+      <section className="px-5 mb-6">
+        <p className="label-cap mb-2 flex items-center gap-1.5">
+          <Vibrate size={12} className="text-accent-red" /> Haptics
+        </p>
+        <div className="bg-grit-card border border-grit divide-y divide-[#262626]">
+          <Toggle
+            label="Vibrate on sets, PRs and rest"
+            on={state.hapticsEnabled !== false}
+            onChange={(v) => {
+              set((s) => ({ ...s, hapticsEnabled: v }));
+              // Fire one immediately when switching on, so the setting proves
+              // itself instead of asking you to go and train to find out.
+              if (v) hapticSetLogged();
+            }}
+          />
+        </div>
+        <p className="text-[10px] text-grit-dim mt-2">
+          Every set gets a tap, a PR gets a double, and rest ending gets a buzz you can feel through
+          a pocket.
+        </p>
+      </section>
 
       {/* In-App Nudges */}
       <section className="px-5 mb-6">

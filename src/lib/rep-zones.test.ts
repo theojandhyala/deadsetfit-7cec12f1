@@ -50,7 +50,10 @@ describe("repZoneMix", () => {
 
   it("percentages always sum to 100", () => {
     const sessions = [
-      sessionWithReps("2026-07-28", [3, 3, 3, 3, 3, 3, 3, 8, 8, 8, 8, 8, 8, 8, 15, 15, 15, 15, 15, 15, 15]),
+      sessionWithReps(
+        "2026-07-28",
+        [3, 3, 3, 3, 3, 3, 3, 8, 8, 8, 8, 8, 8, 8, 15, 15, 15, 15, 15, 15, 15],
+      ),
     ];
     const r = repZoneMix(sessions, "BULK", TODAY)!;
     expect(r.pct.STRENGTH + r.pct.BUILD + r.pct.ENDURANCE).toBe(100);

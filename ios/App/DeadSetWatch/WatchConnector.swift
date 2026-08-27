@@ -152,6 +152,18 @@ final class WatchConnector: NSObject, ObservableObject {
         WatchHaptics.tick()
     }
 
+    /// Did a personal record appear that was not in the previous state?
+    private static func hasNewRecord(before: WatchSessionState, after: WatchSessionState) -> Bool {
+        // A different session entirely is not "a new record in this one".
+        guard before.sessionId == after.sessionId else { return false }
+        for exercise in after.exercises {
+            let previous = before.exercises.first { $0.id == exercise.id }
+            let had = previous?.sets.filter(\.isPR).count ?? 0
+            if exercise.sets.filter(\.isPR).count > had { return true }
+        }
+        return false
+    }
+
     // MARK: - Receiving
 
     nonisolated fileprivate func apply(_ payload: [String: Any]) {
@@ -177,6 +189,13 @@ final class WatchConnector: NSObject, ObservableObject {
             }
             // A finished session clears the overlay outright.
             if !incoming.isLive { self.optimisticSets.removeAll() }
+
+            // Records are decided on the phone, so the wrist only learns about
+            // one when the state comes back. Buzzing here — rather than
+            // optimistically on send — means the pattern is never a lie.
+            if Self.hasNewRecord(before: self.state, after: incoming) {
+                WatchHaptics.record()
+            }
 
             self.state = incoming
         }

@@ -30,7 +30,6 @@ struct RestTimerView: View {
 
             Text(WatchSet.clock(remaining))
                 .font(.system(size: 46, weight: .black, design: .rounded))
-                .contentTransition(.numericText())
 
             HStack(spacing: 6) {
                 Button {

@@ -43,7 +43,12 @@ describe("trainingRhythm", () => {
       ...MONDAYS.map((d) => session(d, 200)), // 2000 kg avg on Mondays
       ...WEDNESDAYS.map((d) => session(d, 50)), // 500 kg avg on Wednesdays
     ];
-    const r = trainingRhythm(sessions, sessions.map((s) => s.date), undefined, TODAY)!;
+    const r = trainingRhythm(
+      sessions,
+      sessions.map((s) => s.date),
+      undefined,
+      TODAY,
+    )!;
     expect(r.strongestDay).toBe("MON");
     expect(r.days.find((d) => d.day === "MON")!.avgVolumeKg).toBe(2000);
     expect(r.advice).toContain("Mondays");
@@ -68,7 +73,12 @@ describe("trainingRhythm", () => {
 
   it("never flags unscheduled days as skipped", () => {
     const sessions = [...MONDAYS, ...WEDNESDAYS].map((d) => session(d, 100));
-    const r = trainingRhythm(sessions, sessions.map((s) => s.date), ["MON", "WED"], TODAY)!;
+    const r = trainingRhythm(
+      sessions,
+      sessions.map((s) => s.date),
+      ["MON", "WED"],
+      TODAY,
+    )!;
     expect(r.mostSkippedDay).toBeNull();
     expect(r.days.find((d) => d.day === "SAT")!.completionRate).toBeNull();
   });

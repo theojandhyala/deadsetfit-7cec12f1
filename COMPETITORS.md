@@ -80,10 +80,12 @@ competitive identity rather than fighting it.
    and still the largest untapped retention lever.
 5. **Routine folders.** Strong organises routines into folders; DEADSET has
    programmes but no grouping. Small.
-6. **Per-exercise bar weight config.** The plate calculator assumes a standard
-   bar; Strong lets you set it per exercise (safety squat bar, trap bar).
-7. **CSV export surfacing.** `src/lib/export.ts` exists — Strong makes export a
-   headline trust feature, and it should be visible in settings.
+6. ~~**Per-exercise bar weight config.**~~ Shipped — eight bar types, saved on
+   the plan, driving both plate maths and the warm-up ramp, on phone and watch.
+7. ~~**CSV export surfacing.**~~ Already shipped — Settings → Export. (This
+   entry was wrong when first written: the button was there all along. The
+   export *format* was the real gap, and now carries set type, duration and
+   distance.)
 
 ## 5. Strategic read
 

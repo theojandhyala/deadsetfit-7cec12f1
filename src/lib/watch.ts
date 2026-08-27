@@ -3,7 +3,8 @@ import { registerPlugin } from "@capacitor/core";
 import { isNativeIos } from "./platform";
 import { trackingModeFor } from "./set-tracking";
 import { getExercise } from "./exercises";
-import type { AppState, WorkoutSession } from "./types";
+import { DEFAULT_BAR_KG } from "./bars";
+import type { AppState, CompletedSet, WorkoutSession } from "./types";
 
 /** What the phone publishes to the watch for one movement. */
 export interface WatchExercisePayload {
@@ -15,6 +16,10 @@ export interface WatchExercisePayload {
   tracking: "WEIGHT" | "DURATION" | "DISTANCE";
   targetSeconds?: number;
   restSeconds: number;
+  /** Bar this movement is loaded on, so the wrist can show plates per side. */
+  barKg: number;
+  /** What was done last time, so the wrist knows the target too. */
+  ghost: WatchSetPayload[];
   sets: Array<{
     weight: number;
     reps: number;
@@ -24,6 +29,17 @@ export interface WatchExercisePayload {
     meters?: number;
     isPR: boolean;
   }>;
+}
+
+/** One set, as the watch draws it. */
+export interface WatchSetPayload {
+  weight: number;
+  reps: number;
+  kind?: string;
+  mode?: string;
+  seconds?: number;
+  meters?: number;
+  isPR: boolean;
 }
 
 export interface WatchStatePayload {
@@ -96,8 +112,40 @@ export async function watchStatus(): Promise<WatchStatus> {
  * one piece of watch logic that can be got wrong silently, because a wrong
  * field just renders as a plausible-looking zero on a screen no test can see.
  */
+function projectSet(set: CompletedSet): WatchSetPayload {
+  return {
+    weight: set.weight,
+    reps: set.reps,
+    ...(set.kind ? { kind: set.kind } : {}),
+    ...(set.mode ? { mode: set.mode } : {}),
+    ...(set.seconds ? { seconds: set.seconds } : {}),
+    ...(set.meters ? { meters: set.meters } : {}),
+    isPR: set.isPR === true,
+  };
+}
+
+/**
+ * What this movement looked like the last time it was trained. The wrist gets
+ * the target, not just the plan — beating last week is the whole point, and
+ * having to check the phone for it defeats the watch.
+ */
+function ghostFor(
+  sessions: WorkoutSession[],
+  exerciseId: string,
+  currentSessionId: string,
+): WatchSetPayload[] {
+  const previous = [...sessions]
+    .filter((s) => s.endedAt && s.id !== currentSessionId)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  for (const session of previous) {
+    const exercise = session.exercises.find((e) => e.exerciseId === exerciseId);
+    if (exercise && exercise.sets.length > 0) return exercise.sets.map(projectSet);
+  }
+  return [];
+}
+
 export function projectSession(
-  state: Pick<AppState, "savedExercises" | "restTimerSeconds">,
+  state: Pick<AppState, "savedExercises" | "restTimerSeconds"> & { sessions?: WorkoutSession[] },
   session: WorkoutSession | null | undefined,
 ): WatchStatePayload {
   if (!session || session.endedAt) {
@@ -127,15 +175,9 @@ export function projectSession(
         tracking,
         ...(exercise.targetSeconds ? { targetSeconds: exercise.targetSeconds } : {}),
         restSeconds: exercise.restSeconds ?? defaultRest,
-        sets: exercise.sets.map((set) => ({
-          weight: set.weight,
-          reps: set.reps,
-          ...(set.kind ? { kind: set.kind } : {}),
-          ...(set.mode ? { mode: set.mode } : {}),
-          ...(set.seconds ? { seconds: set.seconds } : {}),
-          ...(set.meters ? { meters: set.meters } : {}),
-          isPR: set.isPR === true,
-        })),
+        barKg: exercise.barKg ?? DEFAULT_BAR_KG,
+        ghost: ghostFor(state.sessions ?? [], exercise.exerciseId, session.id),
+        sets: exercise.sets.map(projectSet),
       };
     }),
   };
@@ -143,7 +185,7 @@ export function projectSession(
 
 /** Push the live session to the watch. Silently a no-op off native iOS. */
 export async function publishToWatch(
-  state: Pick<AppState, "savedExercises" | "restTimerSeconds">,
+  state: Pick<AppState, "savedExercises" | "restTimerSeconds"> & { sessions?: WorkoutSession[] },
   session: WorkoutSession | null | undefined,
 ): Promise<void> {
   if (!watchSupported()) return;

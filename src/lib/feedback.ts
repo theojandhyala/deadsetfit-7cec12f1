@@ -1,7 +1,8 @@
-// Cross-platform "rest is over" feedback. No native plugin needed: a short Web
-// Audio chime works inside the iOS WKWebView (after the first user gesture, which
-// a live workout always has), and navigator.vibrate is a best-effort buzz on the
-// platforms that support it (Android/web; a no-op on iOS Safari).
+import { hapticRestOver } from "./haptics";
+
+// Cross-platform "rest is over" feedback: a short Web Audio chime, which works
+// inside the iOS WKWebView after the first user gesture (a live workout always
+// has one), plus a haptic through the native Taptic Engine.
 export function restDoneChime() {
   try {
     const Ctx =
@@ -30,9 +31,9 @@ export function restDoneChime() {
   } catch {
     /* audio not available — ignore */
   }
-  try {
-    navigator.vibrate?.([120, 60, 120]);
-  } catch {
-    /* vibrate unsupported — ignore */
-  }
+  // navigator.vibrate does nothing in iOS WKWebView, which is where most of
+  // this app's rest periods happen — so the buzz at the end of rest has never
+  // actually fired on an iPhone. Route it through the native Taptic Engine,
+  // which falls back to navigator.vibrate off iOS.
+  hapticRestOver();
 }

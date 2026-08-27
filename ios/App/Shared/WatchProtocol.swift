@@ -100,6 +100,11 @@ struct WatchExercise: Codable, Equatable, Hashable, Identifiable {
     var tracking: String
     var targetSeconds: Int?
     var restSeconds: Int
+    /// Bar this movement is loaded on, so the wrist can show plates per side.
+    var barKg: Double
+    /// What was done on this movement last time, so the target is on the wrist
+    /// rather than only on the phone.
+    var ghost: [WatchSet]
     var sets: [WatchSet]
 
     /// Working sets only — warm-ups and drops don't advance the plan.
@@ -113,6 +118,24 @@ struct WatchExercise: Codable, Equatable, Hashable, Identifiable {
 
     var isTimed: Bool { tracking == "DURATION" }
     var isDistance: Bool { tracking == "DISTANCE" }
+
+    /// Plates per side for a target weight, heaviest first.
+    ///
+    /// Duplicated from the phone rather than shared, because the phone's copy
+    /// lives in TypeScript. Kept beside the bar weight it depends on so the two
+    /// cannot drift: change the plate set here and the wrist changes with it.
+    func platesPerSide(for total: Double) -> [Double] {
+        guard barKg > 0, total > barKg else { return [] }
+        var remaining = (total - barKg) / 2
+        var plates: [Double] = []
+        for plate in [25.0, 20, 15, 10, 5, 2.5, 1.25] {
+            while remaining >= plate - 0.000_000_001 {
+                plates.append(plate)
+                remaining -= plate
+            }
+        }
+        return plates
+    }
 }
 
 /// Everything the watch needs to draw the session. Published wholesale rather

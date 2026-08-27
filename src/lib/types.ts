@@ -108,6 +108,8 @@ export interface ExercisePlan {
   note?: string;
   /** Runs this exercise directly into the next movement before resting. */
   supersetWithNext?: boolean;
+  /** Weight of the bar this movement is loaded on, in kg. Defaults to 20. */
+  barKg?: number;
 }
 
 export interface DaySchedule {
@@ -195,8 +197,12 @@ export interface CompletedSet {
   rpe?: number;
   isPR?: boolean;
   isAmrap?: boolean;
-  /** Warm-up sets are excluded from volume and PRs; drop sets count as volume but never PR. */
-  kind?: "warmup" | "drop";
+  /**
+   * Warm-up sets are excluded from volume and PRs. Drop sets and sets taken to
+   * failure both count as volume but never set a record: the load was not the
+   * limiting factor in either.
+   */
+  kind?: "warmup" | "drop" | "failure";
   /**
    * Set to measure this effort in time or distance instead of reps. Such sets
    * always store `reps: 0`, so every load x reps volume and PR calculation in
@@ -230,6 +236,8 @@ export interface WorkoutSessionExercise {
   targetSeconds?: number;
   /** Added mid-session rather than planned, so the plan can offer to keep it. */
   addedLive?: boolean;
+  /** Bar this movement is loaded on, in kg, driving plate and warm-up maths. */
+  barKg?: number;
   sets: CompletedSet[];
 }
 
@@ -313,6 +321,8 @@ export interface AppState {
   workoutReminderMinute?: number;
   /** Auto rest-timer duration after each logged set (seconds); 0 = off. Default 90. */
   restTimerSeconds?: number;
+  /** Native haptics on set logs, PRs, rest and milestones. Default on. */
+  hapticsEnabled?: boolean;
   /** Auto-post finished workouts to the social feed. Explicit opt-in only. */
   autoShareWorkouts?: boolean;
   streakArmor?: StreakArmor;

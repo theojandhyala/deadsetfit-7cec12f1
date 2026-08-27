@@ -131,4 +131,40 @@ describe("projectSession", () => {
     const noPref = { savedExercises: [], restTimerSeconds: undefined };
     expect(projectSession(noPref, session([bench])).exercises[0]!.restSeconds).toBe(90);
   });
+
+  it("carries the bar so the wrist can show plates per side", () => {
+    const trap: WorkoutSessionExercise = { ...bench, barKg: 25 };
+    expect(projectSession(state, session([trap])).exercises[0]!.barKg).toBe(25);
+  });
+
+  it("defaults the bar to Olympic when the movement has none set", () => {
+    expect(projectSession(state, session([bench])).exercises[0]!.barKg).toBe(20);
+  });
+
+  it("sends last session's sets so the target is on the wrist", () => {
+    const previous = session([{ ...bench, sets: [{ weight: 75, reps: 8 }] }], {
+      id: "older",
+      date: "2026-08-20",
+      endedAt: "2026-08-20T11:00:00.000Z",
+    });
+    const live = session([bench]);
+    const projected = projectSession({ ...state, sessions: [previous, live] }, live);
+    expect(projected.exercises[0]!.ghost).toEqual([{ weight: 75, reps: 8, isPR: false }]);
+  });
+
+  it("never sends the live session back as its own ghost", () => {
+    const live = session([{ ...bench, sets: [{ weight: 80, reps: 5 }] }]);
+    const projected = projectSession({ ...state, sessions: [live] }, live);
+    expect(projected.exercises[0]!.ghost).toEqual([]);
+  });
+
+  it("ignores unfinished sessions when looking for the ghost", () => {
+    const abandoned = session([{ ...bench, sets: [{ weight: 999, reps: 1 }] }], {
+      id: "abandoned",
+      endedAt: undefined,
+    });
+    const live = session([bench]);
+    const projected = projectSession({ ...state, sessions: [abandoned, live] }, live);
+    expect(projected.exercises[0]!.ghost).toEqual([]);
+  });
 });

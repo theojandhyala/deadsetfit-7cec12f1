@@ -81,6 +81,10 @@ struct ExerciseView: View {
                 .tint(DeadSetTheme.red)
                 .disabled(reps <= 0)
 
+                PlatesRow(exercise: exercise, target: weight)
+
+                GhostRow(exercise: exercise)
+
                 SetHistory(exercise: exercise) {
                     connector.undoLastSet(exercise: exercise)
                 }
@@ -88,7 +92,6 @@ struct ExerciseView: View {
             .padding(.horizontal, 4)
         }
         .navigationTitle(exercise.name)
-        .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             guard !loaded else { return }
             loaded = true
@@ -154,7 +157,6 @@ private struct CrownValue: View {
                 Text(format(value))
                     .font(.system(size: 26, weight: .black, design: .rounded))
                     .frame(maxWidth: .infinity)
-                    .contentTransition(.numericText())
 
                 Button {
                     value = min(range.upperBound, value + step)
@@ -176,6 +178,56 @@ private struct CrownValue: View {
             isHapticFeedbackEnabled: true
         )
         .onAppear { focused = true }
+    }
+}
+
+/// Plates per side for the weight currently dialled in.
+///
+/// This is the number you actually need while standing at the rack, and
+/// needing the phone for it is the reason wrist logging gets abandoned.
+private struct PlatesRow: View {
+    let exercise: WatchExercise
+    let target: Double
+
+    var body: some View {
+        let plates = exercise.platesPerSide(for: target)
+        if exercise.barKg > 0 && target > exercise.barKg {
+            VStack(spacing: 2) {
+                Text("PER SIDE")
+                    .font(.system(size: 9, weight: .black))
+                    .foregroundStyle(.secondary)
+                if plates.isEmpty {
+                    Text("bar only")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(plates.map { WatchSet.trim($0) }.joined(separator: " · "))
+                        .font(.system(size: 14, weight: .bold))
+                        .multilineTextAlignment(.center)
+                }
+            }
+            .padding(.top, 2)
+        }
+    }
+}
+
+/// What this movement looked like last time, so the target travels with you.
+private struct GhostRow: View {
+    let exercise: WatchExercise
+
+    var body: some View {
+        if !exercise.ghost.isEmpty {
+            VStack(spacing: 2) {
+                Text("LAST TIME")
+                    .font(.system(size: 9, weight: .black))
+                    .foregroundStyle(.secondary)
+                Text(exercise.ghost.map(\.display).joined(separator: "  "))
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.top, 4)
+        }
     }
 }
 

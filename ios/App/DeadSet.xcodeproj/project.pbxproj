@@ -38,6 +38,7 @@
 		DEADFA000000000000000026 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DEADFA00000000000000001C /* Assets.xcassets */; };
 		DEADFA000000000000000027 /* WatchConnectivityHub.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000017 /* WatchConnectivityHub.swift */; };
 		DEADFA000000000000000028 /* WatchBridgePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000018 /* WatchBridgePlugin.swift */; };
+		DEADFA00000000000000002B /* HapticsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA00000000000000002A /* HapticsPlugin.swift */; };
 		DEADFA000000000000000029 /* WatchProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000019 /* WatchProtocol.swift */; };
 		DEADFA00000000000000000C /* DeadSetWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000002 /* DeadSetWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
@@ -118,6 +119,7 @@
 		DEADFA000000000000000016 /* RestTimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestTimerView.swift; sourceTree = "<group>"; };
 		DEADFA000000000000000017 /* WatchConnectivityHub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityHub.swift; sourceTree = "<group>"; };
 		DEADFA000000000000000018 /* WatchBridgePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBridgePlugin.swift; sourceTree = "<group>"; };
+		DEADFA00000000000000002A /* HapticsPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticsPlugin.swift; sourceTree = "<group>"; };
 		DEADFA000000000000000019 /* WatchProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchProtocol.swift; sourceTree = "<group>"; };
 		DEADFA00000000000000001A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		DEADFA00000000000000001B /* DeadSetWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DeadSetWatch.entitlements; sourceTree = "<group>"; };
@@ -210,6 +212,7 @@
 				A11E4C092E0B11F0AA010100 /* StoreKitPlugin.swift */,
 				DEADFA000000000000000017 /* WatchConnectivityHub.swift */,
 				DEADFA000000000000000018 /* WatchBridgePlugin.swift */,
+				DEADFA00000000000000002A /* HapticsPlugin.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -406,6 +409,7 @@
 				A11E4C0A2E0B11F0AA010101 /* StoreKitPlugin.swift in Sources */,
 				DEADFA000000000000000027 /* WatchConnectivityHub.swift in Sources */,
 				DEADFA000000000000000028 /* WatchBridgePlugin.swift in Sources */,
+				DEADFA00000000000000002B /* HapticsPlugin.swift in Sources */,
 				DEADFA000000000000000029 /* WatchProtocol.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -720,7 +724,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+				WATCHOS_DEPLOYMENT_TARGET = 9.0;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -754,7 +758,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+				WATCHOS_DEPLOYMENT_TARGET = 9.0;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 			};
 			name = Release;

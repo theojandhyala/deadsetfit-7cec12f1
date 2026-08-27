@@ -13,6 +13,8 @@ struct TimedExerciseView: View {
     @State private var startedAt: Date?
     @State private var accumulated: Int = 0
     @State private var now = Date()
+    /// Guards the one-shot buzz as the hold passes its target.
+    @State private var passedTarget = false
 
     private let tick = Timer.publish(every: 0.2, on: .main, in: .common).autoconnect()
 
@@ -29,7 +31,6 @@ struct TimedExerciseView: View {
                 Text(WatchSet.clock(elapsed))
                     .font(.system(size: 44, weight: .black, design: .rounded))
                     .foregroundStyle(elapsed >= target ? DeadSetTheme.done : .primary)
-                    .contentTransition(.numericText())
 
                 Text(elapsed >= target ? "TARGET BEATEN" : "TARGET \(WatchSet.clock(target))")
                     .font(.system(size: 10, weight: .black))
@@ -59,6 +60,7 @@ struct TimedExerciseView: View {
                         connector.logHold(exercise: exercise, seconds: seconds)
                         startedAt = nil
                         accumulated = 0
+                        passedTarget = false
                     } label: {
                         Label("Log", systemImage: "checkmark")
                             .labelStyle(.iconOnly)
@@ -83,14 +85,20 @@ struct TimedExerciseView: View {
             .padding(.horizontal, 4)
         }
         .navigationTitle(exercise.name)
-        .navigationBarTitleDisplayMode(.inline)
         .onReceive(tick) { value in
-            guard startedAt != nil else { return }
+            guard let started = startedAt else { return }
             now = value
-        }
-        .onChange(of: elapsed) { previous, current in
-            // One buzz as the target passes, so you can hold with your eyes shut.
-            if previous < target, current >= target { WatchHaptics.record() }
+            // Recomputed from the tick rather than read back out of @State:
+            // relying on a just-written state value inside the same closure is
+            // a subtlety nobody should have to reason about here.
+            let running = accumulated + Int(value.timeIntervalSince(started))
+            // One buzz as the target passes, so you can hold with your eyes
+            // shut. Tracked with a flag because onChange's previous value is
+            // watchOS 10 only.
+            if !passedTarget, running >= target {
+                passedTarget = true
+                WatchHaptics.record()
+            }
         }
     }
 }
@@ -111,7 +119,6 @@ struct DistanceExerciseView: View {
                     .foregroundStyle(.secondary)
                 Text(String(Int(meters)))
                     .font(.system(size: 36, weight: .black, design: .rounded))
-                    .contentTransition(.numericText())
 
                 HStack(spacing: 6) {
                     Button { meters = max(0, meters - 100) } label: { Image(systemName: "minus") }
@@ -144,6 +151,5 @@ struct DistanceExerciseView: View {
             .padding(.horizontal, 4)
         }
         .navigationTitle(exercise.name)
-        .navigationBarTitleDisplayMode(.inline)
     }
 }

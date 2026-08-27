@@ -6,6 +6,7 @@ import {
   estimate1RM,
   plateBreakdown,
   updateScheduleDay,
+  warmupRamp,
 } from "./calc";
 import { getExercise } from "./exercises";
 import type { Equipment, Profile } from "./types";
@@ -110,5 +111,34 @@ describe("training calculations", () => {
     expect(estimate1RM(100, 5)).toBe(117);
     expect(estimate1RM(-10, 5)).toBe(0);
     expect(plateBreakdown(100)).toEqual({ perSide: [25, 15], remainderKg: 0, barKg: 20 });
+  });
+});
+
+describe("warmupRamp against a real bar", () => {
+  it("never suggests a warm-up lighter than the bar being used", () => {
+    // An EZ bar is 10 kg. Ramping to 40 kg from an Olympic floor would have
+    // suggested 20 kg as the lightest step and hidden the bar-only warm-up.
+    const ramp = warmupRamp(40, 10);
+    expect(ramp.length).toBeGreaterThan(0);
+    expect(Math.min(...ramp.map((set) => set.weight))).toBeGreaterThanOrEqual(10);
+  });
+
+  it("ramps from a heavier bar without dropping below it", () => {
+    const ramp = warmupRamp(100, 25);
+    expect(Math.min(...ramp.map((set) => set.weight))).toBeGreaterThanOrEqual(25);
+  });
+
+  it("has nothing to ramp when the target is the bar itself", () => {
+    expect(warmupRamp(25, 25)).toEqual([]);
+    expect(warmupRamp(10, 25)).toEqual([]);
+  });
+
+  it("still defaults to the Olympic bar when none is given", () => {
+    expect(warmupRamp(100)).toEqual(warmupRamp(100, 20));
+  });
+
+  it("copes with a bar weight of zero rather than dividing into nothing", () => {
+    const ramp = warmupRamp(40, 0);
+    expect(ramp.every((set) => set.weight > 0)).toBe(true);
   });
 });

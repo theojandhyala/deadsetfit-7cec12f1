@@ -110,6 +110,8 @@ public class WatchBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             tracking: raw["tracking"] as? String ?? "WEIGHT",
             targetSeconds: intValue(raw["targetSeconds"]),
             restSeconds: intValue(raw["restSeconds"]) ?? 90,
+            barKg: doubleValue(raw["barKg"]) ?? 20,
+            ghost: ((raw["ghost"] as? [[String: Any]]) ?? []).map(set(from:)),
             sets: ((raw["sets"] as? [[String: Any]]) ?? []).map(set(from:))
         )
     }

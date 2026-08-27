@@ -65,7 +65,14 @@ function chestSession(date: string, name: string): WorkoutSession {
   } as WorkoutSession;
 }
 
-const SIX_DATES = ["2026-07-06", "2026-07-10", "2026-07-14", "2026-07-18", "2026-07-22", "2026-07-26"];
+const SIX_DATES = [
+  "2026-07-06",
+  "2026-07-10",
+  "2026-07-14",
+  "2026-07-18",
+  "2026-07-22",
+  "2026-07-26",
+];
 
 describe("staleMuscles", () => {
   it("flags a muscle fed the same movement for 6+ sessions", () => {

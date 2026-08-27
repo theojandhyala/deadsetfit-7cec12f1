@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Flame, Sparkles, Trophy, Zap } from "lucide-react";
 
 import { onGritEarned, type GritAnimationEvent } from "@/lib/grit-events";
+import { hapticMilestone } from "@/lib/haptics";
 
 const ICONS = {
   grit: Zap,
@@ -17,6 +18,10 @@ export function GritEarnedLayer() {
 
   useEffect(() => {
     const off = onGritEarned((event) => {
+      // Every milestone routes through this stream, so one listener gives all
+      // of them a haptic. PRs are excluded: PRCelebration owns that pattern,
+      // and buzzing twice for one event muddies what each pattern means.
+      if (event.kind !== "pr") hapticMilestone();
       // PR and rank moments get the full-screen CelebrationLayer — showing
       // the small burst underneath it would double-fire the same event.
       if (event.kind === "pr" || event.kind === "rank") return;

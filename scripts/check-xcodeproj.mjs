@@ -14,7 +14,7 @@
  * opening it the second failure, not the first.
  */
 import { execFileSync } from "node:child_process";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -205,6 +205,33 @@ for (const match of src.matchAll(
   if (existsSync(full)) continue;
   if (isGenerated(full)) continue;
   fail(`file reference points at a missing path: ${path[1]} (looked in ${full})`);
+}
+
+// --- every source file on disk belongs to a target -------------------------
+// The inverse of the check above, and the one that actually bites: adding a
+// .swift file and forgetting to add it to the project leaves it compiling into
+// nothing, and the first symptom is "cannot find X in scope" somewhere else
+// entirely. Only directories the project owns are scanned.
+// Relative to projectDir, which is already ios/App.
+const sourceRoots = ["App", "DeadSetWatch", "Shared", "DeadSetRestActivity"];
+const referencedPaths = new Set();
+for (const match of src.matchAll(
+  new RegExp(`isa = PBXFileReference;.*?path = "?([^";]+)"?;`, "g"),
+)) {
+  referencedPaths.add(match[1].split("/").pop());
+}
+
+for (const relativeRoot of sourceRoots) {
+  const dir = join(projectDir, relativeRoot);
+  if (!existsSync(dir)) continue;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith(".swift")) continue;
+    if (!referencedPaths.has(entry.name)) {
+      fail(
+        `${relativeRoot}/${entry.name} is on disk but not in the project — it will not be compiled`,
+      );
+    }
+  }
 }
 
 // --- report ----------------------------------------------------------------

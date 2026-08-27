@@ -1,9 +1,10 @@
+import { isWorkingSet } from "@/lib/set-tracking";
 import type { CompletedSet, ExercisePlan, WorkoutSessionExercise } from "@/lib/types";
 
 type ExerciseConfig = Record<string, ExercisePlan> | undefined;
 
 export function completedWorkingSets(sets: CompletedSet[]): number {
-  return sets.filter((set) => !set.kind).length;
+  return sets.filter(isWorkingSet).length;
 }
 
 /** Converts the schedule's visible, adjacent links into session-stable group ids. */
