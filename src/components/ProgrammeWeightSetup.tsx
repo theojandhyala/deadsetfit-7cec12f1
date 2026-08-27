@@ -1,5 +1,5 @@
 import { Dumbbell } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { getExercise } from "@/lib/exercises";
 import { requiresWorkingWeight } from "@/lib/workout-flow";
@@ -10,13 +10,10 @@ import type { DayKey, Schedule } from "@/lib/types";
 
 type WeightRow = {
   key: string;
-  source: "schedule" | "program";
-  day: DayKey;
   exerciseId: string;
   name: string;
   weightKg: number;
-  programId?: string;
-  programIndex?: number;
+  days: DayKey[];
 };
 
 const DAY_LABEL: Record<DayKey, string> = {
@@ -32,9 +29,23 @@ const DAY_LABEL: Record<DayKey, string> = {
 export function ProgrammeWeightSetup() {
   const [state, set] = useAppState();
   const [error, setError] = useState<string | null>(null);
+  const [step, setStep] = useState(0);
+  const answers = useRef(new Map<string, number>());
   const unit = unitOf(state);
   const rows = useMemo<WeightRow[]>(() => {
-    const result: WeightRow[] = [];
+    const known = new Map<string, number>();
+    for (const day of Object.values(state.schedule ?? {})) {
+      for (const exerciseId of day.exerciseIds) {
+        const stored = day.exerciseConfig?.[exerciseId]?.weightKg ?? 0;
+        if (stored > 0) known.set(exerciseId, stored);
+      }
+    }
+    const active = state.programs.find((program) => program.id === state.activeProgramId);
+    for (const day of Object.values(active?.days ?? {})) {
+      for (const item of day.items) {
+        if ((item.weightKg ?? 0) > 0) known.set(item.id, item.weightKg!);
+      }
+    }
     const historyWeight = (exerciseId: string) => {
       const sessions = [...state.sessions].sort((a, b) => b.startedAt.localeCompare(a.startedAt));
       for (const session of sessions) {
@@ -43,6 +54,12 @@ export function ProgrammeWeightSetup() {
         if (weighted) return weighted.weight;
       }
       return 0;
+    };
+    const missing = new Map<string, { exerciseId: string; name: string; days: Set<DayKey> }>();
+    const addMissing = (exerciseId: string, name: string, day: DayKey) => {
+      const row = missing.get(exerciseId) ?? { exerciseId, name, days: new Set<DayKey>() };
+      row.days.add(day);
+      missing.set(exerciseId, row);
     };
 
     if (state.schedule) {
@@ -56,43 +73,34 @@ export function ProgrammeWeightSetup() {
           if (!requiresWorkingWeight({ tracking }, exercise.equipment)) continue;
           const stored = plan.exerciseConfig?.[exerciseId]?.weightKg ?? 0;
           if (stored > 0) continue;
-          result.push({
-            key: `schedule:${day}:${exerciseId}`,
-            source: "schedule",
-            day,
-            exerciseId,
-            name: exercise.name,
-            weightKg: historyWeight(exerciseId),
-          });
+          addMissing(exerciseId, exercise.name, day);
         }
       }
     }
 
-    const active = state.programs.find((program) => program.id === state.activeProgramId);
     if (active) {
       for (const day of Object.keys(active.days) as DayKey[]) {
-        active.days[day].items.forEach((item, index) => {
+        active.days[day].items.forEach((item) => {
           const definition = getExercise(item.id, state.savedExercises);
           const tracking = trackingModeFor(definition ?? { name: item.name }, item.reps);
           if (!requiresWorkingWeight({ tracking }, definition?.equipment ?? item.equipment)) return;
           if ((item.weightKg ?? 0) > 0) return;
-          result.push({
-            key: `program:${active.id}:${day}:${index}`,
-            source: "program",
-            day,
-            exerciseId: item.id,
-            name: item.name,
-            weightKg: historyWeight(item.id),
-            programId: active.id,
-            programIndex: index,
-          });
+          addMissing(item.id, item.name, day);
         });
       }
     }
-    return result;
+    return [...missing.values()].map((row) => ({
+      key: row.exerciseId,
+      exerciseId: row.exerciseId,
+      name: row.name,
+      days: [...row.days],
+      weightKg: known.get(row.exerciseId) ?? historyWeight(row.exerciseId),
+    }));
   }, [state]);
 
   if (!state.profile || rows.length === 0) return null;
+  const activeStep = Math.min(step, rows.length - 1);
+  const row = rows[activeStep]!;
 
   return (
     <div
@@ -106,16 +114,23 @@ export function ProgrammeWeightSetup() {
         <div className="flex items-center justify-between gap-3">
           <p className="label-cap text-[10px] text-accent-red">PROGRAMME SETUP</p>
           <p className="label-cap text-[9px] text-grit-dim">
-            {rows.length} LOAD{rows.length === 1 ? "" : "S"} LEFT
+            {activeStep + 1} OF {rows.length}
           </p>
         </div>
         <h2 className="display mt-1 text-3xl font-extrabold uppercase leading-none text-white">
           Set every working weight
         </h2>
         <p className="mt-3 text-xs leading-relaxed text-grit-dim">
-          Enter the load you expect for a normal working set. Recent loads are prefilled where
-          possible. You can change any set later; only completed sets update muscle rankings.
+          One exercise at a time. Repeated exercises use this same load everywhere they appear.
+          Recent loads are prefilled where possible.
         </p>
+
+        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[#242424]">
+          <div
+            className="h-full rounded-full bg-accent-red transition-all"
+            style={{ width: `${((activeStep + 1) / rows.length) * 100}%` }}
+          />
+        </div>
 
         <form
           className="mt-5 space-y-3"
@@ -123,33 +138,30 @@ export function ProgrammeWeightSetup() {
           onSubmit={(event) => {
             event.preventDefault();
             const data = new FormData(event.currentTarget);
-            const values = new Map<string, number>();
-            for (const row of rows) {
-              const display = Number(data.get(row.key));
-              if (!Number.isFinite(display) || display <= 0) {
-                setError(`Enter a weight above 0 ${unit} for ${row.name}. Decimals are allowed.`);
-                const target = event.currentTarget.elements.namedItem(row.key);
-                if (target instanceof Element) {
-                  target.scrollIntoView({ behavior: "smooth", block: "center" });
-                }
-                return;
-              }
-              values.set(row.key, toKg(display, unit));
+            const display = Number(data.get("weight"));
+            if (!Number.isFinite(display) || display <= 0) {
+              setError(`Enter a weight above 0 ${unit} for ${row.name}. Decimals are allowed.`);
+              return;
             }
+            answers.current.set(row.exerciseId, toKg(display, unit));
             setError(null);
+            if (activeStep < rows.length - 1) {
+              setStep(activeStep + 1);
+              return;
+            }
+            const values = new Map(answers.current);
             set((current) => {
               const schedule = current.schedule
                 ? (Object.fromEntries(
                     (Object.keys(current.schedule) as DayKey[]).map((day) => {
                       const plan = current.schedule![day];
-                      const additions = rows.filter(
-                        (row) => row.source === "schedule" && row.day === day,
-                      );
                       const exerciseConfig = { ...(plan.exerciseConfig ?? {}) };
-                      for (const row of additions) {
-                        exerciseConfig[row.exerciseId] = {
-                          ...(exerciseConfig[row.exerciseId] ?? {}),
-                          weightKg: values.get(row.key),
+                      for (const exerciseId of plan.exerciseIds) {
+                        const weightKg = values.get(exerciseId);
+                        if (weightKg == null) continue;
+                        exerciseConfig[exerciseId] = {
+                          ...(exerciseConfig[exerciseId] ?? {}),
+                          weightKg,
                         };
                       }
                       return [day, { ...plan, exerciseConfig }];
@@ -157,19 +169,14 @@ export function ProgrammeWeightSetup() {
                   ) as Schedule)
                 : current.schedule;
               const programs = current.programs.map((program) => {
-                const additions = rows.filter(
-                  (row) => row.source === "program" && row.programId === program.id,
-                );
-                if (!additions.length) return program;
+                if (program.id !== current.activeProgramId) return program;
                 const days = { ...program.days };
                 for (const day of Object.keys(days) as DayKey[]) {
                   days[day] = {
                     ...days[day],
-                    items: days[day].items.map((item, index) => {
-                      const row = additions.find(
-                        (candidate) => candidate.day === day && candidate.programIndex === index,
-                      );
-                      return row ? { ...item, weightKg: values.get(row.key) } : item;
+                    items: days[day].items.map((item) => {
+                      const weightKg = values.get(item.id);
+                      return weightKg == null ? item : { ...item, weightKg };
                     }),
                   };
                 }
@@ -177,35 +184,38 @@ export function ProgrammeWeightSetup() {
               });
               return { ...current, schedule, programs };
             });
+            answers.current.clear();
+            setStep(0);
           }}
         >
-          {rows.map((row) => (
-            <label key={row.key} className="block rounded-2xl border border-grit bg-[#080808] p-4">
-              <span className="flex items-baseline justify-between gap-3">
-                <span className="display text-base font-extrabold uppercase text-white">
-                  {row.name}
-                </span>
-                <span className="label-cap text-[8px] text-grit-dim">{DAY_LABEL[row.day]}</span>
+          <label className="block rounded-2xl border border-grit bg-[#080808] p-5">
+            <span className="display block text-xl font-extrabold uppercase text-white">
+              {row.name}
+            </span>
+            <span className="mt-1 block text-[10px] text-grit-dim">
+              {row.days.map((day) => DAY_LABEL[day]).join(" · ")}
+              {row.days.length > 1 ? " · one weight will fill every repeat" : ""}
+            </span>
+            <span className="mt-5 flex items-center gap-2">
+              <input
+                key={row.key}
+                name="weight"
+                autoFocus
+                type="number"
+                inputMode="decimal"
+                min="0.01"
+                step="any"
+                defaultValue={trimNumber(
+                  toDisplay(answers.current.get(row.exerciseId) ?? row.weightKg, unit),
+                )}
+                placeholder={`Weight in ${unit}`}
+                className="min-h-14 min-w-0 flex-1 rounded-xl border border-grit bg-black px-4 text-2xl font-black tabular-nums text-white outline-none focus:border-accent-red"
+              />
+              <span className="display w-8 text-sm font-extrabold uppercase text-grit-dim">
+                {unit}
               </span>
-              <span className="mt-3 flex items-center gap-2">
-                <input
-                  name={row.key}
-                  type="number"
-                  inputMode="decimal"
-                  min="0.01"
-                  step="any"
-                  defaultValue={
-                    row.weightKg > 0 ? trimNumber(toDisplay(row.weightKg, unit)) : undefined
-                  }
-                  placeholder={`Weight in ${unit}`}
-                  className="min-h-12 min-w-0 flex-1 rounded-xl border border-grit bg-black px-4 text-xl font-black tabular-nums text-white outline-none focus:border-accent-red"
-                />
-                <span className="display w-8 text-sm font-extrabold uppercase text-grit-dim">
-                  {unit}
-                </span>
-              </span>
-            </label>
-          ))}
+            </span>
+          </label>
           {error && (
             <p
               role="alert"
@@ -214,13 +224,26 @@ export function ProgrammeWeightSetup() {
               {error}
             </p>
           )}
-          <button
-            type="submit"
-            className="btn-grit flex min-h-14 w-full items-center justify-center rounded-2xl"
-          >
-            <Dumbbell size={17} className="mr-2" />
-            Finish programme setup
-          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              disabled={activeStep === 0}
+              onClick={() => {
+                setError(null);
+                setStep((current) => Math.max(0, current - 1));
+              }}
+              className="btn-ghost min-h-14 rounded-2xl disabled:opacity-30"
+            >
+              Back
+            </button>
+            <button
+              type="submit"
+              className="btn-grit flex min-h-14 items-center justify-center rounded-2xl"
+            >
+              <Dumbbell size={17} className="mr-2" />
+              {activeStep === rows.length - 1 ? "Finish" : "Next"}
+            </button>
+          </div>
         </form>
       </div>
     </div>
