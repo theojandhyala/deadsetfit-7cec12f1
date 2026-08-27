@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo } from "react";
-import { ChevronLeft, ChevronRight, Lock, Info, TrendingUp } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Lock, Info, Share2, TrendingUp } from "lucide-react";
 
 import { useAppState } from "@/lib/storage";
 import { allExercises } from "@/lib/exercises";
@@ -9,6 +9,7 @@ import { useCountUp } from "@/hooks/useCountUp";
 import { openPaywall } from "@/lib/paywall-events";
 import { formatWeight, unitOf } from "@/lib/units";
 import { StrengthBodyMap, TierLegend } from "@/components/StrengthBodyMap";
+import { StrengthShareCard } from "@/components/StrengthShareCard";
 import {
   GRADED_MUSCLES,
   TIER_BLURB,
@@ -42,6 +43,7 @@ function StrengthPage() {
   const report = useMemo(() => strengthReport(state, library), [state, library]);
   const trend = useMemo(() => strengthTrend(state, library, 7), [state, library]);
   const journey = useMemo(() => strengthJourney(state, library), [state, library]);
+  const [sharing, setSharing] = useState(false);
   const displayScore = useCountUp(report.score, 900);
   const locked = !proLoading && !isPro;
 
@@ -71,7 +73,7 @@ function StrengthPage() {
 
           <BodyMapCard muscles={report.muscles} />
 
-          <JourneyCard journey={journey} />
+          <JourneyCard journey={journey} onShare={() => setSharing(true)} />
 
           <WeekTrend trend={trend} />
 
@@ -100,6 +102,20 @@ function StrengthPage() {
                 </p>
               </div>
             </section>
+          )}
+
+          {sharing && (
+            <StrengthShareCard
+              start={journey.start.muscles}
+              now={journey.now.muscles}
+              tier={report.tier}
+              displayName={state.profile?.displayName || state.profile?.username || "DEADSET"}
+              sinceLabel={`Since ${new Date(`${journey.startedOn}T00:00:00`).toLocaleDateString(
+                undefined,
+                { month: "short", year: "numeric" },
+              )}`}
+              onClose={() => setSharing(false)}
+            />
           )}
 
           <p className="px-5 mt-5 text-[10px] leading-relaxed text-grit-dim">
@@ -139,7 +155,7 @@ function BodyMapCard({ muscles }: { muscles: MuscleGrade[] }) {
 }
 
 /** Then and now, side by side. */
-function JourneyCard({ journey }: { journey: StrengthJourney }) {
+function JourneyCard({ journey, onShare }: { journey: StrengthJourney; onShare: () => void }) {
   if (!journey.meaningful) return null;
 
   const started = new Date(`${journey.startedOn}T00:00:00`).toLocaleDateString(undefined, {
@@ -173,6 +189,11 @@ function JourneyCard({ journey }: { journey: StrengthJourney }) {
             No tier changes yet. Keep going — the body on the right is the one that moves.
           </p>
         )}
+
+        <button onClick={onShare} className="btn-grit mt-3 w-full">
+          <Share2 size={15} className="mr-2" />
+          Share my progress
+        </button>
       </div>
     </section>
   );
