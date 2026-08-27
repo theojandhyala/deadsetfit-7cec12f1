@@ -176,17 +176,17 @@ function StrengthBodyComparison({
           <p className="label-cap text-[10px] text-accent-red">STRENGTH MAP</p>
           <p className="label-cap text-[9px] text-grit-dim">FRONT + BACK</p>
         </div>
-        <div className={`mt-3 grid ${hasBaseline ? "grid-cols-2" : "grid-cols-1"} gap-2`}>
+        <div className="mt-3 grid grid-cols-1 gap-4">
           {hasBaseline && (
             <div className="text-center">
               <p className="label-cap text-[9px] text-grit-dim">FIRST 90 DAYS</p>
-              <MuscleDiagram gradeColors={reportColors(baseline, plannedMuscles)} size={150} />
+              <MuscleDiagram gradeColors={reportColors(baseline, plannedMuscles)} size={220} />
               <p className="display text-lg font-extrabold text-grit">{baseline!.score}</p>
             </div>
           )}
           <div className="text-center">
             <p className="label-cap text-[9px] text-grit-dim">NOW</p>
-            <MuscleDiagram gradeColors={reportColors(current, plannedMuscles)} size={150} />
+            <MuscleDiagram gradeColors={reportColors(current, plannedMuscles)} size={240} />
             <p className="display text-lg font-extrabold text-grit">{current.score}</p>
           </div>
         </div>

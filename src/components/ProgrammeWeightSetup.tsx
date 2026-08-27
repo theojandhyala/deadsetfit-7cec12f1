@@ -1,10 +1,10 @@
 import { Dumbbell } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { getExercise } from "@/lib/exercises";
 import { requiresWorkingWeight } from "@/lib/workout-flow";
 import { trackingModeFor } from "@/lib/set-tracking";
-import { increment, toDisplay, toKg, trimNumber, unitOf } from "@/lib/units";
+import { toDisplay, toKg, trimNumber, unitOf } from "@/lib/units";
 import { useAppState } from "@/lib/storage";
 import type { DayKey, Schedule } from "@/lib/types";
 
@@ -31,6 +31,7 @@ const DAY_LABEL: Record<DayKey, string> = {
 
 export function ProgrammeWeightSetup() {
   const [state, set] = useAppState();
+  const [error, setError] = useState<string | null>(null);
   const unit = unitOf(state);
   const rows = useMemo<WeightRow[]>(() => {
     const result: WeightRow[] = [];
@@ -102,26 +103,40 @@ export function ProgrammeWeightSetup() {
       }}
     >
       <div className="mx-auto max-w-md rounded-3xl border border-accent-red/50 bg-[#101010] p-5 shadow-[0_0_60px_rgba(230,50,34,0.18)]">
-        <p className="label-cap text-[10px] text-accent-red">FINISH YOUR PROGRAMME</p>
+        <div className="flex items-center justify-between gap-3">
+          <p className="label-cap text-[10px] text-accent-red">PROGRAMME SETUP</p>
+          <p className="label-cap text-[9px] text-grit-dim">
+            {rows.length} LOAD{rows.length === 1 ? "" : "S"} LEFT
+          </p>
+        </div>
         <h2 className="display mt-1 text-3xl font-extrabold uppercase leading-none text-white">
           Set every working weight
         </h2>
         <p className="mt-3 text-xs leading-relaxed text-grit-dim">
-          DEADSET uses these loads to prepare every workout. Your completed weight and reps—not
-          these estimates—update the strength map and muscle rankings.
+          Enter the load you expect for a normal working set. Recent loads are prefilled where
+          possible. You can change any set later; only completed sets update muscle rankings.
         </p>
 
         <form
           className="mt-5 space-y-3"
+          noValidate
           onSubmit={(event) => {
             event.preventDefault();
             const data = new FormData(event.currentTarget);
             const values = new Map<string, number>();
             for (const row of rows) {
               const display = Number(data.get(row.key));
-              if (!Number.isFinite(display) || display <= 0) return;
+              if (!Number.isFinite(display) || display <= 0) {
+                setError(`Enter a weight above 0 ${unit} for ${row.name}. Decimals are allowed.`);
+                const target = event.currentTarget.elements.namedItem(row.key);
+                if (target instanceof Element) {
+                  target.scrollIntoView({ behavior: "smooth", block: "center" });
+                }
+                return;
+              }
               values.set(row.key, toKg(display, unit));
             }
+            setError(null);
             set((current) => {
               const schedule = current.schedule
                 ? (Object.fromEntries(
@@ -177,13 +192,12 @@ export function ProgrammeWeightSetup() {
                   name={row.key}
                   type="number"
                   inputMode="decimal"
-                  min={increment(unit)}
-                  step={increment(unit)}
-                  required
+                  min="0.01"
+                  step="any"
                   defaultValue={
                     row.weightKg > 0 ? trimNumber(toDisplay(row.weightKg, unit)) : undefined
                   }
-                  placeholder="Working weight"
+                  placeholder={`Weight in ${unit}`}
                   className="min-h-12 min-w-0 flex-1 rounded-xl border border-grit bg-black px-4 text-xl font-black tabular-nums text-white outline-none focus:border-accent-red"
                 />
                 <span className="display w-8 text-sm font-extrabold uppercase text-grit-dim">
@@ -192,12 +206,20 @@ export function ProgrammeWeightSetup() {
               </span>
             </label>
           ))}
+          {error && (
+            <p
+              role="alert"
+              className="rounded-xl border border-accent-red/50 bg-accent-red/10 px-3 py-2 text-xs font-bold text-accent-red"
+            >
+              {error}
+            </p>
+          )}
           <button
             type="submit"
             className="btn-grit flex min-h-14 w-full items-center justify-center rounded-2xl"
           >
             <Dumbbell size={17} className="mr-2" />
-            Save weights
+            Finish programme setup
           </button>
         </form>
       </div>
