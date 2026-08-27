@@ -123,7 +123,7 @@ function LiftDetailPage() {
   const empty = byDay.length === 0;
 
   return (
-    <div>
+    <div className="deadset-page">
       <header className="px-5 pt-6 pb-3 flex items-center gap-2">
         <Link to="/progress" className="text-grit-dim">
           <ChevronLeft size={22} />

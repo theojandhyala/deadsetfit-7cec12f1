@@ -193,7 +193,10 @@ function CataloguePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-grit pb-28" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+    <div
+      className="deadset-page min-h-screen bg-grit pb-28"
+      style={{ paddingTop: "env(safe-area-inset-top)" }}
+    >
       <input
         ref={fileRef}
         type="file"

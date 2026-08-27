@@ -1333,10 +1333,8 @@ function PlanPage() {
                         <Link2 size={14} />
                         {config.supersetWithNext
                           ? `Superset with ${
-                              getExercise(
-                                selected.exerciseIds[index + 1]!,
-                                state.savedExercises,
-                              )?.name ?? "next exercise"
+                              getExercise(selected.exerciseIds[index + 1]!, state.savedExercises)
+                                ?.name ?? "next exercise"
                             }`
                           : "Link with next exercise"}
                       </button>

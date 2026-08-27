@@ -740,11 +740,17 @@ function ProfilePage() {
 
       <section className="px-5 pb-10 flex flex-col items-center gap-2">
         <div className="flex justify-center gap-4 label-cap text-[10px] text-grit-dim">
-          <Link to="/privacy" className="tap-44">Privacy</Link>
+          <Link to="/privacy" className="tap-44">
+            Privacy
+          </Link>
           <span>·</span>
-          <Link to="/terms" className="tap-44">Terms</Link>
+          <Link to="/terms" className="tap-44">
+            Terms
+          </Link>
           <span>·</span>
-          <Link to="/disclaimer" className="tap-44">Disclaimer</Link>
+          <Link to="/disclaimer" className="tap-44">
+            Disclaimer
+          </Link>
         </div>
         <p className="label-cap text-[10px] text-grit-dim">DEADSET — made by Theo Jandhyala</p>
       </section>

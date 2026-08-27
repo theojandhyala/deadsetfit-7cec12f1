@@ -346,7 +346,7 @@ function ChallengesPage() {
   ];
 
   return (
-    <div className="pb-6">
+    <div className="deadset-page pb-6">
       <header className="px-5 pt-6 pb-4 flex items-center justify-between">
         <Link to="/train" className="flex items-center gap-1.5 press" style={{ color: "#8A8A8A" }}>
           <ArrowLeft size={16} />
@@ -1209,7 +1209,11 @@ function ChallengeRunner({ challenge, onClose }: { challenge: Challenge; onClose
           <div className="w-10 h-1 rounded-full" style={{ background: "#262626" }} />
         </div>
 
-        <button onClick={onClose} className="icon-btn absolute top-4 right-4" style={{ color: "#8A8A8A" }}>
+        <button
+          onClick={onClose}
+          className="icon-btn absolute top-4 right-4"
+          style={{ color: "#8A8A8A" }}
+        >
           <X size={20} />
         </button>
 

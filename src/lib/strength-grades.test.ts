@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   gradeExercise,
+  strengthReportAsOf,
+  strengthTrend,
   personalBests,
   pointsToNextTier,
   STANDARDS,
@@ -244,5 +246,116 @@ describe("tierForScore", () => {
   it("says what the next tier costs, and nothing at the top", () => {
     expect(pointsToNextTier(10)!.tier).toBe("NOVICE");
     expect(pointsToNextTier(100)).toBeNull();
+  });
+});
+
+/** A finished session on a specific day. */
+function sessionOn(date: string, exerciseId: string, weight: number, reps: number): WorkoutSession {
+  return {
+    ...session(exerciseId, exerciseId, [{ weight, reps }]),
+    id: `s-${date}-${exerciseId}-${weight}`,
+    date,
+    startedAt: `${date}T10:00:00.000Z`,
+    endedAt: `${date}T11:00:00.000Z`,
+  };
+}
+
+const NOW = new Date("2026-08-27T12:00:00.000Z");
+
+describe("strengthReportAsOf", () => {
+  it("hides work logged after the cutoff", () => {
+    const sessions = [
+      sessionOn("2026-08-10", "bench-press", 80, 5),
+      sessionOn("2026-08-25", "bench-press", 120, 5),
+    ];
+    const early = strengthReportAsOf(state(sessions), library, "2026-08-15");
+    const late = strengthReportAsOf(state(sessions), library, "2026-08-26");
+    expect(late.score).toBeGreaterThan(early.score);
+  });
+
+  it("includes work logged on the cutoff day itself", () => {
+    const report = strengthReportAsOf(
+      state([sessionOn("2026-08-15", "bench-press", 100, 5)]),
+      library,
+      "2026-08-15",
+    );
+    expect(report.gradedCount).toBe(1);
+  });
+
+  it("reports nothing graded before the athlete had trained", () => {
+    const report = strengthReportAsOf(
+      state([sessionOn("2026-08-20", "bench-press", 100, 5)]),
+      library,
+      "2026-08-01",
+    );
+    expect(report.gradedCount).toBe(0);
+  });
+});
+
+describe("strengthTrend", () => {
+  it("reports the gain when a lift went up this week", () => {
+    const trend = strengthTrend(
+      state([
+        sessionOn("2026-08-01", "bench-press", 80, 5),
+        sessionOn("2026-08-25", "bench-press", 120, 5),
+      ]),
+      library,
+      7,
+      NOW,
+    );
+    expect(trend.overallChange).toBeGreaterThan(0);
+    expect(trend.movers[0]!.muscle).toBe("CHEST");
+    expect(trend.movers[0]!.change).toBeGreaterThan(0);
+  });
+
+  it("stays flat when nothing improved in the window", () => {
+    const trend = strengthTrend(
+      state([sessionOn("2026-08-01", "bench-press", 100, 5)]),
+      library,
+      7,
+      NOW,
+    );
+    expect(trend.overallChange).toBe(0);
+    expect(trend.movers).toEqual([]);
+  });
+
+  it("does not count a lighter session as going backwards", () => {
+    // Grades are built from bests, so a deload week must not read as a loss.
+    const trend = strengthTrend(
+      state([
+        sessionOn("2026-08-01", "bench-press", 120, 5),
+        sessionOn("2026-08-25", "bench-press", 60, 5),
+      ]),
+      library,
+      7,
+      NOW,
+    );
+    expect(trend.overallChange).toBe(0);
+  });
+
+  it("counts a brand-new muscle as a gain from zero", () => {
+    const trend = strengthTrend(state([sessionOn("2026-08-25", "squat", 140, 5)]), library, 7, NOW);
+    const legs = trend.movers.find((m) => m.muscle === "LEGS")!;
+    expect(legs.then).toBe(0);
+    expect(legs.change).toBe(legs.now);
+  });
+
+  it("ranks the biggest gain first", () => {
+    const trend = strengthTrend(
+      state([
+        sessionOn("2026-08-01", "bench-press", 60, 5),
+        sessionOn("2026-08-01", "squat", 60, 5),
+        sessionOn("2026-08-25", "squat", 180, 5),
+        sessionOn("2026-08-25", "bench-press", 65, 5),
+      ]),
+      library,
+      7,
+      NOW,
+    );
+    expect(trend.movers[0]!.muscle).toBe("LEGS");
+  });
+
+  it("says which date it is comparing against", () => {
+    expect(strengthTrend(state([]), library, 7, NOW).since).toBe("2026-08-20");
   });
 });

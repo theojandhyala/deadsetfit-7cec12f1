@@ -193,7 +193,7 @@ function BuilderPage() {
   const d = program.days[day];
 
   return (
-    <div className="pb-8">
+    <div className="deadset-page pb-8">
       <header className="px-5 pt-6 pb-3 flex items-center gap-3">
         <Link to="/programs" className="-ml-1 p-1">
           <ArrowLeft size={20} className="text-grit" />

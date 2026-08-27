@@ -210,7 +210,11 @@ function TrainPage() {
                           {exercise.name}
                         </span>
                         {exercise.superset && (
-                          <Link2 size={11} className="shrink-0 text-accent-red" aria-label="Superset" />
+                          <Link2
+                            size={11}
+                            className="shrink-0 text-accent-red"
+                            aria-label="Superset"
+                          />
                         )}
                         <span className="shrink-0 text-grit-dim">{exercise.target}</span>
                       </div>

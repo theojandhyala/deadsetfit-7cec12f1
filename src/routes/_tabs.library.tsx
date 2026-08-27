@@ -91,7 +91,7 @@ function LibraryPage() {
   }
 
   return (
-    <div className="px-4 pt-6">
+    <div className="deadset-page px-4 pt-6">
       <div className="flex items-end justify-between mb-1">
         <h1 className="label-cap text-grit text-2xl">Library</h1>
         <span className="label-cap text-grit-dim text-xs">

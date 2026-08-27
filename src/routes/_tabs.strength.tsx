@@ -15,9 +15,11 @@ import {
   TIERS,
   pointsToNextTier,
   strengthReport,
+  strengthTrend,
   type ExerciseGrade,
   type MuscleGrade,
   type StrengthTier,
+  type StrengthTrend,
 } from "@/lib/strength-grades";
 
 export const Route = createFileRoute("/_tabs/strength")({
@@ -35,6 +37,7 @@ function StrengthPage() {
     [state.savedExercises],
   );
   const report = useMemo(() => strengthReport(state, library), [state, library]);
+  const trend = useMemo(() => strengthTrend(state, library, 7), [state, library]);
   const displayScore = useCountUp(report.score, 900);
   const locked = !proLoading && !isPro;
 
@@ -61,6 +64,8 @@ function StrengthPage() {
       ) : (
         <>
           <OverallCard tier={report.tier} score={report.score} displayScore={displayScore} />
+
+          <WeekTrend trend={trend} />
 
           <section className="px-5 mt-5">
             <p className="label-cap text-[10px] text-grit-dim mb-2">BY MUSCLE GROUP</p>
@@ -97,6 +102,55 @@ function StrengthPage() {
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * What moved this week.
+ *
+ * A static grade is read once. "Chest went 42 to 47" is a reason to come back,
+ * which is the whole difference between a stat and a habit.
+ */
+function WeekTrend({ trend }: { trend: StrengthTrend }) {
+  if (trend.movers.length === 0) {
+    return (
+      <section className="px-5 mt-3">
+        <div className="rounded-2xl border border-grit px-4 py-3">
+          <p className="label-cap text-[9px] text-grit-dim">THIS WEEK</p>
+          <p className="mt-1 text-xs leading-relaxed text-grit-dim">
+            No grade changes yet. Beat a previous best on any lift and it moves here.
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="px-5 mt-3">
+      <div
+        className="rounded-2xl border px-4 py-3"
+        style={{ borderColor: "rgba(91,208,122,0.35)", background: "rgba(91,208,122,0.06)" }}
+      >
+        <div className="flex items-baseline justify-between">
+          <p className="label-cap text-[9px] text-grit-dim">THIS WEEK</p>
+          {trend.overallChange > 0 && (
+            <p className="display text-sm font-extrabold" style={{ color: "#5bd07a" }}>
+              +{trend.overallChange} OVERALL
+            </p>
+          )}
+        </div>
+        <ul className="stagger mt-2 space-y-1">
+          {trend.movers.slice(0, 4).map((mover) => (
+            <li key={mover.muscle} className="flex items-baseline justify-between gap-3">
+              <span className="text-xs font-bold text-grit">{mover.muscle}</span>
+              <span className="display text-xs font-extrabold tabular-nums text-grit-dim">
+                {mover.then} <span style={{ color: "#5bd07a" }}>→ {mover.now}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
   );
 }
 

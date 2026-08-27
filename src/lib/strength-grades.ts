@@ -345,3 +345,78 @@ export function pointsToNextTier(score: number): { tier: StrengthTier; points: n
   const nextFloor = Math.ceil(((index + 1) / TIERS.length) * 100);
   return { tier: TIERS[index + 1]!, points: Math.max(1, nextFloor - Math.round(score)) };
 }
+
+/**
+ * The report as it would have read on a past date.
+ *
+ * Computed by hiding everything logged after that day rather than by storing
+ * snapshots. Snapshots would drift the moment anything about the standards or
+ * the maths changed, and would be wrong for every athlete who installed after
+ * the feature shipped — this is correct for everyone, retroactively.
+ */
+export function strengthReportAsOf(
+  state: AppState,
+  library: Pick<Exercise, "id" | "name">[],
+  isoDate: string,
+): StrengthReport {
+  const cutoff = `${isoDate}T23:59:59`;
+  return strengthReport(
+    {
+      ...state,
+      sessions: (state.sessions ?? []).filter((session) => session.date <= isoDate),
+      logs: (state.logs ?? []).filter((log) => log.date <= cutoff),
+    },
+    library,
+  );
+}
+
+export interface StrengthDelta {
+  muscle: MuscleGroup;
+  now: number;
+  then: number;
+  /** Positive means stronger than the comparison date. */
+  change: number;
+}
+
+export interface StrengthTrend {
+  overall: number;
+  overallChange: number;
+  /** Muscles that moved, biggest gain first. Unmoved muscles are omitted. */
+  movers: StrengthDelta[];
+  /** The comparison date, so the UI can say what "since" means. */
+  since: string;
+}
+
+/**
+ * How much stronger this athlete got over a window.
+ *
+ * This is the number that makes a grade worth checking again. A static "you
+ * are Intermediate" is read once; "chest went 42 to 47 this week" is a reason
+ * to come back.
+ */
+export function strengthTrend(
+  state: AppState,
+  library: Pick<Exercise, "id" | "name">[],
+  days = 7,
+  now = new Date(),
+): StrengthTrend {
+  const since = new Date(now.getTime() - days * 86_400_000).toISOString().slice(0, 10);
+  const current = strengthReport(state, library);
+  const previous = strengthReportAsOf(state, library, since);
+
+  const before = new Map(previous.muscles.map((muscle) => [muscle.muscle, muscle.score]));
+  const movers: StrengthDelta[] = [];
+  for (const muscle of current.muscles) {
+    const then = before.get(muscle.muscle) ?? 0;
+    if (muscle.score === then) continue;
+    movers.push({ muscle: muscle.muscle, now: muscle.score, then, change: muscle.score - then });
+  }
+  movers.sort((a, b) => b.change - a.change);
+
+  return {
+    overall: current.score,
+    overallChange: current.score - previous.score,
+    movers,
+    since,
+  };
+}

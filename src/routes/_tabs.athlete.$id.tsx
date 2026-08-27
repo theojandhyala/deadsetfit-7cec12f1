@@ -139,7 +139,7 @@ function AthletePage() {
   const badgeC = badgeColor(badge);
 
   return (
-    <div className="pb-10">
+    <div className="deadset-page pb-10">
       <header className="px-5 pt-4 pb-2 flex items-center gap-3">
         <button
           onClick={() => navigate({ to: "/friends" })}
@@ -196,7 +196,7 @@ function AthletePage() {
 
       {/* Follow + counts */}
       {!card.isMe && (
-      <section className="px-5 mb-5">
+        <section className="px-5 mb-5">
           {(card as { followsMe?: boolean }).followsMe && (
             <div className="mb-2 inline-flex items-center gap-1 label-cap text-[10px] text-grit-dim border border-grit rounded px-2 py-0.5">
               Follows you

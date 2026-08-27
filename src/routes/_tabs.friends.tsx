@@ -158,7 +158,7 @@ function FriendsPage() {
   }
 
   return (
-    <div>
+    <div className="deadset-page">
       <header className="px-5 pt-4 pb-2 flex items-start justify-between">
         <div>
           <p className="label-cap">FRIENDS</p>
