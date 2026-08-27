@@ -91,9 +91,11 @@ function ProfilePage() {
   const [goal, setGoal] = useState<string>(p?.goal || "BULK");
   const [exp, setExp] = useState<string>(p?.experience || "BEGINNER");
   const [equip, setEquip] = useState<string>(p?.equipment || "FULL_GYM");
+  const [gender, setGender] = useState<string>(p?.gender || "OTHER");
   // Edit-form inputs are DOM-owned (defaultValue + ref, read on save) — the
   // controlled value/onChange pattern freezes typing in the iOS WKWebView.
   const usernameRef = useRef<HTMLInputElement>(null);
+  const ageRef = useRef<HTMLInputElement>(null);
   const weightRef = useRef<HTMLInputElement>(null);
   const heightRef = useRef<HTMLInputElement>(null);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -228,6 +230,11 @@ function ProfilePage() {
       .slice(0, 20);
     const newWeight = Number(weightRef.current?.value) || p.weightKg;
     const newHeight = Number(heightRef.current?.value) || p.heightCm;
+    const requestedAge = Number(ageRef.current?.value);
+    const newAge =
+      Number.isFinite(requestedAge) && requestedAge >= 13 && requestedAge <= 90
+        ? Math.round(requestedAge)
+        : p.age;
     const newUsername = clean || p.username;
     const newEquip = equip as typeof p.equipment;
     // Exercise choices are derived from equipment, so a change leaves the saved
@@ -251,6 +258,8 @@ function ProfilePage() {
           display_name: (p.displayName?.trim() || newUsername || "Athlete").slice(0, 60),
           goal: goal as "BULK" | "CUT" | "MAINTAIN" | "ATHLETIC",
           experience: exp as "BEGINNER" | "INTERMEDIATE" | "ADVANCED",
+          gender: gender as "MALE" | "FEMALE" | "OTHER",
+          age: newAge,
           equipment: newEquip,
           weight_kg: newWeight,
           height_cm: newHeight,
@@ -262,6 +271,8 @@ function ProfilePage() {
           ...s.profile,
           goal: goal as typeof s.profile.goal,
           experience: exp as typeof s.profile.experience,
+          gender: gender as typeof s.profile.gender,
+          age: newAge,
           equipment: newEquip,
           weightKg: newWeight,
           heightCm: newHeight,
@@ -398,13 +409,22 @@ function ProfilePage() {
           <p className="label-cap">YOUR CARD</p>
           {isPro && <ProBadge size="sm" />}
         </div>
-        <button
-          onClick={() => (editing ? save() : setEditing(true))}
-          disabled={savingProfile}
-          className="label-cap tap-44 mt-1 text-accent-red disabled:opacity-50"
-        >
-          {editing ? (savingProfile ? "..." : "Save") : "Edit"}
-        </button>
+        <div className="flex items-center gap-1">
+          <Link
+            to="/settings"
+            aria-label="Open settings"
+            className="icon-btn h-10 min-h-10 w-10 min-w-10 rounded-xl text-grit-dim press"
+          >
+            <Settings size={17} />
+          </Link>
+          <button
+            onClick={() => (editing ? save() : setEditing(true))}
+            disabled={savingProfile}
+            className="min-h-10 rounded-xl px-3 label-cap text-accent-red disabled:opacity-50 press"
+          >
+            {editing ? (savingProfile ? "..." : "Save") : "Edit"}
+          </button>
+        </div>
       </header>
 
       {/* === FIFA card === */}
@@ -440,7 +460,27 @@ function ProfilePage() {
         />
       </section>
 
-      <section className="px-5 mb-4">
+      <nav className="px-5 mb-4" aria-label="Profile shortcuts">
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { href: "#profile-rank", label: "Rank", Icon: Flame },
+            { href: "#profile-prs", label: "PRs", Icon: Trophy },
+            { href: "#profile-details", label: "Details", Icon: Pencil },
+            { href: "#profile-account", label: "Account", Icon: Settings },
+          ].map(({ href, label, Icon }) => (
+            <a
+              key={href}
+              href={href}
+              className="press flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl border border-white/10 bg-grit-card px-1"
+            >
+              <Icon size={15} className="text-accent-red" />
+              <span className="text-[8px] font-black uppercase text-grit-dim">{label}</span>
+            </a>
+          ))}
+        </div>
+      </nav>
+
+      <section id="profile-rank" className="scroll-mt-28 px-5 mb-4">
         <RankedArena state={state} compact />
       </section>
 
@@ -506,7 +546,7 @@ function ProfilePage() {
       <TrophyCase state={state} />
 
       {/* === Personal Records — flat list === */}
-      <section className="px-5 mb-6">
+      <section id="profile-prs" className="scroll-mt-28 px-5 mb-6">
         <div className="flex items-center justify-between mb-2">
           <p className="label-cap flex items-center gap-1.5">
             <Trophy size={12} className="text-accent-red" /> Personal Records
@@ -532,7 +572,7 @@ function ProfilePage() {
       )}
 
       {/* === Athlete Stats === */}
-      <section className="px-5 mb-6">
+      <section id="profile-details" className="scroll-mt-28 px-5 mb-6">
         <p className="label-cap mb-2">Athlete Stats</p>
         <div className="bg-grit-card border border-grit divide-y divide-[#262626]">
           {editing ? (
@@ -571,6 +611,19 @@ function ProfilePage() {
                   onChange={setEquip}
                   opts={["FULL_GYM", "HOME_GYM", "BODYWEIGHT"]}
                 />
+              </Field>
+              <Field label="Age">
+                <input
+                  ref={ageRef}
+                  defaultValue={String(p.age ?? "")}
+                  inputMode="numeric"
+                  min={13}
+                  max={90}
+                  className="input-grit text-right w-full"
+                />
+              </Field>
+              <Field label="Gender">
+                <Select value={gender} onChange={setGender} opts={["MALE", "FEMALE", "OTHER"]} />
               </Field>
               <Field label="Weight (kg)">
                 <input
@@ -712,7 +765,7 @@ function ProfilePage() {
         </div>
       </section>
 
-      <section className="px-5 mb-6 flex flex-col gap-2">
+      <section id="profile-account" className="scroll-mt-28 px-5 mb-6 flex flex-col gap-2">
         <Link to="/recovery" className="btn-ghost w-full inline-flex items-center justify-center">
           <Heart size={14} className="mr-2" /> Recovery & Mobility
         </Link>
@@ -740,11 +793,17 @@ function ProfilePage() {
 
       <section className="px-5 pb-10 flex flex-col items-center gap-2">
         <div className="flex justify-center gap-4 label-cap text-[10px] text-grit-dim">
-          <Link to="/privacy" className="tap-44">Privacy</Link>
+          <Link to="/privacy" className="tap-44">
+            Privacy
+          </Link>
           <span>·</span>
-          <Link to="/terms" className="tap-44">Terms</Link>
+          <Link to="/terms" className="tap-44">
+            Terms
+          </Link>
           <span>·</span>
-          <Link to="/disclaimer" className="tap-44">Disclaimer</Link>
+          <Link to="/disclaimer" className="tap-44">
+            Disclaimer
+          </Link>
         </div>
         <p className="label-cap text-[10px] text-grit-dim">DEADSET — made by Theo Jandhyala</p>
       </section>

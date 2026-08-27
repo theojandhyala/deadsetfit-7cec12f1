@@ -56,6 +56,7 @@ type Step =
   | "equipment"
   | "focus"
   | "session"
+  | "preferences"
   | "schedule"
   | "experience"
   | "about"
@@ -98,8 +99,8 @@ function orderFor(mode: Mode | null): Step[] {
   if (!mode) return base;
   const schedule: Step[] =
     mode === "GENERATE"
-      ? ["goal", "experience", "about", "days", "equipment", "focus", "session", "schedule"]
-      : ["goal", "experience", "about", "days", "equipment", "focus", "session"];
+      ? ["goal", "days", "equipment", "preferences", "schedule"]
+      : ["goal", "days", "equipment", "preferences"];
   return [...base, ...schedule, "username"];
 }
 
@@ -171,15 +172,35 @@ function Onboarding() {
         return;
       }
       savingRef.current = true;
-      const p = {
-        ...merged,
+      // The first workout should not be blocked by body-stat questions. Keep
+      // durable defaults here; the profile screen can refine calorie and
+      // strength-standard calculations whenever the athlete is ready.
+      const p: Profile = {
+        goal: merged.goal ?? "MAINTAIN",
+        experience: merged.experience ?? "BEGINNER",
+        age: merged.age ?? 25,
+        weightKg: merged.weightKg ?? 75,
+        heightCm: merged.heightCm ?? 175,
+        gender: merged.gender ?? "OTHER",
+        daysPerWeek: merged.daysPerWeek ?? 3,
+        trainingDays: merged.trainingDays ?? ["MON", "WED", "FRI"],
+        equipment: merged.equipment ?? "FULL_GYM",
+        exercisesPerSession: merged.exercisesPerSession ?? 4,
+        sessionMinutes: merged.sessionMinutes ?? 45,
+        focusMuscles: merged.focusMuscles ?? [],
         motivation: merged.motivation ?? "DISCIPLINE",
         sleepQuality: merged.sleepQuality ?? "OK",
         weakness: merged.weakness ?? "CONSISTENCY",
         displayName: merged.displayName ?? merged.username,
         injuries: merged.injuries ?? "",
-        startingWeightKg: merged.startingWeightKg ?? merged.weightKg,
-      } as Profile;
+        startingWeightKg: merged.startingWeightKg ?? merged.weightKg ?? 75,
+        username: merged.username,
+        avatarDataUrl: merged.avatarDataUrl,
+        targetWeightKg: merged.targetWeightKg,
+        dreamOutcome: merged.dreamOutcome,
+        commitmentDate: merged.commitmentDate,
+        committed: merged.committed,
+      };
       const sched = mode === "BUILD" ? emptySchedule() : (draftSchedule ?? defaultSchedule(p));
       const publicStats = buildPublicStats({ ...getState(), profile: p, schedule: sched });
       save({
@@ -349,6 +370,9 @@ function Onboarding() {
             onPick={(v) => next({ equipment: v as Equipment })}
           />
         )}
+        {step === "preferences" && (
+          <TrainingPreferencesStep initial={draft} onSubmit={(patch) => next(patch)} />
+        )}
         {step === "schedule" && (
           <SchedulePreview
             draft={draft}
@@ -495,6 +519,154 @@ function Choice({
           </button>
         ))}
       </div>
+    </>
+  );
+}
+
+function TrainingPreferencesStep({
+  initial,
+  onSubmit,
+}: {
+  initial?: Partial<Profile>;
+  onSubmit: (patch: Partial<Profile>) => void;
+}) {
+  const [experience, setExperience] = useState<Experience>(initial?.experience ?? "BEGINNER");
+  const initialExerciseCount = initial?.exercisesPerSession;
+  const [exerciseCount, setExerciseCount] = useState<3 | 4 | 5 | 6 | 7>(
+    initialExerciseCount === 3 ||
+      initialExerciseCount === 4 ||
+      initialExerciseCount === 5 ||
+      initialExerciseCount === 6 ||
+      initialExerciseCount === 7
+      ? initialExerciseCount
+      : 4,
+  );
+  const [focus, setFocus] = useState<FocusMuscle[]>(initial?.focusMuscles ?? []);
+  const focusOptions: { value: FocusMuscle; label: string }[] = [
+    { value: "CHEST", label: "Chest" },
+    { value: "BACK", label: "Back" },
+    { value: "SHOULDERS", label: "Shoulders" },
+    { value: "ARMS", label: "Arms" },
+    { value: "LEGS", label: "Legs" },
+    { value: "CORE", label: "Core" },
+  ];
+
+  function toggleFocus(muscle: FocusMuscle) {
+    setFocus((current) => {
+      if (current.includes(muscle)) return current.filter((item) => item !== muscle);
+      return current.length < 2 ? [...current, muscle] : [current[1], muscle];
+    });
+  }
+
+  const sessionMinutes = exerciseCount <= 3 ? 30 : exerciseCount <= 4 ? 45 : exerciseCount <= 5 ? 60 : 90;
+
+  return (
+    <>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">Plan preferences</h1>
+      <p className="text-sm text-[#8a8a8a] mb-7">Set the training style for your first week.</p>
+
+      <section className="mb-6" aria-labelledby="experience-label">
+        <p id="experience-label" className="label-cap text-[10px] text-grit-dim mb-2">
+          Experience
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {(["BEGINNER", "INTERMEDIATE", "ADVANCED"] as Experience[]).map((level) => {
+            const active = experience === level;
+            return (
+              <button
+                key={level}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setExperience(level)}
+                className="border rounded-2xl p-3 press"
+                style={{
+                  borderColor: active ? "#e63222" : "#262626",
+                  background: active ? "rgba(230,50,34,0.1)" : "#141414",
+                }}
+              >
+                <span className="display block text-sm uppercase font-extrabold text-grit">
+                  {level === "BEGINNER" ? "New" : level === "INTERMEDIATE" ? "Regular" : "Advanced"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="mb-6" aria-labelledby="exercise-count-label">
+        <div className="flex items-baseline justify-between mb-2">
+          <p id="exercise-count-label" className="label-cap text-[10px] text-grit-dim">
+            Exercises per workout
+          </p>
+          <span className="label-cap text-[9px] text-accent-red">{sessionMinutes} min target</span>
+        </div>
+        <div className="grid grid-cols-5 gap-2">
+          {([3, 4, 5, 6, 7] as const).map((count) => {
+            const active = exerciseCount === count;
+            return (
+              <button
+                key={count}
+                type="button"
+                aria-label={`${count} exercises per workout`}
+                aria-pressed={active}
+                onClick={() => setExerciseCount(count)}
+                className="border rounded-2xl min-h-12 press"
+                style={{
+                  borderColor: active ? "#e63222" : "#262626",
+                  background: active ? "rgba(230,50,34,0.1)" : "#141414",
+                }}
+              >
+                <span className="display text-lg font-extrabold text-grit">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section aria-labelledby="focus-label">
+        <div className="flex items-baseline justify-between mb-2">
+          <p id="focus-label" className="label-cap text-[10px] text-grit-dim">
+            Focus muscles
+          </p>
+          <span className="label-cap text-[9px] text-grit-dim">Optional, up to 2</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {focusOptions.map((option) => {
+            const active = focus.includes(option.value);
+            return (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={active}
+                onClick={() => toggleFocus(option.value)}
+                className="border rounded-2xl px-4 py-3 text-left press"
+                style={{
+                  borderColor: active ? "#e63222" : "#262626",
+                  background: active ? "rgba(230,50,34,0.1)" : "#141414",
+                }}
+              >
+                <span className="display text-base uppercase font-extrabold text-grit">
+                  {option.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <button
+        onClick={() =>
+          onSubmit({
+            experience,
+            exercisesPerSession: exerciseCount,
+            sessionMinutes,
+            focusMuscles: focus,
+          })
+        }
+        className="btn-grit mt-auto"
+      >
+        Preview my week
+      </button>
     </>
   );
 }

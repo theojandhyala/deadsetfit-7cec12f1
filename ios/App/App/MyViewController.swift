@@ -39,5 +39,6 @@ class MyViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(HapticsPlugin())
         bridge?.registerPluginInstance(WidgetBridgePlugin())
         bridge?.registerPluginInstance(WorkoutActivityPlugin())
+        bridge?.registerPluginInstance(AppReviewPlugin())
     }
 }

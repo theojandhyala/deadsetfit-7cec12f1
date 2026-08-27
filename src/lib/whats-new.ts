@@ -2,7 +2,7 @@
 // ship. The card hides once dismissed at the current version, so stale
 // announcements never linger.
 
-export const WHATS_NEW_VERSION = 20260810;
+export const WHATS_NEW_VERSION = 20260820;
 export const WHATS_NEW_SEEN_KEY = "deadset_whats_new_seen";
 
 export interface WhatsNewEntry {
@@ -14,34 +14,24 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
-    title: "Your Story",
-    body: "Lifetime tonnage in real-world objects, best streak, heaviest set — plus milestone celebrations from 10 t to 1,000 t.",
-    where: "Progress",
+    title: "A clearer training day",
+    body: "See the next workout, food, recovery and first steps without mixing them into analytics.",
+    where: "Train",
   },
   {
-    title: "Session records",
-    body: "Biggest day, most reps, longest session — with a banner when you break one.",
-    where: "Progress",
+    title: "Build your whole week",
+    body: "Choose training days, exercises, sets and rep targets, then edit any day whenever plans change.",
+    where: "Plan",
   },
   {
-    title: "Your rhythm",
-    body: "Which weekday you lift heaviest, and which scheduled day keeps slipping.",
-    where: "Progress",
+    title: "Smarter live workouts",
+    body: "Swap an unavailable exercise, use supersets and keep targets and history visible while logging.",
+    where: "Workout",
   },
   {
-    title: "Calorie cycling",
-    body: "Training days eat more, rest days less — same weekly average as your goal.",
-    where: "Diet → Insights",
-  },
-  {
-    title: "Protein spread",
-    body: "How many meals a day actually carry a muscle-building protein dose.",
-    where: "Diet → Insights",
-  },
-  {
-    title: "Fresh stimulus",
-    body: "A heads-up when a muscle has lived on one movement too long, with alternatives.",
-    where: "Progress",
+    title: "Apple Fitness and Pro sync",
+    body: "Bring in Watch activity, send finished sessions to Apple Fitness and restore Pro across devices.",
+    where: "Settings",
   },
 ];
 

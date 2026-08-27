@@ -1,6 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useRef, useState, type RefObject } from "react";
-import { Camera, Trophy, Flame, Trash2, Lock, Gauge, Image as ImageIcon } from "lucide-react";
+import {
+  BrainCircuit,
+  Camera,
+  Flame,
+  Gauge,
+  Image as ImageIcon,
+  Lock,
+  Scale,
+  Trash2,
+  Trophy,
+} from "lucide-react";
 
 import { useAppState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
@@ -375,10 +385,32 @@ function ProgressPage() {
         <Stat label="PRS" value={`${totalPRs}`} sub="HIT" accent={totalPRs > 0} />
       </section>
 
+      <nav className="px-5 mb-6" aria-label="Progress shortcuts">
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { href: "#progress-body", label: "Body", Icon: Scale },
+            { href: "#progress-photos", label: "Photos", Icon: Camera },
+            { href: "#progress-strength", label: "Strength", Icon: Trophy },
+            { href: "#progress-insights", label: "Insights", Icon: BrainCircuit },
+          ].map(({ href, label, Icon }) => (
+            <a
+              key={href}
+              href={href}
+              className="press flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-2xl border border-white/10 bg-grit-card px-1 text-center"
+            >
+              <Icon size={17} className="text-accent-red" />
+              <span className="text-[9px] font-black uppercase text-grit-dim">{label}</span>
+            </a>
+          ))}
+        </div>
+      </nav>
+
       <ProWeeklyReview />
       <AppleFitnessCard />
       <TrainingAutopilot />
-      <PRRoadmap />
+      <div id="progress-strength" className="scroll-mt-28">
+        <PRRoadmap />
+      </div>
 
       {/* Strength grades — the "how strong am I actually" question */}
       <section className="px-5 mb-4 animate-slide-up delay-50">
@@ -445,7 +477,7 @@ function ProgressPage() {
       {/* ——— The intelligence stack: every card below is deterministic,
           data-gated (renders nothing until it can be honest) and carries
           its own section wrapper so empty states leave no gap. ——— */}
-      <section className="px-5 mb-3">
+      <section id="progress-insights" className="scroll-mt-28 px-5 mb-3">
         <div className="deadset-section-title">
           <h2 className="display text-xl font-extrabold uppercase text-grit leading-none">
             Training intelligence
@@ -704,7 +736,7 @@ function ProgressPage() {
       </section>
 
       {/* Weight */}
-      <section className="px-5 mb-6">
+      <section id="progress-body" className="scroll-mt-28 px-5 mb-6">
         <p className="label-cap mb-2">Weight Log</p>
         <div
           className="rounded-2xl p-4"
@@ -840,7 +872,7 @@ function ProgressPage() {
       </section>
 
       {/* Check-ins */}
-      <section className="px-5 mb-6">
+      <section id="progress-photos" className="scroll-mt-28 px-5 mb-6">
         <p className="label-cap mb-2">Photo Check-ins</p>
         <input
           ref={photoRef}

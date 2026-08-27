@@ -27,10 +27,10 @@ export const Route = createFileRoute("/privacy")({
 
 function PrivacyPage() {
   return (
-    <LegalShell title="Privacy Policy" updated="July 26, 2026">
+    <LegalShell title="Privacy Policy" updated="August 24, 2026">
       <p>
         DEADSET ("we", "us") provides a fitness tracking and social training app. This policy
-        explains what we collect, why, and your rights. By using DEADSET you agree to this policy.
+        explains what we collect, why, and your rights.
       </p>
 
       <H>1. Data we collect</H>
@@ -48,7 +48,8 @@ function PrivacyPage() {
           <b>Social:</b> posts, comments, likes, follows, reports you file, users you block.
         </li>
         <li>
-          <b>Technical:</b> device type, OS, app version, IP address, crash logs.
+          <b>Technical:</b> device type, OS, app version, IP address, crash logs, referral and
+          advertising campaign parameters, and interactions with website download buttons.
         </li>
       </ul>
 
@@ -59,6 +60,10 @@ function PrivacyPage() {
         <li>Show your public stats to other athletes (only fields you choose to share).</li>
         <li>Detect abuse, enforce our Terms, and respond to reports.</li>
         <li>Improve the product through aggregated, non-identifying analytics.</li>
+        <li>
+          With your permission, measure whether an advertisement led to a website visit or an App
+          Store button click.
+        </li>
       </ul>
 
       <H>3. Apple Health</H>
@@ -79,19 +84,32 @@ function PrivacyPage() {
       <H>4. Sharing</H>
       <p>
         We do <b>not</b> sell your personal data. We share data only with: (a) infrastructure
-        providers that host the app and APIs (Supabase, Cloudflare, and Stripe for payments); (b)
-        authentication providers you choose (Google or Apple); and (c) authorities when legally
-        required. These providers receive only the information needed to perform their service.
+        providers that host the app and APIs (Supabase and Cloudflare); (b) payment and subscription
+        providers (Apple for iPhone purchases and RevenueCat for subscription receipt and
+        entitlement processing); (c) Stripe only where needed to service a legacy website purchase
+        made before website checkout was retired; (d) authentication providers you choose (Google or
+        Apple); (e) Whop, when you allow advertising measurement, to attribute website visits and
+        App Store button clicks to our advertisements; and (f) authorities when legally required.
+        These providers receive only the information needed to perform their service.
       </p>
 
-      <H>5. Public data</H>
+      <H>5. Website advertising measurement</H>
+      <p>
+        The public DEADSET website asks for permission before loading the Whop advertising pixel. If
+        you allow it, Whop may process your IP address, device and browser information, page URL,
+        referral and campaign parameters, and App Store button clicks to measure advertising
+        performance. Choosing Decline prevents the pixel from loading. Your choice is saved in your
+        browser storage and can be reset by clearing site data.
+      </p>
+
+      <H>6. Public data</H>
       <p>
         Your username, display name, avatar, public stats, posts, and comments are visible to other
         DEADSET users. Sensitive fields (email, weight history, injuries, goal, body measurements)
         stay private to your account.
       </p>
 
-      <H>6. Your rights and controls</H>
+      <H>7. Your rights and controls</H>
       <ul>
         <li>
           <b>Access & export:</b> download your DEADSET data from Settings, or contact{" "}
@@ -113,16 +131,16 @@ function PrivacyPage() {
         </li>
       </ul>
 
-      <H>7. Children</H>
+      <H>8. Children</H>
       <p>DEADSET is not for users under 13. We do not knowingly collect data from children.</p>
 
-      <H>8. Retention</H>
+      <H>9. Retention</H>
       <p>
         We keep account data while your account exists. After deletion, data is removed within 30
         days, except where retention is legally required.
       </p>
 
-      <H>9. Security</H>
+      <H>10. Security</H>
       <p>
         Data is transmitted over HTTPS and stored in access-controlled databases with row-level
         security. No method is 100% secure; report suspected incidents to{" "}
@@ -132,10 +150,10 @@ function PrivacyPage() {
         .
       </p>
 
-      <H>10. Changes</H>
+      <H>11. Changes</H>
       <p>We may update this policy. Material changes will be announced in-app.</p>
 
-      <H>11. Contact</H>
+      <H>12. Contact</H>
       <p>
         DEADSET —{" "}
         <a href="mailto:privacy@deadsetfit.org" className="text-accent-red underline">

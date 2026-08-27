@@ -5,6 +5,11 @@ import { getSubscriptionStatus } from "@/lib/payments.functions";
 import { withTimeout } from "@/lib/account-restore";
 import { isNativeIos } from "@/lib/platform";
 import { getAppleEntitlement, onAppleEntitlementChanged } from "@/lib/storekit";
+import {
+  getRevenueCatProEntitlement,
+  notifyRevenueCatUpdated,
+  syncRevenueCatPurchases,
+} from "@/lib/revenuecat";
 
 const PRO_CACHE_KEY = "deadset_pro_status_v1";
 
@@ -110,6 +115,16 @@ export function ProProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      const revenueCat =
+        nativeIos && session
+          ? await getRevenueCatProEntitlement(session.user.id).catch(() => ({
+              active: false,
+              productId: null,
+              expirationDate: null,
+              willRenew: false,
+            }))
+          : { active: false, productId: null, expirationDate: null, willRenew: false };
+
       let webSubscription: Awaited<ReturnType<typeof getSubscriptionStatus>> | null = null;
       if (!nativeIos && session && isPaymentsConfigured()) {
         webSubscription = await rejectOnTimeout(
@@ -120,14 +135,24 @@ export function ProProvider({ children }: { children: ReactNode }) {
       }
 
       const data = {
-        isPro: apple.active || webSubscription?.isPro === true,
-        isPaidPro: apple.active || webSubscription?.isPro === true,
-        status: apple.active ? "active" : (webSubscription?.status ?? null),
-        priceId: apple.active ? (apple.productId ?? null) : (webSubscription?.priceId ?? null),
+        isPro: apple.active || revenueCat.active || webSubscription?.isPro === true,
+        isPaidPro: apple.active || revenueCat.active || webSubscription?.isPro === true,
+        status: apple.active || revenueCat.active ? "active" : (webSubscription?.status ?? null),
+        priceId: apple.active
+          ? (apple.productId ?? null)
+          : revenueCat.active
+            ? revenueCat.productId
+            : (webSubscription?.priceId ?? null),
         currentPeriodEnd: apple.active
           ? (apple.expirationDate ?? null)
-          : (webSubscription?.currentPeriodEnd ?? null),
-        cancelAtPeriodEnd: apple.active ? false : (webSubscription?.cancelAtPeriodEnd ?? false),
+          : revenueCat.active
+            ? revenueCat.expirationDate
+            : (webSubscription?.currentPeriodEnd ?? null),
+        cancelAtPeriodEnd: revenueCat.active
+          ? !revenueCat.willRenew
+          : apple.active
+            ? false
+            : (webSubscription?.cancelAtPeriodEnd ?? false),
       };
       setIsPro(data.isPro);
       setIsPaidPro(data.isPaidPro);
@@ -156,7 +181,16 @@ export function ProProvider({ children }: { children: ReactNode }) {
     refresh();
     let appleListener: { remove: () => Promise<void> } | undefined;
     if (isNativeIos()) {
-      onAppleEntitlementChanged(() => refresh()).then((listener) => {
+      onAppleEntitlementChanged((entitlement) => {
+        if (entitlement.active) {
+          void supabase.auth.getSession().then(({ data }) =>
+            syncRevenueCatPurchases(data.session?.user.id).then((synced) => {
+              if (synced) notifyRevenueCatUpdated();
+            }),
+          );
+        }
+        void refresh();
+      }).then((listener) => {
         appleListener = listener;
       });
     }
@@ -180,16 +214,19 @@ export function ProProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     };
     const onFocus = () => refresh();
+    const onRevenueCatUpdated = () => refresh();
     const onVisible = () => {
       if (document.visibilityState === "visible") refresh();
     };
     window.addEventListener("focus", onFocus);
+    window.addEventListener("deadset:revenuecat-updated", onRevenueCatUpdated);
     window.addEventListener("deadset:explicit-logout", onExplicitLogout);
     document.addEventListener("visibilitychange", onVisible);
 
     return () => {
       data.subscription.unsubscribe();
       window.removeEventListener("focus", onFocus);
+      window.removeEventListener("deadset:revenuecat-updated", onRevenueCatUpdated);
       window.removeEventListener("deadset:explicit-logout", onExplicitLogout);
       document.removeEventListener("visibilitychange", onVisible);
       void appleListener?.remove();

@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
 import { BottomNav } from "@/components/BottomNav";
@@ -33,6 +33,7 @@ export const Route = createFileRoute("/_tabs")({
 
 function TabsLayout() {
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (routerState) => routerState.location.pathname });
   const getProfile = getMyProfile;
   const [state, set] = useAppState();
   const { isPro, loading: proLoading } = usePro();
@@ -206,7 +207,9 @@ function TabsLayout() {
       }}
     >
       <TopBar />
-      <Outlet />
+      <div key={pathname} className="deadset-route-shell">
+        <Outlet />
+      </div>
       <FeatureTour />
       <GritEarnedLayer />
       <FirstRunTour active={!!state.profile} />

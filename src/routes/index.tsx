@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+
 import { Landing } from "@/components/Landing";
 import { NativeWelcome } from "@/components/NativeWelcome";
 import { isNativeApp } from "@/lib/platform";
@@ -20,16 +21,9 @@ export const Route = createFileRoute("/")({
           "Build your schedule, log workouts, track nutrition, and see your progress clearly.",
       },
       { property: "og:url", content: "https://deadsetfit.org/" },
-      {
-        property: "og:image",
-        content:
-          "https://deadsetfit.org/__l5e/assets-v1/784b292b-3adf-4fa7-9f14-d45495738304/deadset-logo.png",
-      },
-      {
-        name: "twitter:image",
-        content:
-          "https://deadsetfit.org/__l5e/assets-v1/784b292b-3adf-4fa7-9f14-d45495738304/deadset-logo.png",
-      },
+      { property: "og:image", content: "https://deadsetfit.org/og-image.png" },
+      { name: "twitter:image", content: "https://deadsetfit.org/og-image.png" },
+      { name: "apple-itunes-app", content: "app-id=6783511541" },
       { name: "twitter:title", content: "DEADSET — A Clearer Way to Train" },
       {
         name: "twitter:description",
@@ -38,6 +32,22 @@ export const Route = createFileRoute("/")({
       },
     ],
     links: [{ rel: "canonical", href: "https://deadsetfit.org/" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "MobileApplication",
+          name: "DEADSET",
+          operatingSystem: "iOS",
+          applicationCategory: "HealthApplication",
+          description:
+            "Plan workouts, log every set, track nutrition and recovery, and see strength progress clearly.",
+          downloadUrl: "https://apps.apple.com/app/deadset/id6783511541",
+          offers: { "@type": "Offer", price: "0", priceCurrency: "GBP" },
+        }),
+      },
+    ],
   }),
   component: IndexRoute,
 });
@@ -46,7 +56,7 @@ export const Route = createFileRoute("/")({
  * A signed-in user opening the app should land on their dashboard, not the
  * marketing page. On web we still render Landing immediately (SEO / first
  * paint) and redirect if a session turns up; on native we briefly hold so a
- * returning user never sees the marketing page flash.
+ * returning user never sees the welcome screen flash.
  */
 function IndexRoute() {
   const navigate = useNavigate();
@@ -56,6 +66,7 @@ function IndexRoute() {
   useEffect(() => {
     let cancelled = false;
     let unsubscribe: (() => void) | undefined;
+
     (async () => {
       try {
         const { supabase } = await import("@/integrations/supabase/client");
@@ -67,9 +78,9 @@ function IndexRoute() {
           unsubscribe();
           return;
         }
-        // A stalled token refresh must never strand native users on the blank
-        // boot div — time out and reveal the native welcome instead. The auth
-        // listener above still catches a valid session that restores later.
+
+        // A stalled token refresh must never strand native users on a blank
+        // boot view. The listener still catches a valid session restored later.
         const {
           data: { session },
         } = await Promise.race([
@@ -84,10 +95,11 @@ function IndexRoute() {
           return;
         }
       } catch {
-        /* fall through to the correct platform entry screen */
+        /* Fall through to the correct platform entry screen. */
       }
       if (!cancelled) setEntryReady(true);
     })();
+
     return () => {
       cancelled = true;
       unsubscribe?.();

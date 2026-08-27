@@ -1,13 +1,14 @@
 import rpcHandler from "../api/rpc";
 import { createClient } from "@supabase/supabase-js";
 import { handleOAuthRequest, providerConfigured, type OAuthBrokerEnv } from "./lib/oauth.server";
+import { handleTikTokRequest, type TikTokEnv } from "./lib/tiktok.server";
 import {
   subscriptionPayload,
   subscriptionStillUnlocksPro,
   type StripeEnv,
 } from "./lib/entitlements";
 
-interface Env extends OAuthBrokerEnv {
+interface Env extends OAuthBrokerEnv, TikTokEnv {
   ASSETS?: { fetch(request: Request): Promise<Response> };
   SUPABASE_URL?: string;
   SUPABASE_PUBLISHABLE_KEY?: string;
@@ -386,6 +387,8 @@ export default {
     if (url.pathname === "/api/health/supabase") return handleSupabaseHealth(env);
     if (url.pathname === "/api/public/payments/webhook") return handleStripeWebhook(request, env);
     if (url.pathname === "/api/rpc") return handleRpc(request, env);
+    const tiktokResponse = await handleTikTokRequest(request, env);
+    if (tiktokResponse) return tiktokResponse;
     if (url.pathname.startsWith("/api/auth/")) {
       const response = await handleOAuthRequest(request, env);
       if (response) return response;

@@ -279,10 +279,18 @@ function isProSubscriptionStatus(
   status: string | null | undefined,
   currentPeriodEnd: string | null,
 ): boolean {
-  const activeByStatus = ["active", "trialing", "past_due"].includes(status ?? "");
+  const activeByStatus = status === "active";
   const activeCanceled =
     status === "canceled" && !!currentPeriodEnd && new Date(currentPeriodEnd) > new Date();
   return activeByStatus || activeCanceled;
+}
+
+/** A current Stripe record in one of these states must not fall through to an
+ * old `profiles.pro_until` cache. That cache also represents referral rewards,
+ * so it is only a fallback when Stripe is not reporting an unpaid/current
+ * subscription for this customer. */
+function blocksProfileProFallback(status: string | null): boolean {
+  return ["trialing", "past_due", "incomplete", "unpaid"].includes(status ?? "");
 }
 
 function subscriptionStatusFromStripeSubscription(subscription: any): SubscriptionStatus {
@@ -337,7 +345,7 @@ async function stripeSubscriptionStatus(
     const item = sub.items?.data?.[0];
     const end = item?.current_period_end ?? sub.current_period_end ?? 0;
     return (
-      ["active", "trialing", "past_due"].includes(sub.status) ||
+      sub.status === "active" ||
       (sub.status === "canceled" && end > now)
     );
   });
@@ -349,16 +357,24 @@ async function stripeSubscriptionStatus(
 
 async function requirePro(req: any): Promise<AuthCtx> {
   const ctx = await requireAuth(req);
+  const status = await stripeSubscriptionStatus(createStripeClient("live"), ctx);
+  if (status.isPro) {
+    await syncProfileProUntil(ctx.userId, status);
+    return ctx;
+  }
+  // A trial or failed Stripe collection must never inherit stale paid access.
+  if (blocksProfileProFallback(status.status)) {
+    throw Object.assign(new Error("A successful payment is required for DEADSET Pro"), {
+      status: 403,
+    });
+  }
   const { data: profile } = await ctx.supabase
     .from("profiles")
     .select("pro_until")
     .eq("id", ctx.userId)
     .maybeSingle();
   if (profile?.pro_until && new Date(profile.pro_until) > new Date()) return ctx;
-  const status = await stripeSubscriptionStatus(createStripeClient("live"), ctx);
-  await syncProfileProUntil(ctx.userId, status);
-  if (!status.isPro) throw Object.assign(new Error("DEADSET Pro required"), { status: 403 });
-  return ctx;
+  throw Object.assign(new Error("DEADSET Pro required"), { status: 403 });
 }
 
 // Bidirectional block set: users this user blocked OR who blocked this user.
@@ -544,7 +560,7 @@ const handlers: Record<string, Handler> = {
       // own status load, so an already-subscribed user could otherwise start
       // a second subscription on the same customer.
       const existing = await stripeSubscriptionStatus(stripe, { email, userId });
-      if (existing.isPro) {
+      if (existing.isPro || blocksProfileProFallback(existing.status)) {
         await syncProfileProUntil(userId, existing);
         return {
           error:
@@ -614,6 +630,12 @@ const handlers: Record<string, Handler> = {
       .select("pro_until")
       .eq("id", ctx.userId)
       .maybeSingle();
+    const status = await stripeSubscriptionStatus(createStripeClient(d.environment), ctx);
+    if (blocksProfileProFallback(status.status)) return status;
+    if (status.isPro) {
+      await syncProfileProUntil(ctx.userId, status);
+      return status;
+    }
     if (profile?.pro_until && new Date(profile.pro_until) > new Date()) {
       return {
         isPro: true,
@@ -623,8 +645,6 @@ const handlers: Record<string, Handler> = {
         cancelAtPeriodEnd: false,
       };
     }
-    const status = await stripeSubscriptionStatus(createStripeClient(d.environment), ctx);
-    await syncProfileProUntil(ctx.userId, status);
     return status;
   },
 
@@ -2121,12 +2141,24 @@ const handlers: Record<string, Handler> = {
     const now = Date.now();
     const activeSubs = (subs ?? []).filter(
       (s) =>
-        ["active", "trialing", "past_due"].includes(s.status) &&
+        s.status === "active" &&
         (!s.current_period_end || new Date(s.current_period_end).getTime() > now),
     );
     const plans = new Map<string, number>();
     for (const s of activeSubs)
       plans.set(s.price_id ?? "unknown", (plans.get(s.price_id ?? "unknown") ?? 0) + 1);
+
+    const { data: referralRows, error: referralError } = await supabaseAdmin
+      .from("referrals")
+      .select("created_at")
+      .limit(5000);
+    if (referralError) throw new Error(referralError.message);
+    const referrals = {
+      total: referralRows?.length ?? 0,
+      last30Days: (referralRows ?? []).filter(
+        (row) => new Date(row.created_at).getTime() >= now - 30 * 86_400_000,
+      ).length,
+    };
 
     // Acquisition sources, harvested from each user's synced app state.
     const sources = new Map<string, number>();
@@ -2190,6 +2222,7 @@ const handlers: Record<string, Handler> = {
         location: [p.city, p.country].filter(Boolean).join(", ") || null,
       })),
       activeSubscriptions: activeSubs.length,
+      referrals,
       subscriptionPlans: [...plans.entries()].map(([plan, count]) => ({ plan, count })),
       sources: [...sources.entries()]
         .map(([source, count]) => ({ source, count }))

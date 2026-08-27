@@ -1,5 +1,6 @@
 import { createMiddleware } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { subscriptionStillUnlocksPro } from "@/lib/entitlements";
 
 export const requirePro = createMiddleware({ type: "function" })
   .middleware([requireSupabaseAuth])
@@ -16,9 +17,7 @@ export const requirePro = createMiddleware({ type: "function" })
       .maybeSingle();
 
     const isPro =
-      data !== null &&
-      ["active", "trialing", "past_due"].includes(data.status) &&
-      (!data.current_period_end || new Date(data.current_period_end) > new Date());
+      data !== null && subscriptionStillUnlocksPro(data.status, data.current_period_end);
 
     if (!isPro) throw new Error("Pro subscription required");
     return next({ context });

@@ -18,6 +18,7 @@ export const COMPARE_ROWS: { label: string; free: boolean | string; pro: boolean
   { label: "RIR and tempo prescriptions", free: false, pro: true },
   { label: "Private workout cues", free: false, pro: true },
   { label: "Smart same-muscle exercise swaps", free: false, pro: true },
+  { label: "In-session equipment smart swaps", free: false, pro: true },
   { label: "Streak Armor", free: false, pro: true },
   { label: "Volume Optimizer (MEV/MAV/MRV)", free: false, pro: true },
   { label: "Plateau Breaker", free: false, pro: true },

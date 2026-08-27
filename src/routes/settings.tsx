@@ -14,7 +14,9 @@ import {
   Cloud,
   CloudOff,
   FileSpreadsheet,
+  Mail,
   PlayCircle,
+  Star,
   UserRound,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -36,6 +38,7 @@ import {
 } from "@/lib/device-reminders";
 import { supabase } from "@/integrations/supabase/client";
 import { resetFeatureTour } from "@/lib/feature-tour";
+import { openAppStoreReviewPage } from "@/lib/app-review";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "DEADSET — Settings" }] }),
@@ -47,6 +50,7 @@ function SettingsPage() {
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
   const [sessionLogs, setSessionLogs] = useState(() => readSessionLogs());
+  const [appInfo, setAppInfo] = useState<{ version: string; build: string } | null>(null);
   const [account, setAccount] = useState<{
     email: string | null;
     status: "loading" | "signed-out" | "syncing" | "ready" | "offline";
@@ -78,6 +82,22 @@ function SettingsPage() {
         status: isRemoteStateReady(session.user.id) ? "ready" : "offline",
       });
     });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isNativeIos()) return;
+
+    let active = true;
+    void import("@capacitor/app")
+      .then(({ App }) => App.getInfo())
+      .then((info) => {
+        if (active) setAppInfo({ version: info.version, build: info.build });
+      })
+      .catch(() => {});
+
     return () => {
       active = false;
     };
@@ -138,6 +158,14 @@ function SettingsPage() {
       else if (result === "failed") toast.error("Couldn't export — try again from the share sheet");
     } catch {
       toast.error("Couldn't export workout history");
+    }
+  }
+
+  async function handleRateDeadset() {
+    try {
+      await openAppStoreReviewPage();
+    } catch {
+      toast.error("Couldn't open the App Store");
     }
   }
 
@@ -243,22 +271,61 @@ function SettingsPage() {
         <p className="label-cap mb-2 flex items-center gap-1.5">
           <PlayCircle size={12} className="text-accent-red" /> Help
         </p>
-        <button
-          type="button"
-          onClick={() => {
-            resetFeatureTour();
-            navigate({ to: "/train" as never });
-          }}
-          className="flex w-full items-center justify-between rounded-lg border border-grit bg-grit-card px-4 py-4 text-left"
-        >
-          <span>
-            <span className="block text-sm font-bold text-grit">Replay app tutorial</span>
-            <span className="mt-1 block text-[11px] text-grit-dim">
-              A one-minute guide to every main feature.
+        <div className="divide-y divide-[#262626] overflow-hidden rounded-lg border border-grit bg-grit-card">
+          <button
+            type="button"
+            onClick={() => {
+              resetFeatureTour();
+              navigate({ to: "/train" as never });
+            }}
+            className="flex w-full items-center justify-between px-4 py-4 text-left"
+          >
+            <span>
+              <span className="block text-sm font-bold text-grit">Replay app tutorial</span>
+              <span className="mt-1 block text-[11px] text-grit-dim">
+                A one-minute guide to every main feature.
+              </span>
             </span>
-          </span>
-          <ChevronLeft size={18} className="rotate-180 text-grit-dim" />
-        </button>
+            <ChevronLeft size={18} className="rotate-180 text-grit-dim" />
+          </button>
+          {isNativeIos() && (
+            <button
+              type="button"
+              onClick={() => void handleRateDeadset()}
+              className="flex w-full items-center justify-between px-4 py-4 text-left"
+            >
+              <span className="flex items-center gap-3">
+                <span className="grid h-9 w-9 place-items-center rounded-lg border border-grit bg-black">
+                  <Star size={17} className="text-accent-red" />
+                </span>
+                <span>
+                  <span className="block text-sm font-bold text-grit">Rate DEADSET</span>
+                  <span className="mt-1 block text-[11px] text-grit-dim">
+                    Leave a rating or review on the App Store.
+                  </span>
+                </span>
+              </span>
+              <ChevronLeft size={18} className="rotate-180 text-grit-dim" />
+            </button>
+          )}
+          <a
+            href="mailto:support@deadsetfit.org?subject=DEADSET%20Support"
+            className="flex w-full items-center justify-between px-4 py-4 text-left"
+          >
+            <span className="flex items-center gap-3">
+              <span className="grid h-9 w-9 place-items-center rounded-lg border border-grit bg-black">
+                <Mail size={17} className="text-accent-red" />
+              </span>
+              <span>
+                <span className="block text-sm font-bold text-grit">Contact support</span>
+                <span className="mt-1 block text-[11px] text-grit-dim">
+                  Get help with your account, workouts or subscription.
+                </span>
+              </span>
+            </span>
+            <ChevronLeft size={18} className="rotate-180 text-grit-dim" />
+          </a>
+        </div>
       </section>
 
       {/* Weight calculations use one canonical unit across training and rankings. */}
@@ -623,6 +690,10 @@ function SettingsPage() {
           </div>
         </div>
       </details>
+
+      <p className="px-5 pb-4 text-center text-[10px] text-grit-dim">
+        {appInfo ? `DEADSET ${appInfo.version} (${appInfo.build})` : "DEADSET for iPhone"}
+      </p>
     </div>
   );
 }
