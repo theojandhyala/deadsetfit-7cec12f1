@@ -1,8 +1,11 @@
 export type OAuthProvider = "google" | "apple";
+export type AuthMode = "signin" | "signup";
 
 /** The broker lives on our own domain (see src/lib/oauth.server.ts), so every
  *  screen in the sign-in flow — Google's, Apple's, ours — says deadsetfit.org. */
 export const OAUTH_BROKER_ORIGIN = "https://deadsetfit.org";
+export const NATIVE_AUTH_CALLBACK = "org.deadsetfit.app://auth/callback";
+export const NATIVE_AUTH_BRIDGE = "https://deadsetfit.org/auth/native-callback";
 
 export type OAuthCallback = {
   accessToken: string | null;
@@ -60,4 +63,19 @@ export function hasOAuthResult(callback: OAuthCallback) {
   return Boolean(
     callback.error || callback.code || (callback.accessToken && callback.refreshToken),
   );
+}
+
+/** Native welcome has distinct CTAs; malformed or absent values fail to signup. */
+export function authModeFromUrl(value: string): AuthMode {
+  try {
+    return new URL(value).searchParams.get("mode") === "signin" ? "signin" : "signup";
+  } catch {
+    return "signup";
+  }
+}
+
+/** Email confirmation and recovery must return to the installed app on native. */
+export function emailAuthRedirectUrl(nativeShell: boolean, origin: string) {
+  if (nativeShell) return NATIVE_AUTH_BRIDGE;
+  return `${origin.replace(/\/$/, "")}/auth/`;
 }

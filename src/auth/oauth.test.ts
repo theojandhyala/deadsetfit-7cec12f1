@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  authModeFromUrl,
   buildOAuthStartUrl,
   createOAuthState,
+  emailAuthRedirectUrl,
   hasOAuthResult,
+  NATIVE_AUTH_BRIDGE,
   OAUTH_BROKER_ORIGIN,
   oauthProvidersUrl,
   parseOAuthCallback,
@@ -104,5 +107,22 @@ describe("first-party OAuth", () => {
 
     expect(createOAuthState()).toHaveLength(48);
     vi.unstubAllGlobals();
+  });
+
+  it("opens the requested login or signup mode", () => {
+    expect(authModeFromUrl("capacitor://localhost/auth/index.html?mode=signin")).toBe("signin");
+    expect(authModeFromUrl("capacitor://localhost/auth/index.html?mode=signup")).toBe("signup");
+    expect(authModeFromUrl("capacitor://localhost/auth/index.html")).toBe("signup");
+    expect(authModeFromUrl("not a url")).toBe("signup");
+  });
+
+  it("returns native email confirmation and recovery through the app bridge", () => {
+    expect(emailAuthRedirectUrl(true, "capacitor://localhost")).toBe(NATIVE_AUTH_BRIDGE);
+  });
+
+  it("returns web email flows to the website auth page", () => {
+    expect(emailAuthRedirectUrl(false, "https://deadsetfit.org/")).toBe(
+      "https://deadsetfit.org/auth/",
+    );
   });
 });

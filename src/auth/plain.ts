@@ -1,8 +1,12 @@
 import { createClient, type Session } from "@supabase/supabase-js";
 import {
+  authModeFromUrl,
   buildOAuthStartUrl,
   createOAuthState,
+  emailAuthRedirectUrl,
   hasOAuthResult,
+  NATIVE_AUTH_BRIDGE,
+  NATIVE_AUTH_CALLBACK,
   oauthProvidersUrl,
   parseOAuthCallback,
   type OAuthProvider,
@@ -17,8 +21,6 @@ const sessionCookieAccess = "deadset_at";
 const sessionCookieRefresh = "deadset_rt";
 const supabaseCookiePrefix = "deadset_sb_";
 const cookieMaxAge = 60 * 60 * 24 * 180;
-const nativeAuthCallback = "org.deadsetfit.app://auth/callback";
-const nativeAuthBridge = "https://deadsetfit.org/auth/native-callback";
 const oauthStateKey = "deadset_oauth_state_v1";
 
 const form = document.getElementById("auth-form") as HTMLFormElement;
@@ -173,10 +175,7 @@ function isNativeShell() {
 }
 
 function emailRedirectUrl() {
-  if (isNativeShell()) {
-    return "https://deadsetfit.org/auth/";
-  }
-  return `${window.location.origin}/auth/`;
+  return emailAuthRedirectUrl(isNativeShell(), window.location.origin);
 }
 
 /** The broker sends the finished session to /auth/ on the web and to the
@@ -186,7 +185,7 @@ function oauthFlow(): "web" | "native" {
 }
 
 function oauthReturnOrigin() {
-  return isNativeShell() ? new URL(nativeAuthBridge).origin : window.location.origin;
+  return isNativeShell() ? new URL(NATIVE_AUTH_BRIDGE).origin : window.location.origin;
 }
 
 function saveOAuthState(state: string) {
@@ -348,7 +347,7 @@ async function setupNativeAuthCallback() {
   ]);
 
   const handleUrl = async (url: string) => {
-    if (!url.startsWith(nativeAuthCallback)) return;
+    if (!url.startsWith(NATIVE_AUTH_CALLBACK)) return;
     await Browser.close().catch(() => {});
     const callback = parseOAuthCallback(url);
     if (callback.error) {
@@ -363,6 +362,11 @@ async function setupNativeAuthCallback() {
       const session = await sessionFromCallback(callback);
       if (!session) throw new Error("No session returned. Please try again.");
       saveSessionBackup(session);
+      if (callback.type === "recovery") {
+        enterRecoveryMode(session);
+        setBusy(false);
+        return;
+      }
       window.location.replace(await destinationFor(session));
     } catch (error) {
       setMessage(errorMessage(error, "Could not finish sign in."), "error");
@@ -566,7 +570,7 @@ form.addEventListener("submit", async (event) => {
   }
 });
 
-switchMode("signup");
+switchMode(authModeFromUrl(window.location.href));
 void completeBrowserAuthCallback()
   .then((handled) => {
     if (!handled) return restoreExistingSession();

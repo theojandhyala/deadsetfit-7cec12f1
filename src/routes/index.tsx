@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Landing } from "@/components/Landing";
-import { isNativeIos } from "@/lib/platform";
+import { NativeWelcome } from "@/components/NativeWelcome";
+import { isNativeApp } from "@/lib/platform";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -49,15 +50,26 @@ export const Route = createFileRoute("/")({
  */
 function IndexRoute() {
   const navigate = useNavigate();
-  const [showLanding, setShowLanding] = useState(!isNativeIos());
+  const [native] = useState(() => isNativeApp());
+  const [entryReady, setEntryReady] = useState(!native);
 
   useEffect(() => {
     let cancelled = false;
+    let unsubscribe: (() => void) | undefined;
     (async () => {
       try {
         const { supabase } = await import("@/integrations/supabase/client");
+        const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+          if (!cancelled && session) navigate({ to: "/train", replace: true });
+        });
+        unsubscribe = () => authListener.subscription.unsubscribe();
+        if (cancelled) {
+          unsubscribe();
+          return;
+        }
         // A stalled token refresh must never strand native users on the blank
-        // boot div — time out and fall through to the landing page instead.
+        // boot div — time out and reveal the native welcome instead. The auth
+        // listener above still catches a valid session that restores later.
         const {
           data: { session },
         } = await Promise.race([
@@ -72,15 +84,17 @@ function IndexRoute() {
           return;
         }
       } catch {
-        /* fall through to the marketing page */
+        /* fall through to the correct platform entry screen */
       }
-      if (!cancelled) setShowLanding(true);
+      if (!cancelled) setEntryReady(true);
     })();
     return () => {
       cancelled = true;
+      unsubscribe?.();
     };
   }, [navigate]);
 
-  if (!showLanding) return <div className="min-h-[100dvh] bg-grit" />;
+  if (!entryReady) return <div className="min-h-[100dvh] bg-[#070708]" />;
+  if (native) return <NativeWelcome />;
   return <Landing />;
 }
