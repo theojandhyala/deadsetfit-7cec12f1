@@ -133,7 +133,7 @@ struct StreakWidgetView: View {
 
             Text(todayHeadline)
                 .font(.system(size: 13, weight: .heavy))
-                .foregroundStyle(snapshot.trainedToday ? .secondary : .white)
+                .foregroundStyle(snapshot.trainedToday ? Color.secondary : Color.white)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
