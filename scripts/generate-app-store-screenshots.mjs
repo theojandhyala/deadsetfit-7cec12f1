@@ -1,4 +1,4 @@
-import { mkdir } from "node:fs/promises";
+import { mkdir, rm } from "node:fs/promises";
 import sharp from "sharp";
 
 const width = 1320;
@@ -10,23 +10,37 @@ const outputDir = "artifacts/app-store/ios-6.9";
 
 const shots = [
   {
-    source: "public/screenshots/train.png",
+    source: "artifacts/app-store/raw-1.1/01-train.png",
     output: "01-today.png",
-    kicker: "YOUR WHOLE WEEK, WITHOUT THE GUESSWORK",
-    line1: "TRAIN WITH",
-    line2: "A CLEAR PLAN.",
+    kicker: "TODAY WITHOUT THE GUESSWORK",
+    line1: "KNOW TODAY.",
+    line2: "OWN THE WEEK.",
   },
   {
-    source: "public/screenshots/logger.png",
-    output: "02-logger.png",
+    source: "artifacts/app-store/raw-1.1/02-plan.png",
+    output: "02-plan.png",
+    kicker: "FULL SCHEDULE CONTROL",
+    line1: "BUILD THE WEEK.",
+    line2: "YOUR WAY.",
+  },
+  {
+    source: "artifacts/app-store/raw-1.1/03-progress.png",
+    output: "03-progress.png",
+    kicker: "PROOF, NOT GUESSWORK",
+    line1: "SEE THE WORK.",
+    line2: "SEE THE RESULT.",
+  },
+  {
+    source: "artifacts/app-store/raw-1.1/04-logger.png",
+    output: "04-logger.png",
     kicker: "FAST, FOCUSED WORKOUT LOGGING",
     line1: "LOG EVERY SET.",
-    line2: "CATCH EVERY PR.",
+    line2: "MISS NOTHING.",
   },
   {
-    source: "public/screenshots/profile.png",
-    output: "03-ranked.png",
-    kicker: "CONSISTENCY YOU CAN SEE",
+    source: "artifacts/app-store/raw-1.1/05-profile.png",
+    output: "05-ranked.png",
+    kicker: "RANKED TRAINING",
     line1: "BUILD YOUR CARD.",
     line2: "CLIMB THE RANKS.",
   },
@@ -51,6 +65,7 @@ function headingSvg(shot) {
   `);
 }
 
+await rm(outputDir, { recursive: true, force: true });
 await mkdir(outputDir, { recursive: true });
 
 for (const shot of shots) {

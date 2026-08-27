@@ -134,6 +134,8 @@ export interface ProgramExerciseRef {
   youtube_query: string;
   sets: number;
   reps: string;
+  /** Working load chosen during programme setup; stored in kilograms. */
+  weightKg?: number;
 }
 
 export interface ProgramDay {

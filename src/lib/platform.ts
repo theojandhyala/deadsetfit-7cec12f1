@@ -18,5 +18,11 @@ export function getRuntimePlatform(): "ios" | "android" | "web" {
 
 export function isNativeIos(): boolean {
   if (typeof window === "undefined") return false;
-  return getRuntimePlatform() === "ios" && window.Capacitor?.isNativePlatform?.() === true;
+  return getRuntimePlatform() === "ios" && isNativeApp();
+}
+
+/** True for any installed Capacitor shell; website and PWA remain web. */
+export function isNativeApp(): boolean {
+  if (typeof window === "undefined") return false;
+  return getRuntimePlatform() !== "web" && window.Capacitor?.isNativePlatform?.() === true;
 }

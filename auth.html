@@ -6,10 +6,10 @@
     <!-- Redirect to the explicit static sign-in file. Target /auth/index.html,
          not the /auth/ directory: the Capacitor iOS bundled webview can't serve
          a directory index and loops on the SPA otherwise. -->
-    <meta http-equiv="refresh" content="0; url=/auth/index.html" />
     <title>Join DEADSET</title>
     <script>
-      window.location.replace("/auth/index.html");
+      const target = `/auth/index.html${window.location.search}${window.location.hash}`;
+      window.location.replace(target);
     </script>
   </head>
   <body style="margin: 0; background: #080507; color: #f5f5f0; font-family: system-ui, sans-serif">
@@ -27,8 +27,16 @@
           DEAD<span style="color: #f00606">SET</span>
         </h1>
         <p>Opening account setup…</p>
-        <p><a href="/auth/index.html" style="color: #f00606">Tap here if it does not open</a></p>
+        <p>
+          <a id="auth-fallback" href="/auth/index.html" style="color: #f00606"
+            >Tap here if it does not open</a
+          >
+        </p>
       </div>
     </main>
+    <script>
+      document.getElementById("auth-fallback").href =
+        `/auth/index.html${window.location.search}${window.location.hash}`;
+    </script>
   </body>
 </html>

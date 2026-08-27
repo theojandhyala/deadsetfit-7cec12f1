@@ -120,6 +120,7 @@ function PlanPage() {
   const [muscleFilter, setMuscleFilter] = useState<Exercise["muscleGroup"] | "ALL">("ALL");
   const [equipmentFilter, setEquipmentFilter] = useState("ALL");
   const [showCustom, setShowCustom] = useState(false);
+  const [showPlanDefaults, setShowPlanDefaults] = useState(false);
   const [advancedExerciseId, setAdvancedExerciseId] = useState<string | null>(null);
   const [swapExerciseId, setSwapExerciseId] = useState<string | null>(null);
   const [customName, setCustomName] = useState("");
@@ -685,57 +686,78 @@ function PlanPage() {
 
       {!activeProgram && (
         <section className="deadset-section">
-          <div className="deadset-panel-muted flex items-center justify-between gap-4 p-4">
-            <div className="min-w-0">
-              <p className="deadset-kicker">Session build</p>
-              <h2 className="display mt-2 text-xl font-black uppercase text-grit">
-                Movements per workout
-              </h2>
-              <p className="mt-1 text-xs text-grit-dim">
-                Set the default. Fine-tune each day below.
-              </p>
-            </div>
-            <div className="flex shrink-0 items-center rounded-md border border-white/12 bg-black">
-              <button
-                onClick={() =>
-                  setWorkoutSize(
-                    Math.max(3, (state.profile?.exercisesPerSession ?? 5) - 1) as
-                      | 3
-                      | 4
-                      | 5
-                      | 6
-                      | 7
-                      | 8,
-                  )
-                }
-                disabled={(state.profile?.exercisesPerSession ?? 5) <= 3}
-                aria-label="Use fewer exercises per workout"
-                className="grid h-11 w-10 place-items-center text-xl font-bold text-grit-dim disabled:opacity-30"
-              >
-                -
-              </button>
-              <span className="display grid h-11 w-11 place-items-center border-x border-white/10 text-xl font-black text-grit">
-                {state.profile?.exercisesPerSession ?? 5}
+          <div className="overflow-hidden rounded-xl border border-white/10 bg-black/20">
+            <button
+              type="button"
+              onClick={() => setShowPlanDefaults((current) => !current)}
+              aria-expanded={showPlanDefaults}
+              className="flex min-h-14 w-full items-center gap-3 px-4 text-left press"
+            >
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-white/10 bg-black/30 text-grit-dim">
+                <Settings2 size={16} />
               </span>
-              <button
-                onClick={() =>
-                  setWorkoutSize(
-                    Math.min(8, (state.profile?.exercisesPerSession ?? 5) + 1) as
-                      | 3
-                      | 4
-                      | 5
-                      | 6
-                      | 7
-                      | 8,
-                  )
-                }
-                disabled={(state.profile?.exercisesPerSession ?? 5) >= 8}
-                aria-label="Use more exercises per workout"
-                className="grid h-11 w-10 place-items-center text-xl font-bold text-grit-dim disabled:opacity-30"
-              >
-                +
-              </button>
-            </div>
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs font-bold text-grit">Plan defaults</span>
+                <span className="mt-0.5 block text-[10px] text-grit-dim">
+                  {state.profile?.exercisesPerSession ?? 5} movements per workout
+                </span>
+              </span>
+              <ChevronRight
+                size={16}
+                className={`shrink-0 text-grit-dim transition-transform ${showPlanDefaults ? "rotate-90" : ""}`}
+              />
+            </button>
+            {showPlanDefaults && (
+              <div className="deadset-view-switch flex items-center justify-between gap-4 border-t border-white/10 p-4">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-grit">Movements per workout</p>
+                  <p className="mt-1 text-[10px] leading-relaxed text-grit-dim">
+                    Used when DEADSET rebuilds your week. Each day can still be adjusted separately.
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center rounded-md border border-white/12 bg-black">
+                  <button
+                    onClick={() =>
+                      setWorkoutSize(
+                        Math.max(3, (state.profile?.exercisesPerSession ?? 5) - 1) as
+                          | 3
+                          | 4
+                          | 5
+                          | 6
+                          | 7
+                          | 8,
+                      )
+                    }
+                    disabled={(state.profile?.exercisesPerSession ?? 5) <= 3}
+                    aria-label="Use fewer exercises per workout"
+                    className="grid h-11 w-10 place-items-center text-xl font-bold text-grit-dim disabled:opacity-30"
+                  >
+                    -
+                  </button>
+                  <span className="display grid h-11 w-11 place-items-center border-x border-white/10 text-xl font-black text-grit">
+                    {state.profile?.exercisesPerSession ?? 5}
+                  </span>
+                  <button
+                    onClick={() =>
+                      setWorkoutSize(
+                        Math.min(8, (state.profile?.exercisesPerSession ?? 5) + 1) as
+                          | 3
+                          | 4
+                          | 5
+                          | 6
+                          | 7
+                          | 8,
+                      )
+                    }
+                    disabled={(state.profile?.exercisesPerSession ?? 5) >= 8}
+                    aria-label="Use more exercises per workout"
+                    className="grid h-11 w-10 place-items-center text-xl font-bold text-grit-dim disabled:opacity-30"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </section>
       )}
@@ -784,12 +806,13 @@ function PlanPage() {
             return (
               <div
                 key={dayKey}
-                className="border-b border-white/10 last:border-b-0"
+                className={`border-b border-white/10 last:border-b-0 ${
+                  active ? "deadset-plan-day-active" : ""
+                }`}
                 style={{
                   background: active
                     ? "linear-gradient(90deg, rgba(230,50,34,.12), rgba(23,24,27,.98) 46%)"
                     : "#111214",
-                  boxShadow: active ? "inset 3px 0 0 #e63222" : undefined,
                 }}
               >
                 <button
@@ -846,7 +869,7 @@ function PlanPage() {
                 </button>
 
                 {active && !isRest && (
-                  <div className="border-t border-white/10 bg-black/20 px-3 pb-4 pt-3 sm:px-4">
+                  <div className="deadset-plan-reveal border-t border-white/10 bg-black/20 px-3 pb-4 pt-3 sm:px-4">
                     <div className="space-y-2">
                       {day.exerciseIds.map((exerciseId, index) => {
                         const exercise = getExercise(exerciseId, savedAndProgramExercises);
@@ -909,7 +932,7 @@ function PlanPage() {
                 )}
 
                 {active && isRest && !activeProgram && (
-                  <div className="border-t border-white/10 bg-black/20 px-3 py-4 sm:px-4">
+                  <div className="deadset-plan-reveal border-t border-white/10 bg-black/20 px-3 py-4 sm:px-4">
                     <p className="text-xs leading-relaxed text-grit-dim">
                       No workout is scheduled. Keep it as recovery or build a session for this day.
                     </p>

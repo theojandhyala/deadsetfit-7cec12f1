@@ -63,6 +63,11 @@ const activeCapacitorConfig = capacitorConfig
   .join("\n");
 const upgradePage = existsSync("src/routes/upgrade.tsx") ? read("src/routes/upgrade.tsx") : "";
 const infoPlist = existsSync("ios/App/App/Info.plist") ? read("ios/App/App/Info.plist") : "";
+const launchStoryboard = existsSync("ios/App/App/Base.lproj/LaunchScreen.storyboard")
+  ? read("ios/App/App/Base.lproj/LaunchScreen.storyboard")
+  : "";
+const indexHtml = existsSync("index.html") ? read("index.html") : "";
+const indexRoute = existsSync("src/routes/index.tsx") ? read("src/routes/index.tsx") : "";
 const entitlements = existsSync("ios/App/App/App.entitlements")
   ? read("ios/App/App/App.entitlements")
   : "";
@@ -93,8 +98,8 @@ const appleCredentialMigration = existsSync(
   ? read("supabase/migrations/20260815153000_apple_oauth_revocation.sql")
   : "";
 const worker = existsSync("src/cloudflare-worker.ts") ? read("src/cloudflare-worker.ts") : "";
-const nativeAuthBridge = existsSync("auth/native-callback.html")
-  ? read("auth/native-callback.html")
+const nativeAuthBridge = existsSync("auth/native-callback/index.html")
+  ? read("auth/native-callback/index.html")
   : "";
 const profilePage = existsSync("src/routes/_tabs.profile.tsx")
   ? read("src/routes/_tabs.profile.tsx")
@@ -118,16 +123,44 @@ const deviceReminders = existsSync("src/lib/device-reminders.ts")
   ? read("src/lib/device-reminders.ts")
   : "";
 const settingsPage = existsSync("src/routes/settings.tsx") ? read("src/routes/settings.tsx") : "";
+const appReviewClient = existsSync("src/lib/app-review.ts") ? read("src/lib/app-review.ts") : "";
+const appReviewWatcher = existsSync("src/components/AppReviewWatcher.tsx")
+  ? read("src/components/AppReviewWatcher.tsx")
+  : "";
+const appReviewPlugin = existsSync("ios/App/App/AppReviewPlugin.swift")
+  ? read("ios/App/App/AppReviewPlugin.swift")
+  : "";
 const storeKitPlugin = existsSync("ios/App/App/StoreKitPlugin.swift")
   ? read("ios/App/App/StoreKitPlugin.swift")
   : "";
 const storeKitClient = existsSync("src/lib/storekit.ts") ? read("src/lib/storekit.ts") : "";
+const revenueCatClient = existsSync("src/lib/revenuecat.ts") ? read("src/lib/revenuecat.ts") : "";
+const revenueCatSync = existsSync("src/components/RevenueCatSync.tsx")
+  ? read("src/components/RevenueCatSync.tsx")
+  : "";
+const rootRoute = existsSync("src/routes/__root.tsx") ? read("src/routes/__root.tsx") : "";
+const privacyPage = existsSync("src/routes/privacy.tsx") ? read("src/routes/privacy.tsx") : "";
+const landingPage = existsSync("src/components/Landing.tsx")
+  ? read("src/components/Landing.tsx")
+  : "";
+const publicRedirects = existsSync("public/_redirects") ? read("public/_redirects") : "";
+const xcodeProject = existsSync("ios/App/DeadSet.xcodeproj/project.pbxproj")
+  ? read("ios/App/DeadSet.xcodeproj/project.pbxproj")
+  : "";
+const whatsNew = existsSync("src/lib/whats-new.ts") ? read("src/lib/whats-new.ts") : "";
 
 check("package.json exists", !!packageJson.name, "Project metadata is readable.");
 check(
   "production build script",
   packageJson.scripts?.build?.includes("vite build"),
   "Build script runs Vite.",
+);
+check(
+  "first update version",
+  (xcodeProject.match(/MARKETING_VERSION = 1\.1;/g)?.length ?? 0) >= 4 &&
+    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 131;/g)?.length ?? 0) >= 4 &&
+    whatsNew.includes("WHATS_NEW_VERSION = 20260820"),
+  "The app and activity extension are versioned as 1.1 (131), with a matching in-app update summary.",
 );
 check(
   "full check script",
@@ -167,11 +200,44 @@ check(
   existsSync("src/routes/disclaimer.tsx"),
   "Health disclaimer route exists.",
 );
-check("manifest", existsSync("public/manifest.json"), "Web manifest exists.");
+check(
+  "App Store-only public website",
+  landingPage.includes("https://apps.apple.com/app/deadset/id6783511541") &&
+    landingPage.includes("Download on the App Store") &&
+    !landingPage.includes('to="/auth"') &&
+    !landingPage.toLowerCase().includes("stripe") &&
+    rootRoute.includes("WebMarketingRedirect") &&
+    !indexHtml.includes('rel="manifest"') &&
+    publicRedirects.includes("/auth / 302"),
+  "Browser visitors see the App Store campaign, former app routes are retired, and native OAuth keeps its dedicated callback.",
+);
 check(
   "splash asset",
   existsSync("src/assets/splash-2732.png.asset.json"),
   "Splash asset metadata exists.",
+);
+check(
+  "native cold-start experience",
+  infoPlist.includes("<string>LaunchScreen</string>") &&
+    launchStoryboard.includes('image="Splash"') &&
+    indexHtml.includes("Loading your training") &&
+    indexRoute.includes("NativeSessionLoading") &&
+    indexRoute.includes("NativeWelcome"),
+  "The native launch image hands off to a branded session loader and a focused first-run welcome screen.",
+);
+check(
+  "signup-first native welcome",
+  indexRoute.includes("/auth/index.html?mode=signup") &&
+    indexRoute.includes("/auth/index.html?mode=signin") &&
+    authClient.includes('get("mode") === "signin"'),
+  "First launch prioritizes account creation and provides a direct returning-user sign-in path.",
+);
+check(
+  "iPhone portrait and arm64 release support",
+  infoPlist.includes("<string>arm64</string>") &&
+    !infoPlist.includes("UIInterfaceOrientationLandscapeLeft") &&
+    !infoPlist.includes("UIInterfaceOrientationLandscapeRight"),
+  "The iPhone-only interface declares the architecture it ships and only the orientation it supports.",
 );
 check(
   "icon asset",
@@ -191,6 +257,25 @@ check(
     deviceReminders.includes("buildWorkoutReminderDrafts") &&
     settingsPage.includes("iPhone Workout Reminders"),
   "Opt-in local notifications follow the user's training schedule and can be configured in-app.",
+);
+check(
+  "App Store rating requests",
+  existsSync("src/lib/app-review.test.ts") &&
+    rootRoute.includes("<AppReviewWatcher />") &&
+    appReviewWatcher.includes("deadset_native_review_state_v2") &&
+    appReviewClient.includes("REVIEW_MILESTONES = [3, 10, 25]") &&
+    appReviewClient.includes("action=write-review") &&
+    appReviewPlugin.includes("AppStore.requestReview(in: scene)") &&
+    appReviewPlugin.includes('CAPPluginMethod(name: "open"') &&
+    settingsPage.includes("Rate DEADSET"),
+  "Successful workouts can trigger Apple's rating sheet, while Settings always provides a direct write-review link.",
+);
+check(
+  "visible support and version details",
+  settingsPage.includes("support@deadsetfit.org") &&
+    settingsPage.includes("App.getInfo()") &&
+    settingsPage.includes("Contact support"),
+  "Settings provides direct support and reports the installed native version/build.",
 );
 check(
   "StoreKit subscription products",
@@ -217,21 +302,42 @@ check(
   "The iPhone paywall can purchase, restore, and manage Apple subscriptions.",
 );
 check(
+  "RevenueCat StoreKit 2 tracking",
+  packageJson.dependencies?.["@revenuecat/purchases-capacitor"] &&
+    revenueCatClient.includes("PURCHASES_ARE_COMPLETED_BY_TYPE.MY_APP") &&
+    revenueCatClient.includes("STOREKIT_VERSION.STOREKIT_2") &&
+    revenueCatClient.includes("recordPurchase") &&
+    revenueCatClient.includes("syncPurchases") &&
+    upgradePage.includes("recordRevenueCatPurchase") &&
+    upgradePage.includes("syncRevenueCatPurchases"),
+  "RevenueCat observes the existing StoreKit 2 checkout and records both new and restored purchases.",
+);
+check(
+  "RevenueCat identity and disclosure",
+  revenueCatSync.includes("session.user.id") &&
+    revenueCatSync.includes("deadset:explicit-logout") &&
+    rootRoute.includes("<RevenueCatSync />") &&
+    privacyPage.includes("RevenueCat") &&
+    /subscription receipt and\s+entitlement/.test(privacyPage),
+  "RevenueCat customers use account IDs, explicit logout is handled, and subscription processing is disclosed.",
+);
+check(
   "Stripe isolated from native checkout",
   upgradePage.includes("startApplePurchase") &&
     upgradePage.includes("iosNative ?") &&
     proProvider.includes("!nativeIos && session && isPaymentsConfigured()") &&
     !paywallSheet.includes("deadsetfit.org/upgrade") &&
     !storeKitPlugin.toLowerCase().includes("stripe"),
-  "Native checkout uses StoreKit; Stripe remains the website payment channel.",
+  "Native checkout uses StoreKit; no Stripe path is exposed in the iPhone purchase flow.",
 );
 check(
   "Apple subscription terms",
   termsPage.includes("processed by Apple") &&
     termsPage.includes("renew automatically") &&
     termsPage.includes("App Store account") &&
-    /processed by\s+Stripe/.test(termsPage),
-  "Terms describe both Apple in-app subscriptions and Stripe website subscriptions.",
+    termsPage.includes("New subscriptions") &&
+    termsPage.includes("iPhone app"),
+  "Terms describe the Apple-only purchase path and preserve legacy subscription obligations.",
 );
 check(
   "camera usage string",
@@ -276,6 +382,7 @@ for (const type of [
   "Fitness",
   "PhotosorVideos",
   "OtherUserContent",
+  "PurchaseHistory",
 ]) {
   check(
     `privacy manifest: ${type}`,

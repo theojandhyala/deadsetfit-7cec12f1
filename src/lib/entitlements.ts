@@ -68,16 +68,18 @@ export function subscriptionPayload(
   };
 }
 
-/** `past_due` still unlocks Pro: Stripe retries for days, and locking someone
- *  out over a card that is about to succeed loses the customer, not the charge.
- *  A cancelled subscription keeps access until the period it paid for ends. */
+/**
+ * A Pro entitlement must reflect a successful payment. `trialing` has
+ * collected no money and `past_due` has a failed collection. A cancelled
+ * subscription remains valid only through the period already paid for.
+ */
 export function subscriptionStillUnlocksPro(
   status: string | null | undefined,
   periodEnd: string | null,
   now = new Date(),
 ): boolean {
   return (
-    ["active", "trialing", "past_due"].includes(status ?? "") ||
+    status === "active" ||
     (status === "canceled" && !!periodEnd && new Date(periodEnd) > now)
   );
 }

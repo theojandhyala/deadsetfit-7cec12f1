@@ -16,10 +16,11 @@ import {
   ListPlus,
   Timer,
   StickyNote,
+  RefreshCw,
   Dumbbell,
 } from "lucide-react";
 import { useAppState, getState } from "@/lib/storage";
-import { getExercise } from "@/lib/exercises";
+import { allExercises, getExercise } from "@/lib/exercises";
 import { defaultSchedule, isoDay, todayKey, plateBreakdown, warmupRamp } from "@/lib/calc";
 import {
   topSetHistory,
@@ -38,6 +39,7 @@ import { exportSessionToHealth } from "@/lib/health";
 import { shareWorkoutToFeed } from "@/lib/auto-share";
 import { emitGritEarned } from "@/lib/grit-events";
 import { isPersonalRecord } from "@/lib/workout-pr";
+import { liveExerciseSwapCandidates } from "@/lib/live-exercise-swap";
 import {
   buildSupersetIds,
   completedWorkingSets,
@@ -195,7 +197,7 @@ function buildSession(
             plannedWeightKg:
               prescription && prescription.prescribedWeightKg > 0
                 ? prescription.prescribedWeightKg
-                : undefined,
+                : it.weightKg,
             ...resolveTracking(state, it.id, it.name, it.reps),
             sets: [],
           };
@@ -565,6 +567,8 @@ function LiveWorkoutPage() {
   const prAwardedRef = useRef<Set<string>>(new Set());
   const [videoQuery, setVideoQuery] = useState<string | null>(null);
   const [videoTitle, setVideoTitle] = useState("");
+  const [showSwap, setShowSwap] = useState(false);
+  const [swapQuery, setSwapQuery] = useState("");
   const [finished, setFinished] = useState(false);
   const [finishedSessionId, setFinishedSessionId] = useState<string | null>(null);
   const [share, setShare] = useState(false);
@@ -727,6 +731,26 @@ function LiveWorkoutPage() {
       document.removeEventListener("visibilitychange", onResume);
     };
   }, []);
+
+  const liveSwapOptions = useMemo(() => {
+    if (!session || !activeExercise) return [];
+    return liveExerciseSwapCandidates(allExercises(state.savedExercises), {
+      currentExerciseId: activeExercise.exerciseId,
+      targetMuscles: activeExercise.primary_muscles,
+      availableEquipment: state.profile?.equipment,
+      reservedExerciseIds: session.exercises
+        .filter((_, index) => index !== activeIdx)
+        .map((exercise) => exercise.exerciseId),
+      query: swapQuery,
+    });
+  }, [
+    activeExercise,
+    activeIdx,
+    session,
+    state.profile?.equipment,
+    state.savedExercises,
+    swapQuery,
+  ]);
 
   if (finished && finishedSessionId) {
     const finalSession = state.sessions.find((s) => s.id === finishedSessionId);
@@ -1159,6 +1183,38 @@ function LiveWorkoutPage() {
     setActiveIdx((i) => indexAfterMove(i, index, direction));
   }
 
+  /**
+   * Apply a smart swap to this session slot without carrying an unsafe load
+   * or stale tracking mode onto a different movement. The slot's programming
+   * (sets, reps, rest, RIR, tempo and superset) remains intact.
+   */
+  function chooseLiveSwap(replacement: Exercise) {
+    if (!session || current.sets.length > 0) return;
+    mutateExercise(activeIdx, (target) => {
+      // Re-check inside the state update so a late set cannot be reattributed
+      // to the replacement if it lands at the same time as this tap.
+      if (target.sets.length > 0) return target;
+      const tracking = resolveTracking(state, replacement.id, replacement.name, target.targetReps);
+      return {
+        ...target,
+        exerciseId: replacement.id,
+        name: replacement.name,
+        primary_muscles: [replacement.muscleGroup],
+        // A load on a different movement is not a safe default.
+        plannedWeightKg: undefined,
+        addedLive: true,
+        // Explicitly clear a previous duration target before resolving the
+        // replacement's tracking mode.
+        targetSeconds: undefined,
+        ...tracking,
+        sets: [],
+      };
+    });
+    hapticSelection();
+    setShowSwap(false);
+    setSwapQuery("");
+  }
+
   // Tag the effort of the most recently logged set (optional, one tap). Feeds
   // the RPE-aware progression suggestion next session.
   function rpeLastSet(rpe: number) {
@@ -1458,20 +1514,46 @@ function LiveWorkoutPage() {
             <Link
               to="/lift/$exerciseId"
               params={{ exerciseId: current.exerciseId }}
-              className="w-12 h-12 border border-grit flex items-center justify-center text-grit-dim"
+              className="flex h-12 min-w-12 flex-col items-center justify-center gap-0.5 rounded-xl border border-grit px-1 text-grit-dim"
               aria-label="Lift history"
+              title="Lift history"
             >
-              <Trophy size={18} />
+              <Trophy size={15} />
+              <span className="text-[7px] font-black uppercase">History</span>
             </Link>
+            <button
+              type="button"
+              disabled={current.sets.length > 0}
+              onClick={() => {
+                if (!isPro || proLoading) {
+                  openPaywall("smart-swaps");
+                  return;
+                }
+                setSwapQuery("");
+                setShowSwap(true);
+              }}
+              className="flex h-12 min-w-12 flex-col items-center justify-center gap-0.5 rounded-xl border border-grit px-1 text-grit-dim disabled:opacity-35"
+              aria-label={
+                current.sets.length > 0
+                  ? "Exercise swaps are available before logging a set"
+                  : "Swap this exercise"
+              }
+              title={current.sets.length > 0 ? "Swap before logging a set" : "Swap exercise"}
+            >
+              <RefreshCw size={15} />
+              <span className="text-[7px] font-black uppercase">Swap</span>
+            </button>
             <button
               onClick={() => {
                 setVideoQuery(current.name + " form");
                 setVideoTitle(current.name);
               }}
-              className="w-12 h-12 border border-accent-red flex items-center justify-center"
+              className="flex h-12 min-w-12 flex-col items-center justify-center gap-0.5 rounded-xl border border-accent-red px-1"
               aria-label={`${current.name} form guide`}
+              title="Form guide"
             >
-              <Play size={20} className="text-accent-red" />
+              <Play size={15} className="text-accent-red" />
+              <span className="text-[7px] font-black uppercase text-accent-red">Form</span>
             </button>
           </div>
         </div>
@@ -1596,6 +1678,19 @@ function LiveWorkoutPage() {
           onClose={() => setNoting(false)}
         />
       )}
+      {showSwap && (
+        <LiveExerciseSwap
+          currentName={current.name}
+          candidates={liveSwapOptions}
+          query={swapQuery}
+          onQueryChange={setSwapQuery}
+          onChoose={chooseLiveSwap}
+          onClose={() => {
+            setShowSwap(false);
+            setSwapQuery("");
+          }}
+        />
+      )}
       {rest && rest.seconds > 0 && (
         <RestTimer
           key={session.exercises[activeIdx]?.sets.length ?? 0}
@@ -1627,6 +1722,98 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
       >
         {value}
       </p>
+    </div>
+  );
+}
+
+function LiveExerciseSwap({
+  currentName,
+  candidates,
+  query,
+  onQueryChange,
+  onChoose,
+  onClose,
+}: {
+  currentName: string;
+  candidates: Exercise[];
+  query: string;
+  onQueryChange: (value: string) => void;
+  onChoose: (exercise: Exercise) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-end bg-black/75 p-3 sm:items-center sm:justify-center"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="live-swap-title"
+    >
+      <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/15 bg-[#111214] shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-white/10 p-4">
+          <div className="min-w-0">
+            <p className="label-cap text-[9px] text-pro">PRO SMART SWAP</p>
+            <h2
+              id="live-swap-title"
+              className="display mt-1 text-2xl font-black uppercase text-grit"
+            >
+              Keep the session moving
+            </h2>
+            <p className="mt-1 text-xs leading-relaxed text-grit-dim">
+              Replace {currentName} before you log a set. Your workout targets stay in place.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="icon-btn shrink-0 text-grit-dim"
+            aria-label="Close exercise swaps"
+          >
+            <X size={20} />
+          </button>
+        </div>
+        <div className="p-4">
+          <input
+            autoFocus
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder="Search alternatives"
+            className="input-grit w-full"
+            aria-label="Search exercise alternatives"
+          />
+          <div className="mt-3 max-h-[52vh] space-y-2 overflow-y-auto pr-1">
+            {candidates.map((exercise) => (
+              <button
+                key={exercise.id}
+                type="button"
+                onClick={() => onChoose(exercise)}
+                className="flex min-h-16 w-full items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-left press hover:border-accent-red/60"
+              >
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-accent-red/10 text-accent-red">
+                  <Dumbbell size={16} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-bold text-grit">
+                    {exercise.name}
+                  </span>
+                  <span className="mt-0.5 block text-[10px] font-semibold uppercase text-grit-dim">
+                    {exercise.muscleGroup} ·{" "}
+                    {exercise.equipmentLabel ?? exercise.equipment[0].replace("_", " ")}
+                  </span>
+                </span>
+                <RefreshCw size={15} className="shrink-0 text-accent-red" />
+              </button>
+            ))}
+            {candidates.length === 0 && (
+              <div className="rounded-xl border border-white/10 bg-black/25 px-4 py-8 text-center">
+                <p className="text-sm font-bold text-grit">No matching swap found</p>
+                <p className="mt-1 text-xs leading-relaxed text-grit-dim">
+                  Try a broader search or keep the planned movement for today.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

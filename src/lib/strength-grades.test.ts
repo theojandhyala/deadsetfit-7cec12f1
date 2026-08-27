@@ -2,9 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   gradeExercise,
-  strengthJourney,
-  strengthReportAsOf,
-  strengthTrend,
   personalBests,
   pointsToNextTier,
   STANDARDS,
@@ -52,13 +49,6 @@ describe("the standards table", () => {
   it("covers every exercise in the library", () => {
     const missing = EXERCISES.filter((e) => !STANDARDS[e.id]).map((e) => e.id);
     expect(missing).toEqual([]);
-  });
-
-  it("has one threshold per tier above BEGINNER", () => {
-    for (const [id, standard] of Object.entries(STANDARDS)) {
-      expect(standard.male, id).toHaveLength(TIERS.length - 1);
-      expect(standard.female, id).toHaveLength(TIERS.length - 1);
-    }
   });
 
   it("has strictly increasing thresholds — a ladder cannot go backwards", () => {
@@ -155,17 +145,19 @@ describe("gradeExercise", () => {
     expect(grade!.tier).toBe("ADVANCED");
   });
 
-  it("tops out at WORLD CLASS with nothing left to chase", () => {
+  it("reserves WORLD CLASS for a level above the published elite checkpoint", () => {
     const grade = gradeExercise("bench-press", "Bench", { ...bests, e1rmKg: 400 }, 80, "MALE");
-    expect(grade).toMatchObject({ tier: "WORLD CLASS", score: 100, nextAt: null, nextTier: null });
+    expect(grade).toMatchObject({
+      tier: "WORLD_CLASS",
+      score: 100,
+      nextAt: null,
+      nextTier: null,
+    });
   });
 
-  it("keeps ELITE reachable below WORLD CLASS", () => {
-    // 2.0x bodyweight bench enters ELITE; WORLD CLASS is 2.3x.
-    const elite = gradeExercise("bench-press", "Bench", { ...bests, e1rmKg: 165 }, 80, "MALE");
-    expect(elite!.tier).toBe("ELITE");
-    expect(elite!.nextTier).toBe("WORLD CLASS");
-    expect(elite!.nextAt).toBe(185);
+  it("keeps ELITE as a real tier with WORLD CLASS left to chase", () => {
+    const grade = gradeExercise("bench-press", "Bench", { ...bests, e1rmKg: 170 }, 80, "MALE");
+    expect(grade).toMatchObject({ tier: "ELITE", nextTier: "WORLD_CLASS", nextAt: 192.5 });
   });
 
   it("starts at BEGINNER for a first light session", () => {
@@ -223,7 +215,7 @@ describe("strengthReport", () => {
       library,
     );
     const chest = report.muscles.find((m) => m.muscle === "CHEST")!;
-    expect(chest.tier).not.toBe("ELITE");
+    expect(chest.tier).not.toBe("WORLD_CLASS");
     expect(chest.weakest!.exerciseId).toBe("cable-fly");
   });
 
@@ -236,6 +228,16 @@ describe("strengthReport", () => {
       library,
     );
     expect(report.muscles.find((m) => m.muscle === "LEGS")!.weakest!.exerciseId).toBe("leg-curl");
+  });
+
+  it("grades a recognised custom weighted exercise into its muscle group", () => {
+    const report = strengthReport(
+      state([session("custom-chest-press", "Custom Chest Press", [{ weight: 70, reps: 8 }])]),
+      [{ id: "custom-chest-press", name: "Custom Chest Press", muscleGroup: "CHEST" }],
+    );
+    expect(
+      report.muscles.find((muscle) => muscle.muscle === "CHEST")?.exercises[0]?.exerciseId,
+    ).toBe("custom-chest-press");
   });
 
   it("keeps the overall score inside the ladder", () => {
@@ -251,211 +253,24 @@ describe("strengthReport", () => {
 describe("tierForScore", () => {
   it("maps the ends of the range to the ends of the ladder", () => {
     expect(tierForScore(0)).toBe("BEGINNER");
-    expect(tierForScore(100)).toBe("WORLD CLASS");
+    expect(tierForScore(100)).toBe("WORLD_CLASS");
+  });
+
+  it("keeps the rounded six-tier boundaries aligned with exercise scores", () => {
+    expect(tierForScore(16)).toBe("BEGINNER");
+    expect(tierForScore(17)).toBe("NOVICE");
+    expect(tierForScore(33)).toBe("INTERMEDIATE");
+    expect(tierForScore(82)).toBe("ELITE");
+    expect(tierForScore(83)).toBe("WORLD_CLASS");
   });
 
   it("clamps nonsense instead of returning undefined", () => {
     expect(tierForScore(-50)).toBe("BEGINNER");
-    expect(tierForScore(9999)).toBe("WORLD CLASS");
-  });
-
-  it("walks the whole ladder in order as the score climbs", () => {
-    const seen = [0, 20, 40, 60, 80, 100].map(tierForScore);
-    expect(seen).toEqual(TIERS);
+    expect(tierForScore(9999)).toBe("WORLD_CLASS");
   });
 
   it("says what the next tier costs, and nothing at the top", () => {
     expect(pointsToNextTier(10)!.tier).toBe("NOVICE");
     expect(pointsToNextTier(100)).toBeNull();
-  });
-});
-
-/** A finished session on a specific day. */
-function sessionOn(date: string, exerciseId: string, weight: number, reps: number): WorkoutSession {
-  return {
-    ...session(exerciseId, exerciseId, [{ weight, reps }]),
-    id: `s-${date}-${exerciseId}-${weight}`,
-    date,
-    startedAt: `${date}T10:00:00.000Z`,
-    endedAt: `${date}T11:00:00.000Z`,
-  };
-}
-
-const NOW = new Date("2026-08-27T12:00:00.000Z");
-
-describe("strengthReportAsOf", () => {
-  it("hides work logged after the cutoff", () => {
-    const sessions = [
-      sessionOn("2026-08-10", "bench-press", 80, 5),
-      sessionOn("2026-08-25", "bench-press", 120, 5),
-    ];
-    const early = strengthReportAsOf(state(sessions), library, "2026-08-15");
-    const late = strengthReportAsOf(state(sessions), library, "2026-08-26");
-    expect(late.score).toBeGreaterThan(early.score);
-  });
-
-  it("includes work logged on the cutoff day itself", () => {
-    const report = strengthReportAsOf(
-      state([sessionOn("2026-08-15", "bench-press", 100, 5)]),
-      library,
-      "2026-08-15",
-    );
-    expect(report.gradedCount).toBe(1);
-  });
-
-  it("reports nothing graded before the athlete had trained", () => {
-    const report = strengthReportAsOf(
-      state([sessionOn("2026-08-20", "bench-press", 100, 5)]),
-      library,
-      "2026-08-01",
-    );
-    expect(report.gradedCount).toBe(0);
-  });
-});
-
-describe("strengthTrend", () => {
-  it("reports the gain when a lift went up this week", () => {
-    const trend = strengthTrend(
-      state([
-        sessionOn("2026-08-01", "bench-press", 80, 5),
-        sessionOn("2026-08-25", "bench-press", 120, 5),
-      ]),
-      library,
-      7,
-      NOW,
-    );
-    expect(trend.overallChange).toBeGreaterThan(0);
-    expect(trend.movers[0]!.muscle).toBe("CHEST");
-    expect(trend.movers[0]!.change).toBeGreaterThan(0);
-  });
-
-  it("stays flat when nothing improved in the window", () => {
-    const trend = strengthTrend(
-      state([sessionOn("2026-08-01", "bench-press", 100, 5)]),
-      library,
-      7,
-      NOW,
-    );
-    expect(trend.overallChange).toBe(0);
-    expect(trend.movers).toEqual([]);
-  });
-
-  it("does not count a lighter session as going backwards", () => {
-    // Grades are built from bests, so a deload week must not read as a loss.
-    const trend = strengthTrend(
-      state([
-        sessionOn("2026-08-01", "bench-press", 120, 5),
-        sessionOn("2026-08-25", "bench-press", 60, 5),
-      ]),
-      library,
-      7,
-      NOW,
-    );
-    expect(trend.overallChange).toBe(0);
-  });
-
-  it("counts a brand-new muscle as a gain from zero", () => {
-    const trend = strengthTrend(state([sessionOn("2026-08-25", "squat", 140, 5)]), library, 7, NOW);
-    const legs = trend.movers.find((m) => m.muscle === "LEGS")!;
-    expect(legs.then).toBe(0);
-    expect(legs.change).toBe(legs.now);
-  });
-
-  it("ranks the biggest gain first", () => {
-    const trend = strengthTrend(
-      state([
-        sessionOn("2026-08-01", "bench-press", 60, 5),
-        sessionOn("2026-08-01", "squat", 60, 5),
-        sessionOn("2026-08-25", "squat", 180, 5),
-        sessionOn("2026-08-25", "bench-press", 65, 5),
-      ]),
-      library,
-      7,
-      NOW,
-    );
-    expect(trend.movers[0]!.muscle).toBe("LEGS");
-  });
-
-  it("says which date it is comparing against", () => {
-    expect(strengthTrend(state([]), library, 7, NOW).since).toBe("2026-08-20");
-  });
-});
-
-describe("strengthJourney", () => {
-  it("needs more than one session before it claims a journey", () => {
-    const one = strengthJourney(
-      state([sessionOn("2026-08-20", "bench-press", 100, 5)]),
-      library,
-      365,
-      NOW,
-    );
-    expect(one.meaningful).toBe(false);
-  });
-
-  it("compares from the first session, not a year ago, for a new athlete", () => {
-    // Eight weeks in, the "start" body should be their eight weeks — not
-    // eleven months of empty body flattering the comparison.
-    const journey = strengthJourney(
-      state([
-        sessionOn("2026-07-01", "bench-press", 60, 5),
-        sessionOn("2026-08-25", "bench-press", 100, 5),
-      ]),
-      library,
-      365,
-      NOW,
-    );
-    expect(journey.startedOn).toBe("2026-07-01");
-  });
-
-  it("caps the window for a long-standing athlete", () => {
-    const journey = strengthJourney(
-      state([
-        sessionOn("2020-01-01", "bench-press", 60, 5),
-        sessionOn("2026-08-25", "bench-press", 160, 5),
-      ]),
-      library,
-      365,
-      NOW,
-    );
-    expect(journey.startedOn).toBe("2025-08-27");
-  });
-
-  it("names the muscles that climbed a tier", () => {
-    const journey = strengthJourney(
-      state([
-        sessionOn("2026-07-01", "bench-press", 40, 5),
-        sessionOn("2026-08-25", "bench-press", 160, 3),
-      ]),
-      library,
-      365,
-      NOW,
-    );
-    expect(journey.climbed).toContain("CHEST");
-  });
-
-  it("claims no climb when the grade did not move", () => {
-    const journey = strengthJourney(
-      state([
-        sessionOn("2026-07-01", "bench-press", 100, 5),
-        sessionOn("2026-08-25", "bench-press", 100, 5),
-      ]),
-      library,
-      365,
-      NOW,
-    );
-    expect(journey.climbed).toEqual([]);
-  });
-
-  it("treats a muscle trained for the first time as a climb", () => {
-    const journey = strengthJourney(
-      state([
-        sessionOn("2026-07-01", "bench-press", 100, 5),
-        sessionOn("2026-08-25", "squat", 140, 5),
-      ]),
-      library,
-      365,
-      NOW,
-    );
-    expect(journey.climbed).toContain("LEGS");
   });
 });

@@ -49,6 +49,17 @@ export interface WorkoutStep {
   shouldRest: boolean;
 }
 
+/** Timed, distance and bodyweight movements must never be forced to invent a load. */
+export function requiresWorkingWeight(
+  exercise: Pick<WorkoutSessionExercise, "tracking">,
+  equipment: string | string[] | undefined,
+): boolean {
+  const bodyweight = Array.isArray(equipment)
+    ? equipment.includes("BODYWEIGHT")
+    : equipment?.includes("BODYWEIGHT");
+  return (exercise.tracking ?? "WEIGHT") === "WEIGHT" && !bodyweight;
+}
+
 /**
  * Chooses what the athlete should see after logging a normal working set.
  * Superset members advance immediately; rest begins only after the final

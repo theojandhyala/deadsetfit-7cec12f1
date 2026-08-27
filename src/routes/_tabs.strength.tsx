@@ -1,14 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Lock, Info, Share2, TrendingUp } from "lucide-react";
+import { ChevronRight, Lock, Info, Share2, TrendingUp } from "lucide-react";
 
 import { useAppState } from "@/lib/storage";
 import { allExercises } from "@/lib/exercises";
 import { usePro } from "@/hooks/usePro";
 import { useCountUp } from "@/hooks/useCountUp";
 import { openPaywall } from "@/lib/paywall-events";
-import { formatWeight, unitOf, type WeightUnit } from "@/lib/units";
-import { StrengthBodyMap, TierLegend } from "@/components/StrengthBodyMap";
+import { formatWeight, unitOf } from "@/lib/units";
+import { hapticSelection } from "@/lib/haptics";
+import { MuscleDiagram } from "@/components/MuscleDiagram";
 import { StrengthShareCard } from "@/components/StrengthShareCard";
 import {
   GRADED_MUSCLES,
@@ -16,12 +17,12 @@ import {
   TIER_COLOR,
   TIERS,
   pointsToNextTier,
-  strengthJourney,
   strengthReport,
+  strengthReportAsOf,
   strengthTrend,
   type ExerciseGrade,
   type MuscleGrade,
-  type StrengthJourney,
+  type StrengthReport,
   type StrengthTier,
   type StrengthTrend,
 } from "@/lib/strength-grades";
@@ -37,12 +38,51 @@ function StrengthPage() {
   const unit = unitOf(state);
 
   const library = useMemo(
-    () => allExercises(state.savedExercises).map((e) => ({ id: e.id, name: e.name })),
+    () =>
+      allExercises(state.savedExercises).map((e) => ({
+        id: e.id,
+        name: e.name,
+        muscleGroup: e.muscleGroup,
+      })),
     [state.savedExercises],
   );
   const report = useMemo(() => strengthReport(state, library), [state, library]);
+  const firstDay = useMemo(
+    () =>
+      state.sessions
+        .filter((s) => s.endedAt)
+        .map((s) => s.date.slice(0, 10))
+        .sort()[0] ?? null,
+    [state.sessions],
+  );
+  const baselineDay = useMemo(() => {
+    if (!firstDay) return null;
+    const date = new Date(`${firstDay}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + 89);
+    return date.toISOString().slice(0, 10);
+  }, [firstDay]);
+  const baseline = useMemo(
+    () => (baselineDay ? strengthReportAsOf(state, library, baselineDay) : null),
+    [state, library, baselineDay],
+  );
+  const plannedMuscles = useMemo(() => {
+    const covered = new Set<string>();
+    const definitions = allExercises(state.savedExercises);
+    for (const day of Object.values(state.schedule ?? {})) {
+      for (const exerciseId of day.exerciseIds) {
+        const muscle = definitions.find((exercise) => exercise.id === exerciseId)?.muscleGroup;
+        if (muscle) covered.add(muscle);
+      }
+    }
+    const active = state.programs.find((program) => program.id === state.activeProgramId);
+    for (const day of Object.values(active?.days ?? {})) {
+      for (const exercise of day.items) {
+        exercise.primary_muscles.forEach((muscle) => covered.add(muscle.toUpperCase()));
+      }
+    }
+    return covered;
+  }, [state.schedule, state.programs, state.activeProgramId, state.savedExercises]);
   const trend = useMemo(() => strengthTrend(state, library, 7), [state, library]);
-  const journey = useMemo(() => strengthJourney(state, library), [state, library]);
   const [sharing, setSharing] = useState(false);
   const displayScore = useCountUp(report.score, 900);
   const locked = !proLoading && !isPro;
@@ -51,46 +91,59 @@ function StrengthPage() {
 
   return (
     <div className="deadset-page min-h-screen pb-28">
-      <header className="px-5 pt-6 pb-3 flex items-center gap-2">
-        <Link to="/progress" className="text-grit-dim" aria-label="Back to progress">
-          <ChevronLeft size={22} />
-        </Link>
+      <header className="px-5 pt-6 pb-3 flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="label-cap text-grit-dim">YOUR STRENGTH</p>
           <h1 className="display text-2xl font-extrabold uppercase text-grit">
             How strong are you?
           </h1>
         </div>
+        <Link
+          to="/progress"
+          onClick={hapticSelection}
+          className="label-cap flex min-h-11 shrink-0 items-center rounded-xl border border-grit bg-grit-card px-3 py-2 text-[9px] text-grit-dim press"
+        >
+          All progress
+        </Link>
       </header>
 
       {needsBodyweight ? (
         <MissingBodyweight />
-      ) : report.gradedCount === 0 ? (
-        <EmptyState />
       ) : (
         <>
-          <OverallCard tier={report.tier} score={report.score} displayScore={displayScore} />
+          <StrengthBodyComparison
+            baseline={baseline}
+            current={report}
+            plannedMuscles={plannedMuscles}
+            onShare={report.gradedCount > 0 ? () => setSharing(true) : null}
+          />
 
-          <BodyMapCard muscles={report.muscles} />
+          {report.gradedCount > 0 ? (
+            <>
+              <div className="mt-5">
+                <OverallCard tier={report.tier} score={report.score} displayScore={displayScore} />
+              </div>
 
-          <JourneyCard journey={journey} onShare={() => setSharing(true)} />
+              <WeekTrend trend={trend} />
 
-          <WeekTrend trend={trend} />
-
-          <section className="px-5 mt-5">
-            <p className="label-cap text-[10px] text-grit-dim mb-2">BY MUSCLE GROUP</p>
-            <div className="stagger space-y-2">
-              {report.muscles.map((muscle) => (
-                <MuscleCard
-                  key={muscle.muscle}
-                  grade={muscle}
-                  unit={unit}
-                  locked={locked}
-                  onUnlock={() => openPaywall("strength")}
-                />
-              ))}
-            </div>
-          </section>
+              <section className="px-5 mt-5">
+                <p className="label-cap text-[10px] text-grit-dim mb-2">BY MUSCLE GROUP</p>
+                <div className="stagger space-y-2">
+                  {report.muscles.map((muscle) => (
+                    <MuscleCard
+                      key={muscle.muscle}
+                      grade={muscle}
+                      unit={unit}
+                      locked={locked}
+                      onUnlock={() => openPaywall("strength")}
+                    />
+                  ))}
+                </div>
+              </section>
+            </>
+          ) : (
+            <EmptyState hasPlannedExercises={plannedMuscles.size > 0} />
+          )}
 
           {report.ungraded.length > 0 && (
             <section className="px-5 mt-5">
@@ -106,14 +159,18 @@ function StrengthPage() {
 
           {sharing && (
             <StrengthShareCard
-              start={journey.start.muscles}
-              now={journey.now.muscles}
+              start={baseline?.muscles ?? []}
+              now={report.muscles}
               tier={report.tier}
               displayName={state.profile?.displayName || state.profile?.username || "DEADSET"}
-              sinceLabel={`Since ${new Date(`${journey.startedOn}T00:00:00`).toLocaleDateString(
-                undefined,
-                { month: "short", year: "numeric" },
-              )}`}
+              sinceLabel={
+                firstDay
+                  ? `Since ${new Date(`${firstDay}T00:00:00`).toLocaleDateString(undefined, {
+                      month: "short",
+                      year: "numeric",
+                    })}`
+                  : "Your strength"
+              }
               onClose={() => setSharing(false)}
             />
           )}
@@ -129,73 +186,185 @@ function StrengthPage() {
   );
 }
 
-/** The body, coloured by grade — the thing people screenshot. */
-function BodyMapCard({ muscles }: { muscles: MuscleGrade[] }) {
-  const shown = useMemo(
-    () =>
-      [...new Set(muscles.map((muscle) => muscle.tier))].sort(
-        (a, b) => TIERS.indexOf(a) - TIERS.indexOf(b),
-      ),
-    [muscles],
+function reportColors(report: StrengthReport | null, plannedMuscles?: Set<string>) {
+  const colors: Record<string, string> = Object.fromEntries(
+    (report?.muscles ?? []).map((grade) => [grade.muscle, TIER_COLOR[grade.tier]]),
   );
+  for (const muscle of GRADED_MUSCLES) {
+    if (plannedMuscles?.has(muscle) && !colors[muscle]) colors[muscle] = "#62656d";
+  }
+  return colors;
+}
+
+function StrengthBodyComparison({
+  baseline,
+  current,
+  plannedMuscles,
+  onShare,
+}: {
+  baseline: StrengthReport | null;
+  current: StrengthReport;
+  plannedMuscles: Set<string>;
+  onShare: (() => void) | null;
+}) {
+  const hasBaseline = Boolean(baseline?.gradedCount);
+  const baselineColors = reportColors(hasBaseline ? baseline : null);
+  const currentColors = reportColors(current, plannedMuscles);
 
   return (
-    <section className="px-5 mt-4">
-      <div className="rounded-2xl border border-grit bg-grit-card p-4">
-        <p className="label-cap text-[10px] text-grit-dim">YOUR BODY, GRADED</p>
-        <div className="mt-3">
-          <StrengthBodyMap muscles={muscles} size={230} />
+    <section className="px-5 mt-5">
+      <div className="overflow-hidden rounded-2xl border border-grit bg-grit-card">
+        <div className="flex items-baseline justify-between gap-3 px-4 pb-3 pt-4">
+          <div>
+            <p className="label-cap text-[9px] text-grit-dim">YOUR STRENGTH</p>
+            <p className="display text-base font-extrabold uppercase text-grit">
+              Strength progress
+            </p>
+          </div>
+          <p className="label-cap text-right text-[8px] text-accent-red">
+            {hasBaseline ? "START → NOW" : "BASELINE BUILDING"}
+          </p>
         </div>
-        <div className="mt-3">
-          <TierLegend tiers={shown.length > 0 ? shown : TIERS} />
+
+        <div className="border-y border-grit bg-[#17181b] px-3 pb-4 pt-3">
+          <div className="grid grid-cols-2 gap-5 px-1">
+            <div className="text-center">
+              <p className="display text-lg font-extrabold uppercase text-grit">
+                {hasBaseline ? "Start" : "No start yet"}
+              </p>
+              <p className="label-cap mt-0.5 text-[7px] text-grit-dim">
+                {hasBaseline ? "FIRST 90 DAYS" : "LOG YOUR FIRST WORKOUTS"}
+              </p>
+              <p className="display mt-1 text-sm font-extrabold tabular-nums text-grit">
+                {hasBaseline ? baseline!.score : "—"}
+                <span className="label-cap ml-1 text-[6px] text-grit-dim">SCORE</span>
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="display text-lg font-extrabold uppercase text-grit">Now</p>
+              <p className="label-cap mt-0.5 text-[7px] text-grit-dim">YOUR LATEST BESTS</p>
+              <p className="display mt-1 text-sm font-extrabold tabular-nums text-grit">
+                {current.gradedCount > 0 ? current.score : "—"}
+                <span className="label-cap ml-1 text-[6px] text-grit-dim">SCORE</span>
+              </p>
+            </div>
+          </div>
+
+          <ComparisonRow
+            view="front"
+            label="FRONT"
+            baselineColors={baselineColors}
+            currentColors={currentColors}
+          />
+
+          <StrengthTierLegend />
+
+          <ComparisonRow
+            view="back"
+            label="BACK"
+            baselineColors={baselineColors}
+            currentColors={currentColors}
+          />
+
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+            <MapKey color="#303238" label="No exercise set" />
+            <MapKey color="#62656d" label="Set · needs a logged result" />
+          </div>
+        </div>
+
+        {onShare && (
+          <div className="px-4 pt-3">
+            <button onClick={onShare} className="btn-grit w-full">
+              <Share2 size={15} className="mr-2" />
+              Share my progress
+            </button>
+          </div>
+        )}
+
+        <p className="px-4 pt-3 text-center text-[10px] leading-relaxed text-grit-dim">
+          Every colour is earned from your actual lifts, adjusted for bodyweight. Grey areas are
+          missing data—not a made-up score.
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-2 border-t border-grit p-4">
+          {GRADED_MUSCLES.map((muscle) => {
+            const grade = current.muscles.find((item) => item.muscle === muscle);
+            const planned = plannedMuscles.has(muscle);
+            return (
+              <div key={muscle} className="rounded-xl border border-grit bg-black/30 px-3 py-2">
+                <p className="label-cap text-[9px] text-grit">{muscle}</p>
+                <p
+                  className="mt-0.5 text-[9px] leading-tight"
+                  style={{ color: grade ? TIER_COLOR[grade.tier] : "#777" }}
+                >
+                  {grade
+                    ? `${grade.tier} · ${grade.exercises.length} lift${grade.exercises.length === 1 ? "" : "s"}`
+                    : planned
+                      ? "Exercises set · log weighted sets"
+                      : "No exercises set for that"}
+                </p>
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
   );
 }
 
-/** Then and now, side by side. */
-function JourneyCard({ journey, onShare }: { journey: StrengthJourney; onShare: () => void }) {
-  if (!journey.meaningful) return null;
-
-  const started = new Date(`${journey.startedOn}T00:00:00`).toLocaleDateString(undefined, {
-    month: "short",
-    year: "numeric",
-  });
-
+function ComparisonRow({
+  view,
+  label,
+  baselineColors,
+  currentColors,
+}: {
+  view: "front" | "back";
+  label: string;
+  baselineColors: Record<string, string>;
+  currentColors: Record<string, string>;
+}) {
   return (
-    <section className="px-5 mt-4">
-      <div className="rounded-2xl border border-grit bg-grit-card p-4">
-        <div className="flex items-baseline justify-between">
-          <p className="label-cap text-[10px] text-grit-dim">YOUR PROGRESS</p>
-          <p className="label-cap text-[9px] text-grit-dim">SINCE {started.toUpperCase()}</p>
-        </div>
-
-        <div className="mt-3 flex items-center justify-center gap-2">
-          <StrengthBodyMap muscles={journey.start.muscles} size={150} label="Start" />
-          <ChevronRight size={18} className="shrink-0 text-grit-dim" />
-          <StrengthBodyMap muscles={journey.now.muscles} size={150} label="Now" />
-        </div>
-
-        {journey.climbed.length > 0 ? (
-          <p className="mt-3 text-center text-xs leading-relaxed text-grit">
-            <span className="font-bold" style={{ color: "#5bd07a" }}>
-              {journey.climbed.map((muscle) => muscle.toLowerCase()).join(", ")}
-            </span>{" "}
-            climbed a tier.
-          </p>
-        ) : (
-          <p className="mt-3 text-center text-xs leading-relaxed text-grit-dim">
-            No tier changes yet. Keep going — the body on the right is the one that moves.
-          </p>
-        )}
-
-        <button onClick={onShare} className="btn-grit mt-3 w-full">
-          <Share2 size={15} className="mr-2" />
-          Share my progress
-        </button>
+    <div className="relative mt-2">
+      <p className="label-cap absolute left-1 top-2 z-10 text-[6px] tracking-[0.24em] text-grit-dim">
+        {label}
+      </p>
+      <div className="grid grid-cols-2 gap-5">
+        <MuscleDiagram view={view} gradeColors={baselineColors} size={232} />
+        <MuscleDiagram view={view} gradeColors={currentColors} size={232} />
       </div>
-    </section>
+      <div className="pointer-events-none absolute left-1/2 top-1/2 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-[#474a50] bg-[#202226] text-grit">
+        <ChevronRight size={17} strokeWidth={2.4} />
+      </div>
+    </div>
+  );
+}
+
+function StrengthTierLegend() {
+  return (
+    <div className="my-1 grid grid-cols-6 gap-0.5" aria-label="Strength grade colours">
+      {TIERS.map((tier) => (
+        <div
+          key={tier}
+          className="flex min-h-5 min-w-0 items-center justify-center overflow-hidden rounded-[3px] px-px text-center"
+          style={{ background: TIER_COLOR[tier] }}
+        >
+          <span
+            className="block max-w-full font-black uppercase leading-[1.05] text-white"
+            style={{ fontSize: tier === "WORLD_CLASS" ? 5 : 5.5, letterSpacing: 0 }}
+          >
+            {tier.replace("_", " ")}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MapKey({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="flex items-center gap-1 text-[8px] text-grit-dim">
+      <span className="h-2 w-2 rounded-sm border border-white/10" style={{ background: color }} />
+      {label}
+    </span>
   );
 }
 
@@ -317,7 +486,7 @@ function TierLadder({ tier, score }: { tier: StrengthTier; score: number }) {
             className="label-cap text-[7px]"
             style={{ color: step === tier ? TIER_COLOR[step] : "#5a5a5a" }}
           >
-            {step.slice(0, 4)}
+            {step === "WORLD_CLASS" ? "WORLD" : step.slice(0, 4)}
           </span>
         ))}
       </div>
@@ -332,7 +501,7 @@ function MuscleCard({
   onUnlock,
 }: {
   grade: MuscleGrade;
-  unit: WeightUnit;
+  unit: "kg" | "lb";
   locked: boolean;
   onUnlock: () => void;
 }) {
@@ -391,7 +560,7 @@ function MuscleCard({
   );
 }
 
-function ExerciseRow({ grade, unit }: { grade: ExerciseGrade; unit: WeightUnit }) {
+function ExerciseRow({ grade, unit }: { grade: ExerciseGrade; unit: "kg" | "lb" }) {
   const color = TIER_COLOR[grade.tier];
   const measured =
     grade.kind === "RATIO"
@@ -453,14 +622,15 @@ function MissingBodyweight() {
   );
 }
 
-function EmptyState() {
+function EmptyState({ hasPlannedExercises }: { hasPlannedExercises: boolean }) {
   return (
     <section className="px-5">
       <div className="rounded-2xl border border-grit bg-grit-card p-5">
         <p className="display text-lg font-extrabold uppercase text-grit">Nothing to grade yet</p>
         <p className="mt-1.5 text-xs leading-relaxed text-grit-dim">
-          Log a few working sets and every muscle group gets a grade here — from Beginner to Elite,
-          measured against real strength standards.
+          {hasPlannedExercises
+            ? "Your exercises are set. Log their working sets and each covered muscle will move from grey to a real strength grade."
+            : "Build your schedule first. Muscles without an exercise stay grey and say exactly what is missing—DEADSET never invents a score."}
         </p>
         <div className="mt-4 flex flex-wrap gap-1.5">
           {GRADED_MUSCLES.map((muscle) => (
@@ -472,8 +642,8 @@ function EmptyState() {
             </span>
           ))}
         </div>
-        <Link to="/train" className="btn-grit mt-4 w-full">
-          Start a workout
+        <Link to={hasPlannedExercises ? "/train" : "/plan"} className="btn-grit mt-4 w-full">
+          {hasPlannedExercises ? "Start a workout" : "Set up exercises"}
         </Link>
       </div>
     </section>

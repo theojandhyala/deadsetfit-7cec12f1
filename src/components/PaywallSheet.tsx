@@ -231,7 +231,7 @@ const FEATURE_PITCH: Record<
     bullets: [
       "Instant alternatives for the same target muscle",
       "Filtered to equipment you actually have",
-      "Sets, reps, load, rest and coaching cues stay intact",
+      "Use them in the Plan or before the first live set",
     ],
     icon: Hammer,
   },

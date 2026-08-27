@@ -47,6 +47,11 @@ import {
   restoreApplePro,
   type AppleProduct,
 } from "@/lib/storekit";
+import {
+  notifyRevenueCatUpdated,
+  recordRevenueCatPurchase,
+  syncRevenueCatPurchases,
+} from "@/lib/revenuecat";
 
 export const Route = createFileRoute("/upgrade")({
   head: () => ({ meta: [{ title: "DEADSET — Go Pro" }] }),
@@ -82,7 +87,7 @@ const PRO_FEATURES = [
     icon: RefreshCw,
     color: "#f4c33a",
     title: "Smart Exercise Swaps",
-    desc: "Replace a busy or unsuitable movement with a same-muscle alternative while preserving every target and coaching setting.",
+    desc: "Replace a busy or unsuitable movement in your plan or mid-workout with a same-muscle alternative while preserving every target and coaching setting.",
   },
   {
     icon: CalendarDays,
@@ -248,6 +253,11 @@ function UpgradePage() {
           description: "Pro unlocks as soon as Apple approves it.",
         });
       else if (!result.cancelled && result.active) {
+        await recordRevenueCatPurchase(productId, user.id)
+          .then((synced) => {
+            if (synced) notifyRevenueCatUpdated();
+          })
+          .catch((error) => console.warn("RevenueCat purchase recording failed", error));
         await refresh();
         toast.success("DEADSET Pro unlocked");
       }
@@ -265,6 +275,11 @@ function UpgradePage() {
     setCheckoutError(null);
     try {
       const result = await restoreApplePro();
+      await syncRevenueCatPurchases(user?.id)
+        .then((synced) => {
+          if (synced) notifyRevenueCatUpdated();
+        })
+        .catch((error) => console.warn("RevenueCat restore sync failed", error));
       await refresh();
       if (result.active) toast.success("Purchases restored");
       else toast.message("No active DEADSET Pro purchase was found");
@@ -370,13 +385,17 @@ function UpgradePage() {
             Sign in / Create account
           </button>
           <p className="mt-2.5 text-center text-[10px]" style={{ color: "#8a8a8a" }}>
-            Takes under a minute — then checkout loads right here.
+            {iosNative
+              ? "Takes under a minute — then Apple's subscription options load here."
+              : "Takes under a minute — then checkout loads right here."}
           </p>
           <p
             className="mt-3 text-center label-cap text-[9px] leading-relaxed"
             style={{ color: "#8a8a8a" }}
           >
-            Secure payment by Stripe · Promo codes enabled · Cancel anytime
+            {iosNative
+              ? "Subscriptions handled securely by Apple · Restore purchases anytime"
+              : "Secure payment by Stripe · Promo codes enabled · Cancel anytime"}
           </p>
         </div>
 

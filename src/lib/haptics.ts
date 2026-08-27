@@ -124,6 +124,11 @@ export function hapticWorkoutComplete(): void {
   vibrate([40, 80, 40, 80, 80]);
 }
 
+/** A multi-step setup flow was saved successfully. */
+export function hapticSetupComplete(): void {
+  notify("success", [45, 55, 70]);
+}
+
 /** Something was undone or deleted. */
 export function hapticUndo(): void {
   impact("rigid", 14);

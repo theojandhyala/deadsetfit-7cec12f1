@@ -1,5 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Dumbbell, CalendarDays, User, TrendingUp, Plus } from "lucide-react";
+import { Dumbbell, CalendarDays, User, BicepsFlexed, Plus } from "lucide-react";
+
+import { hapticSelection } from "@/lib/haptics";
 
 const LEFT_TABS = [
   { to: "/train", label: "Train", Icon: Dumbbell },
@@ -7,7 +9,7 @@ const LEFT_TABS = [
 ] as const;
 
 const RIGHT_TABS = [
-  { to: "/progress", label: "Progress", Icon: TrendingUp },
+  { to: "/strength", label: "Strength", Icon: BicepsFlexed },
   { to: "/profile", label: "You", Icon: User },
 ] as const;
 
@@ -36,10 +38,14 @@ export function BottomNav() {
             <li key={to} className="flex-1">
               <Link
                 to={to}
-                className="relative flex h-[70px] flex-col items-center justify-center gap-1.5 press"
+                onClick={hapticSelection}
+                aria-current={active ? "page" : undefined}
+                className={`deadset-nav-item relative flex h-[70px] flex-col items-center justify-center gap-1.5 press ${
+                  active ? "deadset-nav-item-active" : ""
+                }`}
                 style={{ color: active ? "#e63222" : "#8a8a8a" }}
               >
-                <div className="relative">
+                <div className="deadset-nav-icon relative">
                   <Icon size={22} strokeWidth={active ? 2.5 : 2} />
                 </div>
                 <span
@@ -50,7 +56,7 @@ export function BottomNav() {
                 </span>
                 {active && (
                   <span
-                    className="absolute bottom-0 left-1/2 h-[3px] w-8 -translate-x-1/2 rounded-t-full"
+                    className="deadset-nav-indicator absolute bottom-0 left-1/2 h-[3px] w-8 -translate-x-1/2 rounded-t-full"
                     style={{ background: "#e63222" }}
                   />
                 )}
@@ -64,11 +70,14 @@ export function BottomNav() {
           <Link
             to="/workout/live"
             search={{}}
-            className="flex flex-col items-center justify-center gap-1 press"
+            onClick={hapticSelection}
+            className={`deadset-record-link flex flex-col items-center justify-center gap-1 press ${
+              isRecordActive ? "deadset-record-link-active" : ""
+            }`}
             aria-label="Start workout"
           >
             <div
-              className="flex items-center justify-center"
+              className="deadset-record-button flex items-center justify-center"
               style={{
                 width: 54,
                 height: 54,
@@ -83,8 +92,11 @@ export function BottomNav() {
                 transition: "box-shadow 0.2s ease, transform 0.15s ease",
               }}
             >
-              <Plus size={26} color="#fff" strokeWidth={2.5} />
+              <Plus className="deadset-record-plus" size={26} color="#fff" strokeWidth={2.5} />
             </div>
+            <span className="deadset-record-label text-[9px] font-black uppercase text-grit-dim">
+              Log
+            </span>
           </Link>
         </li>
 
@@ -95,10 +107,14 @@ export function BottomNav() {
             <li key={to} className="flex-1">
               <Link
                 to={to}
-                className="relative flex h-[70px] flex-col items-center justify-center gap-1.5 press"
+                onClick={hapticSelection}
+                aria-current={active ? "page" : undefined}
+                className={`deadset-nav-item relative flex h-[70px] flex-col items-center justify-center gap-1.5 press ${
+                  active ? "deadset-nav-item-active" : ""
+                }`}
                 style={{ color: active ? "#e63222" : "#8a8a8a" }}
               >
-                <div className="relative">
+                <div className="deadset-nav-icon relative">
                   <Icon size={22} strokeWidth={active ? 2.5 : 2} />
                 </div>
                 <span
@@ -109,7 +125,7 @@ export function BottomNav() {
                 </span>
                 {active && (
                   <span
-                    className="absolute bottom-0 left-1/2 h-[3px] w-8 -translate-x-1/2 rounded-t-full"
+                    className="deadset-nav-indicator absolute bottom-0 left-1/2 h-[3px] w-8 -translate-x-1/2 rounded-t-full"
                     style={{ background: "#e63222" }}
                   />
                 )}

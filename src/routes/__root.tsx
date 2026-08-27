@@ -30,6 +30,12 @@ import { captureAttribution } from "../lib/attribution";
 import { capturePendingCrew } from "../lib/crew-invite";
 import { WeeklyRecapNudge } from "../components/WeeklyRecapNudge";
 import { DeviceReminderSync } from "../components/DeviceReminderSync";
+import { RevenueCatSync } from "../components/RevenueCatSync";
+import { AppReviewWatcher } from "../components/AppReviewWatcher";
+import { FirstWeekActivationNudge } from "../components/FirstWeekActivationNudge";
+import { FeedbackPulse } from "../components/FeedbackPulse";
+import { isNativeIos } from "../lib/platform";
+import { WhopConsentBanner } from "../components/WhopConsent";
 
 function NotFoundComponent() {
   return (
@@ -112,9 +118,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "gym app, workout tracker, PR tracker, bench press, squat, deadlift, fitness, strength training, lifting log, workout program",
       },
       { name: "application-name", content: "DEADSET" },
-      { name: "apple-mobile-web-app-title", content: "DEADSET" },
-      { name: "apple-mobile-web-app-capable", content: "yes" },
-      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
       { property: "og:site_name", content: "DEADSET" },
       // Mirrors index.html so a link shared from any in-app route unfurls with
       // the real card rather than the touch icon.
@@ -180,6 +183,19 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const isAuthRoute = pathname === "/auth" || pathname.startsWith("/auth/");
+  const nativeIos = isNativeIos();
+  const isPublicWebsiteRoute = [
+    "/",
+    "/privacy",
+    "/terms",
+    "/disclaimer",
+    "/tiktok",
+    "/creator",
+    "/3-day-gym-plan",
+    "/workout-tracker",
+    "/stop-guessing",
+    "/real-week",
+  ].includes(pathname);
 
   // Record where this visitor came from (referrer/UTM) for admin analytics.
   useEffect(() => {
@@ -187,9 +203,20 @@ function RootComponent() {
     capturePendingCrew();
   }, [isAuthRoute]);
 
+  if (!nativeIos) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        {isPublicWebsiteRoute ? <Outlet /> : <WebMarketingRedirect />}
+        <WhopConsentBanner />
+        <Toaster />
+      </QueryClientProvider>
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <ProProvider>
+        <RevenueCatSync />
         {!isAuthRoute && <StateSync />}
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
@@ -202,12 +229,35 @@ function RootComponent() {
         {!isAuthRoute && <AchievementWatcher />}
         {!isAuthRoute && <TonnageMilestoneWatcher />}
         {!isAuthRoute && <WeeklyRecapNudge />}
+        {!isAuthRoute && <FirstWeekActivationNudge />}
+        {!isAuthRoute && <FeedbackPulse />}
         {!isAuthRoute && <DeviceReminderSync />}
+        {!isAuthRoute && <AppReviewWatcher />}
         <ReferralRedeemer />
         <CrewInviteRedeemer />
         <ConfirmSheet />
         <Toaster />
       </ProProvider>
     </QueryClientProvider>
+  );
+}
+
+function WebMarketingRedirect() {
+  useEffect(() => {
+    window.location.replace("/");
+  }, []);
+
+  return (
+    <main className="grid min-h-[100dvh] place-items-center bg-[#080808] px-6 text-center text-white">
+      <div>
+        <p className="display text-4xl font-bold uppercase">
+          DEAD<span className="text-accent-red">SET</span>
+        </p>
+        <p className="mt-3 text-sm text-white/50">Opening the DEADSET website…</p>
+        <a href="/" className="mt-6 inline-flex min-h-11 items-center font-bold text-white">
+          Continue
+        </a>
+      </div>
+    </main>
   );
 }

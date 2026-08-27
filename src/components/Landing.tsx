@@ -150,9 +150,9 @@ export type LandingCampaign = "default" | "stop-guessing" | "real-week";
 
 const campaignCopy: Record<LandingCampaign, { eyebrow: string; headline: string; body: string }> = {
   default: {
-    eyebrow: "Built for the lift, not the feed",
-    headline: "Train like it counts.",
-    body: "Plan your week, log every set, and see what is actually improving.",
+    eyebrow: "The iPhone gym app for serious lifters",
+    headline: "Know what to train. Prove every rep.",
+    body: "Your weekly plan, live workout log, PRs, nutrition, and progress—together in one focused app.",
   },
   "stop-guessing": {
     eyebrow: "A clear answer before you walk in",
@@ -172,35 +172,39 @@ function Hero({ campaign }: { campaign: LandingCampaign }) {
     <section id="top" className="landing-hero relative overflow-hidden border-b border-white/10">
       <div className="landing-hero-lines absolute inset-0" aria-hidden="true" />
 
-      <div className="relative mx-auto grid max-w-[1440px] items-start gap-12 px-5 pb-0 pt-[108px] sm:px-8 sm:pt-[124px] lg:min-h-[820px] lg:grid-cols-[minmax(0,0.92fr)_minmax(500px,1.08fr)] lg:items-center lg:gap-20 lg:px-12 lg:pb-28 lg:pt-32">
+      <div className="relative mx-auto grid max-w-[1440px] items-start gap-7 px-5 pb-0 pt-[100px] sm:px-8 sm:pt-[104px] lg:min-h-[760px] lg:grid-cols-[minmax(0,0.92fr)_minmax(500px,1.08fr)] lg:items-center lg:gap-20 lg:px-12 lg:pb-20 lg:pt-28">
         <div className="relative z-20 max-w-2xl animate-slide-up">
-          <div className="mb-6 inline-flex min-h-9 items-center gap-3 border-l-2 border-[#f13a2c] bg-black/35 px-3 text-[11px] font-bold uppercase text-white/68 backdrop-blur-sm sm:mb-7 sm:min-h-10 sm:px-4 sm:text-xs">
+          <div className="mb-5 inline-flex min-h-9 items-center gap-3 border-l-2 border-[#f13a2c] bg-black/35 px-3 text-[11px] font-bold uppercase text-white/68 backdrop-blur-sm sm:min-h-10 sm:px-4 sm:text-xs">
             <span className="h-2 w-2 bg-[#f13a2c] shadow-[0_0_18px_rgba(241,58,44,0.9)]" />
             {copy.eyebrow}
           </div>
 
-          <h1 className="display text-[clamp(3.1rem,16vw,4.1rem)] font-bold uppercase leading-[0.82] tracking-[0] text-[#f4f3ef] sm:text-8xl lg:text-[7.8rem]">
-            Dead<span className="text-[#f13a2c]">set</span>
-          </h1>
-          <p className="display mt-5 max-w-[12ch] text-[2.15rem] font-bold uppercase leading-[0.94] tracking-[0] text-white sm:mt-6 sm:text-6xl">
+          <h1 className="display max-w-[11ch] text-[3rem] font-bold uppercase leading-[0.86] tracking-[0] text-[#f4f3ef] sm:text-[3.75rem] lg:text-[6.4rem]">
             {copy.headline}
-          </p>
-          <p className="mt-6 max-w-md text-[15px] leading-7 text-white/62 sm:mt-7 sm:max-w-xl sm:text-lg sm:leading-8">
+          </h1>
+          <p className="mt-5 max-w-md text-[15px] leading-7 text-white/62 sm:max-w-xl sm:text-lg sm:leading-8 lg:mt-6">
             {copy.body}
           </p>
 
-          <div className="mt-8 flex max-w-md flex-col items-start gap-4 border-t border-white/12 pt-6 sm:mt-9 sm:flex-row sm:items-center sm:gap-6">
+          <ul className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-xs font-bold text-white/72 lg:mt-6" aria-label="Why lifters choose DEADSET">
+            {["Plan every session", "Log sets fast", "See real progress"].map((benefit) => (
+              <li key={benefit} className="flex items-center gap-2">
+                <Check size={14} className="text-[#f13a2c]" strokeWidth={3} aria-hidden="true" />
+                {benefit}
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-5 flex max-w-md flex-col items-start gap-3 border-t border-white/12 pt-5 sm:flex-row sm:items-center sm:gap-5 lg:mt-7 lg:pt-6">
             <AppStoreBadge className="shrink-0 shadow-[0_18px_45px_rgba(0,0,0,0.32)]" />
             <div>
-              <p className="text-sm font-extrabold text-white">Available now on the App Store</p>
-              <p className="mt-1 text-xs leading-5 text-white/45">
-                Free to start · Built for iPhone
-              </p>
+              <p className="text-sm font-extrabold text-white">Free to download</p>
+              <p className="mt-1 text-xs leading-5 text-white/45">No card required · Made for iPhone</p>
             </div>
           </div>
         </div>
 
-        <div className="landing-device-stage pointer-events-none relative z-10 h-[360px] overflow-hidden sm:h-[480px] lg:h-[650px] lg:overflow-visible">
+        <div className="landing-device-stage pointer-events-none relative z-10 h-[390px] overflow-hidden sm:h-[500px] lg:h-[620px] lg:overflow-visible">
           <Phone
             src="/screenshots/logger.webp"
             alt="DEADSET live workout logger"

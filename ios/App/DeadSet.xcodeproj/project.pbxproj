@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		00B4D17EC3B2C37AFDCB3718 /* RestActivityPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D0504D4790907242FD0024 /* RestActivityPlugin.swift */; };
 		A11E4C0A2E0B11F0AA010101 /* StoreKitPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E4C092E0B11F0AA010100 /* StoreKitPlugin.swift */; };
+		B77A4C0A2E0B11F0AA010101 /* AppReviewPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B77A4C092E0B11F0AA010100 /* AppReviewPlugin.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		316C2D96387D8DBFE8B2CADA /* RestActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9774CA8A1B7939BB8417C6C0 /* RestActivityAttributes.swift */; };
 		341E5676EB8D09FFD5859E8F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 90732EDC0FD9422339C4BA5E /* Assets.xcassets */; };
@@ -96,6 +97,7 @@
 /* Begin PBXFileReference section */
 		09D0504D4790907242FD0024 /* RestActivityPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RestActivityPlugin.swift; sourceTree = "<group>"; };
 		A11E4C092E0B11F0AA010100 /* StoreKitPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitPlugin.swift; sourceTree = "<group>"; };
+		B77A4C092E0B11F0AA010100 /* AppReviewPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppReviewPlugin.swift; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* DeadSet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeadSet.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -230,6 +232,7 @@
 				DEADFA000000000000000017 /* WatchConnectivityHub.swift */,
 				DEADFA000000000000000018 /* WatchBridgePlugin.swift */,
 				DEADFA00000000000000002A /* HapticsPlugin.swift */,
+				B77A4C092E0B11F0AA010100 /* AppReviewPlugin.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -437,6 +440,7 @@
 				DEADFA000000000000000028 /* WatchBridgePlugin.swift in Sources */,
 				DEADFA00000000000000002B /* HapticsPlugin.swift in Sources */,
 				DEADFA000000000000000029 /* WatchProtocol.swift in Sources */,
+				B77A4C0A2E0B11F0AA010101 /* AppReviewPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -634,7 +638,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 129;
+				CURRENT_PROJECT_VERSION = 131;
 				DEVELOPMENT_TEAM = 89JWMU95AH;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
@@ -643,7 +647,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = org.deadsetfit.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -659,7 +663,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 129;
+				CURRENT_PROJECT_VERSION = 131;
 				DEVELOPMENT_TEAM = 89JWMU95AH;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
@@ -668,7 +672,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = org.deadsetfit.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
@@ -683,15 +687,15 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = "";
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 129;
+				CURRENT_PROJECT_VERSION = 131;
 				DEVELOPMENT_TEAM = 89JWMU95AH;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = DeadSetRestActivity/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Rest Timer";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
-				MARKETING_VERSION = 1.0;
 				CODE_SIGN_ENTITLEMENTS = DeadSetRestActivity/DeadSetRestActivity.entitlements;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = org.deadsetfit.app.RestActivity;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -709,15 +713,15 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = "";
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 129;
+				CURRENT_PROJECT_VERSION = 131;
 				DEVELOPMENT_TEAM = 89JWMU95AH;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = DeadSetRestActivity/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Rest Timer";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
-				MARKETING_VERSION = 1.0;
 				CODE_SIGN_ENTITLEMENTS = DeadSetRestActivity/DeadSetRestActivity.entitlements;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = org.deadsetfit.app.RestActivity;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
