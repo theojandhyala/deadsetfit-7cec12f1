@@ -63,8 +63,33 @@ export const MUSCLE_SHAPES: Record<string, { f?: string[]; b?: string[] }> = {
   },
 };
 
-/** The outline every muscle shape sits inside. */
+/**
+ * The outline every muscle shape sits inside.
+ *
+ * Built as separate subpaths — head, torso, an arm each side, a leg each side —
+ * rather than one continuous outline, because the muscle shapes were drawn
+ * against specific coordinates and the body has to actually reach them: delts
+ * at x 48-77, biceps at x 44-58, forearms from x 40, calves down to y 370. A
+ * single-stroke silhouette that misses those leaves coloured shapes floating
+ * beside the body, or legs tapering to a point beneath the calves.
+ *
+ * Filled with a single `fill()`, so overlapping subpaths union cleanly.
+ */
 export function bodySilhouette(): string {
-  // generic silhouette
-  return "M100 30 q24 0 24 26 q0 22 -16 30 q22 6 28 28 l8 50 q-2 22 -18 34 l-10 18 v60 q8 30 -2 60 q-8 30 -8 60 v50 q4 22 -4 30 h-24 q-8 -8 -4 -30 v-50 q0 -30 -8 -60 q-10 -30 -2 -60 v-60 l-10 -18 q-16 -12 -18 -34 l8 -50 q6 -22 28 -28 q-16 -8 -16 -30 q0 -26 24 -26 z";
+  // Sits low enough to meet the neck: a head drawn clear of the torso reads
+  // as a floating circle, which is exactly how it looked before.
+  const head = "M100 26 m-18 0 a18 18 0 1 0 36 0 a18 18 0 1 0 -36 0 z";
+  const torso =
+    "M88 40 h24 v22 l20 7 q15 7 17 24 l6 44 q2 12 -6 14 q-8 2 -10 -10 l-4 -20 v56 q0 13 -6 18 h-58 q-6 -5 -6 -18 v-56 l-4 20 q-2 12 -10 10 q-8 -2 -6 -14 l6 -44 q2 -17 17 -24 l20 -7 z";
+  const leftArm =
+    "M64 90 q-14 6 -17 25 l-9 96 q-3 24 1 44 q3 7 9 6 q6 -1 7 -9 l4 -42 l10 -86 q2 -18 -5 -34 z";
+  const rightArm =
+    "M136 90 q14 6 17 25 l9 96 q3 24 -1 44 q-3 7 -9 6 q-6 -1 -7 -9 l-4 -42 l-10 -86 q-2 -18 5 -34 z";
+  const leftLeg =
+    "M76 198 q12 -5 22 0 l1 70 q0 40 -3 76 q-1 20 -3 30 q-1 7 -8 7 q-7 0 -8 -7 q-3 -30 -4 -70 q-1 -62 3 -106 z";
+  const rightLeg =
+    "M124 198 q-12 -5 -22 0 l-1 70 q0 40 3 76 q1 20 3 30 q1 7 8 7 q7 0 8 -7 q3 -30 4 -70 q1 -62 -3 -106 z";
+  return [head, torso, leftArm, rightArm, leftLeg, rightLeg].join(" ");
 }
+
+export const BODY_CONTENT = { x: 36, y: 6, width: 128, height: 378 } as const;

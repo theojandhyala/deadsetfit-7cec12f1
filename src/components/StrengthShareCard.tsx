@@ -3,10 +3,9 @@ import { X, Download, Share2 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { toast } from "sonner";
 
-import { MUSCLE_SHAPES, bodySilhouette } from "@/lib/body-shapes";
 import { getInviteUrl } from "@/lib/referral";
-import { TIER_COLOR, TIERS, type MuscleGrade, type StrengthTier } from "@/lib/strength-grades";
-import type { MuscleGroup } from "@/lib/types";
+import { STRENGTH_CARD_H, STRENGTH_CARD_W, drawStrengthCard } from "@/lib/strength-card-draw";
+import type { MuscleGrade, StrengthTier } from "@/lib/strength-grades";
 
 /**
  * The strength card: your body then, your body now, graded.
@@ -20,61 +19,6 @@ import type { MuscleGroup } from "@/lib/types";
  * The bodies are drawn from the same path data the app renders on screen, via
  * Path2D, so the card and the screen can never show different anatomy.
  */
-
-const GROUP_REGIONS: Record<string, string[]> = {
-  CHEST: ["chest", "upper-chest"],
-  BACK: ["lats", "back", "mid-back", "upper-back", "traps", "rotator-cuff"],
-  LEGS: ["quads", "hamstrings", "glutes", "calves", "hip-flexors"],
-  SHOULDERS: ["front-delts", "side-delts", "rear-delts", "shoulders"],
-  ARMS: ["biceps", "triceps", "forearms", "brachialis"],
-  CORE: ["core", "obliques"],
-};
-
-const VIEW_W = 200;
-const VIEW_H = 420;
-
-function colorsFor(muscles: MuscleGrade[]): Map<string, string> {
-  const map = new Map<string, string>();
-  for (const muscle of muscles) {
-    const color = TIER_COLOR[muscle.tier];
-    for (const region of GROUP_REGIONS[muscle.muscle as MuscleGroup] ?? []) map.set(region, color);
-  }
-  return map;
-}
-
-/** Draw one body at (x, y) with the given height, coloured by grade. */
-function drawBody(
-  ctx: CanvasRenderingContext2D,
-  side: "f" | "b",
-  colors: Map<string, string>,
-  x: number,
-  y: number,
-  height: number,
-) {
-  const scale = height / VIEW_H;
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.scale(scale, scale);
-
-  ctx.fillStyle = "#141414";
-  ctx.strokeStyle = "#2f2f2f";
-  ctx.lineWidth = 1.4;
-  const outline = new Path2D(bodySilhouette());
-  ctx.fill(outline);
-  ctx.stroke(outline);
-
-  for (const [region, shape] of Object.entries(MUSCLE_SHAPES)) {
-    for (const d of shape[side] ?? []) {
-      const path = new Path2D(d);
-      ctx.fillStyle = colors.get(region) ?? "#232323";
-      ctx.fill(path);
-      ctx.strokeStyle = "rgba(0,0,0,0.45)";
-      ctx.lineWidth = 0.6;
-      ctx.stroke(path);
-    }
-  }
-  ctx.restore();
-}
 
 export function StrengthShareCard({
   start,
@@ -97,106 +41,11 @@ export function StrengthShareCard({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const W = 1080;
-    const H = 1920;
-    canvas.width = W;
-    canvas.height = H;
+    canvas.width = STRENGTH_CARD_W;
+    canvas.height = STRENGTH_CARD_H;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-
-    const background = ctx.createLinearGradient(0, 0, 0, H);
-    background.addColorStop(0, "#0a0a0c");
-    background.addColorStop(0.5, "#121016");
-    background.addColorStop(1, "#08080a");
-    ctx.fillStyle = background;
-    ctx.fillRect(0, 0, W, H);
-
-    // Grain, matching the other cards so the set reads as one family.
-    ctx.globalAlpha = 0.035;
-    for (let i = 0; i < 1800; i += 1) {
-      ctx.fillStyle = "#fff";
-      ctx.fillRect(Math.random() * W, Math.random() * H, 1, 1);
-    }
-    ctx.globalAlpha = 1;
-
-    ctx.textAlign = "center";
-    ctx.font = "italic 900 80px 'Arial Black', Arial, sans-serif";
-    ctx.fillStyle = "#e63222";
-    ctx.fillText("DEADSET", W / 2, 140);
-
-    ctx.font = "900 46px Arial, sans-serif";
-    ctx.fillStyle = "#f5f5f0";
-    ctx.fillText("MY STRENGTH PROGRESS", W / 2, 226);
-
-    ctx.font = "700 34px Arial, sans-serif";
-    ctx.fillStyle = "#8a8a8a";
-    ctx.fillText(sinceLabel.toUpperCase(), W / 2, 280);
-
-    const startColors = colorsFor(start);
-    const nowColors = colorsFor(now);
-
-    // Two rows — front and back. Half the muscles anyone trains are not
-    // visible from the front, and a progress picture that omits them is
-    // showing half the work.
-    const bodyHeight = 500;
-    const bodyWidth = (VIEW_W / VIEW_H) * bodyHeight;
-    const leftX = W / 2 - bodyWidth - 120;
-    const rightX = W / 2 + 120;
-
-    ctx.font = "900 32px Arial, sans-serif";
-    ctx.fillStyle = "#8a8a8a";
-    ctx.fillText("START", leftX + bodyWidth / 2, 348);
-    ctx.fillStyle = "#5bd07a";
-    ctx.fillText("NOW", rightX + bodyWidth / 2, 348);
-
-    (["f", "b"] as const).forEach((side, row) => {
-      const y = 380 + row * (bodyHeight + 60);
-      drawBody(ctx, side, startColors, leftX, y, bodyHeight);
-      drawBody(ctx, side, nowColors, rightX, y, bodyHeight);
-
-      // The arrow between them.
-      ctx.strokeStyle = "#5bd07a";
-      ctx.lineWidth = 8;
-      ctx.beginPath();
-      const midY = y + bodyHeight / 2;
-      ctx.moveTo(W / 2 - 40, midY);
-      ctx.lineTo(W / 2 + 30, midY);
-      ctx.moveTo(W / 2 + 6, midY - 24);
-      ctx.lineTo(W / 2 + 32, midY);
-      ctx.lineTo(W / 2 + 6, midY + 24);
-      ctx.stroke();
-    });
-
-    // Tier legend.
-    const legendY = 1512;
-    const chipW = 158;
-    const gap = 10;
-    const totalW = TIERS.length * chipW + (TIERS.length - 1) * gap;
-    let chipX = (W - totalW) / 2;
-    ctx.font = "900 22px Arial, sans-serif";
-    for (const step of TIERS) {
-      ctx.fillStyle = TIER_COLOR[step];
-      ctx.beginPath();
-      ctx.roundRect(chipX, legendY, chipW, 46, 23);
-      ctx.fill();
-      ctx.fillStyle = "#0a0a0a";
-      ctx.fillText(step, chipX + chipW / 2, legendY + 31);
-      chipX += chipW + gap;
-    }
-
-    ctx.font = "900 40px Arial, sans-serif";
-    ctx.fillStyle = TIER_COLOR[tier];
-    ctx.fillText(`${displayName.toUpperCase()} — ${tier}`, W / 2, 1626);
-
-    // Kept above y≈1660: TikTok and Reels overlay the caption strip below
-    // that, which would hide the domain.
-    ctx.font = "700 40px Arial, sans-serif";
-    ctx.fillStyle = "#f5f5f0";
-    ctx.fillText("HOW STRONG ARE YOU?", W / 2, 1584);
-    ctx.font = "700 36px Arial, sans-serif";
-    ctx.fillStyle = "#8a8a8a";
-    ctx.fillText("DEADSETFIT.ORG", W / 2, 1662);
-
+    drawStrengthCard(ctx, { start, now, tier, displayName, sinceLabel });
     setDataUrl(canvas.toDataURL("image/png"));
   }, [start, now, tier, displayName, sinceLabel]);
 

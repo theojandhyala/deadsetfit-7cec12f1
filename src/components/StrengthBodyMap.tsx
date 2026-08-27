@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import { MUSCLE_SHAPES, bodySilhouette } from "@/lib/body-shapes";
+import { BODY_CONTENT, MUSCLE_SHAPES, bodySilhouette } from "@/lib/body-shapes";
 import { TIER_COLOR, type MuscleGrade, type StrengthTier } from "@/lib/strength-grades";
 import type { MuscleGroup } from "@/lib/types";
 
@@ -78,8 +78,8 @@ export function StrengthBodyMap({
         {(["f", "b"] as const).map((side) => (
           <svg
             key={side}
-            viewBox="0 0 200 420"
-            width={size / 2.2}
+            viewBox={`${BODY_CONTENT.x} ${BODY_CONTENT.y} ${BODY_CONTENT.width} ${BODY_CONTENT.height}`}
+            width={(size * BODY_CONTENT.width) / BODY_CONTENT.height}
             height={size}
             role="img"
             aria-label={
