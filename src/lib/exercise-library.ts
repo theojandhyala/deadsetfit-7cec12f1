@@ -49,6 +49,7 @@ export function libraryExerciseToExercise(exercise: LibraryExercise): Exercise {
     muscleGroup: muscleGroup(exercise),
     equipment: equipmentAccess(exercise.equipment),
     equipmentLabel: exercise.equipment,
+    primaryMuscles: exercise.primary_muscles,
     secondaryMuscles: exercise.secondary_muscles,
     skill: experience(exercise.difficulty),
     sets: compound ? 4 : 3,

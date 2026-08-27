@@ -1,15 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ChevronRight, Lock, Info, TrendingUp } from "lucide-react";
 
 import { useAppState } from "@/lib/storage";
 import { allExercises } from "@/lib/exercises";
+import { defaultSchedule } from "@/lib/calc";
 import { usePro } from "@/hooks/usePro";
 import { useCountUp } from "@/hooks/useCountUp";
 import { openPaywall } from "@/lib/paywall-events";
 import { formatWeight, unitOf } from "@/lib/units";
 import { hapticSelection } from "@/lib/haptics";
 import { MuscleDiagram } from "@/components/MuscleDiagram";
+import { MuscleGrowthCoach } from "@/components/MuscleGrowthCoach";
+import type { GrowthTarget } from "@/lib/muscle-growth-recommendations";
+import { toMuscleGroup } from "@/lib/recovery";
 import {
   GRADED_MUSCLES,
   TIER_BLURB,
@@ -31,18 +35,31 @@ export const Route = createFileRoute("/_tabs/strength")({
 
 function StrengthPage() {
   const [state] = useAppState();
+  const [growthTarget, setGrowthTarget] = useState<GrowthTarget>("BACK");
+  const [growthOpen, setGrowthOpen] = useState(false);
   const { isPro, loading: proLoading } = usePro();
   const unit = unitOf(state);
 
-  const library = useMemo(
-    () =>
-      allExercises(state.savedExercises).map((e) => ({
-        id: e.id,
-        name: e.name,
-        muscleGroup: e.muscleGroup,
-      })),
-    [state.savedExercises],
-  );
+  const library = useMemo(() => {
+    const byId = new Map(
+      allExercises(state.savedExercises).map((exercise) => [
+        exercise.id,
+        { id: exercise.id, name: exercise.name, muscleGroup: exercise.muscleGroup },
+      ]),
+    );
+    const active = state.programs.find((program) => program.id === state.activeProgramId);
+    for (const day of Object.values(active?.days ?? {})) {
+      for (const item of day.items) {
+        const muscleGroup = item.primary_muscles
+          .map(toMuscleGroup)
+          .find((muscle): muscle is NonNullable<typeof muscle> => Boolean(muscle));
+        if (muscleGroup && !byId.has(item.id)) {
+          byId.set(item.id, { id: item.id, name: item.name, muscleGroup });
+        }
+      }
+    }
+    return [...byId.values()];
+  }, [state.savedExercises, state.programs, state.activeProgramId]);
   const report = useMemo(() => strengthReport(state, library), [state, library]);
   const firstDay = useMemo(
     () =>
@@ -55,6 +72,7 @@ function StrengthPage() {
   const baselineDay = useMemo(() => {
     if (!firstDay) return null;
     const date = new Date(`${firstDay}T00:00:00Z`);
+    if (!Number.isFinite(date.getTime())) return null;
     date.setUTCDate(date.getUTCDate() + 89);
     return date.toISOString().slice(0, 10);
   }, [firstDay]);
@@ -65,24 +83,37 @@ function StrengthPage() {
   const plannedMuscles = useMemo(() => {
     const covered = new Set<string>();
     const definitions = allExercises(state.savedExercises);
-    for (const day of Object.values(state.schedule ?? {})) {
-      for (const exerciseId of day.exerciseIds) {
-        const muscle = definitions.find((exercise) => exercise.id === exerciseId)?.muscleGroup;
-        if (muscle) covered.add(muscle);
-      }
-    }
     const active = state.programs.find((program) => program.id === state.activeProgramId);
-    for (const day of Object.values(active?.days ?? {})) {
-      for (const exercise of day.items) {
-        exercise.primary_muscles.forEach((muscle) => covered.add(muscle.toUpperCase()));
+    if (active) {
+      for (const day of Object.values(active.days)) {
+        for (const exercise of day.items) {
+          exercise.primary_muscles.forEach((muscle) => {
+            const group = toMuscleGroup(muscle);
+            if (group) covered.add(group);
+          });
+        }
+      }
+    } else {
+      const schedule = state.schedule ?? (state.profile ? defaultSchedule(state.profile) : null);
+      for (const day of Object.values(schedule ?? {})) {
+        for (const exerciseId of day.exerciseIds) {
+          const muscle = definitions.find((exercise) => exercise.id === exerciseId)?.muscleGroup;
+          if (muscle) covered.add(muscle);
+        }
       }
     }
     return covered;
-  }, [state.schedule, state.programs, state.activeProgramId, state.savedExercises]);
+  }, [state.schedule, state.programs, state.activeProgramId, state.savedExercises, state.profile]);
   const displayScore = useCountUp(report.score, 900);
-  const locked = !proLoading && !isPro;
+  const locked = proLoading || !isPro;
 
-  const needsBodyweight = !state.profile?.weightKg;
+  const needsBodyweight = (state.profile?.weightKg ?? 0) <= 0;
+
+  function openGrowthPlan(target: GrowthTarget) {
+    setGrowthTarget(target);
+    setGrowthOpen(true);
+    hapticSelection();
+  }
 
   return (
     <div className="deadset-page min-h-screen pb-28">
@@ -105,13 +136,23 @@ function StrengthPage() {
       {needsBodyweight ? (
         <MissingBodyweight />
       ) : (
-        <>
-          <StrengthBodyComparison
-            baseline={baseline}
-            current={report}
-            plannedMuscles={plannedMuscles}
-          />
+        <StrengthBodyComparison
+          baseline={baseline}
+          current={report}
+          plannedMuscles={plannedMuscles}
+          onSelectMuscle={openGrowthPlan}
+        />
+      )}
 
+      <MuscleGrowthCoach
+        selectedTarget={growthTarget}
+        onTargetChange={setGrowthTarget}
+        open={growthOpen}
+        onOpenChange={setGrowthOpen}
+      />
+
+      {!needsBodyweight && (
+        <>
           {report.gradedCount > 0 ? (
             <>
               <div className="mt-5">
@@ -174,10 +215,12 @@ function StrengthBodyComparison({
   baseline,
   current,
   plannedMuscles,
+  onSelectMuscle,
 }: {
   baseline: StrengthReport | null;
   current: StrengthReport;
   plannedMuscles: Set<string>;
+  onSelectMuscle: (muscle: GrowthTarget) => void;
 }) {
   const hasBaseline = Boolean(baseline?.gradedCount);
   const baselineColors = reportColors(hasBaseline ? baseline : null);
@@ -253,19 +296,31 @@ function StrengthBodyComparison({
             const grade = current.muscles.find((item) => item.muscle === muscle);
             const planned = plannedMuscles.has(muscle);
             return (
-              <div key={muscle} className="rounded-xl border border-grit bg-black/30 px-3 py-2">
-                <p className="label-cap text-[9px] text-grit">{muscle}</p>
-                <p
-                  className="mt-0.5 text-[9px] leading-tight"
-                  style={{ color: grade ? TIER_COLOR[grade.tier] : "#777" }}
-                >
-                  {grade
-                    ? `${grade.tier} · ${grade.exercises.length} lift${grade.exercises.length === 1 ? "" : "s"}`
-                    : planned
-                      ? "Exercises set · log weighted sets"
-                      : "No exercises set for that"}
-                </p>
-              </div>
+              <button
+                key={muscle}
+                type="button"
+                onClick={() => onSelectMuscle(muscle)}
+                aria-label={`Open ${muscle.toLowerCase()} growth game plan`}
+                className="flex min-h-14 items-center justify-between rounded-xl border border-grit bg-black/30 px-3 py-2 text-left press"
+              >
+                <span>
+                  <span className="label-cap block text-[9px] text-grit">{muscle}</span>
+                  <span
+                    className="mt-0.5 block text-[9px] leading-tight"
+                    style={{ color: grade ? TIER_COLOR[grade.tier] : "#777" }}
+                  >
+                    {grade
+                      ? `${grade.tier} · ${grade.exercises.length} lift${grade.exercises.length === 1 ? "" : "s"}`
+                      : planned
+                        ? "Exercises set · log weighted sets"
+                        : "No exercises set for that"}
+                  </span>
+                  <span className="label-cap mt-1 block text-[6px] text-accent-red">
+                    BUILD THIS AREA
+                  </span>
+                </span>
+                <ChevronRight size={15} className="shrink-0 text-accent-red" />
+              </button>
             );
           })}
         </div>

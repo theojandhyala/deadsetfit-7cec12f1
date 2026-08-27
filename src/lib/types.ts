@@ -74,6 +74,8 @@ export interface Exercise {
   youtubeQuery?: string;
   /** Specific equipment label used by the full exercise database. */
   equipmentLabel?: string;
+  /** Granular catalogue anatomy labels retained alongside the broad muscle group. */
+  primaryMuscles?: string[];
   secondaryMuscles?: string[];
   proTip?: string;
   isCompound?: boolean;
@@ -134,6 +136,8 @@ export interface ProgramExerciseRef {
   youtube_query: string;
   sets: number;
   reps: string;
+  /** Per-exercise rest interval carried into sessions built from this programme. */
+  restSeconds?: number;
   /** Working load chosen during programme setup; stored in kilograms. */
   weightKg?: number;
 }

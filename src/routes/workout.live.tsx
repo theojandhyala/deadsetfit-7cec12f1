@@ -198,6 +198,7 @@ function buildSession(
               prescription && prescription.prescribedWeightKg > 0
                 ? prescription.prescribedWeightKg
                 : it.weightKg,
+            restSeconds: it.restSeconds,
             ...resolveTracking(state, it.id, it.name, it.reps),
             sets: [],
           };

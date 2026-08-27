@@ -136,7 +136,14 @@ export const STANDARDS: Record<string, ExerciseStandard> = {
   "bicycle-crunch": S("CORE", "REPS", [15, 30, 50, 80], [15, 30, 50, 80]),
 };
 
-export const GRADED_MUSCLES: MuscleGroup[] = ["CHEST", "BACK", "LEGS", "SHOULDERS", "ARMS", "CORE"];
+export const GRADED_MUSCLES = [
+  "CHEST",
+  "BACK",
+  "LEGS",
+  "SHOULDERS",
+  "ARMS",
+  "CORE",
+] as const satisfies readonly MuscleGroup[];
 
 export interface ExerciseGrade {
   exerciseId: string;

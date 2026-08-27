@@ -129,6 +129,11 @@ export function hapticSetupComplete(): void {
   notify("success", [45, 55, 70]);
 }
 
+/** A movement was added to or safely changed in the athlete's programme. */
+export function hapticPlanUpdated(): void {
+  notify("success", [20, 35, 45]);
+}
+
 /** Something was undone or deleted. */
 export function hapticUndo(): void {
   impact("rigid", 14);
