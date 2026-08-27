@@ -15,16 +15,30 @@ import type { AppState, Exercise, MuscleGroup } from "./types";
  * server, no per-user cost.
  */
 
-export type StrengthTier = "BEGINNER" | "NOVICE" | "INTERMEDIATE" | "ADVANCED" | "ELITE";
+export type StrengthTier =
+  | "BEGINNER"
+  | "NOVICE"
+  | "INTERMEDIATE"
+  | "ADVANCED"
+  | "ELITE"
+  | "WORLD_CLASS";
 
-export const TIERS: StrengthTier[] = ["BEGINNER", "NOVICE", "INTERMEDIATE", "ADVANCED", "ELITE"];
+export const TIERS: StrengthTier[] = [
+  "BEGINNER",
+  "NOVICE",
+  "INTERMEDIATE",
+  "ADVANCED",
+  "ELITE",
+  "WORLD_CLASS",
+];
 
 export const TIER_COLOR: Record<StrengthTier, string> = {
-  BEGINNER: "#8a8a8a",
-  NOVICE: "#7fb3d5",
-  INTERMEDIATE: "#5bd07a",
-  ADVANCED: "#fbbf24",
-  ELITE: "#e63222",
+  BEGINNER: "#ef4444",
+  NOVICE: "#f59e0b",
+  INTERMEDIATE: "#45bd62",
+  ADVANCED: "#3297e3",
+  ELITE: "#a43ac2",
+  WORLD_CLASS: "#ec3f83",
 };
 
 /** One line for each tier, so the grade means something without a legend. */
@@ -34,6 +48,7 @@ export const TIER_BLURB: Record<StrengthTier, string> = {
   INTERMEDIATE: "Stronger than most people in a commercial gym.",
   ADVANCED: "Years of serious training. Top of most gyms.",
   ELITE: "Competitive strength. Very few people get here.",
+  WORLD_CLASS: "Exceptional even among serious strength athletes.",
 };
 
 /**
@@ -135,7 +150,7 @@ export interface ExerciseGrade {
   progress: number;
   /** What was measured: a 1RM in kg, a rep count, or seconds. */
   value: number;
-  /** What reaching the next tier takes, in the same unit. Null at ELITE. */
+  /** What reaching the next tier takes, in the same unit. Null at WORLD CLASS. */
   nextAt: number | null;
   nextTier: StrengthTier | null;
 }
@@ -161,10 +176,10 @@ export interface StrengthReport {
   gradedCount: number;
 }
 
-/** Where a value sits on a four-threshold ladder, as tier index + progress. */
+/** Where a value sits on the standards ladder, as tier index + progress. */
 function placeOnLadder(
   value: number,
-  thresholds: [number, number, number, number],
+  thresholds: readonly number[],
 ): { index: number; progress: number } {
   if (value <= 0) return { index: 0, progress: 0 };
   let index = 0;
@@ -176,6 +191,20 @@ function placeOnLadder(
   const ceiling = thresholds[index]!;
   const span = Math.max(ceiling - floor, 1e-9);
   return { index, progress: Math.max(0, Math.min(1, (value - floor) / span)) };
+}
+
+/**
+ * The standards table has four widely recognisable published checkpoints.
+ * DEADSET adds a real sixth rung above elite without pretending that elite and
+ * world-class are the same thing: one more full advanced-to-elite interval,
+ * with a 20% minimum increase so closely packed tables still demand a leap.
+ */
+function thresholdsWithWorldClass(standard: ExerciseStandard, gender: string | null | undefined) {
+  const published = gender === "FEMALE" ? standard.female : standard.male;
+  const elite = published[3];
+  const advanced = published[2];
+  const worldClass = elite + Math.max(elite - advanced, elite * 0.2);
+  return [...published, worldClass] as const;
 }
 
 /** Personal bests per exercise, from sessions and legacy logs together. */
@@ -239,7 +268,7 @@ export function gradeExercise(
   const standard =
     STANDARDS[exerciseId] ?? (fallbackMuscle ? GENERIC_STANDARD[fallbackMuscle] : undefined);
   if (!standard) return null;
-  const thresholds = gender === "FEMALE" ? standard.female : standard.male;
+  const thresholds = thresholdsWithWorldClass(standard, gender);
 
   let value: number;
   if (standard.kind === "RATIO") {
@@ -256,7 +285,7 @@ export function gradeExercise(
   }
 
   const { index, progress } = placeOnLadder(value, thresholds);
-  const tier = TIERS[index] ?? "ELITE";
+  const tier = TIERS[index] ?? "WORLD_CLASS";
   const nextTier = index < thresholds.length ? (TIERS[index + 1] ?? null) : null;
   const nextThreshold = index < thresholds.length ? thresholds[index]! : null;
 
@@ -366,14 +395,17 @@ export function strengthReportAsOf(
 /** A 0-100 score back to the tier it sits in. */
 export function tierForScore(score: number): StrengthTier {
   const clamped = Math.max(0, Math.min(100, score));
-  const index = Math.min(TIERS.length - 1, Math.floor((clamped / 100) * TIERS.length));
-  return TIERS[index]!;
+  for (let index = TIERS.length - 1; index >= 0; index -= 1) {
+    const floor = Math.round((index / TIERS.length) * 100);
+    if (clamped >= floor) return TIERS[index]!;
+  }
+  return TIERS[0]!;
 }
 
 /** Points still needed to reach the next tier. Null at the top. */
 export function pointsToNextTier(score: number): { tier: StrengthTier; points: number } | null {
   const index = TIERS.indexOf(tierForScore(score));
   if (index >= TIERS.length - 1) return null;
-  const nextFloor = Math.ceil(((index + 1) / TIERS.length) * 100);
+  const nextFloor = Math.round(((index + 1) / TIERS.length) * 100);
   return { tier: TIERS[index + 1]!, points: Math.max(1, nextFloor - Math.round(score)) };
 }

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { Lock, Info, TrendingUp } from "lucide-react";
+import { ChevronRight, Lock, Info, TrendingUp } from "lucide-react";
 
 import { useAppState } from "@/lib/storage";
 import { allExercises } from "@/lib/exercises";
@@ -165,7 +165,7 @@ function reportColors(report: StrengthReport | null, plannedMuscles?: Set<string
     (report?.muscles ?? []).map((grade) => [grade.muscle, TIER_COLOR[grade.tier]]),
   );
   for (const muscle of GRADED_MUSCLES) {
-    if (plannedMuscles?.has(muscle) && !colors[muscle]) colors[muscle] = "#4a4a4a";
+    if (plannedMuscles?.has(muscle) && !colors[muscle]) colors[muscle] = "#62656d";
   }
   return colors;
 }
@@ -180,31 +180,75 @@ function StrengthBodyComparison({
   plannedMuscles: Set<string>;
 }) {
   const hasBaseline = Boolean(baseline?.gradedCount);
+  const baselineColors = reportColors(hasBaseline ? baseline : null);
+  const currentColors = reportColors(current, plannedMuscles);
+
   return (
     <section className="px-5 mt-5">
-      <div className="rounded-2xl border border-grit bg-grit-card p-4">
-        <div className="flex items-baseline justify-between gap-3">
-          <p className="label-cap text-[10px] text-accent-red">STRENGTH MAP</p>
-          <p className="label-cap text-[9px] text-grit-dim">FRONT + BACK</p>
+      <div className="overflow-hidden rounded-2xl border border-grit bg-grit-card">
+        <div className="flex items-baseline justify-between gap-3 px-4 pb-3 pt-4">
+          <div>
+            <p className="label-cap text-[9px] text-grit-dim">YOUR STRENGTH</p>
+            <p className="display text-base font-extrabold uppercase text-grit">
+              Strength progress
+            </p>
+          </div>
+          <p className="label-cap text-right text-[8px] text-accent-red">
+            {hasBaseline ? "START → NOW" : "BASELINE BUILDING"}
+          </p>
         </div>
-        <div className="mt-3 grid grid-cols-1 gap-4">
-          {hasBaseline && (
+
+        <div className="border-y border-grit bg-[#17181b] px-3 pb-4 pt-3">
+          <div className="grid grid-cols-2 gap-5 px-1">
             <div className="text-center">
-              <p className="label-cap text-[9px] text-grit-dim">FIRST 90 DAYS</p>
-              <MuscleDiagram gradeColors={reportColors(baseline, plannedMuscles)} size={220} />
-              <p className="display text-lg font-extrabold text-grit">{baseline!.score}</p>
+              <p className="display text-lg font-extrabold uppercase text-grit">
+                {hasBaseline ? "Start" : "No start yet"}
+              </p>
+              <p className="label-cap mt-0.5 text-[7px] text-grit-dim">
+                {hasBaseline ? "FIRST 90 DAYS" : "LOG YOUR FIRST WORKOUTS"}
+              </p>
+              <p className="display mt-1 text-sm font-extrabold tabular-nums text-grit">
+                {hasBaseline ? baseline!.score : "—"}
+                <span className="label-cap ml-1 text-[6px] text-grit-dim">SCORE</span>
+              </p>
             </div>
-          )}
-          <div className="text-center">
-            <p className="label-cap text-[9px] text-grit-dim">NOW</p>
-            <MuscleDiagram gradeColors={reportColors(current, plannedMuscles)} size={240} />
-            <p className="display text-lg font-extrabold text-grit">{current.score}</p>
+            <div className="text-center">
+              <p className="display text-lg font-extrabold uppercase text-grit">Now</p>
+              <p className="label-cap mt-0.5 text-[7px] text-grit-dim">YOUR LATEST BESTS</p>
+              <p className="display mt-1 text-sm font-extrabold tabular-nums text-grit">
+                {current.gradedCount > 0 ? current.score : "—"}
+                <span className="label-cap ml-1 text-[6px] text-grit-dim">SCORE</span>
+              </p>
+            </div>
+          </div>
+
+          <ComparisonRow
+            view="front"
+            label="FRONT"
+            baselineColors={baselineColors}
+            currentColors={currentColors}
+          />
+
+          <StrengthTierLegend />
+
+          <ComparisonRow
+            view="back"
+            label="BACK"
+            baselineColors={baselineColors}
+            currentColors={currentColors}
+          />
+
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+            <MapKey color="#303238" label="No exercise set" />
+            <MapKey color="#62656d" label="Set · needs a logged result" />
           </div>
         </div>
-        <p className="mt-2 text-center text-[10px] text-grit-dim">
-          Colour shows the real grade of each muscle—not training volume or a body transformation.
+
+        <p className="px-4 pt-3 text-center text-[10px] leading-relaxed text-grit-dim">
+          Every colour is earned from your actual lifts, adjusted for bodyweight. Grey areas are
+          missing data—not a made-up score.
         </p>
-        <div className="mt-4 grid grid-cols-2 gap-2 border-t border-grit pt-4">
+        <div className="mt-3 grid grid-cols-2 gap-2 border-t border-grit p-4">
           {GRADED_MUSCLES.map((muscle) => {
             const grade = current.muscles.find((item) => item.muscle === muscle);
             const planned = plannedMuscles.has(muscle);
@@ -227,6 +271,63 @@ function StrengthBodyComparison({
         </div>
       </div>
     </section>
+  );
+}
+
+function ComparisonRow({
+  view,
+  label,
+  baselineColors,
+  currentColors,
+}: {
+  view: "front" | "back";
+  label: string;
+  baselineColors: Record<string, string>;
+  currentColors: Record<string, string>;
+}) {
+  return (
+    <div className="relative mt-2">
+      <p className="label-cap absolute left-1 top-2 z-10 text-[6px] tracking-[0.24em] text-grit-dim">
+        {label}
+      </p>
+      <div className="grid grid-cols-2 gap-5">
+        <MuscleDiagram view={view} gradeColors={baselineColors} size={232} />
+        <MuscleDiagram view={view} gradeColors={currentColors} size={232} />
+      </div>
+      <div className="pointer-events-none absolute left-1/2 top-1/2 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-[#474a50] bg-[#202226] text-grit">
+        <ChevronRight size={17} strokeWidth={2.4} />
+      </div>
+    </div>
+  );
+}
+
+function StrengthTierLegend() {
+  return (
+    <div className="my-1 grid grid-cols-6 gap-0.5" aria-label="Strength grade colours">
+      {TIERS.map((tier) => (
+        <div
+          key={tier}
+          className="flex min-h-5 min-w-0 items-center justify-center overflow-hidden rounded-[3px] px-px text-center"
+          style={{ background: TIER_COLOR[tier] }}
+        >
+          <span
+            className="block max-w-full font-black uppercase leading-[1.05] text-white"
+            style={{ fontSize: tier === "WORLD_CLASS" ? 5 : 5.5, letterSpacing: 0 }}
+          >
+            {tier.replace("_", " ")}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MapKey({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="flex items-center gap-1 text-[8px] text-grit-dim">
+      <span className="h-2 w-2 rounded-sm border border-white/10" style={{ background: color }} />
+      {label}
+    </span>
   );
 }
 
@@ -299,7 +400,7 @@ function TierLadder({ tier, score }: { tier: StrengthTier; score: number }) {
             className="label-cap text-[7px]"
             style={{ color: step === tier ? TIER_COLOR[step] : "#5a5a5a" }}
           >
-            {step.slice(0, 4)}
+            {step === "WORLD_CLASS" ? "WORLD" : step.slice(0, 4)}
           </span>
         ))}
       </div>

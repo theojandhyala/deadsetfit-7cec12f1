@@ -145,9 +145,19 @@ describe("gradeExercise", () => {
     expect(grade!.tier).toBe("ADVANCED");
   });
 
-  it("tops out at ELITE with nothing left to chase", () => {
+  it("reserves WORLD CLASS for a level above the published elite checkpoint", () => {
     const grade = gradeExercise("bench-press", "Bench", { ...bests, e1rmKg: 400 }, 80, "MALE");
-    expect(grade).toMatchObject({ tier: "ELITE", score: 100, nextAt: null, nextTier: null });
+    expect(grade).toMatchObject({
+      tier: "WORLD_CLASS",
+      score: 100,
+      nextAt: null,
+      nextTier: null,
+    });
+  });
+
+  it("keeps ELITE as a real tier with WORLD CLASS left to chase", () => {
+    const grade = gradeExercise("bench-press", "Bench", { ...bests, e1rmKg: 170 }, 80, "MALE");
+    expect(grade).toMatchObject({ tier: "ELITE", nextTier: "WORLD_CLASS", nextAt: 192.5 });
   });
 
   it("starts at BEGINNER for a first light session", () => {
@@ -205,7 +215,7 @@ describe("strengthReport", () => {
       library,
     );
     const chest = report.muscles.find((m) => m.muscle === "CHEST")!;
-    expect(chest.tier).not.toBe("ELITE");
+    expect(chest.tier).not.toBe("WORLD_CLASS");
     expect(chest.weakest!.exerciseId).toBe("cable-fly");
   });
 
@@ -243,12 +253,20 @@ describe("strengthReport", () => {
 describe("tierForScore", () => {
   it("maps the ends of the range to the ends of the ladder", () => {
     expect(tierForScore(0)).toBe("BEGINNER");
-    expect(tierForScore(100)).toBe("ELITE");
+    expect(tierForScore(100)).toBe("WORLD_CLASS");
+  });
+
+  it("keeps the rounded six-tier boundaries aligned with exercise scores", () => {
+    expect(tierForScore(16)).toBe("BEGINNER");
+    expect(tierForScore(17)).toBe("NOVICE");
+    expect(tierForScore(33)).toBe("INTERMEDIATE");
+    expect(tierForScore(82)).toBe("ELITE");
+    expect(tierForScore(83)).toBe("WORLD_CLASS");
   });
 
   it("clamps nonsense instead of returning undefined", () => {
     expect(tierForScore(-50)).toBe("BEGINNER");
-    expect(tierForScore(9999)).toBe("ELITE");
+    expect(tierForScore(9999)).toBe("WORLD_CLASS");
   });
 
   it("says what the next tier costs, and nothing at the top", () => {
