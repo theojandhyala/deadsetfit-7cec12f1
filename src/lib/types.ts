@@ -134,6 +134,8 @@ export interface ProgramExerciseRef {
   youtube_query: string;
   sets: number;
   reps: string;
+  /** Working load chosen during programme setup; stored in kilograms. */
+  weightKg?: number;
 }
 
 export interface ProgramDay {
@@ -255,8 +257,6 @@ export interface WorkoutSession {
   exercises: WorkoutSessionExercise[];
   totalVolume: number;
   prCount: number;
-  /** Set only after the athlete confirms every load-based exercise before set one. */
-  weightSetupConfirmedAt?: string;
   /** Post-session reflection: how it went, in the athlete's own words. */
   note?: string;
   /** Post-session rating, used to spot when training is drifting. */

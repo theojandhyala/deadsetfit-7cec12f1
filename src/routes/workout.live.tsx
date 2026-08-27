@@ -42,7 +42,6 @@ import {
   buildSupersetIds,
   completedWorkingSets,
   nextStepAfterWorkingSet,
-  requiresWorkingWeight,
   supersetPosition,
 } from "@/lib/workout-flow";
 import { indexAfterMove, indexAfterRemoval, moveItem } from "@/lib/session-edit";
@@ -196,7 +195,7 @@ function buildSession(
             plannedWeightKg:
               prescription && prescription.prescribedWeightKg > 0
                 ? prescription.prescribedWeightKg
-                : undefined,
+                : it.weightKg,
             ...resolveTracking(state, it.id, it.name, it.reps),
             sets: [],
           };
@@ -818,45 +817,6 @@ function LiveWorkoutPage() {
         )}
       </div>
     );
-  }
-
-  if (!session.weightSetupConfirmedAt) {
-    const weighted = session.exercises.flatMap((exercise, index) => {
-      const definition = getExercise(exercise.exerciseId, state.savedExercises);
-      if (!requiresWorkingWeight(exercise, definition?.equipment)) return [];
-      const history = prefillFromHistory(state, session.id, exercise.exerciseId);
-      const weightKg = exercise.plannedWeightKg ?? (Number(history.weight) || 0);
-      return [{ index, exercise, weightKg }];
-    });
-
-    if (weighted.length > 0) {
-      return (
-        <WorkingWeightSetup
-          session={session}
-          weighted={weighted}
-          unit={unit}
-          onCancel={() => void discardWorkout()}
-          onConfirm={(weights) => {
-            set((currentState) => ({
-              ...currentState,
-              sessions: currentState.sessions.map((candidate) =>
-                candidate.id === session.id
-                  ? {
-                      ...candidate,
-                      weightSetupConfirmedAt: new Date().toISOString(),
-                      exercises: candidate.exercises.map((exercise, index) =>
-                        weights[index] != null
-                          ? { ...exercise, plannedWeightKg: weights[index] }
-                          : exercise,
-                      ),
-                    }
-                  : candidate,
-              ),
-            }));
-          }}
-        />
-      );
-    }
   }
 
   const current = session.exercises[activeIdx];
@@ -1653,106 +1613,6 @@ function LiveWorkoutPage() {
         />
       )}
       <GritEarnedLayer />
-    </div>
-  );
-}
-
-function WorkingWeightSetup({
-  session,
-  weighted,
-  unit,
-  onCancel,
-  onConfirm,
-}: {
-  session: WorkoutSession;
-  weighted: { index: number; exercise: WorkoutSessionExercise; weightKg: number }[];
-  unit: WeightUnit;
-  onCancel: () => void;
-  onConfirm: (weights: Record<number, number>) => void;
-}) {
-  return (
-    <div
-      className="min-h-screen bg-[#0a0a0a] px-5 pb-8"
-      style={{ paddingTop: "max(1.5rem, env(safe-area-inset-top))" }}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="label-cap text-[10px] text-accent-red">BEFORE SET ONE</p>
-          <h1 className="display mt-1 text-3xl font-extrabold uppercase leading-none text-grit">
-            Set your working weights
-          </h1>
-          <p className="mt-2 text-xs leading-relaxed text-grit-dim">
-            Confirm the load for every weighted exercise in {session.label}. These numbers prefill
-            the logger and your completed sets power the muscle rankings.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="icon-btn shrink-0 text-grit-dim"
-          aria-label="Cancel workout"
-        >
-          <X size={20} />
-        </button>
-      </div>
-
-      <form
-        className="mt-6 space-y-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          const data = new FormData(event.currentTarget);
-          const weights: Record<number, number> = {};
-          for (const row of weighted) {
-            const displayWeight = Number(data.get(`weight-${row.index}`));
-            if (!Number.isFinite(displayWeight) || displayWeight <= 0) return;
-            weights[row.index] = toKg(displayWeight, unit);
-          }
-          onConfirm(weights);
-        }}
-      >
-        {weighted.map(({ index, exercise, weightKg }) => (
-          <label
-            key={`${exercise.exerciseId}-${index}`}
-            className="block rounded-2xl border border-grit bg-grit-card p-4"
-          >
-            <span className="flex items-baseline justify-between gap-3">
-              <span className="display text-base font-extrabold uppercase text-grit">
-                {exercise.name}
-              </span>
-              <span className="label-cap text-[9px] text-grit-dim">
-                {exercise.targetSets} × {exercise.targetReps}
-              </span>
-            </span>
-            <span className="mt-3 flex items-center gap-2">
-              <input
-                name={`weight-${index}`}
-                type="number"
-                inputMode="decimal"
-                min={increment(unit)}
-                step={increment(unit)}
-                required
-                defaultValue={weightKg > 0 ? trimNumber(toDisplay(weightKg, unit)) : undefined}
-                placeholder="0"
-                className="min-h-12 min-w-0 flex-1 rounded-xl border border-grit bg-[#090909] px-4 text-xl font-black tabular-nums text-white outline-none focus:border-accent-red"
-              />
-              <span className="display w-8 text-sm font-extrabold uppercase text-grit-dim">
-                {unit}
-              </span>
-            </span>
-          </label>
-        ))}
-        <button
-          type="submit"
-          className="btn-grit mt-2 flex min-h-14 w-full items-center justify-center rounded-2xl"
-        >
-          <Dumbbell size={17} className="mr-2" />
-          Confirm weights and start
-        </button>
-        <p className="px-3 text-center text-[10px] leading-relaxed text-grit-dim">
-          You can still adjust any individual set during the workout. Timed, distance and bodyweight
-          movements never ask for a fake load.
-        </p>
-      </form>
     </div>
   );
 }

@@ -25,6 +25,7 @@ import { importHealthWorkouts, healthSupported } from "@/lib/health";
 import { usePro } from "@/hooks/usePro";
 import { FeatureTour } from "@/components/FeatureTour";
 import { buildWidgetSnapshot, publishWidgets } from "@/lib/widgets";
+import { ProgrammeWeightSetup } from "@/components/ProgrammeWeightSetup";
 
 export const Route = createFileRoute("/_tabs")({
   component: TabsLayout,
@@ -209,6 +210,7 @@ function TabsLayout() {
       <FeatureTour />
       <GritEarnedLayer />
       <FirstRunTour active={!!state.profile} />
+      <ProgrammeWeightSetup />
       <BottomNav />
     </div>
   );

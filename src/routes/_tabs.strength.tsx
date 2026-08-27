@@ -61,6 +61,23 @@ function StrengthPage() {
     () => (baselineDay ? strengthReportAsOf(state, library, baselineDay) : null),
     [state, library, baselineDay],
   );
+  const plannedMuscles = useMemo(() => {
+    const covered = new Set<string>();
+    const definitions = allExercises(state.savedExercises);
+    for (const day of Object.values(state.schedule ?? {})) {
+      for (const exerciseId of day.exerciseIds) {
+        const muscle = definitions.find((exercise) => exercise.id === exerciseId)?.muscleGroup;
+        if (muscle) covered.add(muscle);
+      }
+    }
+    const active = state.programs.find((program) => program.id === state.activeProgramId);
+    for (const day of Object.values(active?.days ?? {})) {
+      for (const exercise of day.items) {
+        exercise.primary_muscles.forEach((muscle) => covered.add(muscle.toUpperCase()));
+      }
+    }
+    return covered;
+  }, [state.schedule, state.programs, state.activeProgramId, state.savedExercises]);
   const displayScore = useCountUp(report.score, 900);
   const locked = !proLoading && !isPro;
 
@@ -82,13 +99,17 @@ function StrengthPage() {
 
       {needsBodyweight ? (
         <MissingBodyweight />
-      ) : report.gradedCount === 0 ? (
+      ) : report.gradedCount === 0 && plannedMuscles.size === 0 ? (
         <EmptyState />
       ) : (
         <>
           <OverallCard tier={report.tier} score={report.score} displayScore={displayScore} />
 
-          <StrengthBodyComparison baseline={baseline} current={report} />
+          <StrengthBodyComparison
+            baseline={baseline}
+            current={report}
+            plannedMuscles={plannedMuscles}
+          />
 
           <section className="px-5 mt-5">
             <p className="label-cap text-[10px] text-grit-dim mb-2">BY MUSCLE GROUP</p>
@@ -128,18 +149,24 @@ function StrengthPage() {
   );
 }
 
-function reportColors(report: StrengthReport | null) {
-  return Object.fromEntries(
+function reportColors(report: StrengthReport | null, plannedMuscles?: Set<string>) {
+  const colors: Record<string, string> = Object.fromEntries(
     (report?.muscles ?? []).map((grade) => [grade.muscle, TIER_COLOR[grade.tier]]),
   );
+  for (const muscle of GRADED_MUSCLES) {
+    if (plannedMuscles?.has(muscle) && !colors[muscle]) colors[muscle] = "#4a4a4a";
+  }
+  return colors;
 }
 
 function StrengthBodyComparison({
   baseline,
   current,
+  plannedMuscles,
 }: {
   baseline: StrengthReport | null;
   current: StrengthReport;
+  plannedMuscles: Set<string>;
 }) {
   const hasBaseline = Boolean(baseline?.gradedCount);
   return (
@@ -153,19 +180,40 @@ function StrengthBodyComparison({
           {hasBaseline && (
             <div className="text-center">
               <p className="label-cap text-[9px] text-grit-dim">FIRST 90 DAYS</p>
-              <MuscleDiagram gradeColors={reportColors(baseline)} size={150} />
+              <MuscleDiagram gradeColors={reportColors(baseline, plannedMuscles)} size={150} />
               <p className="display text-lg font-extrabold text-grit">{baseline!.score}</p>
             </div>
           )}
           <div className="text-center">
             <p className="label-cap text-[9px] text-grit-dim">NOW</p>
-            <MuscleDiagram gradeColors={reportColors(current)} size={150} />
+            <MuscleDiagram gradeColors={reportColors(current, plannedMuscles)} size={150} />
             <p className="display text-lg font-extrabold text-grit">{current.score}</p>
           </div>
         </div>
         <p className="mt-2 text-center text-[10px] text-grit-dim">
           Colour shows the real grade of each muscle—not training volume or a body transformation.
         </p>
+        <div className="mt-4 grid grid-cols-2 gap-2 border-t border-grit pt-4">
+          {GRADED_MUSCLES.map((muscle) => {
+            const grade = current.muscles.find((item) => item.muscle === muscle);
+            const planned = plannedMuscles.has(muscle);
+            return (
+              <div key={muscle} className="rounded-xl border border-grit bg-black/30 px-3 py-2">
+                <p className="label-cap text-[9px] text-grit">{muscle}</p>
+                <p
+                  className="mt-0.5 text-[9px] leading-tight"
+                  style={{ color: grade ? TIER_COLOR[grade.tier] : "#777" }}
+                >
+                  {grade
+                    ? `${grade.tier} · ${grade.exercises.length} lift${grade.exercises.length === 1 ? "" : "s"}`
+                    : planned
+                      ? "Exercises set · log weighted sets"
+                      : "No exercises set for that"}
+                </p>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </section>
   );
