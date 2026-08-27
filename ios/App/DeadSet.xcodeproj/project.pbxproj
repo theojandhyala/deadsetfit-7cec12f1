@@ -41,6 +41,14 @@
 		DEADFA00000000000000002B /* HapticsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA00000000000000002A /* HapticsPlugin.swift */; };
 		DEADFA000000000000000029 /* WatchProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000019 /* WatchProtocol.swift */; };
 		DEADFA00000000000000000C /* DeadSetWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000002 /* DeadSetWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		DEADFA000000000000000042 /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000041 /* WidgetSnapshot.swift */; };
+		DEADFA000000000000000043 /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000041 /* WidgetSnapshot.swift */; };
+		DEADFA000000000000000045 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000044 /* WorkoutActivityAttributes.swift */; };
+		DEADFA000000000000000046 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000044 /* WorkoutActivityAttributes.swift */; };
+		DEADFA000000000000000048 /* WidgetBridgePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000047 /* WidgetBridgePlugin.swift */; };
+		DEADFA00000000000000004A /* WorkoutActivityPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000049 /* WorkoutActivityPlugin.swift */; };
+		DEADFA00000000000000004C /* DeadSetWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA00000000000000004B /* DeadSetWidgets.swift */; };
+		DEADFA00000000000000004E /* WorkoutLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA00000000000000004D /* WorkoutLiveActivity.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -124,6 +132,13 @@
 		DEADFA00000000000000001A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		DEADFA00000000000000001B /* DeadSetWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DeadSetWatch.entitlements; sourceTree = "<group>"; };
 		DEADFA00000000000000001C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		DEADFA000000000000000041 /* WidgetSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshot.swift; sourceTree = "<group>"; };
+		DEADFA000000000000000044 /* WorkoutActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutActivityAttributes.swift; sourceTree = "<group>"; };
+		DEADFA000000000000000047 /* WidgetBridgePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetBridgePlugin.swift; sourceTree = "<group>"; };
+		DEADFA000000000000000049 /* WorkoutActivityPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutActivityPlugin.swift; sourceTree = "<group>"; };
+		DEADFA00000000000000004B /* DeadSetWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeadSetWidgets.swift; sourceTree = "<group>"; };
+		DEADFA00000000000000004D /* WorkoutLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivity.swift; sourceTree = "<group>"; };
+		DEADFA00000000000000004F /* DeadSetRestActivity.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DeadSetRestActivity.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -196,6 +211,8 @@
 		504EC3061FED79650016851F /* App */ = {
 			isa = PBXGroup;
 			children = (
+				DEADFA000000000000000047 /* WidgetBridgePlugin.swift */,
+				DEADFA000000000000000049 /* WorkoutActivityPlugin.swift */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				DD5E4C092E0B11F0AA010001 /* HealthKitPlugin.swift */,
@@ -227,6 +244,9 @@
 		FA178EE0662B3E2CF1AFBE13 /* DeadSetRestActivity */ = {
 			isa = PBXGroup;
 			children = (
+				DEADFA00000000000000004B /* DeadSetWidgets.swift */,
+				DEADFA00000000000000004D /* WorkoutLiveActivity.swift */,
+				DEADFA00000000000000004F /* DeadSetRestActivity.entitlements */,
 				9774CA8A1B7939BB8417C6C0 /* RestActivityAttributes.swift */,
 				B7676950F92E00726A64E17C /* RestLiveActivity.swift */,
 				90732EDC0FD9422339C4BA5E /* Assets.xcassets */,
@@ -257,6 +277,8 @@
 		DEADFA000000000000000004 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				DEADFA000000000000000041 /* WidgetSnapshot.swift */,
+				DEADFA000000000000000044 /* WorkoutActivityAttributes.swift */,
 				DEADFA000000000000000019 /* WatchProtocol.swift */,
 			);
 			path = Shared;
@@ -401,6 +423,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DEADFA000000000000000042 /* WidgetSnapshot.swift in Sources */,
+				DEADFA000000000000000045 /* WorkoutActivityAttributes.swift in Sources */,
+				DEADFA000000000000000048 /* WidgetBridgePlugin.swift in Sources */,
+				DEADFA00000000000000004A /* WorkoutActivityPlugin.swift in Sources */,
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				DD5E4C0A2E0B11F0AA010001 /* HealthKitPlugin.swift in Sources */,
 				DD5E4C0C2E0B11F0AA010003 /* MyViewController.swift in Sources */,
@@ -418,6 +444,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DEADFA000000000000000043 /* WidgetSnapshot.swift in Sources */,
+				DEADFA000000000000000046 /* WorkoutActivityAttributes.swift in Sources */,
+				DEADFA00000000000000004C /* DeadSetWidgets.swift in Sources */,
+				DEADFA00000000000000004E /* WorkoutLiveActivity.swift in Sources */,
 				316C2D96387D8DBFE8B2CADA /* RestActivityAttributes.swift in Sources */,
 				EEB7161F538A742A62782921 /* RestLiveActivity.swift in Sources */,
 			);
@@ -661,6 +691,7 @@
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
 				MARKETING_VERSION = 1.0;
+				CODE_SIGN_ENTITLEMENTS = DeadSetRestActivity/DeadSetRestActivity.entitlements;
 				PRODUCT_BUNDLE_IDENTIFIER = org.deadsetfit.app.RestActivity;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -686,6 +717,7 @@
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
 				MARKETING_VERSION = 1.0;
+				CODE_SIGN_ENTITLEMENTS = DeadSetRestActivity/DeadSetRestActivity.entitlements;
 				PRODUCT_BUNDLE_IDENTIFIER = org.deadsetfit.app.RestActivity;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;

@@ -90,3 +90,60 @@ id defined and referenced, every target registered, every file reference
 resolving to a real path — and runs as part of `npm run check`. It is not a
 substitute for opening the project once, but it turns a parse failure into a
 caught error rather than a confusing one.
+
+---
+
+# Live Activities and widgets
+
+Both live in the **existing** `DeadSetRestActivity` extension rather than new
+targets. It is already a `com.apple.widgetkit-extension`, and one WidgetBundle
+can host Live Activities and home-screen widgets together — so this is one
+target, one App ID and one provisioning profile instead of three.
+
+`DeadSetWidgetBundle` in `RestLiveActivity.swift` lists everything the
+extension provides:
+
+- `RestLiveActivity` — the rest countdown (already shipped).
+- `WorkoutLiveActivity` — the live session: current movement, sets against the
+  plan, tonnage, PRs, and a running clock.
+- `StreakWidget` — small home-screen plus all three Lock Screen accessory
+  families.
+- `RankWidget` — medium: rank, grit, rank progress and the week.
+
+## The App Group is not optional
+
+A widget runs in its own process and **cannot see the WKWebView's
+localStorage**, where all DEADSET training data lives. The app therefore writes
+a `WidgetSnapshot` into a shared App Group container and the widget reads it
+there.
+
+`group.org.deadsetfit.app` is declared in **both** `App.entitlements` and
+`DeadSetRestActivity.entitlements`. It must also be enabled on both App IDs in
+the developer account. **If it is not, the build will fail to install with an
+entitlement mismatch — this is not a silent degradation.** Automatic signing
+will offer to create the group on first archive.
+
+## Why the widget never polls
+
+`getTimeline` returns a single entry with `policy: .never`. The data only moves
+when the athlete does something in the app, so the app calls
+`WidgetCenter.reloadAllTimelines()` at that moment instead. A polling schedule
+would spend the system refresh budget re-reading a file that has not changed.
+
+For the same reason the web layer publishes only when the snapshot's _contents_
+differ (`_tabs.tsx` compares the serialised payload). Publishing on every state
+write — every set, every glass of water — would burn the reload budget and get
+the app throttled out of the updates that matter.
+
+## Why the session clock is never pushed
+
+`startedAt` goes into the Live Activity's content state once, and iOS renders
+elapsed time from it. Live Activity updates are rate-limited and over-budget
+ones are dropped, so a clock that depended on them would stutter or freeze
+exactly when the app is suspended — which, mid-set, it usually is. The app only
+pushes an update when a set actually lands.
+
+`end()` ends _every_ workout activity, not just the one this process started:
+an activity outlives the app that requested it, so after a relaunch mid-session
+the tracked id is gone while the card is still on the Lock Screen. Leaving one
+there forever is the worst failure this feature has.

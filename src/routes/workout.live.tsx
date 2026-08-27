@@ -53,6 +53,7 @@ import {
   hapticUndo,
   hapticWorkoutComplete,
 } from "@/lib/haptics";
+import { endWorkoutActivity, syncWorkoutActivity } from "@/lib/workout-activity";
 import {
   clearWatch,
   drainWatchActions,
@@ -673,6 +674,14 @@ function LiveWorkoutPage() {
     void publishToWatch(state, session);
   }, [state, session]);
 
+  // The Lock Screen and Dynamic Island follow the same moments. Only a live,
+  // unfinished session gets an activity — finishWorkout ends it explicitly, so
+  // this effect never has to guess whether a session is over.
+  useEffect(() => {
+    if (!session || session.endedAt) return;
+    void syncWorkoutActivity(session, activeIdx);
+  }, [session, activeIdx]);
+
   useEffect(() => {
     let disposed = false;
     let unsubscribe: (() => void) | undefined;
@@ -1218,6 +1227,7 @@ function LiveWorkoutPage() {
     // to publish it: the app is often backgrounded the moment a workout ends,
     // and a wrist still showing a live session is worse than a blank one.
     void clearWatch();
+    void endWorkoutActivity();
     hapticWorkoutComplete();
     emitGritEarned(50, "WORKOUT COMPLETE", "quest");
     // Apple Health export (native iOS, user-enabled): rings + watch credit.
@@ -1245,6 +1255,8 @@ function LiveWorkoutPage() {
       sessions: st.sessions.filter((s) => s.id !== session!.id),
       activeSessionId: null,
     }));
+    void clearWatch();
+    void endWorkoutActivity();
     nav({ to: "/train" });
   }
 

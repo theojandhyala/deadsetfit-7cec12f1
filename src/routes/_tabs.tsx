@@ -24,6 +24,7 @@ import { runStreakArmor } from "@/lib/streak-armor";
 import { importHealthWorkouts, healthSupported } from "@/lib/health";
 import { usePro } from "@/hooks/usePro";
 import { FeatureTour } from "@/components/FeatureTour";
+import { buildWidgetSnapshot, publishWidgets } from "@/lib/widgets";
 
 export const Route = createFileRoute("/_tabs")({
   component: TabsLayout,
@@ -173,6 +174,20 @@ function TabsLayout() {
       if (next) set(() => next);
     });
   }, [ready, state.profile, state.healthSync?.enabled, state.healthSync?.importWorkouts, set]);
+
+  // Home-screen and Lock Screen widgets. Published only when the numbers a
+  // widget actually draws have changed: WidgetCenter.reloadAllTimelines has a
+  // system refresh budget, and firing it on every state write — every set,
+  // every glass of water — would spend that budget and get the app throttled
+  // out of the updates that matter.
+  const lastWidgetPayload = useRef<string | null>(null);
+  useEffect(() => {
+    if (!ready) return;
+    const snapshot = JSON.stringify(buildWidgetSnapshot(state));
+    if (snapshot === lastWidgetPayload.current) return;
+    lastWidgetPayload.current = snapshot;
+    void publishWidgets(state);
+  }, [ready, state]);
 
   if (!ready) {
     return (

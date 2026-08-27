@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Structural check for the Xcode project file.
+ * Structural checks for the iOS project, for the many environments where Xcode
+ * is not available.
  *
  * `project.pbxproj` is edited by hand here — Xcode is not available in CI or in
  * the environments this repo is often worked on — and a malformed one fails
@@ -234,6 +235,67 @@ for (const relativeRoot of sourceRoots) {
   }
 }
 
+// --- Swift brace balance ---------------------------------------------------
+// Not a compiler, and not pretending to be one. But an unbalanced brace is the
+// single most common way hand-edited Swift breaks, and catching it here costs
+// milliseconds against a twenty-minute cloud archive that fails at the end.
+function swiftBalance(text) {
+  let depth = 0;
+  let inString = false;
+  let inBlockComment = false;
+  let inLineComment = false;
+  for (let i = 0; i < text.length; i += 1) {
+    const c = text[i];
+    const next = text[i + 1];
+    if (inLineComment) {
+      if (c === "\n") inLineComment = false;
+      continue;
+    }
+    if (inBlockComment) {
+      if (c === "*" && next === "/") {
+        inBlockComment = false;
+        i += 1;
+      }
+      continue;
+    }
+    if (inString) {
+      if (c === "\\") i += 1;
+      else if (c === '"') inString = false;
+      continue;
+    }
+    if (c === "/" && next === "/") {
+      inLineComment = true;
+      i += 1;
+      continue;
+    }
+    if (c === "/" && next === "*") {
+      inBlockComment = true;
+      i += 1;
+      continue;
+    }
+    if (c === '"') {
+      inString = true;
+      continue;
+    }
+    if (c === "{") depth += 1;
+    if (c === "}") depth -= 1;
+    if (depth < 0) return "an unmatched '}'";
+  }
+  return depth === 0 ? null : `${depth} unclosed '{'`;
+}
+
+let swiftChecked = 0;
+for (const relativeRoot of sourceRoots) {
+  const dir = join(projectDir, relativeRoot);
+  if (!existsSync(dir)) continue;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith(".swift")) continue;
+    swiftChecked += 1;
+    const problem = swiftBalance(readFileSync(join(dir, entry.name), "utf8"));
+    if (problem) fail(`${relativeRoot}/${entry.name} has ${problem}`);
+  }
+}
+
 // --- report ----------------------------------------------------------------
 if (failures.length > 0) {
   console.error("Xcode project check FAILED:\n");
@@ -241,5 +303,6 @@ if (failures.length > 0) {
   process.exit(1);
 }
 console.log(
-  `Xcode project check passed: ${defined.size} objects, targets: ${targetNames.join(", ")}.`,
+  `iOS project check passed: ${defined.size} objects, ${swiftChecked} Swift files, ` +
+    `targets: ${targetNames.join(", ")}.`,
 );

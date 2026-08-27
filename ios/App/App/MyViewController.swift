@@ -14,5 +14,7 @@ class MyViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(StoreKitPlugin())
         bridge?.registerPluginInstance(WatchBridgePlugin())
         bridge?.registerPluginInstance(HapticsPlugin())
+        bridge?.registerPluginInstance(WidgetBridgePlugin())
+        bridge?.registerPluginInstance(WorkoutActivityPlugin())
     }
 }
