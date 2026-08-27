@@ -23,7 +23,9 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "start": "node server.js",
-    "check:xcodeproj": "node scripts/check-xcodeproj.mjs"
+    "check:xcodeproj": "node scripts/check-xcodeproj.mjs",
+    "render:cards": "node scripts/render-cards.mjs",
+    "render:body": "node scripts/render-cards.mjs --body"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",
