@@ -78,6 +78,11 @@ export interface Exercise {
   proTip?: string;
   isCompound?: boolean;
   isCustom?: boolean;
+  /**
+   * How the movement is measured. Omitted means load x reps, which is also
+   * what `trackingModeFor` infers for anything that isn't a hold or cardio.
+   */
+  tracking?: "WEIGHT" | "DURATION" | "DISTANCE";
   /** Start time in seconds for action clip (defaults to 5) */
   clipStart?: number;
   /** End time in seconds for action clip (defaults to clipStart + 6) */
@@ -192,6 +197,16 @@ export interface CompletedSet {
   isAmrap?: boolean;
   /** Warm-up sets are excluded from volume and PRs; drop sets count as volume but never PR. */
   kind?: "warmup" | "drop";
+  /**
+   * Set to measure this effort in time or distance instead of reps. Such sets
+   * always store `reps: 0`, so every load x reps volume and PR calculation in
+   * the app contributes nothing for them without needing to know they exist.
+   */
+  mode?: "duration" | "distance";
+  /** Time under tension for a hold, or elapsed time for a distance effort. */
+  seconds?: number;
+  /** Distance covered, in metres. */
+  meters?: number;
 }
 
 export interface WorkoutSessionExercise {
@@ -209,6 +224,12 @@ export interface WorkoutSessionExercise {
   note?: string;
   /** Stable within a session; exercises sharing an id are performed as one round. */
   supersetId?: string;
+  /** How this movement is logged. Resolved once when the session is built. */
+  tracking?: "WEIGHT" | "DURATION" | "DISTANCE";
+  /** Target hold or effort length in seconds, for time-based movements. */
+  targetSeconds?: number;
+  /** Added mid-session rather than planned, so the plan can offer to keep it. */
+  addedLive?: boolean;
   sets: CompletedSet[];
 }
 

@@ -19,6 +19,7 @@ import { useAppState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
 import { estimate1RM } from "@/lib/calc";
 import { OneRmCalculator } from "@/components/OneRmCalculator";
+import { formatDistance, formatDuration, timedBestsFor } from "@/lib/set-tracking";
 import type { SetLog, AppState } from "@/lib/types";
 
 export const Route = createFileRoute("/_tabs/lift/$exerciseId")({
@@ -46,6 +47,9 @@ function gatherLogs(state: AppState, exerciseId: string): SetLog[] {
       .filter((e) => e.exerciseId === exerciseId)
       .forEach((e) =>
         e.sets.forEach((set) => {
+          // Timed and distance efforts have no weight-and-reps pair: charting
+          // them would draw a 20 kg "top set" for a weighted plank.
+          if (set.mode) return;
           sessionDays.add(s.date.slice(0, 10));
           out.push({ exerciseId, weight: set.weight, reps: set.reps, date: s.date });
         }),
@@ -67,6 +71,11 @@ function LiftDetailPage() {
   const name = ex?.name ?? exerciseId.replace(/-/g, " ");
 
   const all = useMemo(() => gatherLogs(state, exerciseId), [state, exerciseId]);
+  // Holds and carries keep their own records — they never reach the 1RM chart.
+  const timedBests = useMemo(
+    () => timedBestsFor(state.sessions, exerciseId),
+    [state.sessions, exerciseId],
+  );
 
   const cutoff = Date.now() - range.days * 86400000;
   const logs = all.filter((l) => new Date(l.date).getTime() >= cutoff);
@@ -124,6 +133,27 @@ function LiftDetailPage() {
           <h1 className="display text-2xl font-extrabold uppercase text-grit truncate">{name}</h1>
         </div>
       </header>
+
+      {(timedBests.seconds > 0 || timedBests.meters > 0) && (
+        <section className="px-5 mb-4 grid grid-cols-2 gap-3">
+          {timedBests.seconds > 0 && (
+            <div className="bg-grit-card border border-grit p-3">
+              <p className="label-cap text-[10px] text-grit-dim">LONGEST HOLD</p>
+              <p className="display text-3xl font-extrabold text-accent-red leading-none mt-1">
+                {formatDuration(timedBests.seconds)}
+              </p>
+            </div>
+          )}
+          {timedBests.meters > 0 && (
+            <div className="bg-grit-card border border-grit p-3">
+              <p className="label-cap text-[10px] text-grit-dim">FURTHEST</p>
+              <p className="display text-3xl font-extrabold text-accent-red leading-none mt-1">
+                {formatDistance(timedBests.meters)}
+              </p>
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="px-5 mb-4 grid grid-cols-2 gap-3">
         <div className="bg-grit-card border border-grit p-3">

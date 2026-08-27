@@ -13,6 +13,9 @@ import {
   Ghost,
   Pencil,
   Link2,
+  ListPlus,
+  Timer,
+  StickyNote,
 } from "lucide-react";
 import { useAppState, getState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
@@ -40,14 +43,29 @@ import {
   nextStepAfterWorkingSet,
   supersetPosition,
 } from "@/lib/workout-flow";
+import { indexAfterMove, indexAfterRemoval, moveItem } from "@/lib/session-edit";
+import {
+  formatDistance,
+  formatDuration,
+  formatSet,
+  isTimedPersonalRecord,
+  parseDurationTarget,
+  setVolume,
+  timedBestsFor,
+  trackingModeFor,
+  type TrackingMode,
+} from "@/lib/set-tracking";
 import { VideoModal } from "@/components/VideoModal";
 import { ShareCard } from "@/components/ShareCard";
 import { GritEarnedLayer } from "@/components/GritEarnedLayer";
 import { RestTimer } from "@/components/RestTimer";
 import { FormCoaching } from "@/components/FormCoaching";
 import { SessionReflection } from "@/components/SessionReflection";
+import { SessionExerciseSheet } from "@/components/SessionExerciseSheet";
 import type {
   AppState,
+  Exercise,
+  ExercisePlan,
   WorkoutSession,
   WorkoutSessionExercise,
   CompletedSet,
@@ -57,6 +75,16 @@ import type {
 } from "@/lib/types";
 
 type WorkoutSource = "auto" | "program" | "schedule";
+
+/** One set as the logger hands it over, before PR and rest handling. */
+type LoggedEntry = {
+  weight: number;
+  reps: number;
+  kind?: "warmup" | "drop";
+  mode?: "duration" | "distance";
+  seconds?: number;
+  meters?: number;
+};
 type LiveWorkoutSearch = {
   day?: DayKey;
   source?: Exclude<WorkoutSource, "auto">;
@@ -78,6 +106,23 @@ export const Route = createFileRoute("/workout/live")({
 
 function getScheduleForState(state: ReturnType<typeof useAppState>[0]) {
   return state.schedule ?? (state.profile ? defaultSchedule(state.profile) : null);
+}
+
+/**
+ * How a movement in this session should be logged. Resolved once, when the
+ * session is built, so a mid-session library edit can't change the units of
+ * sets already recorded against it.
+ */
+function resolveTracking(
+  state: ReturnType<typeof useAppState>[0],
+  exerciseId: string,
+  name: string,
+  reps: string | undefined,
+): { tracking: TrackingMode; targetSeconds?: number } {
+  const definition = getExercise(exerciseId, state.savedExercises);
+  const tracking = trackingModeFor({ name, tracking: definition?.tracking }, reps);
+  const targetSeconds = tracking === "DURATION" ? (parseDurationTarget(reps) ?? 45) : undefined;
+  return { tracking, ...(targetSeconds ? { targetSeconds } : {}) };
 }
 
 function buildSession(
@@ -120,6 +165,7 @@ function buildSession(
               prescription && prescription.prescribedWeightKg > 0
                 ? prescription.prescribedWeightKg
                 : undefined,
+            ...resolveTracking(state, it.id, it.name, it.reps),
             sets: [],
           };
         }),
@@ -159,6 +205,12 @@ function buildSession(
         tempo: cfg?.tempo,
         note: cfg?.note,
         supersetId: supersetIds[index],
+        ...resolveTracking(
+          state,
+          eid,
+          ex?.name ?? eid,
+          cfg?.reps ?? d.reps ?? ex?.reps ?? "8-12",
+        ),
         sets: [],
       };
     }),
@@ -184,8 +236,9 @@ function bestsFor(state: AppState, exerciseId: string): { bestWeight: number; be
   state.sessions.forEach((s) =>
     s.exercises.forEach((e) => {
       if (e.exerciseId !== exerciseId) return;
-      // Warm-up and drop sets never count toward a lift's best (and so never PR).
-      e.sets.forEach((cs) => cs.kind || consider(cs.weight, cs.reps));
+      // Warm-ups, drop sets and timed efforts never count toward a lift's
+      // load x reps best (and so never PR against it).
+      e.sets.forEach((cs) => cs.kind || cs.mode || consider(cs.weight, cs.reps));
     }),
   );
   return { bestWeight, bestBwReps };
@@ -486,6 +539,8 @@ function LiveWorkoutPage() {
   const [finishedSessionId, setFinishedSessionId] = useState<string | null>(null);
   const [share, setShare] = useState(false);
   const [rest, setRest] = useState<{ seconds: number; nextIndex: number } | null>(null);
+  const [managing, setManaging] = useState(false);
+  const [noting, setNoting] = useState(false);
   const restPref = state.restTimerSeconds ?? 90;
 
   const totals = useMemo(() => {
@@ -496,7 +551,7 @@ function LiveWorkoutPage() {
     session.exercises.forEach((e) => {
       e.sets.forEach((s) => {
         if (s.kind === "warmup") return; // warm-ups aren't working volume
-        vol += s.weight * s.reps;
+        vol += setVolume(s);
         sets += 1;
         if (s.isPR) prs += 1;
       });
@@ -546,6 +601,31 @@ function LiveWorkoutPage() {
       activeExercise && session ? ghostSets(state, activeExercise.exerciseId, session.id) : [],
     [state, activeExercise, session],
   );
+  const timedBests = useMemo(
+    () =>
+      activeExercise && session
+        ? timedBestsFor(state.sessions, activeExercise.exerciseId, session.id)
+        : { seconds: 0, meters: 0 },
+    [state.sessions, activeExercise, session],
+  );
+
+  /**
+   * The same workout, last time you did it. Strong shows you the last set;
+   * this shows whether the whole session is ahead — the number that actually
+   * says if you are progressing.
+   */
+  const lastTime = useMemo(() => {
+    if (!session) return null;
+    const previous = state.sessions
+      .filter((s) => s.endedAt && s.id !== session.id && s.label === session.label)
+      .sort((a, b) => b.startedAt.localeCompare(a.startedAt))[0];
+    if (!previous) return null;
+    const volume = previous.exercises.reduce(
+      (sum, e) => sum + e.sets.reduce((inner, cs) => inner + setVolume(cs), 0),
+      0,
+    );
+    return volume > 0 ? { volume, date: previous.date } : null;
+  }, [state.sessions, session]);
 
   // Pre-logged defaults: allocated weight from the schedule → last session
   // containing the exercise → smart suggestion → bodyweight (0).
@@ -667,7 +747,8 @@ function LiveWorkoutPage() {
     Math.round((completedPlanSets / Math.max(1, plannedSets)) * 100),
   );
 
-  function logSet(weight: number, reps: number, kind?: "warmup" | "drop") {
+  function logSet(entry: LoggedEntry) {
+    const { weight, reps, kind, mode, seconds, meters } = entry;
     const ex = session!.exercises[activeIdx];
     if (!ex) return;
     // Compute the PR flag INSIDE the updater against fresh state, so a rapid
@@ -678,27 +759,44 @@ function LiveWorkoutPage() {
     // fresh state that decided the PR, before the new set is written into it.
     let prPreviousBest = 0;
     let prIsBodyweight = false;
+    // Timed and distance efforts get their own record line, and no share card:
+    // the PR card is built around a load and a rep count.
+    let timedPRLabel: string | null = null;
     set((st) => {
-      const { bestWeight, bestBwReps } = bestsFor(st, ex.exerciseId);
       const definition = getExercise(ex.exerciseId, st.savedExercises);
-      const supportsBodyweight = definition?.equipment.includes("BODYWEIGHT") ?? false;
-      awardedPR = isPersonalRecord({
-        weight,
-        reps,
-        bestWeight,
-        bestBodyweightReps: bestBwReps,
-        supportsBodyweight,
-        specialSet: !!kind,
-      });
-      if (awardedPR) {
-        prIsBodyweight = weight <= 0;
-        prPreviousBest = prIsBodyweight ? bestBwReps : bestWeight;
+      if (mode) {
+        const bests = timedBestsFor(st.sessions, ex.exerciseId, session!.id);
+        awardedPR = isTimedPersonalRecord({ mode, seconds, meters, kind }, bests);
+        if (awardedPR) {
+          timedPRLabel =
+            mode === "duration"
+              ? formatDuration(seconds ?? 0)
+              : `${Math.round(meters ?? 0)}m`;
+        }
+      } else {
+        const { bestWeight, bestBwReps } = bestsFor(st, ex.exerciseId);
+        const supportsBodyweight = definition?.equipment.includes("BODYWEIGHT") ?? false;
+        awardedPR = isPersonalRecord({
+          weight,
+          reps,
+          bestWeight,
+          bestBodyweightReps: bestBwReps,
+          supportsBodyweight,
+          specialSet: !!kind,
+        });
+        if (awardedPR) {
+          prIsBodyweight = weight <= 0;
+          prPreviousBest = prIsBodyweight ? bestBwReps : bestWeight;
+        }
       }
       const newSet: CompletedSet = {
         weight,
         reps,
         ...(awardedPR ? { isPR: true } : {}),
         ...(kind ? { kind } : {}),
+        ...(mode ? { mode } : {}),
+        ...(seconds ? { seconds } : {}),
+        ...(meters ? { meters } : {}),
       };
       return {
         ...st,
@@ -716,18 +814,22 @@ function LiveWorkoutPage() {
     });
     if (awardedPR) {
       // Undo + re-tick must not farm the award twice.
-      const key = `${ex.exerciseId}:${weight}:${reps}`;
+      const key = `${ex.exerciseId}:${weight}:${reps}:${seconds ?? 0}:${meters ?? 0}`;
       if (!prAwardedRef.current.has(key)) {
         prAwardedRef.current.add(key);
-        emitGritEarned(25, `NEW PR — ${ex.name.toUpperCase()}`, "pr", {
-          pr: {
-            exercise: ex.name,
-            weight,
-            reps,
-            ...(prPreviousBest > 0 ? { previousBest: prPreviousBest } : {}),
-            ...(prIsBodyweight ? { bodyweight: true } : {}),
-          },
-        });
+        if (timedPRLabel) {
+          emitGritEarned(25, `NEW PR — ${ex.name.toUpperCase()} ${timedPRLabel}`, "pr");
+        } else {
+          emitGritEarned(25, `NEW PR — ${ex.name.toUpperCase()}`, "pr", {
+            pr: {
+              exercise: ex.name,
+              weight,
+              reps,
+              ...(prPreviousBest > 0 ? { previousBest: prPreviousBest } : {}),
+              ...(prIsBodyweight ? { bodyweight: true } : {}),
+            },
+          });
+        }
       }
     }
     // Superset movements rotate immediately and rest only after a full round.
@@ -745,22 +847,175 @@ function LiveWorkoutPage() {
     setRest({ seconds: exerciseRest, nextIndex: step.nextIndex });
   }
 
+  /** Rewrite this session in place, leaving every other session untouched. */
+  function mutateSession(fn: (s: WorkoutSession) => WorkoutSession) {
+    set((st) => ({
+      ...st,
+      sessions: st.sessions.map((s) => (s.id === session!.id ? fn(s) : s)),
+    }));
+  }
+
+  /** Rewrite one exercise of this session in place. */
+  function mutateExercise(
+    index: number,
+    fn: (e: WorkoutSessionExercise) => WorkoutSessionExercise,
+  ) {
+    mutateSession((s) => ({
+      ...s,
+      exercises: s.exercises.map((e, i) => (i === index ? fn(e) : e)),
+    }));
+  }
+
   function undoLastSet() {
     const ex = session!.exercises[activeIdx];
     if (!ex || ex.sets.length === 0) return;
-    set((st) => ({
-      ...st,
-      sessions: st.sessions.map((s) =>
-        s.id === session!.id
+    mutateExercise(activeIdx, (e) => ({ ...e, sets: e.sets.slice(0, -1) }));
+  }
+
+  /**
+   * Correct a set that was already ticked. Every logged set stays editable for
+   * the length of the session — a mis-tapped weight three sets ago shouldn't
+   * mean unwinding everything after it.
+   */
+  function editSet(setIndex: number, patch: LoggedEntry) {
+    mutateExercise(activeIdx, (e) => ({
+      ...e,
+      sets: e.sets.map((cs, i) =>
+        i === setIndex
           ? {
-              ...s,
-              exercises: s.exercises.map((e, i) =>
-                i === activeIdx ? { ...e, sets: e.sets.slice(0, -1) } : e,
-              ),
+              ...cs,
+              weight: patch.weight,
+              reps: patch.reps,
+              ...(patch.seconds ? { seconds: patch.seconds } : { seconds: undefined }),
+              ...(patch.meters ? { meters: patch.meters } : { meters: undefined }),
             }
-          : s,
+          : cs,
       ),
     }));
+  }
+
+  function deleteSet(setIndex: number) {
+    mutateExercise(activeIdx, (e) => ({
+      ...e,
+      sets: e.sets.filter((_, i) => i !== setIndex),
+    }));
+  }
+
+  /** Per-exercise rest, changed on the gym floor and kept for next time. */
+  function setExerciseRest(seconds: number) {
+    const ex = session!.exercises[activeIdx];
+    if (!ex) return;
+    mutateExercise(activeIdx, (e) => ({ ...e, restSeconds: seconds }));
+    persistToPlan(ex.exerciseId, { restSeconds: seconds });
+  }
+
+  /** A cue written mid-session, kept on the plan so it shows up next time. */
+  function setExerciseNote(note: string) {
+    const ex = session!.exercises[activeIdx];
+    if (!ex) return;
+    const trimmed = note.trim();
+    mutateExercise(activeIdx, (e) => ({ ...e, note: trimmed || undefined }));
+    persistToPlan(ex.exerciseId, { note: trimmed || undefined });
+  }
+
+  /**
+   * Write one field back onto the day's plan, so an adjustment made during a
+   * workout survives into the next one. Only touches the scheduled day — a
+   * session started from a programme leaves the programme alone.
+   */
+  function persistToPlan(exerciseId: string, patch: Partial<ExercisePlan>) {
+    set((st) => {
+      const schedule = st.schedule ?? (st.profile ? defaultSchedule(st.profile) : null);
+      const day = schedule?.[session!.dayKey];
+      if (!schedule || !day || !day.exerciseIds.includes(exerciseId)) return st;
+      const config = { ...(day.exerciseConfig ?? {}) };
+      const next = { ...(config[exerciseId] ?? {}), ...patch };
+      // Clearing a note shouldn't leave an empty key behind.
+      for (const key of Object.keys(next) as Array<keyof ExercisePlan>) {
+        if (next[key] === undefined) delete next[key];
+      }
+      config[exerciseId] = next;
+      return {
+        ...st,
+        schedule: { ...schedule, [session!.dayKey]: { ...day, exerciseConfig: config } },
+      };
+    });
+  }
+
+  /** Add a movement that wasn't planned — the rack was taken, or you felt good. */
+  function addExerciseLive(exercise: Exercise) {
+    const alreadyThere = session!.exercises.findIndex((e) => e.exerciseId === exercise.id);
+    if (alreadyThere >= 0) {
+      setActiveIdx(alreadyThere);
+      return;
+    }
+    const entry: WorkoutSessionExercise = {
+      exerciseId: exercise.id,
+      name: exercise.name,
+      primary_muscles: [exercise.muscleGroup],
+      targetSets: exercise.sets,
+      targetReps: exercise.reps,
+      addedLive: true,
+      ...resolveTracking(state, exercise.id, exercise.name, exercise.reps),
+      sets: [],
+    };
+    mutateSession((s) => ({ ...s, exercises: [...s.exercises, entry] }));
+    setActiveIdx(session!.exercises.length);
+  }
+
+  /**
+   * Swap the movement in this slot for another. Logged sets belong to the old
+   * movement, so a swap after work is done is refused rather than silently
+   * reattributing them — remove and add instead.
+   */
+  async function replaceExerciseLive(exercise: Exercise) {
+    const current = session!.exercises[activeIdx];
+    if (!current) return;
+    if (current.sets.length > 0) {
+      const ok = await askConfirm({
+        title: `Drop ${current.sets.length} logged ${current.sets.length === 1 ? "set" : "sets"}?`,
+        message: `Those sets were logged against ${current.name}. Swapping to ${exercise.name} throws them away.`,
+        confirmLabel: "Swap anyway",
+        danger: true,
+      });
+      if (!ok) return;
+    }
+    mutateExercise(activeIdx, () => ({
+      exerciseId: exercise.id,
+      name: exercise.name,
+      primary_muscles: [exercise.muscleGroup],
+      targetSets: current.targetSets,
+      targetReps: exercise.reps,
+      addedLive: true,
+      ...resolveTracking(state, exercise.id, exercise.name, exercise.reps),
+      sets: [],
+    }));
+  }
+
+  async function removeExerciseLive(index: number) {
+    const target = session!.exercises[index];
+    if (!target) return;
+    if (session!.exercises.length <= 1) return;
+    if (target.sets.length > 0) {
+      const ok = await askConfirm({
+        title: `Remove ${target.name}?`,
+        message: `${target.sets.length} logged ${target.sets.length === 1 ? "set" : "sets"} on this movement will be thrown away.`,
+        confirmLabel: "Remove",
+        danger: true,
+      });
+      if (!ok) return;
+    }
+    const lengthBefore = session!.exercises.length;
+    mutateSession((s) => ({ ...s, exercises: s.exercises.filter((_, i) => i !== index) }));
+    setActiveIdx((i) => indexAfterRemoval(i, index, lengthBefore));
+  }
+
+  /** Reorder the session when the gym floor doesn't match the plan. */
+  function moveExerciseLive(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= session!.exercises.length) return;
+    mutateSession((s) => ({ ...s, exercises: moveItem(s.exercises, index, direction) }));
+    setActiveIdx((i) => indexAfterMove(i, index, direction));
   }
 
   // Tag the effort of the most recently logged set (optional, one tap). Feeds
@@ -800,7 +1055,7 @@ function LiveWorkoutPage() {
       live.exercises.forEach((e) =>
         e.sets.forEach((cs) => {
           if (cs.kind === "warmup") return; // warm-ups aren't working volume
-          totalVolume += cs.weight * cs.reps;
+          totalVolume += setVolume(cs);
           if (cs.isPR) prCount += 1;
         }),
       );
@@ -808,7 +1063,9 @@ function LiveWorkoutPage() {
       live.exercises.forEach((e) => {
         let best: CompletedSet | null = null;
         e.sets.forEach((cs) => {
-          if (cs.weight <= 0 || cs.kind) return; // only true working sets set the best
+          // Only true load x reps working sets set the best: a timed hold has
+          // no weight-and-reps pair to write into the lift log.
+          if (cs.weight <= 0 || cs.kind || cs.mode) return;
           if (
             !best ||
             cs.weight > best.weight ||
@@ -900,7 +1157,41 @@ function LiveWorkoutPage() {
         <Stat label="PRS" value={`${totals.prs}`} accent={totals.prs > 0} />
       </div>
 
-      <div className="flex gap-2 overflow-x-auto px-4 py-3 border-b border-grit">
+      {lastTime && (
+        <div className="border-b border-grit px-4 py-2.5">
+          <div className="flex items-baseline justify-between">
+            <span className="label-cap text-[9px] text-grit-dim">
+              VS LAST {session.label.toUpperCase()}
+            </span>
+            <span
+              className="display text-xs font-extrabold tabular-nums"
+              style={{ color: totals.vol >= lastTime.volume ? "#22c55e" : "#8a8a8a" }}
+            >
+              {totals.vol >= lastTime.volume
+                ? `AHEAD BY ${Math.round(totals.vol - lastTime.volume).toLocaleString()} KG`
+                : `${Math.round(lastTime.volume - totals.vol).toLocaleString()} KG TO GO`}
+            </span>
+          </div>
+          <div className="mt-1.5 h-1.5 rounded-full bg-[#1a1a1a] overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all"
+              style={{
+                width: `${Math.min(100, Math.round((totals.vol / lastTime.volume) * 100))}%`,
+                background: totals.vol >= lastTime.volume ? "#22c55e" : "#e63222",
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 overflow-x-auto px-4 py-3 border-b border-grit">
+        <button
+          onClick={() => setManaging(true)}
+          className="flex-shrink-0 flex h-8 w-8 items-center justify-center border border-grit text-grit-dim press"
+          aria-label="Edit session exercises"
+        >
+          <ListPlus size={15} />
+        </button>
         {session.exercises.map((e, i) => {
           const done = e.targetSets > 0 && completedWorkingSets(e.sets) >= e.targetSets;
           const active = i === activeIdx;
@@ -954,10 +1245,7 @@ function LiveWorkoutPage() {
                 Superset · movement {currentSuperset.position} of {currentSuperset.total}
               </p>
             )}
-            {(current.targetRir != null ||
-              current.tempo ||
-              current.restSeconds ||
-              progressionLabel) && (
+            {(current.targetRir != null || current.tempo || progressionLabel) && (
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {progressionLabel && (
                   <span className="rounded-md border border-amber-300/25 bg-amber-300/[0.06] px-2 py-1 text-[9px] font-black uppercase text-amber-300">
@@ -974,13 +1262,34 @@ function LiveWorkoutPage() {
                     {current.tempo} tempo
                   </span>
                 )}
-                {current.restSeconds != null && (
-                  <span className="rounded-md border border-grit px-2 py-1 text-[9px] font-black uppercase text-grit-dim">
-                    {current.restSeconds}s rest
-                  </span>
-                )}
               </div>
             )}
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <button
+                onClick={() => {
+                  // Cycle the common gym intervals; kept on the plan for next time.
+                  const options = [0, 60, 90, 120, 180];
+                  const now = current.restSeconds ?? restPref;
+                  const next = options[(options.indexOf(now) + 1) % options.length]!;
+                  setExerciseRest(next);
+                }}
+                className="flex items-center gap-1 rounded-md border border-grit px-2 py-1 text-[9px] font-black uppercase text-grit-dim press"
+                aria-label="Change rest for this exercise"
+              >
+                <Timer size={11} />
+                {(current.restSeconds ?? restPref) === 0
+                  ? "no rest"
+                  : `${current.restSeconds ?? restPref}s rest`}
+              </button>
+              <button
+                onClick={() => setNoting(true)}
+                className="flex items-center gap-1 rounded-md border border-grit px-2 py-1 text-[9px] font-black uppercase text-grit-dim press"
+                aria-label="Note for this exercise"
+              >
+                <StickyNote size={11} />
+                {current.note ? "edit note" : "note"}
+              </button>
+            </div>
           </div>
           <div className="flex flex-shrink-0 gap-2">
             <Link
@@ -1016,27 +1325,40 @@ function LiveWorkoutPage() {
           <FormCoaching exerciseId={current.exerciseId} name={current.name} compact />
         </div>
 
-        <SetLogger
-          key={`${session.id}:${activeIdx}`}
-          exercise={current}
-          defaultWeight={defaults.weight}
-          defaultReps={defaults.reps}
-          requiresWeight={
-            !(
-              getExercise(current.exerciseId, state.savedExercises)?.equipment.includes(
-                "BODYWEIGHT",
-              ) ?? false
-            )
-          }
-          history={evolution}
-          suggestion={suggestion}
-          ghost={ghost}
-          isProUser={isPro}
-          proLoading={proLoading}
-          onLog={logSet}
-          onUndo={undoLastSet}
-          onRpe={rpeLastSet}
-        />
+        {current.tracking && current.tracking !== "WEIGHT" ? (
+          <TimedSetLogger
+            key={`${session.id}:${activeIdx}`}
+            exercise={current}
+            bests={timedBests}
+            onLog={logSet}
+            onEditSet={editSet}
+            onDeleteSet={deleteSet}
+          />
+        ) : (
+          <SetLogger
+            key={`${session.id}:${activeIdx}`}
+            exercise={current}
+            defaultWeight={defaults.weight}
+            defaultReps={defaults.reps}
+            requiresWeight={
+              !(
+                getExercise(current.exerciseId, state.savedExercises)?.equipment.includes(
+                  "BODYWEIGHT",
+                ) ?? false
+              )
+            }
+            history={evolution}
+            suggestion={suggestion}
+            ghost={ghost}
+            isProUser={isPro}
+            proLoading={proLoading}
+            onLog={logSet}
+            onUndo={undoLastSet}
+            onRpe={rpeLastSet}
+            onEditSet={editSet}
+            onDeleteSet={deleteSet}
+          />
+        )}
       </div>
 
       <div
@@ -1071,6 +1393,30 @@ function LiveWorkoutPage() {
 
       {videoQuery && (
         <VideoModal query={videoQuery} title={videoTitle} onClose={() => setVideoQuery(null)} />
+      )}
+      {managing && (
+        <SessionExerciseSheet
+          exercises={session.exercises}
+          activeIndex={activeIdx}
+          saved={state.savedExercises}
+          onAdd={addExerciseLive}
+          onReplace={(exercise) => void replaceExerciseLive(exercise)}
+          onRemove={(index) => void removeExerciseLive(index)}
+          onMove={moveExerciseLive}
+          onSelect={setActiveIdx}
+          onClose={() => setManaging(false)}
+        />
+      )}
+      {noting && (
+        <NoteSheet
+          name={current.name}
+          note={current.note ?? ""}
+          onSave={(note) => {
+            setExerciseNote(note);
+            setNoting(false);
+          }}
+          onClose={() => setNoting(false)}
+        />
       )}
       {rest && rest.seconds > 0 && (
         <RestTimer
@@ -1120,6 +1466,8 @@ function SetLogger({
   onLog,
   onUndo,
   onRpe,
+  onEditSet,
+  onDeleteSet,
 }: {
   exercise: WorkoutSessionExercise;
   defaultWeight: number;
@@ -1130,15 +1478,18 @@ function SetLogger({
   ghost: GhostSet[];
   isProUser: boolean;
   proLoading: boolean;
-  onLog: (weight: number, reps: number, kind?: "warmup" | "drop") => void;
+  onLog: (entry: LoggedEntry) => void;
   onUndo: () => void;
   onRpe: (rpe: number) => void;
+  onEditSet: (setIndex: number, patch: LoggedEntry) => void;
+  onDeleteSet: (setIndex: number) => void;
 }) {
   // Pre-logged flow: every set arrives filled from the plan. In the gym you
   // just tick the row — no typing, no timers. Tap the pencil to adjust a
   // pending set if the day deviates from the plan.
   const [override, setOverride] = useState<{ weight: number; reps: number } | null>(null);
   const [editing, setEditing] = useState(false);
+  const [editingSet, setEditingSet] = useState<number | null>(null);
   const [weightError, setWeightError] = useState(false);
   const [extraSets, setExtraSets] = useState(0);
   const editWeightRef = useRef<HTMLInputElement>(null);
@@ -1191,7 +1542,7 @@ function SetLogger({
   }
 
   const fmt = (w: number, r: number) =>
-    w > 0 ? `${w} kg × ${r}` : requiresWeight ? `Set weight · ${r} reps` : `${r} reps`;
+    formatSet({ weight: w, reps: r }, requiresWeight);
 
   return (
     <div className="mt-5 bg-grit-card border border-grit rounded-2xl p-4">
@@ -1324,7 +1675,7 @@ function SetLogger({
             <button
               key={w.pct}
               type="button"
-              onClick={() => onLog(w.weight, w.reps, "warmup")}
+              onClick={() => onLog({ weight: w.weight, reps: w.reps, kind: "warmup" })}
               className="text-[10px] text-grit-dim border border-grit rounded-full px-2 py-0.5 press hover:border-accent-red hover:text-grit"
             >
               {w.weight}kg×{w.reps}
@@ -1345,8 +1696,8 @@ function SetLogger({
               disabled={!done && !isNext}
               onClick={() => {
                 if (done) {
-                  // Only the most recent tick can be taken back.
-                  if (i === logged - 1) onUndo();
+                  // Every logged set stays correctable, not just the last tick.
+                  setEditingSet(i);
                   return;
                 }
                 if (isNext) {
@@ -1354,7 +1705,7 @@ function SetLogger({
                     openWeightEditor();
                     return;
                   }
-                  onLog(nextWeight, nextReps);
+                  onLog({ weight: nextWeight, reps: nextReps });
                 }
               }}
               className="w-full flex items-center justify-between border rounded-xl px-3 py-3 press text-left disabled:opacity-40"
@@ -1391,7 +1742,7 @@ function SetLogger({
                 </span>
               </span>
               <span className="display text-lg font-extrabold text-grit leading-none flex items-center">
-                {done ? fmt(doneSet!.weight, doneSet!.reps) : fmt(nextWeight, nextReps)}
+                {done ? formatSet(doneSet!, requiresWeight) : fmt(nextWeight, nextReps)}
                 {doneSet?.isPR && <Flame size={14} className="ml-2 text-accent-red" />}
                 {isNext && !editing && (
                   <Pencil
@@ -1497,7 +1848,7 @@ function SetLogger({
             // marked (never a PR, but counts as volume).
             const dropW =
               nextWeight > 0 ? Math.max(2.5, Math.round((nextWeight * 0.8) / 2.5) * 2.5) : 0;
-            onLog(dropW, nextReps, "drop");
+            onLog({ weight: dropW, reps: nextReps, kind: "drop" });
           }}
           className="w-full border border-dashed border-accent-red/40 rounded-xl py-2.5 label-cap text-[10px] text-accent-red press"
         >
@@ -1530,8 +1881,488 @@ function SetLogger({
       )}
 
       <p className="text-xs text-grit-dim mt-3 leading-relaxed">
-        Tap a set to tick it off — swipe for the next exercise. PRs are detected automatically.
+        Tap a set to tick it off, or tap a logged one to fix it — swipe for the next exercise. PRs
+        are detected automatically.
       </p>
+
+      {editingSet !== null && exercise.sets[editingSet] && (
+        <SetEditorSheet
+          set={exercise.sets[editingSet]!}
+          index={editingSet}
+          requiresWeight={requiresWeight}
+          onSave={(patch) => {
+            onEditSet(editingSet, patch);
+            setEditingSet(null);
+          }}
+          onDelete={() => {
+            onDeleteSet(editingSet);
+            setEditingSet(null);
+          }}
+          onClose={() => setEditingSet(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * A cue written on the gym floor. Saved onto the day's plan, so the thing you
+ * worked out mid-set is waiting for you the next time you do this movement.
+ */
+function NoteSheet({
+  name,
+  note,
+  onSave,
+  onClose,
+}: {
+  name: string;
+  note: string;
+  onSave: (note: string) => void;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end bg-black/70"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Note for ${name}`}
+      onClick={onClose}
+    >
+      <div
+        className="w-full rounded-t-2xl border-t border-grit bg-grit-card p-5"
+        style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <p className="label-cap text-[10px] text-accent-red">CUE — {name.toUpperCase()}</p>
+          <button onClick={onClose} className="icon-btn text-grit-dim" aria-label="Close">
+            <X size={18} />
+          </button>
+        </div>
+        <textarea
+          ref={ref}
+          defaultValue={note}
+          rows={3}
+          placeholder="Elbows tucked, pause on the chest…"
+          className="input-grit mt-3 w-full resize-none"
+          aria-label={`Note for ${name}`}
+        />
+        <p className="mt-2 text-[11px] leading-relaxed text-grit-dim">
+          Kept on your plan for this day — it shows up next time you train this movement.
+        </p>
+        <button onClick={() => onSave(ref.current?.value ?? "")} className="btn-grit mt-3 w-full">
+          Save cue
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** mm:ss in, seconds out. Accepts a bare number of seconds too. */
+function parseClock(raw: string): number {
+  const text = raw.trim();
+  if (!text) return 0;
+  const parts = text.split(":");
+  if (parts.length === 2) {
+    const mins = Number(parts[0]!.replace(/[^0-9]/g, "")) || 0;
+    const secs = Number(parts[1]!.replace(/[^0-9]/g, "")) || 0;
+    return mins * 60 + secs;
+  }
+  return Math.max(0, Math.round(Number(text.replace(/[^0-9.]/g, "")) || 0));
+}
+
+/** Seconds as an editable mm:ss string. */
+function clockValue(seconds: number): string {
+  const total = Math.max(0, Math.round(seconds));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+}
+
+/**
+ * Correct or delete a set that was already logged. Opens over the logger so
+ * the athlete never has to unwind good sets to fix a bad one.
+ */
+function SetEditorSheet({
+  set: logged,
+  index,
+  requiresWeight,
+  onSave,
+  onDelete,
+  onClose,
+}: {
+  set: CompletedSet;
+  index: number;
+  requiresWeight: boolean;
+  onSave: (patch: LoggedEntry) => void;
+  onDelete: () => void;
+  onClose: () => void;
+}) {
+  const weightRef = useRef<HTMLInputElement>(null);
+  const repsRef = useRef<HTMLInputElement>(null);
+  const timeRef = useRef<HTMLInputElement>(null);
+  const distanceRef = useRef<HTMLInputElement>(null);
+
+  function save() {
+    const weight = Number((weightRef.current?.value ?? "").replace(/[^0-9.]/g, ""));
+    const reps = Math.floor(Number((repsRef.current?.value ?? "").replace(/[^0-9]/g, "")));
+    const seconds = timeRef.current ? parseClock(timeRef.current.value) : undefined;
+    const meters = distanceRef.current
+      ? Math.round(Number(distanceRef.current.value.replace(/[^0-9.]/g, "")) || 0)
+      : undefined;
+    onSave({
+      weight: Number.isFinite(weight) && weight >= 0 ? weight : 0,
+      reps: logged.mode ? 0 : Number.isFinite(reps) && reps > 0 ? reps : logged.reps,
+      ...(logged.mode ? { mode: logged.mode } : {}),
+      ...(seconds ? { seconds } : {}),
+      ...(meters ? { meters } : {}),
+    });
+  }
+
+  const label =
+    logged.kind === "warmup" ? "WARM-UP SET" : logged.kind === "drop" ? "DROP SET" : `SET ${index + 1}`;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end bg-black/70"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Edit ${label.toLowerCase()}`}
+      onClick={onClose}
+    >
+      <div
+        className="w-full rounded-t-2xl border-t border-grit bg-grit-card p-5"
+        style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <p className="label-cap text-[10px] text-accent-red">EDIT {label}</p>
+          <button onClick={onClose} className="icon-btn text-grit-dim" aria-label="Close">
+            <X size={18} />
+          </button>
+        </div>
+
+        {logged.mode === "duration" ? (
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <label className="block">
+              <span className="label-cap text-[9px] text-grit-dim">TIME (MM:SS)</span>
+              <input
+                ref={timeRef}
+                inputMode="numeric"
+                defaultValue={clockValue(logged.seconds ?? 0)}
+                className="input-grit mt-1 w-full"
+                aria-label="Hold time"
+              />
+            </label>
+            <label className="block">
+              <span className="label-cap text-[9px] text-grit-dim">ADDED LOAD (KG)</span>
+              <input
+                ref={weightRef}
+                inputMode="decimal"
+                defaultValue={logged.weight > 0 ? String(logged.weight) : ""}
+                placeholder="0"
+                className="input-grit mt-1 w-full"
+                aria-label="Added load in kilograms"
+              />
+            </label>
+          </div>
+        ) : logged.mode === "distance" ? (
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <label className="block">
+              <span className="label-cap text-[9px] text-grit-dim">DISTANCE (M)</span>
+              <input
+                ref={distanceRef}
+                inputMode="numeric"
+                defaultValue={logged.meters ? String(logged.meters) : ""}
+                className="input-grit mt-1 w-full"
+                aria-label="Distance in metres"
+              />
+            </label>
+            <label className="block">
+              <span className="label-cap text-[9px] text-grit-dim">TIME (MM:SS)</span>
+              <input
+                ref={timeRef}
+                inputMode="numeric"
+                defaultValue={logged.seconds ? clockValue(logged.seconds) : ""}
+                placeholder="0:00"
+                className="input-grit mt-1 w-full"
+                aria-label="Elapsed time"
+              />
+            </label>
+          </div>
+        ) : (
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <label className="block">
+              <span className="label-cap text-[9px] text-grit-dim">
+                {requiresWeight ? "WEIGHT (KG)" : "ADDED LOAD (KG)"}
+              </span>
+              <input
+                ref={weightRef}
+                inputMode="decimal"
+                defaultValue={logged.weight > 0 ? String(logged.weight) : ""}
+                placeholder={requiresWeight ? "kg" : "0"}
+                className="input-grit mt-1 w-full"
+                aria-label="Weight in kilograms"
+              />
+            </label>
+            <label className="block">
+              <span className="label-cap text-[9px] text-grit-dim">REPS</span>
+              <input
+                ref={repsRef}
+                inputMode="numeric"
+                defaultValue={String(logged.reps)}
+                className="input-grit mt-1 w-full"
+                aria-label="Reps"
+              />
+            </label>
+          </div>
+        )}
+
+        {logged.isPR && (
+          <p className="mt-3 text-[11px] leading-relaxed text-grit-dim">
+            This set is flagged as a PR. Editing it changes the numbers on the set, but the record
+            it already earned stands.
+          </p>
+        )}
+
+        <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
+          <button onClick={save} className="btn-grit">
+            Save set
+          </button>
+          <button
+            onClick={onDelete}
+            className="border border-accent-red/50 rounded-xl px-4 label-cap text-[10px] text-accent-red press"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Logger for movements measured in time or distance. A plank logged as reps
+ * poisons the rep history and hands out fake PRs, so holds, carries and
+ * conditioning get a stopwatch and their own records instead.
+ */
+function TimedSetLogger({
+  exercise,
+  bests,
+  onLog,
+  onEditSet,
+  onDeleteSet,
+}: {
+  exercise: WorkoutSessionExercise;
+  bests: { seconds: number; meters: number };
+  onLog: (entry: LoggedEntry) => void;
+  onEditSet: (setIndex: number, patch: LoggedEntry) => void;
+  onDeleteSet: (setIndex: number) => void;
+}) {
+  const distance = exercise.tracking === "DISTANCE";
+  const target = exercise.targetSeconds ?? 45;
+  const [elapsed, setElapsed] = useState(0);
+  const [running, setRunning] = useState(false);
+  const [editingSet, setEditingSet] = useState<number | null>(null);
+  const startedAtRef = useRef<number | null>(null);
+  const loadRef = useRef<HTMLInputElement>(null);
+  const distanceRef = useRef<HTMLInputElement>(null);
+
+  // Wall-clock based, not tick-counted: a backgrounded phone throttles timers,
+  // and a hold that reads short because iOS paused the tab is worse than none.
+  useEffect(() => {
+    if (!running) return;
+    const id = window.setInterval(() => {
+      const startedAt = startedAtRef.current;
+      if (startedAt != null) setElapsed(Math.round((Date.now() - startedAt) / 1000));
+    }, 200);
+    return () => window.clearInterval(id);
+  }, [running]);
+
+  const logged = exercise.sets.length;
+  const planned = Math.max(exercise.targetSets, logged);
+  const addedLoad = () => {
+    const value = Number((loadRef.current?.value ?? "").replace(/[^0-9.]/g, ""));
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  };
+
+  function stopAndLog() {
+    const seconds = elapsed;
+    setRunning(false);
+    startedAtRef.current = null;
+    setElapsed(0);
+    if (seconds <= 0) return;
+    onLog({ weight: addedLoad(), reps: 0, mode: "duration", seconds });
+  }
+
+  function logDistance() {
+    const meters = Math.round(Number((distanceRef.current?.value ?? "").replace(/[^0-9.]/g, "")) || 0);
+    if (meters <= 0) return;
+    onLog({ weight: 0, reps: 0, mode: "distance", meters, ...(elapsed ? { seconds: elapsed } : {}) });
+    setRunning(false);
+    startedAtRef.current = null;
+    setElapsed(0);
+    if (distanceRef.current) distanceRef.current.value = "";
+  }
+
+  return (
+    <div className="mt-5 bg-grit-card border border-grit rounded-2xl p-4">
+      <div className="flex items-center justify-between">
+        <p className="label-cap text-accent-red text-[10px]">
+          {distance ? "DISTANCE EFFORT" : "TIMED HOLD"}
+        </p>
+        <p className="label-cap text-[10px] text-grit-dim">
+          {logged}/{planned} · {distance ? "PER SET" : formatDuration(target)}
+        </p>
+      </div>
+
+      {(distance ? bests.meters : bests.seconds) > 0 && (
+        <div className="mt-3 flex items-center gap-2 border border-grit rounded-xl px-3 py-2">
+          <Ghost size={11} className="ghost-live text-accent-red" />
+          <span className="label-cap text-[9px] text-grit-dim">BEST SO FAR</span>
+          <span className="display ml-auto text-sm font-extrabold text-grit">
+            {distance ? formatDistance(bests.meters) : formatDuration(bests.seconds)}
+          </span>
+        </div>
+      )}
+
+      <div className="mt-3 rounded-xl border border-grit px-4 py-5 text-center">
+        <p
+          className="display text-5xl font-extrabold tabular-nums leading-none"
+          style={{ color: !distance && elapsed >= target ? "#22c55e" : "#f5f5f5" }}
+          aria-live="off"
+        >
+          {formatDuration(elapsed)}
+        </p>
+        {!distance && (
+          <p className="label-cap mt-2 text-[9px] text-grit-dim">
+            {elapsed >= target ? "TARGET BEATEN" : `TARGET ${formatDuration(target)}`}
+          </p>
+        )}
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              if (running) {
+                setRunning(false);
+                startedAtRef.current = null;
+                return;
+              }
+              startedAtRef.current = Date.now() - elapsed * 1000;
+              setRunning(true);
+            }}
+            className="btn-ghost"
+          >
+            {running ? "Pause" : elapsed > 0 ? "Resume" : "Start"}
+          </button>
+          <button
+            type="button"
+            onClick={distance ? logDistance : stopAndLog}
+            disabled={!distance && elapsed <= 0}
+            className="btn-grit disabled:opacity-40"
+          >
+            <Check size={16} className="mr-2" />
+            Log set
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {distance ? (
+          <label className="block">
+            <span className="label-cap text-[9px] text-grit-dim">DISTANCE (M)</span>
+            <input
+              ref={distanceRef}
+              inputMode="numeric"
+              placeholder="1000"
+              className="input-grit mt-1 w-full"
+              aria-label="Distance in metres"
+            />
+          </label>
+        ) : (
+          <label className="block">
+            <span className="label-cap text-[9px] text-grit-dim">ADDED LOAD (KG)</span>
+            <input
+              ref={loadRef}
+              inputMode="decimal"
+              placeholder="0"
+              className="input-grit mt-1 w-full"
+              aria-label="Added load in kilograms"
+            />
+          </label>
+        )}
+        {!distance && (
+          <button
+            type="button"
+            onClick={() => onLog({ weight: addedLoad(), reps: 0, mode: "duration", seconds: target })}
+            className="mt-[18px] border border-dashed border-grit rounded-xl py-2.5 label-cap text-[10px] text-grit-dim press"
+          >
+            Log {formatDuration(target)}
+          </button>
+        )}
+      </div>
+
+      <div className="mt-3 space-y-1.5">
+        {Array.from({ length: planned }, (_, i) => {
+          const doneSet = i < logged ? exercise.sets[i] : null;
+          return (
+            <button
+              key={i}
+              type="button"
+              disabled={!doneSet}
+              onClick={() => doneSet && setEditingSet(i)}
+              className="w-full flex items-center justify-between border rounded-xl px-3 py-3 press text-left disabled:opacity-40"
+              style={{
+                borderColor: doneSet
+                  ? doneSet.isPR
+                    ? "rgba(230,50,34,.6)"
+                    : "rgba(34,197,94,.4)"
+                  : "#262626",
+                background: doneSet ? "rgba(34,197,94,.05)" : undefined,
+              }}
+            >
+              <span className="flex items-center gap-2.5">
+                <span
+                  className="flex h-6 w-6 items-center justify-center rounded-full border"
+                  style={{
+                    borderColor: doneSet ? "#22c55e" : "#3a3a3a",
+                    background: doneSet ? "#22c55e" : "transparent",
+                  }}
+                >
+                  {doneSet && <Check size={14} className="text-black" strokeWidth={3} />}
+                </span>
+                <span className="label-cap text-[10px] text-[#8a8a8a]">SET {i + 1}</span>
+              </span>
+              <span className="display text-lg font-extrabold text-grit leading-none flex items-center">
+                {doneSet ? formatSet(doneSet, false) : "—"}
+                {doneSet?.isPR && <Flame size={14} className="ml-2 text-accent-red" />}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <p className="text-xs text-grit-dim mt-3 leading-relaxed">
+        {distance
+          ? "Log the distance you covered — time is optional. Distance efforts never count toward tonnage."
+          : "Time under tension, not reps. Holds never count toward tonnage, and your record is the longest one."}
+      </p>
+
+      {editingSet !== null && exercise.sets[editingSet] && (
+        <SetEditorSheet
+          set={exercise.sets[editingSet]!}
+          index={editingSet}
+          requiresWeight={false}
+          onSave={(patch) => {
+            onEditSet(editingSet, patch);
+            setEditingSet(null);
+          }}
+          onDelete={() => {
+            onDeleteSet(editingSet);
+            setEditingSet(null);
+          }}
+          onClose={() => setEditingSet(null)}
+        />
+      )}
     </div>
   );
 }

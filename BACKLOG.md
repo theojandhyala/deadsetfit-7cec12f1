@@ -6,6 +6,13 @@
 
 ## Shipped
 
+- ✅ **Live session control** — add / swap / remove / reorder exercises during a
+  workout, edit or delete any logged set (not just the last), per-exercise rest
+  and cues editable mid-session and saved back to the plan.
+- ✅ **Time & distance sets** — holds and carries get a stopwatch and a
+  longest-hold record; conditioning logs distance. Neither pollutes tonnage,
+  rep history, 1RM charts or the FIFA card. See `COMPETITORS.md`.
+- ✅ **"Vs last session" bar** — live tonnage against the same workout last time.
 - ✅ **Progress Catalogue** (`/catalogue`) — before/after photo comparison, journey
   stats, photo timeline + lightbox, PR wall with per-lift climb sparklines,
   "Share your week" recap card. Linked from the Progress tab.

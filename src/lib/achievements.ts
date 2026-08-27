@@ -95,8 +95,8 @@ function bestMatching(sessions: WorkoutSession[], match: RegExp): number {
     for (const e of s.exercises) {
       if (!match.test(e.name)) continue;
       for (const set of e.sets) {
-        // Warm-ups and drop sets are not a lift's true best.
-        if (set.kind) continue;
+        // Warm-ups, drop sets and timed efforts are not a lift's true best.
+        if (set.kind || set.mode) continue;
         if (set.weight > best) best = set.weight;
       }
     }
@@ -133,7 +133,8 @@ export function achievementFacts(state: AppState): AchievementFacts {
       for (const set of e.sets) {
         setsHere += 1;
         totalReps += set.reps || 0;
-        if (!set.kind && set.weight > heaviestSetKg) heaviestSetKg = set.weight;
+        // Added load on a hold is not a heaviest-set candidate.
+        if (!set.kind && !set.mode && set.weight > heaviestSetKg) heaviestSetKg = set.weight;
       }
     }
     totalSets += setsHere;

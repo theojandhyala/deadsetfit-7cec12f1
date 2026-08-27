@@ -200,6 +200,9 @@ export function computeFifaStats(state: AppState): FifaStats {
   for (const session of state.sessions || []) {
     for (const ex of session.exercises) {
       for (const s of ex.sets) {
+        // Timed and distance efforts have no rep count: averaging their zero
+        // in would drag rep endurance down for anyone who planks.
+        if (s.mode) continue;
         // Cap a single set's contribution so one mis-logged 60-"rep" hold
         // can't peg the whole stat.
         repTotal += Math.min(s.reps, 20);
