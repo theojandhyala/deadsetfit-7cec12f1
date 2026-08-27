@@ -23,6 +23,7 @@ const {
   hapticRestOver,
   hapticUndo,
   hapticSelection,
+  hapticSetupComplete,
 } = await import("./haptics");
 
 beforeEach(() => {
@@ -73,6 +74,11 @@ describe("the vocabulary", () => {
 
   it("sends rest-over through the notification engine", () => {
     hapticRestOver();
+    expect(notification).toHaveBeenCalledWith({ type: "success" });
+  });
+
+  it("confirms a completed setup with a success notification", () => {
+    hapticSetupComplete();
     expect(notification).toHaveBeenCalledWith({ type: "success" });
   });
 

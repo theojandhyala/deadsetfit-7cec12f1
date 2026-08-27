@@ -6,6 +6,7 @@ import { requiresWorkingWeight } from "@/lib/workout-flow";
 import { trackingModeFor } from "@/lib/set-tracking";
 import { toDisplay, toKg, trimNumber, unitOf } from "@/lib/units";
 import { useAppState } from "@/lib/storage";
+import { hapticFailure, hapticSelection, hapticSetupComplete } from "@/lib/haptics";
 import type { DayKey, Schedule } from "@/lib/types";
 
 type WeightRow = {
@@ -140,12 +141,14 @@ export function ProgrammeWeightSetup() {
             const data = new FormData(event.currentTarget);
             const display = Number(data.get("weight"));
             if (!Number.isFinite(display) || display <= 0) {
+              hapticFailure();
               setError(`Enter a weight above 0 ${unit} for ${row.name}. Decimals are allowed.`);
               return;
             }
             answers.current.set(row.exerciseId, toKg(display, unit));
             setError(null);
             if (activeStep < rows.length - 1) {
+              hapticSelection();
               setStep(activeStep + 1);
               return;
             }
@@ -186,6 +189,7 @@ export function ProgrammeWeightSetup() {
             });
             answers.current.clear();
             setStep(0);
+            hapticSetupComplete();
           }}
         >
           <label className="block rounded-2xl border border-grit bg-[#080808] p-5">
@@ -229,6 +233,7 @@ export function ProgrammeWeightSetup() {
               type="button"
               disabled={activeStep === 0}
               onClick={() => {
+                hapticSelection();
                 setError(null);
                 setStep((current) => Math.max(0, current - 1));
               }}

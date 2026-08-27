@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { ChevronLeft, Lock, Info, TrendingUp } from "lucide-react";
+import { Lock, Info, TrendingUp } from "lucide-react";
 
 import { useAppState } from "@/lib/storage";
 import { allExercises } from "@/lib/exercises";
@@ -8,6 +8,7 @@ import { usePro } from "@/hooks/usePro";
 import { useCountUp } from "@/hooks/useCountUp";
 import { openPaywall } from "@/lib/paywall-events";
 import { formatWeight, unitOf } from "@/lib/units";
+import { hapticSelection } from "@/lib/haptics";
 import { MuscleDiagram } from "@/components/MuscleDiagram";
 import {
   GRADED_MUSCLES,
@@ -85,46 +86,56 @@ function StrengthPage() {
 
   return (
     <div className="deadset-page min-h-screen pb-28">
-      <header className="px-5 pt-6 pb-3 flex items-center gap-2">
-        <Link to="/progress" className="text-grit-dim" aria-label="Back to progress">
-          <ChevronLeft size={22} />
-        </Link>
+      <header className="px-5 pt-6 pb-3 flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="label-cap text-grit-dim">YOUR STRENGTH</p>
           <h1 className="display text-2xl font-extrabold uppercase text-grit">
             How strong are you?
           </h1>
         </div>
+        <Link
+          to="/progress"
+          onClick={hapticSelection}
+          className="label-cap flex min-h-11 shrink-0 items-center rounded-xl border border-grit bg-grit-card px-3 py-2 text-[9px] text-grit-dim press"
+        >
+          All progress
+        </Link>
       </header>
 
       {needsBodyweight ? (
         <MissingBodyweight />
-      ) : report.gradedCount === 0 && plannedMuscles.size === 0 ? (
-        <EmptyState />
       ) : (
         <>
-          <OverallCard tier={report.tier} score={report.score} displayScore={displayScore} />
-
           <StrengthBodyComparison
             baseline={baseline}
             current={report}
             plannedMuscles={plannedMuscles}
           />
 
-          <section className="px-5 mt-5">
-            <p className="label-cap text-[10px] text-grit-dim mb-2">BY MUSCLE GROUP</p>
-            <div className="stagger space-y-2">
-              {report.muscles.map((muscle) => (
-                <MuscleCard
-                  key={muscle.muscle}
-                  grade={muscle}
-                  unit={unit}
-                  locked={locked}
-                  onUnlock={() => openPaywall("strength")}
-                />
-              ))}
-            </div>
-          </section>
+          {report.gradedCount > 0 ? (
+            <>
+              <div className="mt-5">
+                <OverallCard tier={report.tier} score={report.score} displayScore={displayScore} />
+              </div>
+
+              <section className="px-5 mt-5">
+                <p className="label-cap text-[10px] text-grit-dim mb-2">BY MUSCLE GROUP</p>
+                <div className="stagger space-y-2">
+                  {report.muscles.map((muscle) => (
+                    <MuscleCard
+                      key={muscle.muscle}
+                      grade={muscle}
+                      unit={unit}
+                      locked={locked}
+                      onUnlock={() => openPaywall("strength")}
+                    />
+                  ))}
+                </div>
+              </section>
+            </>
+          ) : (
+            <EmptyState hasPlannedExercises={plannedMuscles.size > 0} />
+          )}
 
           {report.ungraded.length > 0 && (
             <section className="px-5 mt-5">
@@ -424,14 +435,15 @@ function MissingBodyweight() {
   );
 }
 
-function EmptyState() {
+function EmptyState({ hasPlannedExercises }: { hasPlannedExercises: boolean }) {
   return (
     <section className="px-5">
       <div className="rounded-2xl border border-grit bg-grit-card p-5">
         <p className="display text-lg font-extrabold uppercase text-grit">Nothing to grade yet</p>
         <p className="mt-1.5 text-xs leading-relaxed text-grit-dim">
-          Log a few working sets and every muscle group gets a grade here — from Beginner to Elite,
-          measured against real strength standards.
+          {hasPlannedExercises
+            ? "Your exercises are set. Log their working sets and each covered muscle will move from grey to a real strength grade."
+            : "Build your schedule first. Muscles without an exercise stay grey and say exactly what is missing—DEADSET never invents a score."}
         </p>
         <div className="mt-4 flex flex-wrap gap-1.5">
           {GRADED_MUSCLES.map((muscle) => (
@@ -443,8 +455,8 @@ function EmptyState() {
             </span>
           ))}
         </div>
-        <Link to="/train" className="btn-grit mt-4 w-full">
-          Start a workout
+        <Link to={hasPlannedExercises ? "/train" : "/plan"} className="btn-grit mt-4 w-full">
+          {hasPlannedExercises ? "Start a workout" : "Set up exercises"}
         </Link>
       </div>
     </section>

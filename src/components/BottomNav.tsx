@@ -1,5 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Dumbbell, CalendarDays, User, TrendingUp, Plus } from "lucide-react";
+import { Dumbbell, CalendarDays, User, BicepsFlexed, Plus } from "lucide-react";
+
+import { hapticSelection } from "@/lib/haptics";
 
 const LEFT_TABS = [
   { to: "/train", label: "Train", Icon: Dumbbell },
@@ -7,7 +9,7 @@ const LEFT_TABS = [
 ] as const;
 
 const RIGHT_TABS = [
-  { to: "/progress", label: "Progress", Icon: TrendingUp },
+  { to: "/strength", label: "Strength", Icon: BicepsFlexed },
   { to: "/profile", label: "You", Icon: User },
 ] as const;
 
@@ -36,6 +38,7 @@ export function BottomNav() {
             <li key={to} className="flex-1">
               <Link
                 to={to}
+                onClick={hapticSelection}
                 className="relative flex h-[70px] flex-col items-center justify-center gap-1.5 press"
                 style={{ color: active ? "#e63222" : "#8a8a8a" }}
               >
@@ -64,6 +67,7 @@ export function BottomNav() {
           <Link
             to="/workout/live"
             search={{}}
+            onClick={hapticSelection}
             className="flex flex-col items-center justify-center gap-1 press"
             aria-label="Start workout"
           >
@@ -95,6 +99,7 @@ export function BottomNav() {
             <li key={to} className="flex-1">
               <Link
                 to={to}
+                onClick={hapticSelection}
                 className="relative flex h-[70px] flex-col items-center justify-center gap-1.5 press"
                 style={{ color: active ? "#e63222" : "#8a8a8a" }}
               >
