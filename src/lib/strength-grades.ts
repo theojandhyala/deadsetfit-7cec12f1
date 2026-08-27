@@ -59,6 +59,16 @@ const S = (
   female: [number, number, number, number],
 ): ExerciseStandard => ({ muscle, kind, male, female });
 
+/** Conservative accessory-lift ratios for recognised loaded movements without a named standard. */
+const GENERIC_STANDARD: Partial<Record<MuscleGroup, ExerciseStandard>> = {
+  CHEST: S("CHEST", "RATIO", [0.3, 0.55, 0.8, 1.05], [0.2, 0.35, 0.55, 0.75]),
+  BACK: S("BACK", "RATIO", [0.4, 0.7, 1.0, 1.3], [0.25, 0.5, 0.75, 1.0]),
+  LEGS: S("LEGS", "RATIO", [0.6, 1.0, 1.5, 2.0], [0.45, 0.75, 1.15, 1.6]),
+  SHOULDERS: S("SHOULDERS", "RATIO", [0.2, 0.35, 0.55, 0.75], [0.12, 0.25, 0.4, 0.6]),
+  ARMS: S("ARMS", "RATIO", [0.15, 0.3, 0.45, 0.65], [0.1, 0.2, 0.32, 0.48]),
+  CORE: S("CORE", "RATIO", [0.2, 0.4, 0.65, 0.9], [0.15, 0.3, 0.5, 0.7]),
+};
+
 export const STANDARDS: Record<string, ExerciseStandard> = {
   // CHEST
   "bench-press": S("CHEST", "RATIO", [0.75, 1.25, 1.75, 2.0], [0.5, 0.75, 1.0, 1.25]),
@@ -224,8 +234,10 @@ export function gradeExercise(
   best: Bests,
   bodyweightKg: number,
   gender: string | null | undefined,
+  fallbackMuscle?: MuscleGroup,
 ): ExerciseGrade | null {
-  const standard = STANDARDS[exerciseId];
+  const standard =
+    STANDARDS[exerciseId] ?? (fallbackMuscle ? GENERIC_STANDARD[fallbackMuscle] : undefined);
   if (!standard) return null;
   const thresholds = gender === "FEMALE" ? standard.female : standard.male;
 
@@ -277,10 +289,11 @@ export function gradeExercise(
  */
 export function strengthReport(
   state: AppState,
-  library: Pick<Exercise, "id" | "name">[],
+  library: Array<Pick<Exercise, "id" | "name"> & Partial<Pick<Exercise, "muscleGroup">>>,
 ): StrengthReport {
   const bests = personalBests(state);
   const names = new Map(library.map((exercise) => [exercise.id, exercise.name]));
+  const muscles = new Map(library.map((exercise) => [exercise.id, exercise.muscleGroup]));
   const bodyweightKg = state.profile?.weightKg ?? 0;
   const gender = state.profile?.gender;
 
@@ -292,6 +305,7 @@ export function strengthReport(
       best,
       bodyweightKg,
       gender,
+      muscles.get(exerciseId),
     );
     if (!grade) continue;
     const bucket = byMuscle.get(grade.muscle) ?? [];
@@ -299,7 +313,7 @@ export function strengthReport(
     byMuscle.set(grade.muscle, bucket);
   }
 
-  const muscles: MuscleGrade[] = [];
+  const muscleGrades: MuscleGrade[] = [];
   const ungraded: MuscleGroup[] = [];
   for (const muscle of GRADED_MUSCLES) {
     const grades = (byMuscle.get(muscle) ?? []).sort((a, b) => b.score - a.score);
@@ -308,7 +322,7 @@ export function strengthReport(
       continue;
     }
     const score = Math.round(grades.reduce((sum, grade) => sum + grade.score, 0) / grades.length);
-    muscles.push({
+    muscleGrades.push({
       muscle,
       score,
       tier: tierForScore(score),
@@ -318,23 +332,25 @@ export function strengthReport(
   }
 
   const score =
-    muscles.length === 0
+    muscleGrades.length === 0
       ? 0
-      : Math.round(muscles.reduce((sum, muscle) => sum + muscle.score, 0) / muscles.length);
+      : Math.round(
+          muscleGrades.reduce((sum, muscle) => sum + muscle.score, 0) / muscleGrades.length,
+        );
 
   return {
-    muscles,
+    muscles: muscleGrades,
     tier: tierForScore(score),
     score,
     ungraded,
-    gradedCount: muscles.reduce((sum, muscle) => sum + muscle.exercises.length, 0),
+    gradedCount: muscleGrades.reduce((sum, muscle) => sum + muscle.exercises.length, 0),
   };
 }
 
 /** Strength report using only history available on or before a calendar day. */
 export function strengthReportAsOf(
   state: AppState,
-  library: Pick<Exercise, "id" | "name">[],
+  library: Array<Pick<Exercise, "id" | "name"> & Partial<Pick<Exercise, "muscleGroup">>>,
   cutoffIso: string,
 ): StrengthReport {
   return strengthReport(

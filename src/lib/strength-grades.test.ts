@@ -220,6 +220,16 @@ describe("strengthReport", () => {
     expect(report.muscles.find((m) => m.muscle === "LEGS")!.weakest!.exerciseId).toBe("leg-curl");
   });
 
+  it("grades a recognised custom weighted exercise into its muscle group", () => {
+    const report = strengthReport(
+      state([session("custom-chest-press", "Custom Chest Press", [{ weight: 70, reps: 8 }])]),
+      [{ id: "custom-chest-press", name: "Custom Chest Press", muscleGroup: "CHEST" }],
+    );
+    expect(
+      report.muscles.find((muscle) => muscle.muscle === "CHEST")?.exercises[0]?.exerciseId,
+    ).toBe("custom-chest-press");
+  });
+
   it("keeps the overall score inside the ladder", () => {
     const report = strengthReport(
       state([session("bench-press", "Bench Press", [{ weight: 400, reps: 10 }])]),

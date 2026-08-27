@@ -16,7 +16,8 @@ export function buildSupersetIds(
   let activeGroup: string | undefined;
 
   exerciseIds.forEach((exerciseId, index) => {
-    const linksNext = !!exerciseConfig?.[exerciseId]?.supersetWithNext && index < exerciseIds.length - 1;
+    const linksNext =
+      !!exerciseConfig?.[exerciseId]?.supersetWithNext && index < exerciseIds.length - 1;
     if (activeGroup) groups[index] = activeGroup;
     if (linksNext) {
       activeGroup ??= `superset-${index + 1}`;
@@ -46,6 +47,17 @@ export function supersetPosition(
 export interface WorkoutStep {
   nextIndex: number;
   shouldRest: boolean;
+}
+
+/** Timed, distance and bodyweight movements must never be forced to invent a load. */
+export function requiresWorkingWeight(
+  exercise: Pick<WorkoutSessionExercise, "tracking">,
+  equipment: string | string[] | undefined,
+): boolean {
+  const bodyweight = Array.isArray(equipment)
+    ? equipment.includes("BODYWEIGHT")
+    : equipment?.includes("BODYWEIGHT");
+  return (exercise.tracking ?? "WEIGHT") === "WEIGHT" && !bodyweight;
 }
 
 /**
@@ -78,8 +90,7 @@ export function nextStepAfterWorkingSet(
     );
     const afterGroup = members.length ? members[members.length - 1]! + 1 : currentIndex + 1;
     return {
-      nextIndex:
-        incomplete ?? (afterGroup < exercises.length ? afterGroup : currentIndex),
+      nextIndex: incomplete ?? (afterGroup < exercises.length ? afterGroup : currentIndex),
       shouldRest: true,
     };
   }

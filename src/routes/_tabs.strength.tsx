@@ -34,7 +34,12 @@ function StrengthPage() {
   const unit = unitOf(state);
 
   const library = useMemo(
-    () => allExercises(state.savedExercises).map((e) => ({ id: e.id, name: e.name })),
+    () =>
+      allExercises(state.savedExercises).map((e) => ({
+        id: e.id,
+        name: e.name,
+        muscleGroup: e.muscleGroup,
+      })),
     [state.savedExercises],
   );
   const report = useMemo(() => strengthReport(state, library), [state, library]);
