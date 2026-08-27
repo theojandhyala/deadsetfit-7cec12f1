@@ -28,7 +28,7 @@ import type { AppState } from "@/lib/types";
 import { clearSessionDiagnostics, readSessionLogs } from "@/lib/session-diagnostics";
 import { connectHealth, healthSupported } from "@/lib/health";
 import { watchStatus, watchSupported, type WatchStatus } from "@/lib/watch";
-import { hapticSelection, hapticSetLogged } from "@/lib/haptics";
+import { hapticFailure, hapticSaved, hapticSelection, hapticSetLogged } from "@/lib/haptics";
 import { DEFAULT_STREAK_ALERT_HOUR } from "@/lib/streak-notifications";
 import { Watch } from "lucide-react";
 import { isNativeIos } from "@/lib/platform";
@@ -110,8 +110,10 @@ function SettingsPage() {
         ...s,
         healthSync: { importWorkouts: true, exportWorkouts: true, ...s.healthSync, enabled: true },
       }));
+      hapticSaved();
       toast.success("Apple Health connected — watch workouts will sync in");
     } else {
+      hapticFailure();
       toast.error("Health access not granted. Check Settings → Health → Data Access.");
     }
   }
@@ -120,21 +122,30 @@ function SettingsPage() {
 
   async function toggleDeviceReminders(enabled: boolean) {
     if (!enabled) {
-      set((s) => ({ ...s, deviceRemindersEnabled: false }));
-      await disableWorkoutNotifications().catch(() => {});
-      toast.success("Device workout reminders turned off");
+      try {
+        await disableWorkoutNotifications();
+        set((s) => ({ ...s, deviceRemindersEnabled: false }));
+        hapticSaved();
+        toast.success("Device workout reminders turned off");
+      } catch {
+        hapticFailure();
+        toast.error("Workout reminders could not be turned off");
+      }
       return;
     }
 
     try {
       const granted = await requestWorkoutNotificationPermission();
       if (!granted) {
+        hapticFailure();
         toast.error("Notifications are blocked. Allow them in iPhone Settings to turn this on.");
         return;
       }
       set((s) => ({ ...s, deviceRemindersEnabled: true }));
+      hapticSaved();
       toast.success("Workout reminders scheduled for your training days");
     } catch {
+      hapticFailure();
       toast.error("Workout reminders could not be enabled");
     }
   }
@@ -142,10 +153,16 @@ function SettingsPage() {
   async function handleExportJson() {
     try {
       const result = await exportJsonBackup();
-      if (result === "delivered") toast.success("Backup exported");
-      else if (result === "failed") toast.error("Couldn't export — try again from the share sheet");
+      if (result === "delivered") {
+        hapticSaved();
+        toast.success("Backup exported");
+      } else if (result === "failed") {
+        hapticFailure();
+        toast.error("Couldn't export — try again from the share sheet");
+      }
       // "cancelled" = user dismissed the native share sheet — stay quiet.
     } catch {
+      hapticFailure();
       toast.error("Couldn't export backup");
     }
   }
@@ -153,10 +170,16 @@ function SettingsPage() {
   async function handleExportCsv() {
     try {
       const result = await exportWorkoutCsv();
-      if (result === "delivered") toast.success("Workout history exported");
-      else if (result === "empty") toast("No finished workouts to export yet");
-      else if (result === "failed") toast.error("Couldn't export — try again from the share sheet");
+      if (result === "delivered") {
+        hapticSaved();
+        toast.success("Workout history exported");
+      } else if (result === "empty") toast("No finished workouts to export yet");
+      else if (result === "failed") {
+        hapticFailure();
+        toast.error("Couldn't export — try again from the share sheet");
+      }
     } catch {
+      hapticFailure();
       toast.error("Couldn't export workout history");
     }
   }
@@ -165,6 +188,7 @@ function SettingsPage() {
     try {
       await openAppStoreReviewPage();
     } catch {
+      hapticFailure();
       toast.error("Couldn't open the App Store");
     }
   }
@@ -188,8 +212,10 @@ function SettingsPage() {
         // Merge over DEFAULT_STATE so an older/partial backup can't leave
         // required fields undefined and crash downstream reducers.
         set(() => ({ ...DEFAULT_STATE, ...(parsed as Partial<AppState>) }) as AppState);
+        hapticSaved();
         toast.success("Data imported");
       } catch (e) {
+        hapticFailure();
         toast.error(e instanceof Error ? e.message : "Couldn't import file");
       }
     };
@@ -199,8 +225,14 @@ function SettingsPage() {
   async function copySessionLogs() {
     const logs = readSessionLogs();
     setSessionLogs(logs);
-    await navigator.clipboard.writeText(JSON.stringify(logs, null, 2));
-    toast.success("Session logs copied");
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(logs, null, 2));
+      hapticSaved();
+      toast.success("Session logs copied");
+    } catch {
+      hapticFailure();
+      toast.error("Couldn't copy session logs");
+    }
   }
 
   function clearSessionLogs() {
@@ -709,7 +741,14 @@ function Toggle({
 }) {
   return (
     <button
-      onClick={() => onChange(!on)}
+      type="button"
+      onClick={() => {
+        // Deliberately fire before the preference changes so switching haptics
+        // off still acknowledges the tap. Switching them on gets its stronger
+        // proof pulse from the setting's onChange handler after state is saved.
+        hapticSelection();
+        onChange(!on);
+      }}
       aria-pressed={on}
       aria-label={`${label}: ${on ? "on" : "off"}`}
       className="w-full flex items-center justify-between px-4 py-3"

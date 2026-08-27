@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   BarChart3,
+  BicepsFlexed,
   CalendarDays,
   Check,
   Dumbbell,
@@ -91,6 +92,18 @@ const SLIDES: Slide[] = [
       "Log weight regularly to build a useful trend",
       "Use weekly photos with consistent lighting",
       "Open any lift to review its full history",
+    ],
+  },
+  {
+    icon: BicepsFlexed,
+    color: "#a43ac2",
+    eyebrow: "Strength Map",
+    title: "See the body your lifts are building",
+    body: "Strength turns your real logged lifts into a front-and-back muscle map, adjusted for your bodyweight instead of guessed from activity.",
+    tips: [
+      "Grey shows exactly which areas still need an exercise or logged result",
+      "Tap any muscle for a rule-based growth game plan and recommended movements",
+      "Share a 9:16 Strength Map card when the colours change",
     ],
   },
   {

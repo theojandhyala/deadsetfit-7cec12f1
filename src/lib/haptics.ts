@@ -77,6 +77,11 @@ export function hapticSetLogged(): void {
   impact("medium", 18);
 }
 
+/** The athlete committed to a session. Crisp and decisive, but only once. */
+export function hapticWorkoutStart(): void {
+  impact("rigid", 22);
+}
+
 /** A warm-up or drop set: real, but not a working set. Lighter than a tick. */
 export function hapticSpecialSet(): void {
   impact("light", 10);
@@ -127,6 +132,11 @@ export function hapticWorkoutComplete(): void {
 /** A multi-step setup flow was saved successfully. */
 export function hapticSetupComplete(): void {
   notify("success", [45, 55, 70]);
+}
+
+/** A lightweight check-in or preference was saved. */
+export function hapticSaved(): void {
+  impact("light", 10);
 }
 
 /** A movement was added to or safely changed in the athlete's programme. */

@@ -32,6 +32,13 @@ import { defaultSchedule, todayKey, updateScheduleDay } from "@/lib/calc";
 import { currentWeekStart, getWeeklyCompetitionStats } from "@/lib/competition";
 import { allExercises, EXERCISES, getExercise } from "@/lib/exercises";
 import { libraryExerciseToExercise } from "@/lib/exercise-library";
+import {
+  hapticFailure,
+  hapticPlanUpdated,
+  hapticSelection,
+  hapticUndo,
+  hapticWorkoutStart,
+} from "@/lib/haptics";
 import { listExercises } from "@/lib/library.functions";
 import { openPaywall } from "@/lib/paywall-events";
 import { useAppState } from "@/lib/storage";
@@ -279,6 +286,7 @@ function PlanPage() {
     setEditingDay(false);
     setShowCopy(false);
     setShowPicker(false);
+    hapticSelection();
     requestAnimationFrame(() => {
       document.getElementById("week-map")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
@@ -354,16 +362,19 @@ function PlanPage() {
       sets: 3,
       reps: "8-12",
     }));
+    hapticPlanUpdated();
     toast.success(`${DAY_NAMES[selectedDay]} set to ${preset.label}`);
   }
 
   function setRestDay() {
     updateSelected(() => ({ label: "REST", exerciseIds: [] }));
     setShowPicker(false);
+    hapticPlanUpdated();
     toast.success(`${DAY_NAMES[selectedDay]} is now a rest day`);
   }
 
   function toggleExercise(exercise: Exercise) {
+    const removing = selected.exerciseIds.includes(exercise.id);
     if (!EXERCISES.some((builtIn) => builtIn.id === exercise.id)) {
       set((current) =>
         current.savedExercises.some((saved) => saved.id === exercise.id)
@@ -372,7 +383,6 @@ function PlanPage() {
       );
     }
     updateSelected((day) => {
-      const removing = day.exerciseIds.includes(exercise.id);
       const exerciseIds = removing
         ? day.exerciseIds.filter((id) => id !== exercise.id)
         : [...day.exerciseIds, exercise.id];
@@ -389,6 +399,8 @@ function PlanPage() {
         exerciseConfig: Object.keys(exerciseConfig).length ? exerciseConfig : undefined,
       };
     });
+    if (removing) hapticUndo();
+    else hapticSelection();
   }
 
   function replaceExercise(replacement: Exercise) {
@@ -418,12 +430,14 @@ function PlanPage() {
     setShowPicker(false);
     setSwapExerciseId(null);
     scrollToBuilder("day-movements");
+    hapticPlanUpdated();
     toast.success(`${original?.name ?? "Exercise"} swapped for ${replacement.name}`);
   }
 
   function createCustomExercise() {
     const name = customName.trim().slice(0, 60);
     if (name.length < 2) {
+      hapticFailure();
       toast.error("Enter an exercise name");
       return;
     }
@@ -460,6 +474,7 @@ function PlanPage() {
     });
     setCustomName("");
     setShowCustom(false);
+    hapticPlanUpdated();
     toast.success(`${name} added to ${DAY_NAMES[selectedDay]}`);
   }
 
@@ -510,6 +525,7 @@ function PlanPage() {
         : current.profile,
       schedule: nextSchedule,
     }));
+    hapticPlanUpdated();
     toast.success(`Workouts set to ${size} exercises`);
   }
 
@@ -519,6 +535,7 @@ function PlanPage() {
     const exerciseIds = [...selected.exerciseIds];
     [exerciseIds[index], exerciseIds[target]] = [exerciseIds[target], exerciseIds[index]];
     updateSelected((day) => ({ ...day, exerciseIds }));
+    hapticSelection();
   }
 
   function updateExercise(exerciseId: string, patch: Partial<ExercisePlan>) {
@@ -559,6 +576,7 @@ function PlanPage() {
       },
     });
     setShowCopy(false);
+    hapticPlanUpdated();
     toast.success(`Copied to ${DAY_NAMES[target]}`);
   }
 
@@ -577,6 +595,7 @@ function PlanPage() {
     if (!confirmed) return;
     saveSchedule(defaultSchedule(state.profile));
     setSelectedDay(todayKey());
+    hapticPlanUpdated();
     toast.success("Your week has been rebalanced");
   }
 
@@ -814,6 +833,7 @@ function PlanPage() {
               >
                 <button
                   onClick={() => {
+                    if (dayKey !== selectedDay) hapticSelection();
                     setSelectedDay(dayKey);
                     setEditingDay(false);
                     setShowCopy(false);
@@ -903,6 +923,7 @@ function PlanPage() {
                           day: dayKey,
                           source: activeProgram ? "program" : "schedule",
                         }}
+                        onClick={hapticWorkoutStart}
                         className="btn-grit flex min-h-11 items-center justify-center gap-2 text-xs"
                       >
                         <Play size={14} />
@@ -1356,10 +1377,8 @@ function PlanPage() {
                         <Link2 size={14} />
                         {config.supersetWithNext
                           ? `Superset with ${
-                              getExercise(
-                                selected.exerciseIds[index + 1]!,
-                                state.savedExercises,
-                              )?.name ?? "next exercise"
+                              getExercise(selected.exerciseIds[index + 1]!, state.savedExercises)
+                                ?.name ?? "next exercise"
                             }`
                           : "Link with next exercise"}
                       </button>
@@ -1419,7 +1438,11 @@ function PlanPage() {
               {MUSCLE_FILTERS.map((muscle) => (
                 <button
                   key={muscle}
-                  onClick={() => setMuscleFilter(muscle)}
+                  onClick={() => {
+                    if (muscle === muscleFilter) return;
+                    setMuscleFilter(muscle);
+                    hapticSelection();
+                  }}
                   aria-pressed={muscleFilter === muscle}
                   className={`shrink-0 rounded-md border px-3 py-2 text-[10px] font-black uppercase ${
                     muscleFilter === muscle
@@ -1434,7 +1457,11 @@ function PlanPage() {
             <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
               <select
                 value={equipmentFilter}
-                onChange={(event) => setEquipmentFilter(event.target.value)}
+                onChange={(event) => {
+                  if (event.target.value === equipmentFilter) return;
+                  setEquipmentFilter(event.target.value);
+                  hapticSelection();
+                }}
                 aria-label="Filter exercises by equipment"
                 className="input-grit min-h-11 text-xs uppercase"
               >

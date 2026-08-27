@@ -259,12 +259,14 @@ export function MuscleGrowthCoach({ selectedTarget, onTargetChange, open, onOpen
   const subTargets = growthTargetsFor(selectedMuscle);
 
   function chooseTarget(target: GrowthTarget) {
+    if (target === selectedTarget) return;
     setPendingRecommendationId(null);
     onTargetChange(target);
     hapticSelection();
   }
 
   function chooseGoal(nextGoal: GrowthGoal) {
+    if (nextGoal === goal) return;
     setPendingRecommendationId(null);
     setGoal(nextGoal);
     hapticSelection();

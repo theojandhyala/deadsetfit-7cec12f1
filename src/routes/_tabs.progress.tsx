@@ -43,6 +43,7 @@ import { AppleFitnessCard } from "@/components/AppleFitnessCard";
 import { TrainingAutopilot } from "@/components/TrainingAutopilot";
 import { ProWeeklyReview } from "@/components/ProWeeklyReview";
 import { PRRoadmap } from "@/components/PRRoadmap";
+import { hapticFailure, hapticSaved, hapticSelection, hapticUndo } from "@/lib/haptics";
 
 export const Route = createFileRoute("/_tabs/progress")({
   head: () => ({ meta: [{ title: "DEADSET — Progress" }] }),
@@ -87,8 +88,12 @@ function ProgressPage() {
         ...s,
         checkIns: [...s.checkIns, { date: new Date().toISOString(), photoDataUrl: dataUrl }],
       }));
+      hapticSaved();
     };
-    img.onerror = () => URL.revokeObjectURL(url);
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      hapticFailure();
+    };
     img.src = url;
   }
 
@@ -97,9 +102,13 @@ function ProgressPage() {
       openPaywall("photos");
       return;
     }
-    setCompare((c) =>
-      c.includes(id) ? c.filter((x) => x !== id) : c.length < 2 ? [...c, id] : [c[1], id],
-    );
+    const next = compare.includes(id)
+      ? compare.filter((x) => x !== id)
+      : compare.length < 2
+        ? [...compare, id]
+        : [compare[1], id];
+    setCompare(next);
+    hapticSelection();
   }
 
   /** Bodyweight entry nearest to an ISO date (for photo comparisons). */
@@ -115,7 +124,10 @@ function ProgressPage() {
   }
   function logWeight() {
     const w = Number(weightRef.current?.value);
-    if (!w || w < 0) return;
+    if (!w || w < 0) {
+      hapticFailure();
+      return;
+    }
     // One entry per day: re-logging today replaces it (fixes typo re-entry and
     // the duplicate-key/delete-all collision on same-day rows).
     const today = isoDay();
@@ -124,6 +136,7 @@ function ProgressPage() {
       weights: [...s.weights.filter((x) => x.date !== today), { date: today, weight: w }],
     }));
     if (weightRef.current) weightRef.current.value = "";
+    hapticSaved();
   }
   function logMeasurements() {
     const chest = +(chestRef.current?.value ?? "") || 0;
@@ -131,8 +144,14 @@ function ProgressPage() {
     const arms = +(armsRef.current?.value ?? "") || 0;
     const legs = +(legsRef.current?.value ?? "") || 0;
     // Don't record an all-empty measurement row — it would pollute the chart.
-    if (!chest && !waist && !arms && !legs) return;
-    if (chest < 0 || waist < 0 || arms < 0 || legs < 0) return;
+    if (!chest && !waist && !arms && !legs) {
+      hapticFailure();
+      return;
+    }
+    if (chest < 0 || waist < 0 || arms < 0 || legs < 0) {
+      hapticFailure();
+      return;
+    }
     // One entry per day: re-logging today replaces it.
     const today = isoDay();
     set((s) => ({
@@ -145,12 +164,15 @@ function ProgressPage() {
     for (const r of [chestRef, waistRef, armsRef, legsRef]) {
       if (r.current) r.current.value = "";
     }
+    hapticSaved();
   }
   function deleteWeight(date: string) {
     set((s) => ({ ...s, weights: s.weights.filter((w) => w.date !== date) }));
+    hapticUndo();
   }
   function deleteMeasurement(date: string) {
     set((s) => ({ ...s, measurements: s.measurements.filter((m) => m.date !== date) }));
+    hapticUndo();
   }
   async function deleteCheckIn(date: string) {
     const ok = await askConfirm({
@@ -161,6 +183,7 @@ function ProgressPage() {
     if (!ok) return;
     set((s) => ({ ...s, checkIns: s.checkIns.filter((c) => c.date !== date) }));
     setCompare((c) => c.filter((d) => d !== date));
+    hapticUndo();
   }
 
   // PRs across both new sessions and legacy logs — enriched with reps, date, history, group
@@ -396,6 +419,9 @@ function ProgressPage() {
             <a
               key={href}
               href={href}
+              onClick={() => {
+                if (window.location.hash !== href) hapticSelection();
+              }}
               className="press flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-2xl border border-white/10 bg-grit-card px-1 text-center"
             >
               <Icon size={17} className="text-accent-red" />
@@ -412,7 +438,7 @@ function ProgressPage() {
         <PRRoadmap />
       </div>
 
-      {/* Strength grades — the "how strong am I actually" question */}
+      {/* Strength Map — the "how strong am I actually" signature feature */}
       <section className="px-5 mb-4 animate-slide-up delay-50">
         <Link
           to="/strength"
@@ -425,13 +451,13 @@ function ProgressPage() {
           <div className="flex items-center justify-between">
             <div className="min-w-0">
               <p className="label-cap text-[10px]" style={{ color: "#5bd07a" }}>
-                Strength Grades
+                Strength Map
               </p>
               <p className="display text-xl font-extrabold uppercase text-white leading-none mt-0.5">
-                See your strength
+                See the body you're building
               </p>
               <p className="text-[11px] text-grit-dim mt-1">
-                Every muscle graded Beginner → Elite for your bodyweight.
+                Front and back, graded from your real lifts and bodyweight.
               </p>
             </div>
             <Gauge size={26} style={{ color: "#5bd07a" }} />

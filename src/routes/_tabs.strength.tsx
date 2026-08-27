@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ChevronRight, Lock, Info, TrendingUp } from "lucide-react";
+import { ChevronRight, Lock, Info, Share2, TrendingUp } from "lucide-react";
 
 import { useAppState } from "@/lib/storage";
 import { allExercises } from "@/lib/exercises";
@@ -12,6 +12,7 @@ import { formatWeight, unitOf } from "@/lib/units";
 import { hapticSelection } from "@/lib/haptics";
 import { MuscleDiagram } from "@/components/MuscleDiagram";
 import { MuscleGrowthCoach } from "@/components/MuscleGrowthCoach";
+import { StrengthMapShareCard } from "@/components/StrengthMapShareCard";
 import type { GrowthTarget } from "@/lib/muscle-growth-recommendations";
 import { toMuscleGroup } from "@/lib/recovery";
 import {
@@ -37,6 +38,7 @@ function StrengthPage() {
   const [state] = useAppState();
   const [growthTarget, setGrowthTarget] = useState<GrowthTarget>("BACK");
   const [growthOpen, setGrowthOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const { isPro, loading: proLoading } = usePro();
   const unit = unitOf(state);
 
@@ -115,11 +117,16 @@ function StrengthPage() {
     hapticSelection();
   }
 
+  function openStrengthShare() {
+    hapticSelection();
+    setShareOpen(true);
+  }
+
   return (
     <div className="deadset-page min-h-screen pb-28">
       <header className="px-5 pt-6 pb-3 flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="label-cap text-grit-dim">YOUR STRENGTH</p>
+          <p className="label-cap text-grit-dim">YOUR STRENGTH MAP</p>
           <h1 className="display text-2xl font-extrabold uppercase text-grit">
             How strong are you?
           </h1>
@@ -141,6 +148,7 @@ function StrengthPage() {
           current={report}
           plannedMuscles={plannedMuscles}
           onSelectMuscle={openGrowthPlan}
+          onShare={openStrengthShare}
         />
       )}
 
@@ -150,6 +158,17 @@ function StrengthPage() {
         open={growthOpen}
         onOpenChange={setGrowthOpen}
       />
+
+      {shareOpen && (
+        <StrengthMapShareCard
+          current={report}
+          baseline={baseline}
+          gradeColors={reportColors(report, plannedMuscles)}
+          displayName={state.profile?.displayName}
+          username={state.profile?.username}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
 
       {!needsBodyweight && (
         <>
@@ -216,11 +235,13 @@ function StrengthBodyComparison({
   current,
   plannedMuscles,
   onSelectMuscle,
+  onShare,
 }: {
   baseline: StrengthReport | null;
   current: StrengthReport;
   plannedMuscles: Set<string>;
   onSelectMuscle: (muscle: GrowthTarget) => void;
+  onShare: () => void;
 }) {
   const hasBaseline = Boolean(baseline?.gradedCount);
   const baselineColors = reportColors(hasBaseline ? baseline : null);
@@ -323,6 +344,28 @@ function StrengthBodyComparison({
               </button>
             );
           })}
+        </div>
+        <div className="border-t border-grit p-4 pt-3">
+          <button
+            type="button"
+            onClick={onShare}
+            className="press flex min-h-14 w-full items-center justify-between gap-3 rounded-xl border border-accent-red/45 bg-[linear-gradient(110deg,rgba(230,50,34,.24),rgba(230,50,34,.07))] px-4 text-left"
+          >
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-accent-red text-white shadow-[0_8px_22px_rgba(230,50,34,.3)]">
+                <Share2 size={17} strokeWidth={2.5} />
+              </span>
+              <span className="min-w-0">
+                <span className="display block truncate text-base font-black uppercase text-grit">
+                  Share my Strength Map
+                </span>
+                <span className="block text-[9px] font-semibold text-grit-dim">
+                  9:16 card built from your real lifts
+                </span>
+              </span>
+            </span>
+            <ChevronRight size={17} className="shrink-0 text-accent-red" />
+          </button>
         </div>
       </div>
     </section>

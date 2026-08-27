@@ -66,6 +66,7 @@ import {
   hapticSpecialSet,
   hapticUndo,
   hapticWorkoutComplete,
+  hapticWorkoutStart,
 } from "@/lib/haptics";
 import { endWorkoutActivity, syncWorkoutActivity } from "@/lib/workout-activity";
 import {
@@ -486,12 +487,15 @@ function LiveWorkoutPage() {
   function startDay(dayKey: DayKey, source: WorkoutSource = "auto") {
     const s = buildSession(state, dayKey, source);
     if (!s) return;
+    hapticWorkoutStart();
     set((st) => ({ ...st, sessions: [...st.sessions, s], activeSessionId: s.id }));
   }
 
   // One-tap restart of the most recent finished session — same exercises and
   // targets, fresh (empty) sets. The fastest path back into training.
   function repeatSession(sourceId: string) {
+    if (!state.sessions.some((session) => session.id === sourceId)) return;
+    hapticWorkoutStart();
     set((st) => {
       const last = st.sessions.find((s) => s.id === sourceId);
       if (!last) return st;
@@ -932,7 +936,7 @@ function LiveWorkoutPage() {
         ),
       };
     });
-    if (kind) hapticSpecialSet();
+    if (kind === "warmup" || kind === "drop") hapticSpecialSet();
     else if (!awardedPR) hapticSetLogged();
 
     if (awardedPR) {
