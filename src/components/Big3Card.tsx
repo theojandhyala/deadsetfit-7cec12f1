@@ -2,6 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import type { AppState, SetLog } from "@/lib/types";
 import { estimate1RM } from "@/lib/calc";
+import { useUnit } from "@/hooks/useUnit";
+import { formatWeightValue } from "@/lib/units";
 
 const BIG3: { id: string; label: string }[] = [
   { id: "bench-press", label: "BENCH" },
@@ -35,6 +37,7 @@ function bestE1RMBetween(logs: SetLog[], fromMs: number, toMs: number) {
 }
 
 export function Big3Card({ state }: { state: AppState }) {
+  const unit = useUnit();
   const now = Date.now();
   const d30 = now - 30 * 86400000;
   const d60 = now - 60 * 86400000;
@@ -73,8 +76,8 @@ export function Big3Card({ state }: { state: AppState }) {
             >
               <p className="label-cap text-[9px] text-grit-dim">{label}</p>
               <p className="display text-2xl font-extrabold text-grit leading-none mt-1">
-                {current || "—"}
-                {current ? <span className="text-[10px] text-grit-dim ml-0.5">kg</span> : null}
+                {current ? formatWeightValue(current, unit) : "—"}
+                {current ? <span className="text-[10px] text-grit-dim ml-0.5">{unit}</span> : null}
               </p>
               <div
                 className="inline-flex items-center gap-0.5 mt-1.5 text-[10px] font-bold"

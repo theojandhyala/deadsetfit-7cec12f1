@@ -23,12 +23,7 @@ const DAY_SHORT: Record<string, string> = {
 export function TrainingRhythmCard({ state }: { state: AppState }) {
   const rhythm = useMemo(
     () =>
-      trainingRhythm(
-        state.sessions,
-        state.completedDates,
-        state.profile?.trainingDays,
-        isoDay(),
-      ),
+      trainingRhythm(state.sessions, state.completedDates, state.profile?.trainingDays, isoDay()),
     [state.sessions, state.completedDates, state.profile?.trainingDays],
   );
 

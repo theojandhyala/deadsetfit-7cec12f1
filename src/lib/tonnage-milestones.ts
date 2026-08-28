@@ -13,7 +13,12 @@ export const TONNAGE_MILESTONES: TonnageMilestone[] = [
   { kg: 10_000, label: "10 tonnes", flavor: "a loaded cement mixer", emoji: "🚛" },
   { kg: 25_000, label: "25 tonnes", flavor: "a humpback whale calf and its mother", emoji: "🐋" },
   { kg: 50_000, label: "50 tonnes", flavor: "a battle tank", emoji: "🛡️" },
-  { kg: 100_000, label: "100 tonnes", flavor: "a blue whale — the largest animal ever", emoji: "🌊" },
+  {
+    kg: 100_000,
+    label: "100 tonnes",
+    flavor: "a blue whale — the largest animal ever",
+    emoji: "🌊",
+  },
   { kg: 250_000, label: "250 tonnes", flavor: "a fully loaded Boeing 747", emoji: "✈️" },
   { kg: 500_000, label: "500 tonnes", flavor: "a deep-sea trawler", emoji: "🚢" },
   { kg: 1_000_000, label: "1,000 tonnes", flavor: "a million kilos. A MILLION.", emoji: "🚀" },

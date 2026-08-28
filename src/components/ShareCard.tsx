@@ -3,11 +3,7 @@ import { X, Download, Share2 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { toast } from "sonner";
 import type { WorkoutSession } from "@/lib/types";
-import {
-  drawSessionCard,
-  SESSION_CARD_H,
-  SESSION_CARD_W,
-} from "@/lib/session-card-draw";
+import { drawSessionCard, SESSION_CARD_H, SESSION_CARD_W } from "@/lib/session-card-draw";
 import { getInviteUrl } from "@/lib/referral";
 
 // 9:16 TikTok / Reels / Shorts ready (1080 x 1920)

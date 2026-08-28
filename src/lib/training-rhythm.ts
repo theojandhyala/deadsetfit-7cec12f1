@@ -88,7 +88,15 @@ export function trainingRhythm(
 
   // Walk every full day once to get per-weekday occurrence and hit counts —
   // DST-proof because everything is UTC-midnight arithmetic.
-  const occurrences: Record<DayKey, number> = { MON: 0, TUE: 0, WED: 0, THU: 0, FRI: 0, SAT: 0, SUN: 0 };
+  const occurrences: Record<DayKey, number> = {
+    MON: 0,
+    TUE: 0,
+    WED: 0,
+    THU: 0,
+    FRI: 0,
+    SAT: 0,
+    SUN: 0,
+  };
   const hits: Record<DayKey, number> = { MON: 0, TUE: 0, WED: 0, THU: 0, FRI: 0, SAT: 0, SUN: 0 };
   for (let t = rateStart; t < today; t += DAY_MS) {
     const iso = new Date(t).toISOString().slice(0, 10);

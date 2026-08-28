@@ -53,6 +53,7 @@ export function strengthStandard(
   gender?: string | null,
 ): StrengthStandard | null {
   if (!oneRmKg || !bodyweightKg) return null;
+  if (gender !== "MALE" && gender !== "FEMALE") return null;
   const table = gender === "FEMALE" ? FEMALE_STANDARDS[liftId] : MALE_STANDARDS[liftId];
   const ratio = oneRmKg / bodyweightKg;
   let tierIdx = 0;

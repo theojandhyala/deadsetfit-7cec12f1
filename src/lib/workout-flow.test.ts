@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { buildSupersetIds, completedWorkingSets, nextStepAfterWorkingSet } from "./workout-flow";
+import {
+  buildSupersetIds,
+  completedWorkingSets,
+  nextStepAfterWorkingSet,
+  requiresWorkingWeight,
+} from "./workout-flow";
 import type { CompletedSet, WorkoutSessionExercise } from "./types";
 
 function exercise(
@@ -55,5 +60,13 @@ describe("workout flow", () => {
   it("advances when a normal exercise reaches its planned sets", () => {
     const exercises = [exercise(undefined, 2), exercise(undefined, 0)];
     expect(nextStepAfterWorkingSet(exercises, 0)).toEqual({ nextIndex: 1, shouldRest: true });
+  });
+
+  it("requires a pre-workout load only for externally loaded movements", () => {
+    expect(requiresWorkingWeight({ tracking: "WEIGHT" }, "BARBELL")).toBe(true);
+    expect(requiresWorkingWeight({ tracking: "WEIGHT" }, "BODYWEIGHT")).toBe(false);
+    expect(requiresWorkingWeight({ tracking: "WEIGHT" }, "bodyweight")).toBe(false);
+    expect(requiresWorkingWeight({ tracking: "DURATION" }, "MAT")).toBe(false);
+    expect(requiresWorkingWeight({ tracking: "DISTANCE" }, "CARDIO")).toBe(false);
   });
 });

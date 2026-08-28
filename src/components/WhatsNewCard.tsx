@@ -1,12 +1,7 @@
 import { useState } from "react";
 import { Sparkles, X } from "lucide-react";
 
-import {
-  WHATS_NEW,
-  WHATS_NEW_VERSION,
-  readWhatsNewSeen,
-  dismissWhatsNew,
-} from "@/lib/whats-new";
+import { WHATS_NEW, WHATS_NEW_VERSION, readWhatsNewSeen, dismissWhatsNew } from "@/lib/whats-new";
 
 /**
  * Feature discovery — new engines are useless if nobody knows they exist.
@@ -20,11 +15,10 @@ export function WhatsNewCard() {
 
   return (
     <section className="px-5 mb-6">
-      <div className="bg-grit-card border border-accent-red/50 rounded-2xl p-4 relative overflow-hidden">
-        <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-accent-red/15 blur-2xl" />
+      <div className="relative overflow-hidden rounded-2xl border border-accent-red/50 bg-grit-card p-4">
         <div className="flex items-start justify-between">
           <p className="label-cap text-[10px] text-accent-red flex items-center gap-1.5">
-            <Sparkles size={12} /> New in DEADSET
+            <Sparkles size={12} /> New in 1.2
           </p>
           <button
             type="button"
@@ -39,14 +33,16 @@ export function WhatsNewCard() {
           </button>
         </div>
 
-        <div className="space-y-2 mt-1">
+        <div className="mt-2 divide-y divide-white/5">
           {WHATS_NEW.map((f) => (
-            <div key={f.title} className="flex items-baseline gap-2">
-              <p className="text-[11px] leading-relaxed text-grit-dim min-w-0">
-                <span className="display font-extrabold uppercase text-grit">{f.title}</span>{" "}
-                <span className="text-accent-red/80 label-cap text-[8px]">{f.where}</span> —{" "}
-                {f.body}
-              </p>
+            <div key={f.title} className="py-2.5 first:pt-1 last:pb-0">
+              <div className="mb-1 flex items-center justify-between gap-3">
+                <p className="display min-w-0 text-[12px] font-extrabold uppercase text-grit">
+                  {f.title}
+                </p>
+                <span className="label-cap shrink-0 text-[8px] text-accent-red/80">{f.where}</span>
+              </div>
+              <p className="text-[11px] leading-relaxed text-grit-dim">{f.body}</p>
             </div>
           ))}
         </div>

@@ -10,7 +10,13 @@ import type { AppState } from "@/lib/types";
  * more fuel and rest days less, holding the weekly average exactly where the
  * goal already put it. Hidden until a calorie goal exists.
  */
-export function CalorieCyclingCard({ state, baseCalories }: { state: AppState; baseCalories: number }) {
+export function CalorieCyclingCard({
+  state,
+  baseCalories,
+}: {
+  state: AppState;
+  baseCalories: number;
+}) {
   const cycle = useMemo(() => {
     const p = state.profile;
     if (!p) return null;

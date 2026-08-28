@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   BarChart3,
+  Camera,
+  Timer,
+  BicepsFlexed,
   CalendarDays,
   Check,
   Dumbbell,
@@ -19,7 +22,10 @@ import {
 import { useAppState } from "@/lib/storage";
 import { usePro } from "@/hooks/usePro";
 import { isNativeIos } from "@/lib/platform";
-import { FEATURE_TOUR_SEEN_KEY } from "@/lib/feature-tour";
+import { FEATURE_TOUR_REPLAY_EVENT, FEATURE_TOUR_SEEN_KEY } from "@/lib/feature-tour";
+import { hapticSelection, hapticSetupComplete } from "@/lib/haptics";
+import { lockBodyScroll } from "@/lib/body-scroll-lock";
+import { TourDemo, type DemoKind } from "@/components/TourDemo";
 
 type Slide = {
   icon: typeof Dumbbell;
@@ -29,6 +35,8 @@ type Slide = {
   body: string;
   tips: string[];
   pro?: boolean;
+  /** The looping demonstration shown above the copy. */
+  demo?: DemoKind;
 };
 
 const SLIDES: Slide[] = [
@@ -48,6 +56,7 @@ const SLIDES: Slide[] = [
     icon: CalendarDays,
     color: "#f59e0b",
     eyebrow: "Plan",
+    demo: "week",
     title: "Build the week first",
     body: "Open Plan to see every training day. Choose a day, set its focus, then add or reorder the exercises you actually want to do.",
     tips: [
@@ -61,6 +70,7 @@ const SLIDES: Slide[] = [
     icon: Plus,
     color: "#e63222",
     eyebrow: "Live workout",
+    demo: "logging",
     title: "Log the set in front of you",
     body: "Tap the centre + or Start Workout. Enter a working weight once, then tick sets as you complete them.",
     tips: [
@@ -70,9 +80,36 @@ const SLIDES: Slide[] = [
     ],
   },
   {
+    icon: Timer,
+    color: "#38bdf8",
+    eyebrow: "Rest timer",
+    demo: "rest",
+    title: "Rest is timed for you",
+    body: "Tick a set and the rest clock starts itself. It counts down against a deadline, so it stays exact with the phone locked, the app closed or your wrist raised.",
+    tips: [
+      "Live Activity and Dynamic Island show it without unlocking",
+      "Apple Watch buzzes when the set is due",
+      "Per-exercise rest lengths, editable any time",
+    ],
+  },
+  {
+    icon: Camera,
+    color: "#e879f9",
+    eyebrow: "Progress photos",
+    demo: "photos",
+    title: "The mirror lies. The camera doesn't.",
+    body: "A weekly check-in photo is the only honest record of a body changing. Progress opens on your before-and-after, and turns it into a card worth posting.",
+    tips: [
+      "Photos never leave your device unless you share them",
+      "Bodyweight change is matched to each shot automatically",
+      "Two shots a fortnight apart unlock the comparison",
+    ],
+  },
+  {
     icon: Utensils,
     color: "#22c55e",
     eyebrow: "Food & hydration",
+    demo: "nutrition",
     title: "Keep fuel visible",
     body: "Food sits near the top of Train in the Daily Hub. Use Diary for today and Insights for trends and coaching.",
     tips: [
@@ -94,9 +131,23 @@ const SLIDES: Slide[] = [
     ],
   },
   {
+    icon: BicepsFlexed,
+    color: "#a43ac2",
+    eyebrow: "Strength Map",
+    demo: "strength",
+    title: "See the body your lifts are building",
+    body: "Strength turns your real logged lifts into a front-and-back muscle map, adjusted for your bodyweight instead of guessed from activity.",
+    tips: [
+      "Grey shows exactly which areas still need an exercise or logged result",
+      "Tap any muscle for a rule-based growth game plan and recommended movements",
+      "Share a 9:16 Strength Map card when the colours change",
+    ],
+  },
+  {
     icon: HeartPulse,
     color: "#14b8a6",
     eyebrow: "Health & recovery",
+    demo: "health",
     title: "Train around real readiness",
     body: "Recovery turns soreness, sleep and recent training into a clear view of what is ready and what needs more time.",
     tips: [
@@ -109,6 +160,7 @@ const SLIDES: Slide[] = [
     icon: Users,
     color: "#f97316",
     eyebrow: "Friends & ranks",
+    demo: "friends",
     title: "Build your crew",
     body: "Search usernames, follow friends, share lifts and compare progress without exposing your exact location.",
     tips: [
@@ -121,6 +173,7 @@ const SLIDES: Slide[] = [
     icon: Library,
     color: "#a3e635",
     eyebrow: "Exercise library",
+    demo: "library",
     title: "Find any movement",
     body: "The Library contains form guidance, muscles worked, equipment, difficulty and a direct way to add an exercise to any day.",
     tips: [
@@ -144,10 +197,11 @@ const SLIDES: Slide[] = [
   {
     icon: Crown,
     color: "#f4c33a",
-    eyebrow: "Optional upgrade",
-    title: "DEADSET Pro",
+    eyebrow: "Your membership",
+    demo: "membership",
+    title: "DEADSET intelligence",
     pro: true,
-    body: "The complete training and logging loop stays free. Pro adds automation, advanced programming and deeper analysis.",
+    body: "Your membership includes the complete training loop, automation, advanced programming and deeper analysis.",
     tips: [
       "Training Autopilot applies progression decisions",
       "Plan Intelligence audits volume and recovery spacing",
@@ -168,12 +222,20 @@ const SLIDES: Slide[] = [
   },
 ];
 
+function markFeatureTourSeen() {
+  try {
+    localStorage.setItem(FEATURE_TOUR_SEEN_KEY, "1");
+  } catch {
+    /* Local storage can be unavailable in restricted browser modes. */
+  }
+}
+
 /**
  * One-time guided tour of every feature, shown to brand-new users after
  * onboarding. Existing users (who already have training data) are marked seen
  * silently so they're never interrupted.
  */
-export function FeatureTour() {
+export function FeatureTour({ active = true }: { active?: boolean }) {
   const [state] = useAppState();
   const { isPro } = usePro();
   const navigate = useNavigate();
@@ -182,6 +244,11 @@ export function FeatureTour() {
   const decided = useRef(false);
 
   useEffect(() => {
+    if (!active) {
+      decided.current = false;
+      setShow(false);
+      return;
+    }
     if (decided.current) return;
     let seen = true;
     try {
@@ -189,48 +256,71 @@ export function FeatureTour() {
     } catch {
       /* ignore */
     }
-    if (seen) return;
+    if (seen) {
+      decided.current = true;
+      return;
+    }
     // Wait until onboarding has produced a profile.
     if (!state.profile) return;
     decided.current = true;
     const hasHistory = (state.sessions?.length ?? 0) > 0 || state.completedDates.length > 0;
-    try {
-      localStorage.setItem(FEATURE_TOUR_SEEN_KEY, "1");
-    } catch {
-      /* ignore */
-    }
     // New users get the walkthrough automatically. Existing users can replay it
     // from Settings without being interrupted after an update.
-    if (!hasHistory) setShow(true);
-  }, [state.profile, state.sessions, state.completedDates]);
+    if (hasHistory) {
+      markFeatureTourSeen();
+      return;
+    }
+    setI(0);
+    setShow(true);
+  }, [active, state.profile, state.sessions, state.completedDates]);
+
+  useEffect(() => {
+    const replay = () => {
+      decided.current = false;
+      setI(0);
+      if (!active || !state.profile) return;
+      decided.current = true;
+      setShow(true);
+    };
+    window.addEventListener(FEATURE_TOUR_REPLAY_EVENT, replay);
+    return () => window.removeEventListener(FEATURE_TOUR_REPLAY_EVENT, replay);
+  }, [active, state.profile]);
 
   useEffect(() => {
     if (!show) return;
 
-    const previousOverflow = document.body.style.overflow;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setShow(false);
+      if (event.key !== "Escape") return;
+      markFeatureTourSeen();
+      hapticSelection();
+      setShow(false);
     };
 
-    document.body.style.overflow = "hidden";
+    const unlock = lockBodyScroll();
     window.addEventListener("keydown", onKeyDown);
 
     return () => {
-      document.body.style.overflow = previousOverflow;
+      unlock();
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [show]);
 
   if (!show) return null;
 
-  // Drop the Pro slide for users who already have Pro — and on native iOS,
-  // Paid members do not need a tour slide advertising features they already own.
+  // Members already have it, so the pitch is noise to them. Everyone else sees
+  // it, iOS included: DEADSET is a subscription sold through Apple now, and
+  // withholding what it includes from the people being asked to pay for it is
+  // the exact opposite of not hiding things.
   const slides = isPro ? SLIDES.filter((s) => !s.pro) : SLIDES;
   const slide = slides[Math.min(i, slides.length - 1)];
   const last = i >= slides.length - 1;
   const Icon = slide.icon;
 
-  const close = () => setShow(false);
+  const close = () => {
+    markFeatureTourSeen();
+    hapticSetupComplete();
+    setShow(false);
+  };
 
   return (
     <div
@@ -255,12 +345,21 @@ export function FeatureTour() {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-8 py-5 text-center">
-        <div
-          className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl"
-          style={{ background: `${slide.color}18`, border: `1px solid ${slide.color}40` }}
-        >
-          <Icon size={38} style={{ color: slide.color }} />
-        </div>
+        {slide.demo ? (
+          // Keyed on the slide so the animations restart on every advance —
+          // a demo that plays once and then sits still on later visits is
+          // just a screenshot.
+          <div className="mb-5 w-full max-w-sm">
+            <TourDemo key={`${slide.eyebrow}-${i}`} kind={slide.demo} />
+          </div>
+        ) : (
+          <div
+            className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl"
+            style={{ background: `${slide.color}18`, border: `1px solid ${slide.color}40` }}
+          >
+            <Icon size={38} style={{ color: slide.color }} />
+          </div>
+        )}
         {slide.pro && (
           <span className="pro-chip text-[10px] px-1.5 py-0.5 mb-2">
             <Crown size={10} strokeWidth={2.75} /> Pro
@@ -303,7 +402,10 @@ export function FeatureTour() {
         {i > 0 ? (
           <button
             type="button"
-            onClick={() => setI(i - 1)}
+            onClick={() => {
+              hapticSelection();
+              setI(i - 1);
+            }}
             className="btn-ghost px-4 inline-flex items-center gap-1"
           >
             <ChevronLeft size={16} /> Back
@@ -326,7 +428,10 @@ export function FeatureTour() {
         ) : (
           <button
             type="button"
-            onClick={() => setI(i + 1)}
+            onClick={() => {
+              hapticSelection();
+              setI(i + 1);
+            }}
             className="btn-grit flex-1 rounded-xl inline-flex items-center justify-center gap-1"
           >
             Next <ChevronRight size={16} />

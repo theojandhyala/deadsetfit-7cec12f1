@@ -7,7 +7,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // Activate the watch link here rather than from the Capacitor plugin.
+        // WatchConnectivity delivers queued payloads to the app, and iOS
+        // suspends the WKWebView whenever the app backgrounds — which is the
+        // normal state of a phone while its owner is looking at their wrist.
+        // If the WCSession only existed while JavaScript was running, sets
+        // logged on the watch with the phone in a pocket would arrive with no
+        // delegate to receive them and be dropped.
+        WatchConnectivityHub.shared.activate()
         return true
     }
 

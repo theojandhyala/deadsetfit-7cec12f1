@@ -7,7 +7,7 @@ import "./styles.css";
 
 // Exposes the bundled release in diagnostics and scopes asset recovery to this
 // deployment so one old CDN race cannot strand later versions.
-const RELEASE_ID = "2026-07-28-release1";
+const RELEASE_ID = "2026-08-28-release6";
 const PRELOAD_RETRY_KEY = `deadset_preload_retry_${RELEASE_ID}`;
 document.documentElement.dataset.deadsetRelease = RELEASE_ID;
 
@@ -24,9 +24,7 @@ function renderBootFailure(error: unknown) {
   root.innerHTML = `
     <main style="min-height:100vh;display:grid;place-items:center;background:#0a0a0a;color:#f5f5f0;font-family:Inter,system-ui,sans-serif;padding:24px;text-align:center">
       <div style="max-width:360px">
-        <h1 style="margin:0;font-family:Impact,'Arial Black',sans-serif;font-size:44px;font-style:italic;letter-spacing:-.04em">
-          DEAD<span style="color:#e63222">SET</span>
-        </h1>
+        <img src="/brand/deadset-lockup.png" alt="DEADSET — Forge Your Body" style="display:block;width:260px;max-width:100%;height:auto;margin:0 auto" />
         <p style="margin:18px 0 0;color:#f5f5f0;font-size:14px;font-weight:800;letter-spacing:.14em;text-transform:uppercase">
           Loading hit a snag
         </p>
@@ -71,19 +69,12 @@ window.addEventListener("vite:preloadError", async () => {
 // copied into a new tab from disabling future release repairs.
 window.setTimeout(() => sessionStorage.removeItem(PRELOAD_RETRY_KEY), 10_000);
 
-function withBootTimeout<T>(promise: Promise<T>, timeoutMs = 2500): Promise<T | undefined> {
-  return Promise.race([
-    promise,
-    new Promise<undefined>((resolve) => window.setTimeout(resolve, timeoutMs)),
-  ]);
-}
-
 try {
   createRoot(root).render(<RouterProvider router={router} />);
 } catch (error) {
   renderBootFailure(error);
 }
 
-void withBootTimeout(restoreSupabaseSession()).catch((error) => {
+void restoreSupabaseSession().catch((error) => {
   console.warn("Session restore failed; continuing app boot", error);
 });

@@ -4,8 +4,10 @@ import {
   calculateMacros,
   defaultSchedule,
   estimate1RM,
+  focusExerciseRecommendation,
   plateBreakdown,
   updateScheduleDay,
+  warmupRamp,
 } from "./calc";
 import { getExercise } from "./exercises";
 import type { Equipment, Profile } from "./types";
@@ -26,6 +28,16 @@ function profile(overrides: Partial<Profile> = {}): Profile {
 }
 
 describe("defaultSchedule", () => {
+  it("names an equipment-valid recommendation for every onboarding focus", () => {
+    for (const equipment of ["FULL_GYM", "HOME_GYM", "BODYWEIGHT"] as const) {
+      for (const focus of ["CHEST", "BACK", "SHOULDERS", "ARMS", "LEGS", "CORE"] as const) {
+        const recommendation = focusExerciseRecommendation(focus, equipment);
+        expect(recommendation, `${focus}/${equipment}`).not.toBeNull();
+        expect(getExercise(recommendation!.id)?.equipment).toContain(equipment);
+      }
+    }
+  });
+
   it.each<Equipment>(["FULL_GYM", "HOME_GYM", "BODYWEIGHT"])(
     "only schedules exercises available for %s",
     (equipment) => {
@@ -52,6 +64,39 @@ describe("defaultSchedule", () => {
 
     for (const day of Object.values(schedule)) {
       expect(day.exerciseIds.length).toBeLessThanOrEqual(3);
+      expect(new Set(day.exerciseIds).size).toBe(day.exerciseIds.length);
+    }
+  });
+
+  it("keeps core inside four-movement full-body sessions when core is a focus", () => {
+    const schedule = defaultSchedule(
+      profile({
+        daysPerWeek: 3,
+        exercisesPerSession: 4,
+        focusMuscles: ["CORE"],
+      }),
+    );
+
+    const trainingDays = Object.values(schedule).filter((day) => day.exerciseIds.length > 0);
+    expect(trainingDays).toHaveLength(3);
+    for (const day of trainingDays) {
+      expect(day.exerciseIds).toHaveLength(4);
+      expect(day.exerciseIds).toContain("plank");
+    }
+  });
+
+  it("reserves capped full-body slots for multiple selected focus muscles", () => {
+    const schedule = defaultSchedule(
+      profile({
+        daysPerWeek: 3,
+        exercisesPerSession: 4,
+        focusMuscles: ["CHEST", "CORE"],
+      }),
+    );
+
+    for (const day of Object.values(schedule).filter((candidate) => candidate.exerciseIds.length)) {
+      expect(day.exerciseIds).toHaveLength(4);
+      expect(day.exerciseIds).toEqual(expect.arrayContaining(["cable-fly", "plank"]));
       expect(new Set(day.exerciseIds).size).toBe(day.exerciseIds.length);
     }
   });
@@ -110,5 +155,34 @@ describe("training calculations", () => {
     expect(estimate1RM(100, 5)).toBe(117);
     expect(estimate1RM(-10, 5)).toBe(0);
     expect(plateBreakdown(100)).toEqual({ perSide: [25, 15], remainderKg: 0, barKg: 20 });
+  });
+});
+
+describe("warmupRamp against a real bar", () => {
+  it("never suggests a warm-up lighter than the bar being used", () => {
+    // An EZ bar is 10 kg. Ramping to 40 kg from an Olympic floor would have
+    // suggested 20 kg as the lightest step and hidden the bar-only warm-up.
+    const ramp = warmupRamp(40, 10);
+    expect(ramp.length).toBeGreaterThan(0);
+    expect(Math.min(...ramp.map((set) => set.weight))).toBeGreaterThanOrEqual(10);
+  });
+
+  it("ramps from a heavier bar without dropping below it", () => {
+    const ramp = warmupRamp(100, 25);
+    expect(Math.min(...ramp.map((set) => set.weight))).toBeGreaterThanOrEqual(25);
+  });
+
+  it("has nothing to ramp when the target is the bar itself", () => {
+    expect(warmupRamp(25, 25)).toEqual([]);
+    expect(warmupRamp(10, 25)).toEqual([]);
+  });
+
+  it("still defaults to the Olympic bar when none is given", () => {
+    expect(warmupRamp(100)).toEqual(warmupRamp(100, 20));
+  });
+
+  it("copes with a bar weight of zero rather than dividing into nothing", () => {
+    const ramp = warmupRamp(40, 0);
+    expect(ramp.every((set) => set.weight > 0)).toBe(true);
   });
 });

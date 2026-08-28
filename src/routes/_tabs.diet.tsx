@@ -314,9 +314,7 @@ function DietPage() {
               onClick={() => setView(option)}
               aria-pressed={view === option}
               className={`rounded-lg px-4 py-3 text-xs font-bold uppercase transition-colors ${
-                view === option
-                  ? "bg-accent-red text-white"
-                  : "text-grit-dim hover:text-grit"
+                view === option ? "bg-accent-red text-white" : "text-grit-dim hover:text-grit"
               }`}
             >
               {option}

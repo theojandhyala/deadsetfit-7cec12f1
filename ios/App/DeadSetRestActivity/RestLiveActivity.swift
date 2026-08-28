@@ -2,21 +2,32 @@ import ActivityKit
 import SwiftUI
 import WidgetKit
 
+/// Everything this extension provides: two Live Activities and the home-screen
+/// and Lock Screen widgets. One extension rather than several, because they
+/// share a target, an App ID and a provisioning profile — and WidgetKit is
+/// perfectly happy hosting all of them from a single bundle.
+@main
+struct DeadSetWidgetBundle: WidgetBundle {
+    var body: some Widget {
+        RestLiveActivity()
+        WorkoutLiveActivity()
+        StreakWidget()
+        RankWidget()
+    }
+}
+
+private let brandRed = Color(red: 225 / 255, green: 6 / 255, blue: 0)
+
+/// Rest is part of the session, so tapping it goes back to the live workout
+/// rather than to wherever the app was last left.
+private let restWorkoutLink = URL(string: "org.deadsetfit.app://workout-live")
+
 /// The rest timer as it appears outside the app: Dynamic Island when the phone is
 /// in use, Lock Screen when it is face-down on a bench.
 ///
 /// Everything counts down with `.timer` against `endsAt` rather than a value the
 /// app pushes. That keeps it exact with zero updates from DEADSET — the countdown
 /// continues even if the app is suspended or killed mid-rest.
-@main
-struct DeadSetRestActivityBundle: WidgetBundle {
-    var body: some Widget {
-        RestLiveActivity()
-    }
-}
-
-private let brandRed = Color(red: 225 / 255, green: 6 / 255, blue: 0)
-
 struct RestLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: RestActivityAttributes.self) { context in
@@ -47,6 +58,7 @@ struct RestLiveActivity: Widget {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
+            .widgetURL(restWorkoutLink)
             .activityBackgroundTint(Color.black.opacity(0.92))
             .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
@@ -55,12 +67,16 @@ struct RestLiveActivity: Widget {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("REST")
                             .font(.system(size: 10, weight: .black))
-                            .tracking(2)
+                            .tracking(1)
                             .foregroundStyle(brandRed)
                         Text(context.attributes.exerciseName)
                             .font(.system(size: 13, weight: .semibold))
                             .lineLimit(1)
+                            .truncationMode(.tail)
+                            .minimumScaleFactor(0.85)
                     }
+                    .padding(.leading, 4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     Text(timerInterval: Date.now...context.state.endsAt, countsDown: true)
@@ -95,6 +111,7 @@ struct RestLiveActivity: Widget {
                     .monospacedDigit()
                     .foregroundStyle(brandRed)
             }
+            .widgetURL(restWorkoutLink)
             .keylineTint(brandRed)
         }
     }

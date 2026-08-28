@@ -23,7 +23,11 @@ export function FormCoaching({
 
   return (
     <div
-      className={compact ? "border-t border-grit pt-2" : "deadset-3d-panel border border-grit bg-grit-card p-4"}
+      className={
+        compact
+          ? "border-t border-grit pt-2"
+          : "deadset-3d-panel border border-grit bg-grit-card p-4"
+      }
     >
       <button
         onClick={() => setOpen((v) => !v)}

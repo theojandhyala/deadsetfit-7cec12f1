@@ -19,7 +19,10 @@ import { useAppState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
 import { estimate1RM } from "@/lib/calc";
 import { OneRmCalculator } from "@/components/OneRmCalculator";
+import { formatDistance, formatDuration, timedBestsFor } from "@/lib/set-tracking";
 import type { SetLog, AppState } from "@/lib/types";
+import { useUnit } from "@/hooks/useUnit";
+import { formatWeight, formatWeightValue } from "@/lib/units";
 
 export const Route = createFileRoute("/_tabs/lift/$exerciseId")({
   head: () => ({ meta: [{ title: "DEADSET — Lift History" }] }),
@@ -46,6 +49,9 @@ function gatherLogs(state: AppState, exerciseId: string): SetLog[] {
       .filter((e) => e.exerciseId === exerciseId)
       .forEach((e) =>
         e.sets.forEach((set) => {
+          // Timed and distance efforts have no weight-and-reps pair: charting
+          // them would draw a 20 kg "top set" for a weighted plank.
+          if (set.mode) return;
           sessionDays.add(s.date.slice(0, 10));
           out.push({ exerciseId, weight: set.weight, reps: set.reps, date: s.date });
         }),
@@ -59,6 +65,7 @@ function gatherLogs(state: AppState, exerciseId: string): SetLog[] {
 
 function LiftDetailPage() {
   const { exerciseId } = Route.useParams();
+  const unit = useUnit();
   const [state] = useAppState();
   const [rangeIdx, setRangeIdx] = useState(1);
   const range = RANGES[rangeIdx];
@@ -67,6 +74,11 @@ function LiftDetailPage() {
   const name = ex?.name ?? exerciseId.replace(/-/g, " ");
 
   const all = useMemo(() => gatherLogs(state, exerciseId), [state, exerciseId]);
+  // Holds and carries keep their own records — they never reach the 1RM chart.
+  const timedBests = useMemo(
+    () => timedBestsFor(state.sessions, exerciseId),
+    [state.sessions, exerciseId],
+  );
 
   const cutoff = Date.now() - range.days * 86400000;
   const logs = all.filter((l) => new Date(l.date).getTime() >= cutoff);
@@ -114,7 +126,7 @@ function LiftDetailPage() {
   const empty = byDay.length === 0;
 
   return (
-    <div>
+    <div className="deadset-page">
       <header className="px-5 pt-6 pb-3 flex items-center gap-2">
         <Link to="/progress" className="text-grit-dim">
           <ChevronLeft size={22} />
@@ -125,19 +137,40 @@ function LiftDetailPage() {
         </div>
       </header>
 
+      {(timedBests.seconds > 0 || timedBests.meters > 0) && (
+        <section className="px-5 mb-4 grid grid-cols-2 gap-3">
+          {timedBests.seconds > 0 && (
+            <div className="bg-grit-card border border-grit p-3">
+              <p className="label-cap text-[10px] text-grit-dim">LONGEST HOLD</p>
+              <p className="display text-3xl font-extrabold text-accent-red leading-none mt-1">
+                {formatDuration(timedBests.seconds)}
+              </p>
+            </div>
+          )}
+          {timedBests.meters > 0 && (
+            <div className="bg-grit-card border border-grit p-3">
+              <p className="label-cap text-[10px] text-grit-dim">FURTHEST</p>
+              <p className="display text-3xl font-extrabold text-accent-red leading-none mt-1">
+                {formatDistance(timedBests.meters)}
+              </p>
+            </div>
+          )}
+        </section>
+      )}
+
       <section className="px-5 mb-4 grid grid-cols-2 gap-3">
         <div className="bg-grit-card border border-grit p-3">
           <p className="label-cap text-[10px] text-grit-dim">ALL-TIME 1RM</p>
           <p className="display text-3xl font-extrabold text-grit leading-none mt-1">
-            {allTimePR || "—"}
-            <span className="text-xs text-grit-dim ml-1">kg</span>
+            {allTimePR ? formatWeightValue(allTimePR, unit) : "—"}
+            <span className="text-xs text-grit-dim ml-1">{unit}</span>
           </p>
         </div>
         <div className="bg-grit-card border border-grit p-3">
           <p className="label-cap text-[10px] text-grit-dim">EST. 1RM</p>
           <p className="display text-3xl font-extrabold text-accent-red leading-none mt-1">
-            {e1rmPR || "—"}
-            <span className="text-xs text-grit-dim ml-1">kg</span>
+            {e1rmPR ? formatWeightValue(e1rmPR, unit) : "—"}
+            <span className="text-xs text-grit-dim ml-1">{unit}</span>
           </p>
         </div>
       </section>
@@ -269,6 +302,7 @@ function StrengthStandard({
   e1rm: number;
   bodyweightKg: number;
 }) {
+  const unit = useUnit();
   const thresholds = STRENGTH_LEVELS.map((l) => getStandardKg(exerciseId, l, bodyweightKg));
   // Find current level: highest threshold the user meets
   let currentLevelIdx = -1;
@@ -327,13 +361,13 @@ function StrengthStandard({
       {e1rm > 0 ? (
         <div>
           <p className="text-sm text-grit font-bold">
-            You lift <span className="text-accent-red">{e1rm}kg</span>
+            You lift <span className="text-accent-red">{formatWeight(e1rm, unit)}</span>
             {currentLevelIdx >= 0 ? ` · ${STRENGTH_LEVELS[currentLevelIdx]}` : " · Below Beginner"}
           </p>
           {nextLevel && nextThreshold && (
             <p className="text-xs text-grit-dim mt-1">
-              Next level ({nextLevel}): {nextThreshold}kg
-              <span className="text-accent-red ml-1">+{gap}kg away</span>
+              Next level ({nextLevel}): {formatWeight(nextThreshold, unit)}
+              <span className="text-accent-red ml-1">+{formatWeight(gap, unit)} away</span>
             </p>
           )}
           {!nextLevel && <p className="text-xs text-grit-dim mt-1">Elite level achieved.</p>}

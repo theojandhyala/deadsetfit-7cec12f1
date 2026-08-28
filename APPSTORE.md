@@ -1,78 +1,123 @@
-# DEADSET — App Store Submission Guide
+# DEADSET App Store Release Guide
 
-This app is a client-only Vite + TanStack Router web app. To ship it on the App Store you wrap it with **Capacitor** (a thin native shell) and submit through Xcode.
+This repository ships DEADSET as a bundled Capacitor iPhone app. The public website is an App Store campaign page; it is not the product runtime. Core screens are packaged in the binary and network features use DEADSET's Cloudflare and Supabase services.
 
-## 1. Local setup (one time)
+## Release identity
+
+- App Store ID: `6783511541`
+- Bundle identifier: `org.deadsetfit.app`
+- Version: `1.2`
+- Build: `145`
+- Device family: iPhone
+- Minimum iOS version: iOS 15
+- Category: Health & Fitness
+- Support URL: `https://deadsetfit.org`
+- Support email: `support@deadsetfit.org`
+- Privacy policy: `https://deadsetfit.org/privacy`
+- Terms: `https://deadsetfit.org/terms`
+
+The Rest Activity extension must use the same version and build as the main app.
+
+## Production architecture
+
+- UI: Vite, React, TanStack Router and Capacitor
+- Website/API: Cloudflare at `deadsetfit.org`
+- Accounts and synced data: Supabase project `fqfdygbveeztgxwkbmfi`
+- Google and Apple sign-in: DEADSET-owned OAuth broker on `deadsetfit.org`
+- iPhone subscriptions: Apple StoreKit 2 only
+- Subscription analytics and cross-device entitlement sync: RevenueCat
+- Apple Watch data: imported through HealthKit when the user opts in
+- Workout export: completed DEADSET sessions can be written to Apple Health
+
+Do not add a Capacitor `server.url` for release. The App Store binary must continue to use `webDir: "dist/client"`.
+
+## Release checks
+
+From the repository root:
 
 ```bash
-bun add -D @capacitor/cli
-bun add @capacitor/core @capacitor/ios @capacitor/android @capacitor/splash-screen @capacitor/status-bar
-bun run build
-npx cap add ios
-npx cap add android
-npx cap sync
-```
-
-`capacitor.config.ts` is already in the repo. It currently ships the **bundled** web build (the `server` block is commented out) — the App-Store-ready configuration. To iterate against the live site during development, temporarily uncomment `server.url = "https://deadsetfit.org"`, then re-comment it before submitting.
-
-## 2. App Store-ready build
-
-Before the final submission, comment out `server.url` in `capacitor.config.ts` so the app ships the bundled web build. App Review can reject shells that depend on a live website for core functionality:
-
-```ts
-// server: { url: "https://deadsetfit.org", cleartext: false },
-```
-
-Then:
-
-```bash
-npm run appstore:check
+npm ci
+npm run check
+npm audit --omit=dev
+node scripts/check-bundle-config.mjs
 APPSTORE_STRICT=1 node scripts/appstore-check.mjs
 npx cap sync ios
-npx cap open ios
+xcodebuild \
+  -project ios/App/DeadSet.xcodeproj \
+  -scheme DeadSet \
+  -configuration Release \
+  -sdk iphonesimulator \
+  -destination 'generic/platform=iOS Simulator' \
+  CODE_SIGNING_ALLOWED=NO \
+  build
 ```
 
-Xcode opens. In Xcode:
+The strict readiness check probes both Google and Apple OAuth in web and native modes. Run it while online. A passing simulator build proves compilation, not App Store product configuration, signing or real-device HealthKit behavior.
 
-- Set **Team** (your Apple Developer account)
-- Set **Bundle Identifier**: `org.deadsetfit.app`
-- Set **Version** + **Build**
-- Product → Archive → Distribute App → App Store Connect
+## Manual QA
 
-## 3. Required App Store assets (you provide)
+Test a fresh install and an update from the previous public build on a real iPhone.
 
-| Asset              | Size                                | Notes                                     |
-| ------------------ | ----------------------------------- | ----------------------------------------- |
-| App icon           | 1024×1024 PNG, no alpha             | Use the DEADSET red-on-black mark         |
-| iPhone screenshots | 1290×2796 (6.7")                    | At least 3 — Train, Friends, Profile tabs |
-| iPad screenshots   | 2048×2732 (optional)                | Only if you ship iPad                     |
-| Launch screen      | Already wired                       | Uses `splash-2732.png` from CDN           |
-| Privacy policy URL | `https://deadsetfit.org/privacy`    | Already live                              |
-| Support URL        | Pick one (e.g. mailto link or page) | Required                                  |
+1. Confirm the native launch screen, session loader and signup-first welcome appear without a blank or web-browser flash.
+2. Create an account with email, Google and Apple. Confirm provider consent screens name DEADSET or `deadsetfit.org`, never Lovable.
+3. Complete onboarding, create a weekly schedule, set exercises, sets and rep targets, then confirm the weekly set grid and Strength Map reflect that plan.
+4. Start a scheduled workout, swap an exercise before its first set, log sets, use the rest timer and finish the workout.
+5. Force-quit during a workout and confirm the active session resumes without losing logged sets.
+6. Log food and water, inspect progress, rankings and every bottom-tab destination. Send, accept, decline and cancel friend requests; confirm mutual friends can compare public PRs and Strength Maps side by side.
+7. Connect Apple Health, verify steps and activity data, then finish a workout and confirm it appears in Apple Fitness.
+8. Buy both the monthly and annual Pro products with separate eligible sandbox accounts. Verify the seven-day introductory offer on each, immediate selected-plan pricing for an ineligible account, entitlement, restore, Manage Subscription and cancellation behavior.
+9. Sign out and back in on another device. Confirm cloud training data and Pro access return.
+10. Test account deletion, notification permission denial and approval, the five-second Lock Screen notification test, camera/photo denial, offline launch and recovery from network errors.
+11. Open Privacy, Terms, Support and Rate DEADSET from Settings.
+12. Run VoiceOver, Dynamic Type and keyboard focus checks on onboarding, schedule editing, live workout and paywall screens.
 
-## 4. App Store Connect metadata
+## Subscription review
 
-- **Name**: DEADSET
-- **Subtitle**: Train. Build. Become.
-- **Category**: Health & Fitness
-- **Age rating**: 4+
-- **Description**: pull from `src/components/Landing.tsx` value props
-- **Keywords**: gym, workout, PR, bench, squat, deadlift, strength, lifting log, program
+The app recognizes these immutable product identifiers:
 
-## 5. Things to disclose in App Review
+- `org.deadsetfit.pro.monthly`
+- `org.deadsetfit.pro.annual`
 
-- The app uses **email + Google sign-in** (Lovable Cloud / Supabase auth).
-- The app accepts **payments via Stripe** for Pro on web. The native iOS upgrade page currently blocks Stripe checkout because Apple requires **In-App Purchase** for digital subscriptions. Before submitting a paid iOS build, either integrate StoreKit/RevenueCat or ship iOS as free-tier only.
+Both products are offered for a new purchase in version 1.2. Before submission, confirm they are approved in App Store Connect, priced at £5.99/month and £39.99/year in the UK, and each configured with a one-week introductory free trial. Introductory eligibility is controlled by Apple at the subscription-group level. RevenueCat observes StoreKit transactions; it does not replace Apple's purchase sheet.
 
-## 6. Pre-submission QA checklist
+The iPhone app must not expose Stripe, a web checkout, external purchase instructions or buttons that route users around Apple's in-app purchase system. Legacy web subscriptions may still be recognized after sign-in, but new iPhone purchases use StoreKit.
 
-- Run `npm run appstore:check`.
-- Disable `server.url`, then run `APPSTORE_STRICT=1 node scripts/appstore-check.mjs`.
-- Fresh-install the iOS build on a real iPhone, create an account, complete onboarding, start and finish a workout, log food/water, open Profile, open Privacy/Terms, and verify the Pro page does not show Stripe checkout.
-- Test offline launch after first install. The shell should render the bundled app and show recoverable network states for auth, sync, and billing features.
-- Verify screenshots are from the current UI and do not show test payment banners, debug copy, or placeholder data.
-- Confirm App Privacy answers cover account identifiers, workout/health-adjacent data, progress check-in photos, purchase history, and diagnostics.
+## App Review notes
 
-## 7. Updating after release
+Provide App Review with a working non-Pro reviewer account and concise navigation steps. Include these facts:
 
-Because `capacitor.config.ts` can point at the live site, most updates are just `bun run build` + deploy — no resubmission needed. Resubmit only when you change native config, icons, splash, or permissions.
+- A reviewer can build a schedule in Plan and start a workout in Train.
+- Apple Health is optional. The app remains usable when Health permission is denied.
+- Camera and photo access are optional and used for progress check-ins and avatars.
+- Sign in with Apple and Google return through `deadsetfit.org` to the bundled app.
+- Pro is sold through Apple as a selectable monthly or annual subscription. Both choices use Apple's purchase sheet and show the exact local price.
+- Restore Purchases and Manage Subscription are on the Pro screen.
+- Account deletion is available inside Profile.
+
+Never give App Review an expired account, a production paywall that cannot load, or instructions that depend on an unreleased website state.
+
+## App Store assets
+
+- 1024 x 1024 icon with no alpha channel
+- Current iPhone screenshots for the display sizes requested by App Store Connect
+- Screenshots showing Train, the weekly set grid, Strength Map, live workout, friend comparison and Apple Fitness integration
+- Accurate app description, keywords, privacy answers and age rating
+- Current support and privacy URLs
+- Version 1.2 release notes matching the in-app New in 1.2 summary
+
+Suggested release notes:
+
+> DEADSET 1.2 turns your plan into visible progress. Find athletes reliably by name or @username, discover lifters in your city, manage every friend-request state and compare accepted friends side by side. This update also adds contextual Lock Screen notification setup and testing, clearer social error recovery, stronger onboarding, weekly set maps and Strength Map progression.
+
+## Archive and upload
+
+1. Open `ios/App/DeadSet.xcodeproj` in Xcode.
+2. Select the DEADSET development team and confirm automatic signing has no errors.
+3. Select Any iOS Device (arm64).
+4. Choose Product > Archive.
+5. In Organizer, run Validate App before Distribute App.
+6. Upload to App Store Connect and wait for processing.
+7. Attach build 146 to version 1.2 and complete export compliance and content-rights questions. Confirm both approved subscriptions are attached and available to the app.
+8. Test the processed build in TestFlight before submitting it for review.
+
+Every bundled product update requires a new App Store build and review. Website deployment alone does not update the installed app.

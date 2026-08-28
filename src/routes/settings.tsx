@@ -5,15 +5,18 @@ import {
   Download,
   Upload,
   Bell,
+  Vibrate,
+  Scale,
   BellRing,
   Clock3,
   Droplets,
-  Scale,
   ClipboardList,
   Cloud,
   CloudOff,
   FileSpreadsheet,
+  Mail,
   PlayCircle,
+  Star,
   UserRound,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -24,14 +27,21 @@ import { DEFAULT_STATE } from "@/lib/default-state";
 import type { AppState } from "@/lib/types";
 import { clearSessionDiagnostics, readSessionLogs } from "@/lib/session-diagnostics";
 import { connectHealth, healthSupported } from "@/lib/health";
+import { watchStatus, watchSupported, type WatchStatus } from "@/lib/watch";
+import { hapticFailure, hapticSaved, hapticSelection, hapticSetLogged } from "@/lib/haptics";
+import { DEFAULT_STREAK_ALERT_HOUR } from "@/lib/streak-notifications";
 import { Watch } from "lucide-react";
 import { isNativeIos } from "@/lib/platform";
 import {
   disableWorkoutNotifications,
+  getWorkoutNotificationPermission,
   requestWorkoutNotificationPermission,
+  scheduleNotificationTest,
+  type NotificationPermissionState,
 } from "@/lib/device-reminders";
 import { supabase } from "@/integrations/supabase/client";
 import { resetFeatureTour } from "@/lib/feature-tour";
+import { openAppStoreReviewPage, openIosAppSettings } from "@/lib/app-review";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "DEADSET — Settings" }] }),
@@ -43,16 +53,23 @@ function SettingsPage() {
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
   const [sessionLogs, setSessionLogs] = useState(() => readSessionLogs());
+  const [appInfo, setAppInfo] = useState<{ version: string; build: string } | null>(null);
+  const [notificationPermission, setNotificationPermission] =
+    useState<NotificationPermissionState | null>(null);
   const [account, setAccount] = useState<{
     email: string | null;
     status: "loading" | "signed-out" | "syncing" | "ready" | "offline";
   }>({ email: null, status: "loading" });
 
   const reminders = state.remindersEnabled ?? true;
-  const deviceReminders = state.deviceRemindersEnabled ?? false;
+  const deviceReminders =
+    (state.deviceRemindersEnabled ?? false) && notificationPermission !== "denied";
   const reminderHour = state.workoutReminderHour ?? 18;
   const reminderMinute = state.workoutReminderMinute ?? 0;
   const health = state.healthSync ?? { enabled: false, importWorkouts: true, exportWorkouts: true };
+  // Lock-screen notifications only exist in the native shell; on the web these
+  // toggles would promise something the browser cannot deliver.
+  const notificationsSupported = isNativeIos();
 
   useEffect(() => {
     let active = true;
@@ -76,6 +93,37 @@ function SettingsPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isNativeIos()) return;
+
+    let active = true;
+    void import("@capacitor/app")
+      .then(({ App }) => App.getInfo())
+      .then((info) => {
+        if (active) setAppInfo({ version: info.version, build: info.build });
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!notificationsSupported) return;
+    const refresh = () => {
+      void getWorkoutNotificationPermission()
+        .then(setNotificationPermission)
+        .catch(() => setNotificationPermission("unavailable"));
+    };
+    refresh();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [notificationsSupported]);
+
   async function pairHealth() {
     const granted = await connectHealth();
     if (granted) {
@@ -83,8 +131,10 @@ function SettingsPage() {
         ...s,
         healthSync: { importWorkouts: true, exportWorkouts: true, ...s.healthSync, enabled: true },
       }));
+      hapticSaved();
       toast.success("Apple Health connected — watch workouts will sync in");
     } else {
+      hapticFailure();
       toast.error("Health access not granted. Check Settings → Health → Data Access.");
     }
   }
@@ -93,32 +143,107 @@ function SettingsPage() {
 
   async function toggleDeviceReminders(enabled: boolean) {
     if (!enabled) {
-      set((s) => ({ ...s, deviceRemindersEnabled: false }));
-      await disableWorkoutNotifications().catch(() => {});
-      toast.success("Device workout reminders turned off");
+      try {
+        await disableWorkoutNotifications();
+        set((s) => ({
+          ...s,
+          deviceRemindersEnabled: false,
+          notificationPreferenceConfigured: true,
+        }));
+        hapticSaved();
+        toast.success("Device workout reminders turned off");
+      } catch {
+        hapticFailure();
+        toast.error("Workout reminders could not be turned off");
+      }
       return;
     }
 
     try {
       const granted = await requestWorkoutNotificationPermission();
       if (!granted) {
+        setNotificationPermission("denied");
+        hapticFailure();
         toast.error("Notifications are blocked. Allow them in iPhone Settings to turn this on.");
         return;
       }
-      set((s) => ({ ...s, deviceRemindersEnabled: true }));
+      setNotificationPermission("granted");
+      set((s) => ({
+        ...s,
+        deviceRemindersEnabled: true,
+        notificationPreferenceConfigured: true,
+      }));
+      hapticSaved();
       toast.success("Workout reminders scheduled for your training days");
     } catch {
+      hapticFailure();
       toast.error("Workout reminders could not be enabled");
+    }
+  }
+
+  async function toggleLockScreenAlert(kind: "streak" | "rival", enabled: boolean) {
+    if (!enabled) {
+      set((s) => ({
+        ...s,
+        ...(kind === "streak" ? { streakAlertsEnabled: false } : { rivalAlertsEnabled: false }),
+        notificationPreferenceConfigured: true,
+      }));
+      hapticSaved();
+      return;
+    }
+    try {
+      const granted = await requestWorkoutNotificationPermission();
+      setNotificationPermission(granted ? "granted" : "denied");
+      if (!granted) {
+        hapticFailure();
+        toast.error("Notifications are blocked. Open iPhone Settings to allow them.");
+        return;
+      }
+      set((s) => ({
+        ...s,
+        ...(kind === "streak" ? { streakAlertsEnabled: true } : { rivalAlertsEnabled: true }),
+        notificationPreferenceConfigured: true,
+      }));
+      hapticSaved();
+    } catch {
+      hapticFailure();
+      toast.error("Notification settings couldn't be updated");
+    }
+  }
+
+  async function sendNotificationTest() {
+    try {
+      let granted = notificationPermission === "granted";
+      if (!granted) granted = await requestWorkoutNotificationPermission();
+      setNotificationPermission(granted ? "granted" : "denied");
+      if (!granted) {
+        hapticFailure();
+        toast.error("Notifications are blocked. Open iPhone Settings to allow them.");
+        return;
+      }
+      const scheduled = await scheduleNotificationTest();
+      if (!scheduled) throw new Error("Notification permission changed");
+      hapticSaved();
+      toast.success("Test scheduled — it will arrive in five seconds");
+    } catch {
+      hapticFailure();
+      toast.error("The test notification couldn't be scheduled");
     }
   }
 
   async function handleExportJson() {
     try {
       const result = await exportJsonBackup();
-      if (result === "delivered") toast.success("Backup exported");
-      else if (result === "failed") toast.error("Couldn't export — try again from the share sheet");
+      if (result === "delivered") {
+        hapticSaved();
+        toast.success("Backup exported");
+      } else if (result === "failed") {
+        hapticFailure();
+        toast.error("Couldn't export — try again from the share sheet");
+      }
       // "cancelled" = user dismissed the native share sheet — stay quiet.
     } catch {
+      hapticFailure();
       toast.error("Couldn't export backup");
     }
   }
@@ -126,11 +251,26 @@ function SettingsPage() {
   async function handleExportCsv() {
     try {
       const result = await exportWorkoutCsv();
-      if (result === "delivered") toast.success("Workout history exported");
-      else if (result === "empty") toast("No finished workouts to export yet");
-      else if (result === "failed") toast.error("Couldn't export — try again from the share sheet");
+      if (result === "delivered") {
+        hapticSaved();
+        toast.success("Workout history exported");
+      } else if (result === "empty") toast("No finished workouts to export yet");
+      else if (result === "failed") {
+        hapticFailure();
+        toast.error("Couldn't export — try again from the share sheet");
+      }
     } catch {
+      hapticFailure();
       toast.error("Couldn't export workout history");
+    }
+  }
+
+  async function handleRateDeadset() {
+    try {
+      await openAppStoreReviewPage();
+    } catch {
+      hapticFailure();
+      toast.error("Couldn't open the App Store");
     }
   }
 
@@ -153,8 +293,10 @@ function SettingsPage() {
         // Merge over DEFAULT_STATE so an older/partial backup can't leave
         // required fields undefined and crash downstream reducers.
         set(() => ({ ...DEFAULT_STATE, ...(parsed as Partial<AppState>) }) as AppState);
+        hapticSaved();
         toast.success("Data imported");
       } catch (e) {
+        hapticFailure();
         toast.error(e instanceof Error ? e.message : "Couldn't import file");
       }
     };
@@ -164,8 +306,14 @@ function SettingsPage() {
   async function copySessionLogs() {
     const logs = readSessionLogs();
     setSessionLogs(logs);
-    await navigator.clipboard.writeText(JSON.stringify(logs, null, 2));
-    toast.success("Session logs copied");
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(logs, null, 2));
+      hapticSaved();
+      toast.success("Session logs copied");
+    } catch {
+      hapticFailure();
+      toast.error("Couldn't copy session logs");
+    }
   }
 
   function clearSessionLogs() {
@@ -236,22 +384,61 @@ function SettingsPage() {
         <p className="label-cap mb-2 flex items-center gap-1.5">
           <PlayCircle size={12} className="text-accent-red" /> Help
         </p>
-        <button
-          type="button"
-          onClick={() => {
-            resetFeatureTour();
-            navigate({ to: "/train" as never });
-          }}
-          className="flex w-full items-center justify-between rounded-lg border border-grit bg-grit-card px-4 py-4 text-left"
-        >
-          <span>
-            <span className="block text-sm font-bold text-grit">Replay app tutorial</span>
-            <span className="mt-1 block text-[11px] text-grit-dim">
-              A one-minute guide to every main feature.
+        <div className="divide-y divide-[#262626] overflow-hidden rounded-lg border border-grit bg-grit-card">
+          <button
+            type="button"
+            onClick={() => {
+              resetFeatureTour();
+              navigate({ to: "/train" as never });
+            }}
+            className="flex w-full items-center justify-between px-4 py-4 text-left"
+          >
+            <span>
+              <span className="block text-sm font-bold text-grit">Replay app tutorial</span>
+              <span className="mt-1 block text-[11px] text-grit-dim">
+                A one-minute guide to every main feature.
+              </span>
             </span>
-          </span>
-          <ChevronLeft size={18} className="rotate-180 text-grit-dim" />
-        </button>
+            <ChevronLeft size={18} className="rotate-180 text-grit-dim" />
+          </button>
+          {isNativeIos() && (
+            <button
+              type="button"
+              onClick={() => void handleRateDeadset()}
+              className="flex w-full items-center justify-between px-4 py-4 text-left"
+            >
+              <span className="flex items-center gap-3">
+                <span className="grid h-9 w-9 place-items-center rounded-lg border border-grit bg-black">
+                  <Star size={17} className="text-accent-red" />
+                </span>
+                <span>
+                  <span className="block text-sm font-bold text-grit">Rate DEADSET</span>
+                  <span className="mt-1 block text-[11px] text-grit-dim">
+                    Leave a rating or review on the App Store.
+                  </span>
+                </span>
+              </span>
+              <ChevronLeft size={18} className="rotate-180 text-grit-dim" />
+            </button>
+          )}
+          <a
+            href="mailto:support@deadsetfit.org?subject=DEADSET%20Support"
+            className="flex w-full items-center justify-between px-4 py-4 text-left"
+          >
+            <span className="flex items-center gap-3">
+              <span className="grid h-9 w-9 place-items-center rounded-lg border border-grit bg-black">
+                <Mail size={17} className="text-accent-red" />
+              </span>
+              <span>
+                <span className="block text-sm font-bold text-grit">Contact support</span>
+                <span className="mt-1 block text-[11px] text-grit-dim">
+                  Get help with your account, workouts or subscription.
+                </span>
+              </span>
+            </span>
+            <ChevronLeft size={18} className="rotate-180 text-grit-dim" />
+          </a>
+        </div>
       </section>
 
       {/* Weight calculations use one canonical unit across training and rankings. */}
@@ -267,6 +454,10 @@ function SettingsPage() {
           Workout weights and strength rankings use kilograms consistently.
         </p>
       </section>
+
+      {/* The watch app itself — separate from Health, and worth saying so:
+          pairing Health does nothing for the wrist app, and vice versa. */}
+      {watchSupported() && <WatchAppCard />}
 
       {/* Apple Watch & Health — native iOS only */}
       {healthSupported() && (
@@ -382,6 +573,69 @@ function SettingsPage() {
         </section>
       )}
 
+      {/* Units — stored in kg either way; this only changes what is shown. */}
+      <section className="px-5 mb-6">
+        <p className="label-cap mb-2 flex items-center gap-1.5">
+          <Scale size={12} className="text-accent-red" /> Weight units
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {(["kg", "lb"] as const).map((option) => {
+            const active = (state.units ?? "kg") === option;
+            return (
+              <button
+                key={option}
+                onClick={() => {
+                  set((s) => ({ ...s, units: option }));
+                  hapticSelection();
+                }}
+                className="rounded-xl border py-3 press"
+                style={{
+                  borderColor: active ? "#e63222" : "#262626",
+                  background: active ? "rgba(230,50,34,0.08)" : "transparent",
+                }}
+              >
+                <span
+                  className="display text-lg font-extrabold uppercase"
+                  style={{ color: active ? "#e63222" : "#8a8a8a" }}
+                >
+                  {option}
+                </span>
+                <span className="label-cap block text-[9px] text-grit-dim">
+                  {option === "kg" ? "Kilograms" : "Pounds"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-[10px] text-grit-dim mt-2 leading-relaxed">
+          Your history is always stored in kilograms, so switching units never changes a single
+          logged set — only how it is shown. Plates and the bar follow your choice too.
+        </p>
+      </section>
+
+      {/* Haptics */}
+      <section className="px-5 mb-6">
+        <p className="label-cap mb-2 flex items-center gap-1.5">
+          <Vibrate size={12} className="text-accent-red" /> Haptics
+        </p>
+        <div className="bg-grit-card border border-grit divide-y divide-[#262626]">
+          <Toggle
+            label="Vibrate on sets, PRs and rest"
+            on={state.hapticsEnabled !== false}
+            onChange={(v) => {
+              set((s) => ({ ...s, hapticsEnabled: v }));
+              // Fire one immediately when switching on, so the setting proves
+              // itself instead of asking you to go and train to find out.
+              if (v) hapticSetLogged();
+            }}
+          />
+        </div>
+        <p className="text-[10px] text-grit-dim mt-2">
+          Every set gets a tap, a PR gets a double, and rest ending gets a buzz you can feel through
+          a pocket.
+        </p>
+      </section>
+
       {/* In-App Nudges */}
       <section className="px-5 mb-6">
         <p className="label-cap mb-2 flex items-center gap-1.5">
@@ -408,6 +662,74 @@ function SettingsPage() {
           These cards appear quietly inside DEADSET while you use it.
         </p>
       </section>
+
+      {/* Notifications that arrive on the lock screen */}
+      {notificationsSupported && (
+        <section className="px-5 mb-6">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <p className="label-cap flex items-center gap-1.5">
+              <Bell size={12} className="text-accent-red" /> Notifications
+            </p>
+            <span
+              className={`rounded-full border px-2 py-1 text-[8px] font-black uppercase tracking-wider ${
+                notificationPermission === "granted"
+                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                  : "border-accent-red/40 bg-accent-red/10 text-accent-red"
+              }`}
+            >
+              {notificationPermission === "granted"
+                ? "Allowed"
+                : notificationPermission === "denied"
+                  ? "Blocked"
+                  : "Not enabled"}
+            </span>
+          </div>
+          <div className="bg-grit-card border border-grit divide-y divide-[#262626]">
+            <Toggle
+              label="Streak at risk"
+              on={notificationPermission === "granted" && state.streakAlertsEnabled !== false}
+              onChange={(v) => void toggleLockScreenAlert("streak", v)}
+            />
+            <Toggle
+              label="Rival activity"
+              on={notificationPermission === "granted" && state.rivalAlertsEnabled !== false}
+              onChange={(v) => void toggleLockScreenAlert("rival", v)}
+            />
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => void sendNotificationTest()}
+              className="btn-ghost min-h-11 text-[9px]"
+            >
+              <BellRing size={12} className="mr-1.5" /> Send 5s test
+            </button>
+            {notificationPermission === "denied" ? (
+              <button
+                type="button"
+                onClick={() => void openIosAppSettings()}
+                className="btn-grit min-h-11 text-[9px]"
+              >
+                Open iPhone Settings
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void toggleLockScreenAlert("streak", true)}
+                className="btn-grit min-h-11 text-[9px]"
+              >
+                Enable alerts
+              </button>
+            )}
+          </div>
+          <p className="text-[10px] text-grit-dim mt-2 leading-relaxed">
+            Streak warnings arrive at{" "}
+            {String(state.streakAlertHour ?? DEFAULT_STREAK_ALERT_HOUR).padStart(2, "0")}:00 on any
+            day you haven't logged. Rival nudges cover duels you're losing or about to lose. Both
+            are scheduled on this device — DEADSET never watches you from a server.
+          </p>
+        </section>
+      )}
 
       {/* Hydration target */}
       <section className="px-5 mb-6">
@@ -516,6 +838,10 @@ function SettingsPage() {
           </div>
         </div>
       </details>
+
+      <p className="px-5 pb-4 text-center text-[10px] text-grit-dim">
+        {appInfo ? `DEADSET ${appInfo.version} (${appInfo.build})` : "DEADSET for iPhone"}
+      </p>
     </div>
   );
 }
@@ -531,7 +857,14 @@ function Toggle({
 }) {
   return (
     <button
-      onClick={() => onChange(!on)}
+      type="button"
+      onClick={() => {
+        // Deliberately fire before the preference changes so switching haptics
+        // off still acknowledges the tap. Switching them on gets its stronger
+        // proof pulse from the setting's onChange handler after state is saved.
+        hapticSelection();
+        onChange(!on);
+      }}
       aria-pressed={on}
       aria-label={`${label}: ${on ? "on" : "off"}`}
       className="w-full flex items-center justify-between px-4 py-3"
@@ -545,5 +878,67 @@ function Toggle({
         />
       </span>
     </button>
+  );
+}
+
+/**
+ * Live status of the wrist app.
+ *
+ * Deliberately reports what is actually true rather than a single "connected"
+ * badge: "paired but not installed" and "installed but out of range" are
+ * different problems with different fixes, and collapsing them into one state
+ * is how support tickets get written.
+ */
+function WatchAppCard() {
+  const [status, setStatus] = useState<WatchStatus | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const read = () => {
+      void watchStatus().then((next) => {
+        if (!cancelled) setStatus(next);
+      });
+    };
+    read();
+    // Reachability changes when the watch goes in and out of range.
+    const id = window.setInterval(read, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, []);
+
+  if (!status?.supported) return null;
+
+  const detail = !status.paired
+    ? "No Apple Watch paired with this iPhone."
+    : !status.installed
+      ? "Install DEADSET on your watch from the Watch app on iPhone."
+      : status.reachable
+        ? "Connected. Start a workout on your phone and it appears on your wrist."
+        : "Installed. Out of range right now — sets logged on your watch will sync when it reconnects.";
+
+  const tone =
+    status.installed && status.reachable ? "#22c55e" : status.installed ? "#8a8a8a" : "#e63222";
+
+  return (
+    <section className="px-5 mb-6">
+      <p className="label-cap mb-2 flex items-center gap-1.5">
+        <Watch size={12} className="text-accent-red" /> DEADSET on Apple Watch
+      </p>
+      <div className="bg-grit-card border border-grit p-4" style={{ borderRadius: 8 }}>
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full" style={{ background: tone }} />
+          <p className="text-sm font-bold text-grit">
+            {status.installed ? (status.reachable ? "Connected" : "Out of range") : "Not installed"}
+          </p>
+        </div>
+        <p className="text-[11px] text-grit-dim mt-1.5 leading-relaxed">{detail}</p>
+        <p className="text-[10px] text-grit-dim mt-2 leading-relaxed">
+          Log sets, holds and rest from your wrist. Your phone stays the record — the watch queues
+          anything it logs while you are apart.
+        </p>
+      </div>
+    </section>
   );
 }

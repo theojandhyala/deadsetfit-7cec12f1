@@ -1,6 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useRef, useState, type RefObject } from "react";
-import { Camera, Trophy, Flame, Trash2, Lock, Image as ImageIcon } from "lucide-react";
+import {
+  BrainCircuit,
+  Camera,
+  Flame,
+  Gauge,
+  Image as ImageIcon,
+  Lock,
+  Scale,
+  Trash2,
+  Trophy,
+} from "lucide-react";
 
 import { useAppState } from "@/lib/storage";
 import { getExercise } from "@/lib/exercises";
@@ -33,6 +43,15 @@ import { AppleFitnessCard } from "@/components/AppleFitnessCard";
 import { TrainingAutopilot } from "@/components/TrainingAutopilot";
 import { ProWeeklyReview } from "@/components/ProWeeklyReview";
 import { PRRoadmap } from "@/components/PRRoadmap";
+import { useUnit } from "@/hooks/useUnit";
+import { captureCheckIn, deleteStoredPhoto } from "@/lib/progress-photo-store";
+import { useProgressPhotoMigration } from "@/hooks/useProgressPhotoMigration";
+import { CheckInImage } from "@/components/CheckInImage";
+import { ProgressPhotoHero } from "@/components/ProgressPhotoHero";
+import { ProgressPhotoShareCard } from "@/components/ProgressPhotoShareCard";
+import { photoJourney } from "@/lib/progress-photos";
+import { formatVolume, formatWeight, toDisplay, toKg } from "@/lib/units";
+import { hapticFailure, hapticSaved, hapticSelection, hapticUndo } from "@/lib/haptics";
 
 export const Route = createFileRoute("/_tabs/progress")({
   head: () => ({ meta: [{ title: "DEADSET — Progress" }] }),
@@ -41,10 +60,15 @@ export const Route = createFileRoute("/_tabs/progress")({
 
 function ProgressPage() {
   const [state, set] = useAppState();
+  const unit = useUnit();
   const { isPro, loading } = usePro();
   const analyticsLocked = loading || !isPro;
   const photoRef = useRef<HTMLInputElement>(null);
   const [compare, setCompare] = useState<string[]>([]);
+  const [sharingPhotos, setSharingPhotos] = useState(false);
+  // Moves any photos still inlined from an older build into storage, once.
+  const userIdRef = useProgressPhotoMigration();
+  const journey = photoJourney(state);
   // Log inputs are DOM-owned (defaultValue + ref, read on submit) — controlled
   // value/onChange freezes typing in the iOS WKWebView.
   const weightRef = useRef<HTMLInputElement>(null);
@@ -59,27 +83,15 @@ function ProgressPage() {
   const totalPRs = state.sessions.reduce((a, s) => a + (s.prCount || 0), 0);
 
   function addPhoto(file: File) {
-    // Downscale to a bounded JPEG — raw camera photos are multi-MB base64
-    // strings that live inside the state blob: they blow the 2MB sync cap
-    // and make every state parse/stringify visibly janky on phones.
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      const max = 900;
-      const scale = Math.min(1, max / Math.max(img.width, img.height));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
-      URL.revokeObjectURL(url);
-      set((s) => ({
-        ...s,
-        checkIns: [...s.checkIns, { date: new Date().toISOString(), photoDataUrl: dataUrl }],
-      }));
-    };
-    img.onerror = () => URL.revokeObjectURL(url);
-    img.src = url;
+    // Uploaded to the athlete's private bucket, not inlined into the synced
+    // state blob: a stored photo is ~122 KB against a 2,000,000-byte cap, so a
+    // handful of check-ins used to pause cloud backup of all training data.
+    void captureCheckIn(file, userIdRef.current)
+      .then((checkIn) => {
+        set((s) => ({ ...s, checkIns: [...s.checkIns, checkIn] }));
+        hapticSaved();
+      })
+      .catch(() => hapticFailure());
   }
 
   function togglePhoto(id: string) {
@@ -87,9 +99,13 @@ function ProgressPage() {
       openPaywall("photos");
       return;
     }
-    setCompare((c) =>
-      c.includes(id) ? c.filter((x) => x !== id) : c.length < 2 ? [...c, id] : [c[1], id],
-    );
+    const next = compare.includes(id)
+      ? compare.filter((x) => x !== id)
+      : compare.length < 2
+        ? [...compare, id]
+        : [compare[1], id];
+    setCompare(next);
+    hapticSelection();
   }
 
   /** Bodyweight entry nearest to an ISO date (for photo comparisons). */
@@ -104,8 +120,15 @@ function ProgressPage() {
     return best ? best.weight : null;
   }
   function logWeight() {
-    const w = Number(weightRef.current?.value);
-    if (!w || w < 0) return;
+    const typed = Number(weightRef.current?.value);
+    if (!typed || typed < 0) {
+      hapticFailure();
+      return;
+    }
+    // Typed in the athlete's units; bodyweight is stored in kilograms like
+    // every other weight, or their whole history changes meaning when they
+    // switch the setting.
+    const w = toKg(typed, unit);
     // One entry per day: re-logging today replaces it (fixes typo re-entry and
     // the duplicate-key/delete-all collision on same-day rows).
     const today = isoDay();
@@ -114,6 +137,7 @@ function ProgressPage() {
       weights: [...s.weights.filter((x) => x.date !== today), { date: today, weight: w }],
     }));
     if (weightRef.current) weightRef.current.value = "";
+    hapticSaved();
   }
   function logMeasurements() {
     const chest = +(chestRef.current?.value ?? "") || 0;
@@ -121,8 +145,14 @@ function ProgressPage() {
     const arms = +(armsRef.current?.value ?? "") || 0;
     const legs = +(legsRef.current?.value ?? "") || 0;
     // Don't record an all-empty measurement row — it would pollute the chart.
-    if (!chest && !waist && !arms && !legs) return;
-    if (chest < 0 || waist < 0 || arms < 0 || legs < 0) return;
+    if (!chest && !waist && !arms && !legs) {
+      hapticFailure();
+      return;
+    }
+    if (chest < 0 || waist < 0 || arms < 0 || legs < 0) {
+      hapticFailure();
+      return;
+    }
     // One entry per day: re-logging today replaces it.
     const today = isoDay();
     set((s) => ({
@@ -135,12 +165,15 @@ function ProgressPage() {
     for (const r of [chestRef, waistRef, armsRef, legsRef]) {
       if (r.current) r.current.value = "";
     }
+    hapticSaved();
   }
   function deleteWeight(date: string) {
     set((s) => ({ ...s, weights: s.weights.filter((w) => w.date !== date) }));
+    hapticUndo();
   }
   function deleteMeasurement(date: string) {
     set((s) => ({ ...s, measurements: s.measurements.filter((m) => m.date !== date) }));
+    hapticUndo();
   }
   async function deleteCheckIn(date: string) {
     const ok = await askConfirm({
@@ -149,8 +182,11 @@ function ProgressPage() {
       danger: true,
     });
     if (!ok) return;
+    const removed = state.checkIns.find((c) => c.date === date);
+    if (removed?.photoPath) void deleteStoredPhoto(removed.photoPath);
     set((s) => ({ ...s, checkIns: s.checkIns.filter((c) => c.date !== date) }));
     setCompare((c) => c.filter((d) => d !== date));
+    hapticUndo();
   }
 
   // PRs across both new sessions and legacy logs — enriched with reps, date, history, group
@@ -371,14 +407,96 @@ function ProgressPage() {
           icon={<Flame size={14} />}
         />
         <Stat label="SESSIONS" value={`${totalSessions}`} sub="LOGGED" />
-        <Stat label="VOLUME" value={`${Math.round(totalVolume).toLocaleString()}`} sub="KG" />
+        <Stat
+          label="VOLUME"
+          value={`${Math.round(toDisplay(totalVolume, unit)).toLocaleString()}`}
+          sub={unit.toUpperCase()}
+        />
         <Stat label="PRS" value={`${totalPRs}`} sub="HIT" accent={totalPRs > 0} />
       </section>
+
+      {/* Progress photos, above the fold. This is the app's most persuasive
+          artefact and it used to sit in a small grid at the bottom of a very
+          long screen, behind a ghost button you had to already know about. */}
+      <ProgressPhotoHero
+        checkIns={state.checkIns}
+        weights={state.weights}
+        unit={unit}
+        onCapture={() => photoRef.current?.click()}
+        onShare={() => setSharingPhotos(true)}
+        onOpenAll={() => {
+          document.getElementById("progress-photos")?.scrollIntoView({ behavior: "smooth" });
+        }}
+      />
+
+      {sharingPhotos && journey.first && journey.latest && (
+        <ProgressPhotoShareCard
+          before={journey.first}
+          now={journey.latest}
+          daysApart={journey.daysApart}
+          weightDeltaKg={journey.weightDeltaKg}
+          unit={unit}
+          displayName={state.profile?.displayName || state.profile?.username || "DEADSET"}
+          onClose={() => setSharingPhotos(false)}
+        />
+      )}
+
+      <nav className="px-5 mb-6" aria-label="Progress shortcuts">
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { href: "#progress-body", label: "Body", Icon: Scale },
+            { href: "#progress-photos", label: "Photos", Icon: Camera },
+            { href: "#progress-strength", label: "Strength", Icon: Trophy },
+            { href: "#progress-insights", label: "Insights", Icon: BrainCircuit },
+          ].map(({ href, label, Icon }) => (
+            <a
+              key={href}
+              href={href}
+              onClick={() => {
+                if (window.location.hash !== href) hapticSelection();
+              }}
+              className="press flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-2xl border border-white/10 bg-grit-card px-1 text-center"
+            >
+              <Icon size={17} className="text-accent-red" />
+              <span className="text-[9px] font-black uppercase text-grit-dim">{label}</span>
+            </a>
+          ))}
+        </div>
+      </nav>
 
       <ProWeeklyReview />
       <AppleFitnessCard />
       <TrainingAutopilot />
-      <PRRoadmap />
+      <div id="progress-strength" className="scroll-mt-28">
+        <PRRoadmap />
+      </div>
+
+      {/* Strength Map — the "how strong am I actually" signature feature */}
+      <section className="px-5 mb-4 animate-slide-up delay-50">
+        <Link
+          to="/strength"
+          className="deadset-3d-panel deadset-lift block w-full p-4 press"
+          style={{
+            background: "linear-gradient(135deg, rgba(91,208,122,0.14), #141414)",
+            border: "1.5px solid rgba(91,208,122,0.4)",
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="min-w-0">
+              <p className="label-cap text-[10px]" style={{ color: "#5bd07a" }}>
+                Strength Map
+              </p>
+              <p className="display text-xl font-extrabold uppercase text-white leading-none mt-0.5">
+                See the body you're building
+              </p>
+              <p className="text-[11px] text-grit-dim mt-1">
+                Front and back, graded from your real lifts and bodyweight.
+              </p>
+            </div>
+            <Gauge size={26} style={{ color: "#5bd07a" }} />
+          </div>
+        </Link>
+      </section>
 
       {/* The Catalogue — visual journey (photos, PR wall, before/after) */}
       <section className="px-5 mb-6 animate-slide-up delay-50">
@@ -418,7 +536,7 @@ function ProgressPage() {
       {/* ——— The intelligence stack: every card below is deterministic,
           data-gated (renders nothing until it can be honest) and carries
           its own section wrapper so empty states leave no gap. ——— */}
-      <section className="px-5 mb-3">
+      <section id="progress-insights" className="scroll-mt-28 px-5 mb-3">
         <div className="deadset-section-title">
           <h2 className="display text-xl font-extrabold uppercase text-grit leading-none">
             Training intelligence
@@ -482,7 +600,7 @@ function ProgressPage() {
             {/* Training Consistency Heatmap */}
             <div className="mb-6">
               <p className="label-cap mb-2">Training Consistency</p>
-              <div className="rounded-2xl p-4 overflow-x-auto">
+              <div className="min-w-0 overflow-hidden rounded-2xl p-4">
                 <ConsistencyHeatmap completedDates={state.completedDates} />
               </div>
             </div>
@@ -509,9 +627,7 @@ function ProgressPage() {
                           <span className={wk.isCurrent ? "text-accent-red" : "text-white"}>
                             {wk.label}
                           </span>
-                          <span className="text-[#8A8A8A]">
-                            {Math.round(wk.volume).toLocaleString()}kg
-                          </span>
+                          <span className="text-[#8A8A8A]">{formatVolume(wk.volume, unit)}</span>
                         </div>
                         <div className="h-2 bg-[#0a0a0a]">
                           <div
@@ -557,11 +673,12 @@ function ProgressPage() {
                           </span>
                         </div>
                         <p className="text-[11px] text-grit-dim mt-1">
-                          e1RM {b.oneRm}kg · {b.standard!.ratio}× bodyweight
+                          e1RM {formatWeight(b.oneRm, unit)} · {b.standard!.ratio}× bodyweight
                           {b.standard!.nextTier && b.standard!.nextAtKg && (
                             <span>
                               {" "}
-                              · {b.standard!.nextAtKg}kg for {b.standard!.nextTier}
+                              · {formatWeight(b.standard!.nextAtKg!, unit)} for{" "}
+                              {b.standard!.nextTier}
                             </span>
                           )}
                         </p>
@@ -609,7 +726,7 @@ function ProgressPage() {
                           {c.name}
                         </p>
                         <p className="display text-lg font-extrabold text-[#e63222]">
-                          {Math.max(...c.points.map((p) => p.weight))}KG
+                          {formatWeight(Math.max(...c.points.map((p) => p.weight)), unit)}
                         </p>
                       </div>
                       <LineChart points={c.points.map((p) => p.weight)} />
@@ -630,9 +747,7 @@ function ProgressPage() {
                       <div key={name}>
                         <div className="flex justify-between text-xs uppercase font-bold tracking-wider mb-1">
                           <span className="text-white">{name}</span>
-                          <span className="text-[#8A8A8A]">
-                            {Math.round(vol).toLocaleString()}kg
-                          </span>
+                          <span className="text-[#8A8A8A]">{formatVolume(vol, unit)}</span>
                         </div>
                         <div className="h-2 bg-[#0a0a0a]">
                           <div
@@ -677,7 +792,7 @@ function ProgressPage() {
       </section>
 
       {/* Weight */}
-      <section className="px-5 mb-6">
+      <section id="progress-body" className="scroll-mt-28 px-5 mb-6">
         <p className="label-cap mb-2">Weight Log</p>
         <div
           className="rounded-2xl p-4"
@@ -688,7 +803,7 @@ function ProgressPage() {
               ref={weightRef}
               inputMode="decimal"
               defaultValue=""
-              placeholder="Today's kg"
+              placeholder={`Today's ${unit}`}
               className="input-grit"
             />
             <button onClick={logWeight} className="btn-grit">
@@ -708,12 +823,14 @@ function ProgressPage() {
                   <p className="display text-lg font-extrabold leading-none" style={{ color }}>
                     {bw.perWeek > 0 ? "+" : ""}
                     {bw.perWeek}
-                    <span className="text-[10px] text-grit-dim ml-1">kg/wk</span>
+                    <span className="text-[10px] text-grit-dim ml-1">{unit}/wk</span>
                   </p>
                 </div>
                 {bw.target && (
                   <div className="text-right">
-                    <p className="label-cap text-[10px] text-grit-dim">Target {bw.target}kg</p>
+                    <p className="label-cap text-[10px] text-grit-dim">
+                      Target {formatWeight(bw.target, unit)}
+                    </p>
                     <p className="text-xs text-grit">
                       {bw.etaDate
                         ? `~${new Date(bw.etaDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
@@ -736,7 +853,7 @@ function ProgressPage() {
                   <div key={w.date} className="flex items-center justify-between py-1 text-xs">
                     <span className="text-[#8A8A8A]">{w.date}</span>
                     <div className="flex items-center gap-3">
-                      <span className="font-bold text-grit">{w.weight} kg</span>
+                      <span className="font-bold text-grit">{formatWeight(w.weight, unit)}</span>
                       <button
                         onClick={() => deleteWeight(w.date)}
                         className="text-[#8A8A8A] hover:text-[#e63222] tap-44"
@@ -813,13 +930,15 @@ function ProgressPage() {
       </section>
 
       {/* Check-ins */}
-      <section className="px-5 mb-6">
+      <section id="progress-photos" className="scroll-mt-28 px-5 mb-6">
         <p className="label-cap mb-2">Photo Check-ins</p>
         <input
           ref={photoRef}
           type="file"
           accept="image/*"
-          capture="environment"
+          // No `capture` attribute: it forces the rear camera and skips the
+          // library entirely. A progress photo is usually a mirror shot taken
+          // on the front camera, or one already in Photos.
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];
@@ -840,14 +959,14 @@ function ProgressPage() {
                   const w = weightNear(d);
                   return (
                     <div key={d} className="rounded-2xl">
-                      <img
-                        src={p?.photoDataUrl}
-                        alt=""
-                        className="w-full aspect-[3/4] object-cover"
-                      />
+                      {p && (
+                        <CheckInImage checkIn={p} className="w-full aspect-[3/4] object-cover" />
+                      )}
                       <div className="text-[10px] p-1 label-cap text-center">
                         {p?.date.slice(0, 10)}
-                        {w !== null && <span className="text-grit-dim"> · {w}kg</span>}
+                        {w !== null && (
+                          <span className="text-grit-dim"> · {formatWeight(w, unit)}</span>
+                        )}
                       </div>
                     </div>
                   );
@@ -868,7 +987,7 @@ function ProgressPage() {
                     <span style={{ color: delta > 0 ? "#e63222" : "#22c55e" }}>
                       {" "}
                       · {delta > 0 ? "+" : ""}
-                      {delta}kg
+                      {formatWeight(delta, unit)}
                     </span>
                   )}
                 </p>
@@ -899,11 +1018,7 @@ function ProgressPage() {
                         className="relative border block w-full"
                         style={{ borderColor: sel ? "#e63222" : "#262626" }}
                       >
-                        <img
-                          src={c.photoDataUrl}
-                          alt=""
-                          className="w-full aspect-[3/4] object-cover"
-                        />
+                        <CheckInImage checkIn={c} className="w-full aspect-[3/4] object-cover" />
                         <span
                           className="absolute bottom-0 inset-x-0 text-[9px] text-center label-cap py-0.5"
                           style={{ background: "rgba(0,0,0,0.7)" }}
@@ -996,61 +1111,33 @@ function ConsistencyHeatmap({ completedDates }: { completedDates: string[] }) {
     weeks.push(col);
   }
 
-  // Month labels: find first week of each month
-  const monthLabels: { label: string; weekIdx: number }[] = [];
-  for (let w = 0; w < WEEKS; w++) {
-    const firstDay = weeks[w][0].date;
-    const dt = new Date(firstDay);
-    // Show label if it's the first occurrence of this month
-    if (dt.getDate() <= 7) {
-      const prev = w > 0 ? new Date(weeks[w - 1][0].date).getMonth() : -1;
-      if (dt.getMonth() !== prev) {
-        monthLabels.push({
-          label: dt.toLocaleString("default", { month: "short" }).toUpperCase(),
-          weekIdx: w,
-        });
-      }
-    }
-  }
-
-  const CELL = 10;
-  const GAP = 2;
-  const totalW = WEEKS * (CELL + GAP) - GAP;
+  const timelineLabels = [0, 13, 26, 39, 51].map((weekIdx) =>
+    new Date(weeks[weekIdx][0].date).toLocaleString("default", { month: "short" }).toUpperCase(),
+  );
 
   return (
-    <div style={{ minWidth: totalW }}>
-      {/* Month labels */}
-      <div className="flex mb-1" style={{ gap: GAP }}>
-        {weeks.map((_, w) => {
-          const label = monthLabels.find((m) => m.weekIdx === w);
-          return (
-            <div key={w} style={{ width: CELL, flexShrink: 0 }}>
-              {label && (
-                <span
-                  className="text-[8px] label-cap text-[#8A8A8A]"
-                  style={{ whiteSpace: "nowrap" }}
-                >
-                  {label.label}
-                </span>
-              )}
-            </div>
-          );
-        })}
+    <div className="min-w-0 w-full">
+      <div className="mb-1 flex items-center justify-between">
+        {timelineLabels.map((label, index) => (
+          <span key={`${label}-${index}`} className="label-cap text-[7px] text-[#8A8A8A]">
+            {label}
+          </span>
+        ))}
       </div>
-      {/* Grid */}
-      <div className="flex" style={{ gap: GAP }}>
+      <div
+        className="grid min-w-0 w-full gap-px"
+        style={{ gridTemplateColumns: `repeat(${WEEKS}, minmax(0, 1fr))` }}
+      >
         {weeks.map((col, w) => (
-          <div key={w} className="flex flex-col" style={{ gap: GAP }}>
+          <div key={w} className="grid min-w-0 gap-px">
             {col.map((cell) => (
               <div
                 key={cell.date}
+                className="aspect-square min-w-0 rounded-[1px]"
                 title={`${cell.date}: ${cell.count} workout${cell.count !== 1 ? "s" : ""}`}
                 style={{
-                  width: CELL,
-                  height: CELL,
                   background:
                     cell.count === 0 ? "#0A0A0A" : cell.count === 1 ? "#7a1410" : "#e63222",
-                  flexShrink: 0,
                 }}
               />
             ))}
@@ -1061,7 +1148,7 @@ function ConsistencyHeatmap({ completedDates }: { completedDates: string[] }) {
       <div className="flex items-center gap-2 mt-2">
         <span className="text-[9px] label-cap text-[#8A8A8A]">Less</span>
         {["#0A0A0A", "#7a1410", "#e63222"].map((c) => (
-          <div key={c} style={{ width: CELL, height: CELL, background: c, flexShrink: 0 }} />
+          <div key={c} className="h-2.5 w-2.5 shrink-0" style={{ background: c }} />
         ))}
         <span className="text-[9px] label-cap text-[#8A8A8A]">More</span>
       </div>

@@ -164,7 +164,9 @@ export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>,
   },
 });
 
-export async function restoreSupabaseSession() {
+let sessionRestorePromise: Promise<void> | undefined;
+
+async function restoreSessionFromBackup() {
   if (!isBrowser()) return;
   const {
     data: { session },
@@ -198,4 +200,15 @@ export async function restoreSupabaseSession() {
     // deleting the refresh token here causes the very logout loop we're trying
     // to prevent. Explicit logout still clears it.
   }
+}
+
+/** One shared restore prevents startup routes from racing the same auth lock. */
+export function restoreSupabaseSession(): Promise<void> {
+  sessionRestorePromise ??= restoreSessionFromBackup().catch((error) => {
+    // A hard storage/network failure should not poison every later retry in
+    // this app process. Keep concurrent callers deduplicated, then re-arm.
+    sessionRestorePromise = undefined;
+    throw error;
+  });
+  return sessionRestorePromise;
 }

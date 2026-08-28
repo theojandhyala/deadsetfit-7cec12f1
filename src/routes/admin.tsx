@@ -1,7 +1,16 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import { Activity, ArrowLeft, Users, Crown, TrendingUp, Globe, RefreshCw } from "lucide-react";
+import {
+  Activity,
+  ArrowLeft,
+  Users,
+  Crown,
+  TrendingUp,
+  Globe,
+  RefreshCw,
+  Gift,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { getAdminStats, type AdminStats } from "@/lib/admin.functions";
 
@@ -83,6 +92,13 @@ function AdminPage() {
                 icon={<Crown size={16} />}
                 label="PRO SUBS"
                 value={stats.activeSubscriptions}
+                accent
+              />
+              <Kpi icon={<Gift size={16} />} label="REFERRALS" value={stats.referrals.total} />
+              <Kpi
+                icon={<TrendingUp size={16} />}
+                label="REFS / 30D"
+                value={stats.referrals.last30Days}
                 accent
               />
             </div>

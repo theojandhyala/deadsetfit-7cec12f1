@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { estimate1RM } from "@/lib/calc";
+import { useUnit } from "@/hooks/useUnit";
 
 const PERCENTAGES = [95, 90, 85, 80, 75, 70, 65, 60] as const;
 
@@ -20,6 +21,7 @@ export function OneRmCalculator({
   initialWeight?: number;
   initialReps?: number;
 }) {
+  const unit = useUnit();
   const [open, setOpen] = useState(false);
   const [weight, setWeight] = useState(
     initialWeight && initialWeight > 0 ? String(initialWeight) : "",
@@ -91,7 +93,7 @@ export function OneRmCalculator({
               <p className="label-cap text-[10px] text-grit-dim">Estimated 1RM</p>
               <p className="font-display uppercase text-4xl font-extrabold text-accent-red leading-none mt-1">
                 {oneRm}
-                <span className="text-xs text-grit-dim ml-1">kg</span>
+                <span className="text-xs text-grit-dim ml-1">{unit}</span>
               </p>
 
               <div className="mt-4 border-t border-grit pt-3 grid grid-cols-4 gap-2">
@@ -100,7 +102,7 @@ export function OneRmCalculator({
                     <p className="label-cap text-[10px] text-grit-dim">{pct}%</p>
                     <p className="font-display text-base font-extrabold text-grit leading-tight">
                       {formatKg(roundTo2p5((oneRm * pct) / 100))}
-                      <span className="text-[9px] text-grit-dim ml-0.5">kg</span>
+                      <span className="text-[9px] text-grit-dim ml-0.5">{unit}</span>
                     </p>
                   </div>
                 ))}

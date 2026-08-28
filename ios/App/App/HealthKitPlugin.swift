@@ -137,7 +137,7 @@ public class HealthKitPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        let calendar = Calendar.current
+        let calendar = Calendar(identifier: .gregorian)
         let today = calendar.startOfDay(for: Date())
         let start = calendar.date(byAdding: .day, value: -6, to: today) ?? today
         let end = Date()
@@ -256,7 +256,14 @@ public class HealthKitPlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         group.enter()
-        let components = calendar.dateComponents([.year, .month, .day], from: today)
+        // HealthKit throws an Objective-C exception (and terminates the app)
+        // when activity-summary components are not a complete Gregorian day.
+        // Calendar.current omitted the required era and could be non-Gregorian
+        // for the user's locale. Keep these components explicit: this call is
+        // reached as soon as the Progress screen refreshes Apple Fitness.
+        var components = calendar.dateComponents([.era, .year, .month, .day], from: today)
+        components.calendar = calendar
+        components.timeZone = calendar.timeZone
         let summaryPredicate = HKQuery.predicateForActivitySummary(with: components)
         let summaryQuery = HKActivitySummaryQuery(predicate: summaryPredicate) { _, summaries, error in
             if let summary = summaries?.first {

@@ -6,6 +6,7 @@ import {
   ArrowDown,
   ArrowUp,
   Check,
+  BellRing,
   ChevronLeft,
   Dumbbell,
   Minus,
@@ -14,9 +15,10 @@ import {
   Zap,
 } from "lucide-react";
 import { GritLogo } from "@/components/GritLogo";
+import { SetupLivePreview } from "@/components/SetupLivePreview";
+import { StrengthEngineTutorial } from "@/components/StrengthEngineTutorial";
 import { getState, setLocalStateOwner, setState, waitForRemoteState } from "@/lib/storage";
-import { calculateCalories, calculateMacros, defaultSchedule, isoDay } from "@/lib/calc";
-import { strengthStandard, TIER_COLORS } from "@/lib/strength-standards";
+import { defaultSchedule, focusExerciseRecommendation, isoDay, WEEK } from "@/lib/calc";
 import { EXERCISES, getExercise } from "@/lib/exercises";
 import { getMyProfile, saveProfile } from "@/lib/profile.functions";
 import { saveUserState } from "@/lib/user-state.functions";
@@ -35,13 +37,20 @@ import type {
 import { WeekdayPicker } from "@/components/WeekdayPicker";
 import { daysPerWeekFor, describeDays, MIN_TRAINING_DAYS } from "@/lib/training-days";
 import { buildPublicStats } from "@/lib/fifa-stats";
-import { PRO_HIGHLIGHTS } from "@/lib/pro-features";
+import { currencyForCountry, detectCountry, type SupportedCurrency } from "@/lib/currency";
+import { formatWeightValue, toKg, type WeightUnit } from "@/lib/units";
 import {
-  CURRENCY_META,
-  currencyForCountry,
-  detectCountry,
-  type SupportedCurrency,
-} from "@/lib/currency";
+  onboardingOrder,
+  onboardingStageLabel,
+  type OnboardingActiveStep,
+  type OnboardingMode,
+} from "@/lib/onboarding-flow";
+import { hapticFailure, hapticSaved, hapticSelection } from "@/lib/haptics";
+import { deriveLiveSetupBlueprint } from "@/lib/setup-blueprint";
+import { normaliseDecimalInput } from "@/lib/programme-weight-setup";
+import { finishAppBoot } from "@/lib/app-boot";
+import { requestWorkoutNotificationPermission } from "@/lib/device-reminders";
+import { isNativeIos } from "@/lib/platform";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "DEADSET — Onboarding" }] }),
@@ -56,8 +65,11 @@ type Step =
   | "equipment"
   | "focus"
   | "session"
+  | "preferences"
   | "schedule"
+  | "notifications"
   | "experience"
+  | "units"
   | "about"
   | "sleep"
   | "target"
@@ -70,10 +82,9 @@ type Step =
   | "photo"
   | "analyzing"
   | "blueprint"
-  | "commit"
-  | "pro";
+  | "commit";
 
-type Mode = "GENERATE" | "BUILD";
+type Mode = OnboardingMode;
 
 const REP_TARGETS = [
   "1-3",
@@ -93,37 +104,61 @@ const REP_TARGETS = [
   "AMRAP",
 ] as const;
 
-function orderFor(mode: Mode | null): Step[] {
-  const base: Step[] = ["mode"];
-  if (!mode) return base;
-  const schedule: Step[] =
-    mode === "GENERATE"
-      ? ["goal", "experience", "about", "days", "equipment", "focus", "session", "schedule"]
-      : ["goal", "experience", "about", "days", "equipment", "focus", "session"];
-  return [...base, ...schedule, "username"];
+function scheduleInputsFingerprint(profile: Partial<Profile>): string {
+  return JSON.stringify({
+    goal: profile.goal ?? null,
+    experience: profile.experience ?? null,
+    trainingDays: profile.trainingDays ?? null,
+    daysPerWeek: profile.daysPerWeek ?? null,
+    equipment: profile.equipment ?? null,
+    focusMuscles: profile.focusMuscles ?? null,
+    exercisesPerSession: profile.exercisesPerSession ?? null,
+    sessionMinutes: profile.sessionMinutes ?? null,
+  });
+}
+
+function isDevelopmentSetupPreview(): boolean {
+  return (
+    import.meta.env.DEV &&
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("preview") === "1"
+  );
 }
 
 function Onboarding() {
   const navigate = useNavigate();
   const [idx, setIdx] = useState(0);
+  const [direction, setDirection] = useState<"forward" | "back">("forward");
   const [mode, setMode] = useState<Mode | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Partial<Profile>>({});
+  // Not part of Profile — it lives on app state — but it has to be chosen here,
+  // before the weight question, or "80" could mean either thing.
+  const [units, setUnits] = useState<WeightUnit>("kg");
   const [draftSchedule, setDraftSchedule] = useState<Schedule | null>(null);
   const savingRef = useRef(false);
-  // Where to land after the final save: the web pro step can point this at
-  // /upgrade; everything else finishes into the app.
-  const destinationRef = useRef<"/train" | "/plan" | "/upgrade">("/train");
   const save = saveProfile;
   const saveFullState = saveUserState;
   const getProfile = getMyProfile;
-  const ORDER = useMemo(() => orderFor(mode), [mode]);
+  const ORDER = useMemo(() => onboardingOrder(mode) as Step[], [mode]);
   const step = ORDER[idx];
+
+  useEffect(() => {
+    if (userId) finishAppBoot();
+  }, [userId]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [step]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
+        if (isDevelopmentSetupPreview()) {
+          setUserId("local-preview");
+          return;
+        }
         const { supabase } = await import("@/integrations/supabase/client");
         const {
           data: { session },
@@ -147,7 +182,7 @@ function Onboarding() {
             profile: accountProfile,
             schedule: current.schedule ?? defaultSchedule(accountProfile),
           }));
-          navigate({ to: "/train", replace: true });
+          navigate({ to: "/upgrade", replace: true });
         }
       } catch {
         // Auth hiccup: stay on onboarding — the final save re-checks the session.
@@ -159,8 +194,26 @@ function Onboarding() {
   }, [getProfile, navigate]);
 
   function next(patch: Partial<Profile>) {
+    const upcoming = ORDER[idx + 1];
     const merged = { ...draft, ...patch };
+    // Keep the live read-back and the visibly selected defaults identical from
+    // the first frame of each screen, even before the athlete taps a control.
+    if (upcoming === "days" && !merged.trainingDays?.length) {
+      merged.trainingDays = ["MON", "WED", "FRI"];
+      merged.daysPerWeek = 3;
+    }
+    if (upcoming === "preferences") {
+      merged.experience ??= "BEGINNER";
+      merged.exercisesPerSession ??= 4;
+      merged.sessionMinutes ??= 45;
+      merged.focusMuscles ??= [];
+    }
+    setDirection("forward");
+    hapticSelection();
     setDraft(merged);
+    if (draftSchedule && scheduleInputsFingerprint(draft) !== scheduleInputsFingerprint(merged)) {
+      setDraftSchedule(null);
+    }
     if (idx === ORDER.length - 1) {
       // Guard against a double-tap on the final CTA firing two saves. The
       // userId check must come first — locking savingRef before it would
@@ -171,16 +224,41 @@ function Onboarding() {
         return;
       }
       savingRef.current = true;
-      const p = {
-        ...merged,
+      // The first workout should not be blocked by body-stat questions. Keep
+      // durable defaults here; the profile screen can refine calorie and
+      // strength-standard calculations whenever the athlete is ready.
+      const p: Profile = {
+        goal: merged.goal ?? "MAINTAIN",
+        experience: merged.experience ?? "BEGINNER",
+        // These are required in the active flow. Zero is a defensive fallback
+        // that keeps Strength explicitly ungraded if a future route bypasses
+        // the screen; never invent a 75 kg athlete.
+        age: merged.age ?? 0,
+        weightKg: merged.weightKg ?? 0,
+        heightCm: merged.heightCm ?? 0,
+        gender: merged.gender ?? "OTHER",
+        daysPerWeek: merged.daysPerWeek ?? 3,
+        trainingDays: merged.trainingDays ?? ["MON", "WED", "FRI"],
+        equipment: merged.equipment ?? "FULL_GYM",
+        exercisesPerSession: merged.exercisesPerSession ?? 4,
+        sessionMinutes: merged.sessionMinutes ?? 45,
+        focusMuscles: merged.focusMuscles ?? [],
         motivation: merged.motivation ?? "DISCIPLINE",
         sleepQuality: merged.sleepQuality ?? "OK",
         weakness: merged.weakness ?? "CONSISTENCY",
         displayName: merged.displayName ?? merged.username,
         injuries: merged.injuries ?? "",
-        startingWeightKg: merged.startingWeightKg ?? merged.weightKg,
-      } as Profile;
-      const sched = mode === "BUILD" ? emptySchedule() : (draftSchedule ?? defaultSchedule(p));
+        startingWeightKg: merged.startingWeightKg ?? merged.weightKg ?? 0,
+        username: merged.username,
+        avatarDataUrl: merged.avatarDataUrl,
+        targetWeightKg: merged.targetWeightKg,
+        dreamOutcome: merged.dreamOutcome,
+        commitmentDate: merged.commitmentDate,
+        committed: merged.committed,
+      };
+      // BUILD starts in edit mode, but it must still finish with a usable first
+      // week. Saving an empty schedule strands the athlete on Train.
+      const sched = draftSchedule ?? defaultSchedule(p);
       const publicStats = buildPublicStats({ ...getState(), profile: p, schedule: sched });
       save({
         data: {
@@ -201,15 +279,17 @@ function Onboarding() {
       })
         .then(async () => {
           setLocalStateOwner(userId);
-          const nextState = { ...getState(), profile: p, schedule: sched };
+          const nextState = { ...getState(), profile: p, schedule: sched, units };
           setState(() => nextState);
           await saveFullState({ data: { data: JSON.stringify(nextState) } }).catch(() => {
             toast.warning("Setup saved locally. We'll keep trying to sync it.");
           });
-          navigate({ to: mode === "BUILD" ? "/plan" : destinationRef.current, replace: true });
+          hapticSaved();
+          navigate({ to: "/upgrade", replace: true });
         })
         .catch((e: Error) => {
           savingRef.current = false;
+          hapticFailure();
           const msg = e.message || "Couldn't save profile";
           if (/username/i.test(msg)) {
             toast.error("That @username is taken — pick another.");
@@ -223,30 +303,51 @@ function Onboarding() {
     }
   }
 
+  function previewDraft(patch: Partial<Profile>) {
+    const merged = { ...draft, ...patch };
+    if (draftSchedule && scheduleInputsFingerprint(draft) !== scheduleInputsFingerprint(merged)) {
+      setDraftSchedule(null);
+    }
+    setDraft(merged);
+  }
+
   return (
     <div
-      className="deadset-onboarding min-h-screen bg-grit flex flex-col"
+      className="deadset-onboarding min-h-[100dvh] bg-grit flex flex-col"
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
       <div className="px-6 pt-10 pb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           {idx > 0 && (
             <button
-              onClick={() => setIdx(idx - 1)}
+              onClick={() => {
+                hapticSelection();
+                setDirection("back");
+                setIdx(idx - 1);
+              }}
               aria-label="Back"
               className="w-9 h-9 -ml-2 flex items-center justify-center rounded-full border border-grit bg-grit-card text-grit-dim press"
             >
               <ChevronLeft size={18} />
             </button>
           )}
-          <GritLogo className="text-3xl" />
+          <GritLogo className="w-32" />
         </div>
         <span className="label-cap">
-          {idx === 0 ? "QUICK SETUP" : `${idx} / ${ORDER.length - 1}`}
+          {idx === 0
+            ? "LIVE SETUP"
+            : `${onboardingStageLabel(step as OnboardingActiveStep)} · ${idx} / ${ORDER.length - 1}`}
         </span>
       </div>
       <div className="px-6">
-        <div className="h-1.5 bg-grit-card rounded-full overflow-hidden">
+        <div
+          className="h-1.5 bg-grit-card rounded-full overflow-hidden"
+          role="progressbar"
+          aria-label="Setup progress"
+          aria-valuemin={0}
+          aria-valuemax={Math.max(1, ORDER.length - 1)}
+          aria-valuenow={idx}
+        >
           <div
             className="h-full bg-accent-red rounded-full transition-all"
             style={{
@@ -256,10 +357,23 @@ function Onboarding() {
           />
         </div>
       </div>
-      <div key={step} className="flex-1 px-6 pt-10 pb-10 flex flex-col animate-slide-up">
+      {mode && !["mode", "schedule", "notifications", "blueprint", "analyzing"].includes(step) && (
+        <div className="px-6 pt-4">
+          <SetupLivePreview draft={draft} mode={mode} schedule={draftSchedule} compact />
+        </div>
+      )}
+      <div
+        key={step}
+        className={`flex-1 px-6 pt-8 pb-10 flex flex-col ${
+          direction === "back" ? "animate-slide-down" : "animate-slide-up"
+        }`}
+      >
         {step === "mode" && (
           <ModeStep
             onPick={(m: Mode) => {
+              hapticSelection();
+              setDirection("forward");
+              if (m !== mode) setDraftSchedule(null);
               setMode(m);
               setIdx(1);
             }}
@@ -318,7 +432,18 @@ function Onboarding() {
             onPick={(v) => next({ experience: v as Experience })}
           />
         )}
-        {step === "about" && <AboutYouStep initial={draft} onSubmit={(patch) => next(patch)} />}
+        {step === "units" && (
+          <UnitsStep
+            value={units}
+            onSubmit={(chosen) => {
+              setUnits(chosen);
+              next({});
+            }}
+          />
+        )}
+        {step === "about" && (
+          <AboutYouStep unit={units} initial={draft} onSubmit={(patch) => next(patch)} />
+        )}
         {step === "sleep" && (
           <Choice
             eyebrow="Recovery is where you actually grow"
@@ -335,6 +460,9 @@ function Onboarding() {
         {step === "days" && (
           <TrainingDaysStep
             initial={draft.trainingDays}
+            onPreview={(days) =>
+              previewDraft({ trainingDays: days, daysPerWeek: daysPerWeekFor(days) })
+            }
             onSubmit={(days) => next({ trainingDays: days, daysPerWeek: daysPerWeekFor(days) })}
           />
         )}
@@ -349,16 +477,25 @@ function Onboarding() {
             onPick={(v) => next({ equipment: v as Equipment })}
           />
         )}
+        {step === "preferences" && (
+          <TrainingPreferencesStep
+            initial={draft}
+            onPreview={previewDraft}
+            onSubmit={(patch) => next(patch)}
+          />
+        )}
         {step === "schedule" && (
           <SchedulePreview
             draft={draft}
             initial={draftSchedule}
+            startEditing={mode === "BUILD"}
             onContinue={(schedule) => {
               setDraftSchedule(schedule);
               next({});
             }}
           />
         )}
+        {step === "notifications" && <NotificationStep onContinue={() => next({})} />}
         {step === "injuries" && (
           <Injuries
             initial={draft.injuries}
@@ -389,6 +526,7 @@ function Onboarding() {
         )}
         {step === "target" && (
           <TargetStep
+            unit={units}
             currentKg={draft.weightKg}
             goal={draft.goal}
             initial={draft.targetWeightKg}
@@ -444,19 +582,18 @@ function Onboarding() {
           <PhotoStep onSubmit={(url) => next({ avatarDataUrl: url })} onSkip={() => next({})} />
         )}
         {step === "analyzing" && <AnalyzingStep draft={draft} onDone={() => next({})} />}
-        {step === "blueprint" && <BlueprintStep draft={draft} onEnter={() => next({})} />}
+        {step === "blueprint" && (
+          <BlueprintStep
+            draft={draft}
+            mode={mode ?? "GENERATE"}
+            schedule={draftSchedule ?? defaultSchedule(draft as Profile)}
+            onEnter={() => next({})}
+          />
+        )}
         {step === "commit" && (
           <CommitStep
             draft={draft}
             onCommit={(commitmentDate) => next({ committed: true, commitmentDate })}
-          />
-        )}
-        {step === "pro" && (
-          <ProChoiceStep
-            onChoose={(goPro) => {
-              destinationRef.current = goPro ? "/upgrade" : "/train";
-              next({});
-            }}
           />
         )}
       </div>
@@ -499,22 +636,281 @@ function Choice({
   );
 }
 
-function AboutYouStep({
+/**
+ * Kilograms or pounds.
+ *
+ * Asked before anything is weighed, because every weight after this — the
+ * athlete's own bodyweight, every load, every strength grade computed against
+ * that bodyweight — is meaningless until the number has a unit attached.
+ */
+function UnitsStep({
+  value,
+  onSubmit,
+}: {
+  value: WeightUnit;
+  onSubmit: (unit: WeightUnit) => void;
+}) {
+  const [choice, setChoice] = useState<WeightUnit>(value);
+  return (
+    <div className="stagger">
+      <h2 className="display text-3xl font-extrabold uppercase text-grit">Weight units</h2>
+      <p className="mt-2 text-sm leading-relaxed text-grit-dim">
+        How do you measure weight? Everything in DEADSET follows this — plates, the bar, your
+        bodyweight, your strength grades.
+      </p>
+
+      <div className="mt-6 grid grid-cols-2 gap-3">
+        {(["kg", "lb"] as const).map((option) => {
+          const active = choice === option;
+          return (
+            <button
+              key={option}
+              onClick={() => setChoice(option)}
+              aria-pressed={active}
+              className="rounded-2xl border py-6 press"
+              style={{
+                borderColor: active ? "#e63222" : "rgba(255,255,255,.1)",
+                background: active ? "rgba(230,50,34,.1)" : "rgba(18,18,18,.9)",
+              }}
+            >
+              <span
+                className="display block text-3xl font-extrabold uppercase"
+                style={{ color: active ? "#e63222" : "#8a8a8a" }}
+              >
+                {option}
+              </span>
+              <span className="label-cap mt-1 block text-[10px] text-grit-dim">
+                {option === "kg" ? "Kilograms" : "Pounds"}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <p className="mt-4 text-[11px] leading-relaxed text-grit-dim">
+        You can change this any time in Settings. Your history is stored in kilograms either way, so
+        switching never alters a logged set.
+      </p>
+
+      <button onClick={() => onSubmit(choice)} className="btn-grit mt-6 w-full">
+        Continue
+      </button>
+    </div>
+  );
+}
+
+function TrainingPreferencesStep({
   initial,
+  onPreview,
   onSubmit,
 }: {
   initial?: Partial<Profile>;
+  onPreview: (patch: Partial<Profile>) => void;
+  onSubmit: (patch: Partial<Profile>) => void;
+}) {
+  const [experience, setExperience] = useState<Experience>(initial?.experience ?? "BEGINNER");
+  const initialExerciseCount = initial?.exercisesPerSession;
+  const [exerciseCount, setExerciseCount] = useState<3 | 4 | 5 | 6 | 7>(
+    initialExerciseCount === 3 ||
+      initialExerciseCount === 4 ||
+      initialExerciseCount === 5 ||
+      initialExerciseCount === 6 ||
+      initialExerciseCount === 7
+      ? initialExerciseCount
+      : 4,
+  );
+  const [focus, setFocus] = useState<FocusMuscle[]>(initial?.focusMuscles ?? []);
+  const focusOptions: { value: FocusMuscle; label: string }[] = [
+    { value: "CHEST", label: "Chest" },
+    { value: "BACK", label: "Back" },
+    { value: "SHOULDERS", label: "Shoulders" },
+    { value: "ARMS", label: "Arms" },
+    { value: "LEGS", label: "Legs" },
+    { value: "CORE", label: "Core" },
+  ];
+
+  function toggleFocus(muscle: FocusMuscle) {
+    hapticSelection();
+    const next = focus.includes(muscle)
+      ? focus.filter((item) => item !== muscle)
+      : focus.length < 2
+        ? [...focus, muscle]
+        : [focus[1], muscle];
+    setFocus(next);
+    onPreview({ focusMuscles: next });
+  }
+
+  const sessionMinutes =
+    exerciseCount <= 3 ? 30 : exerciseCount <= 4 ? 45 : exerciseCount <= 5 ? 60 : 90;
+
+  return (
+    <>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">Plan preferences</h1>
+      <p className="text-sm text-[#8a8a8a] mb-7">Set the training style for your first week.</p>
+
+      <section className="mb-6" aria-labelledby="experience-label">
+        <p id="experience-label" className="label-cap text-[10px] text-grit-dim mb-2">
+          Experience
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {(["BEGINNER", "INTERMEDIATE", "ADVANCED"] as Experience[]).map((level) => {
+            const active = experience === level;
+            return (
+              <button
+                key={level}
+                type="button"
+                aria-pressed={active}
+                onClick={() => {
+                  hapticSelection();
+                  setExperience(level);
+                  onPreview({ experience: level });
+                }}
+                className="border rounded-2xl p-3 press"
+                style={{
+                  borderColor: active ? "#e63222" : "#262626",
+                  background: active ? "rgba(230,50,34,0.1)" : "#141414",
+                }}
+              >
+                <span className="display block text-sm uppercase font-extrabold text-grit">
+                  {level === "BEGINNER" ? "New" : level === "INTERMEDIATE" ? "Regular" : "Advanced"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="mb-6" aria-labelledby="exercise-count-label">
+        <div className="flex items-baseline justify-between mb-2">
+          <p id="exercise-count-label" className="label-cap text-[10px] text-grit-dim">
+            Exercises per workout
+          </p>
+          <span className="label-cap text-[9px] text-accent-red">{sessionMinutes} min target</span>
+        </div>
+        <div className="grid grid-cols-5 gap-2">
+          {([3, 4, 5, 6, 7] as const).map((count) => {
+            const active = exerciseCount === count;
+            return (
+              <button
+                key={count}
+                type="button"
+                aria-label={`${count} exercises per workout`}
+                aria-pressed={active}
+                onClick={() => {
+                  hapticSelection();
+                  setExerciseCount(count);
+                  onPreview({
+                    exercisesPerSession: count,
+                    sessionMinutes: count <= 3 ? 30 : count <= 4 ? 45 : count <= 5 ? 60 : 90,
+                  });
+                }}
+                className="border rounded-2xl min-h-12 press"
+                style={{
+                  borderColor: active ? "#e63222" : "#262626",
+                  background: active ? "rgba(230,50,34,0.1)" : "#141414",
+                }}
+              >
+                <span className="display text-lg font-extrabold text-grit">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section aria-labelledby="focus-label">
+        <div className="flex items-baseline justify-between mb-2">
+          <p id="focus-label" className="label-cap text-[10px] text-grit-dim">
+            Focus muscles
+          </p>
+          <span className="label-cap text-[9px] text-grit-dim">Optional, up to 2</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {focusOptions.map((option) => {
+            const active = focus.includes(option.value);
+            return (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={active}
+                onClick={() => toggleFocus(option.value)}
+                className="border rounded-2xl px-4 py-3 text-left press"
+                style={{
+                  borderColor: active ? "#e63222" : "#262626",
+                  background: active ? "rgba(230,50,34,0.1)" : "#141414",
+                }}
+              >
+                <span className="display text-base uppercase font-extrabold text-grit">
+                  {option.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {focus.length > 0 && (
+          <div className="mt-3 rounded-2xl border border-accent-red/30 bg-accent-red/[0.07] p-3">
+            <p className="label-cap text-[8px] text-accent-red">PINNED INTO YOUR WEEK</p>
+            <div className="mt-2 grid gap-1.5">
+              {focus.map((muscle) => {
+                const recommendation = focusExerciseRecommendation(
+                  muscle,
+                  initial?.equipment ?? "FULL_GYM",
+                );
+                return (
+                  <p key={muscle} className="text-[11px] font-semibold text-grit">
+                    <Check size={12} className="mr-1.5 inline text-accent-red" />
+                    {muscle.charAt(0) + muscle.slice(1).toLowerCase()}:{" "}
+                    {recommendation?.name ?? "targeted movement"}
+                  </p>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-[9px] leading-relaxed text-grit-dim">
+              DEADSET keeps these movements when it trims the workout to your chosen length.
+            </p>
+          </div>
+        )}
+      </section>
+
+      <button
+        onClick={() =>
+          onSubmit({
+            experience,
+            exercisesPerSession: exerciseCount,
+            sessionMinutes,
+            focusMuscles: focus,
+          })
+        }
+        className="btn-grit mt-auto"
+      >
+        Preview my week
+      </button>
+    </>
+  );
+}
+
+function AboutYouStep({
+  initial,
+  unit,
+  onSubmit,
+}: {
+  initial?: Partial<Profile>;
+  unit: WeightUnit;
   onSubmit: (patch: Partial<Profile>) => void;
 }) {
   const [age, setAge] = useState(initial?.age != null ? String(initial.age) : "");
-  const [weight, setWeight] = useState(initial?.weightKg != null ? String(initial.weightKg) : "");
+  const [weight, setWeight] = useState(
+    initial?.weightKg != null ? formatWeightValue(initial.weightKg, unit) : "",
+  );
   const [height, setHeight] = useState(initial?.heightCm != null ? String(initial.heightCm) : "");
   const [gender, setGender] = useState<Gender | null>(initial?.gender ?? null);
   const a = Number(age);
   const w = Number(weight);
   const h = Number(height);
   const ageOk = age !== "" && a >= 13 && a <= 90;
-  const weightOk = weight !== "" && w >= 30 && w <= 250;
+  // Bounds in the athlete's own units — 30 to 250 kg is a sane human range,
+  // but rejecting a 180 lb lifter for being "too heavy" is not.
+  const weightKg = toKg(w, unit);
+  const weightOk = weight !== "" && weightKg >= 30 && weightKg <= 250;
   const heightOk = height !== "" && h >= 120 && h <= 230;
   const valid = ageOk && weightOk && heightOk && gender !== null;
 
@@ -530,7 +926,7 @@ function AboutYouStep({
     },
     {
       label: "WEIGHT",
-      suffix: "kg",
+      suffix: unit,
       value: weight,
       set: setWeight,
       ok: weightOk,
@@ -550,9 +946,12 @@ function AboutYouStep({
 
   return (
     <>
-      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">About you</h1>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">
+        Strength calibration
+      </h1>
       <p className="text-sm text-[#8a8a8a] mb-8">
-        Sets your calories, macros and strength standards. Never shown publicly.
+        Your bodyweight and reference table keep the Strength Map honest. Age and height tune fuel
+        targets. Never shown publicly.
       </p>
       <div className="grid grid-cols-3 gap-2 mb-6">
         {fields.map((f, i) => (
@@ -563,12 +962,15 @@ function AboutYouStep({
                 autoFocus={i === 0}
                 defaultValue={f.value}
                 onChange={(e) => {
-                  const cleaned = e.target.value.replace(f.digitsOnly ? /[^0-9]/g : /[^0-9.]/g, "");
+                  const cleaned = f.digitsOnly
+                    ? e.target.value.replace(/[^0-9]/g, "")
+                    : normaliseDecimalInput(e.target.value);
                   e.target.value = cleaned;
                   f.set(cleaned);
                 }}
                 inputMode="decimal"
                 placeholder={f.placeholder}
+                aria-label={`${f.label.toLowerCase()} in ${f.suffix}`}
                 className="bg-transparent outline-none w-full min-w-0 text-2xl font-display font-extrabold text-grit"
                 style={{ color: f.value && !f.ok ? "#e63222" : undefined }}
               />
@@ -577,14 +979,18 @@ function AboutYouStep({
           </div>
         ))}
       </div>
-      <p className="label-cap text-[10px] text-grit-dim mb-2">GENDER</p>
+      <p className="label-cap text-[10px] text-grit-dim mb-2">STRENGTH REFERENCE</p>
       <div className="grid grid-cols-3 gap-2 mb-6">
         {(["MALE", "FEMALE", "OTHER"] as Gender[]).map((g) => {
           const active = gender === g;
           return (
             <button
               key={g}
-              onClick={() => setGender(g)}
+              aria-pressed={active}
+              onClick={() => {
+                hapticSelection();
+                setGender(g);
+              }}
               className="border rounded-2xl p-3 press"
               style={{
                 borderColor: active ? "#e63222" : "#262626",
@@ -595,15 +1001,21 @@ function AboutYouStep({
                 className="display text-sm uppercase font-extrabold"
                 style={{ color: active ? "#f5f5f0" : "#8a8a8a" }}
               >
-                {g === "MALE" ? "Male" : g === "FEMALE" ? "Female" : "Other"}
+                {g === "MALE" ? "Male" : g === "FEMALE" ? "Female" : "Skip"}
               </span>
             </button>
           );
         })}
       </div>
+      {gender === "OTHER" && (
+        <p className="mb-4 text-[10px] leading-relaxed text-grit-dim">
+          Skip keeps strength grades grey until you choose a reference in Profile. DEADSET will not
+          silently use the wrong standard.
+        </p>
+      )}
       <button
         disabled={!valid}
-        onClick={() => gender && onSubmit({ age: a, weightKg: w, heightCm: h, gender })}
+        onClick={() => gender && onSubmit({ age: a, weightKg, heightCm: h, gender })}
         className="btn-grit mt-auto disabled:opacity-40"
       >
         Continue
@@ -787,10 +1199,12 @@ function PhotoStep({ onSubmit, onSkip }: { onSubmit: (url: string) => void; onSk
 function SchedulePreview({
   draft,
   initial,
+  startEditing = false,
   onContinue,
 }: {
   draft: Partial<Profile>;
   initial: Schedule | null;
+  startEditing?: boolean;
   onContinue: (schedule: Schedule) => void;
 }) {
   // Preview must match what actually gets saved.
@@ -802,11 +1216,22 @@ function SchedulePreview({
         equipment: draft.equipment ?? "FULL_GYM",
         focusMuscles: draft.focusMuscles,
         exercisesPerSession: draft.exercisesPerSession ?? 5,
+        trainingDays: draft.trainingDays,
       }) as Profile,
-    [draft.goal, draft.daysPerWeek, draft.equipment, draft.focusMuscles, draft.exercisesPerSession],
+    [
+      draft.goal,
+      draft.daysPerWeek,
+      draft.equipment,
+      draft.focusMuscles,
+      draft.exercisesPerSession,
+      draft.trainingDays,
+    ],
   );
   const [schedule, setSchedule] = useState<Schedule>(() => initial ?? defaultSchedule(stub));
-  const [selectedDay, setSelectedDay] = useState<DayKey>("MON");
+  const [selectedDay, setSelectedDay] = useState<DayKey>(
+    () => WEEK.find((day) => schedule[day].exerciseIds.length > 0) ?? "MON",
+  );
+  const [editing, setEditing] = useState(startEditing);
 
   const DAYS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
   const available = EXERCISES.filter(
@@ -825,6 +1250,7 @@ function SchedulePreview({
   }
 
   function updateDayTargets(dayKey: DayKey, patch: { sets?: number; reps?: string }) {
+    hapticSelection();
     setSchedule((current) => ({
       ...current,
       [dayKey]: { ...current[dayKey], ...patch },
@@ -836,6 +1262,7 @@ function SchedulePreview({
     exerciseId: string,
     patch: { sets?: number; reps?: string },
   ) {
+    hapticSelection();
     setSchedule((current) => ({
       ...current,
       [dayKey]: {
@@ -856,6 +1283,7 @@ function SchedulePreview({
     const exerciseIds = schedule[dayKey].exerciseIds;
     if (target < 0 || target >= exerciseIds.length) return;
     const next = [...exerciseIds];
+    hapticSelection();
     [next[index], next[target]] = [next[target], next[index]];
     setSchedule((current) => ({
       ...current,
@@ -884,6 +1312,7 @@ function SchedulePreview({
     if (!exerciseId) return;
     const exercise = getExercise(exerciseId);
     if (!exercise) return;
+    hapticSelection();
     setSchedule((current) => {
       const day = current[selectedDay];
       if (day.exerciseIds.includes(exerciseId)) return current;
@@ -898,6 +1327,64 @@ function SchedulePreview({
     });
   }
 
+  if (!editing) {
+    const blueprint = deriveLiveSetupBlueprint(draft, { mode: "GENERATE", schedule });
+    const trainingDays = blueprint.week.filter((day) => day.isTraining);
+    return (
+      <>
+        <p className="label-cap mb-2 flex items-center gap-1.5 text-accent-red">
+          <Zap size={12} fill="currentColor" /> YOUR WEEK IS LIVE
+        </p>
+        <h1 className="display mb-1 text-3xl font-extrabold uppercase text-grit sm:text-4xl">
+          Built around your life
+        </h1>
+        <p className="mb-5 text-sm leading-relaxed text-[#8a8a8a]">
+          This is the exact week DEADSET will save. Starting loads come next, one movement at a
+          time.
+        </p>
+
+        <SetupLivePreview draft={draft} mode="GENERATE" schedule={schedule} />
+
+        <div className="mt-4 space-y-2" aria-label="Generated training days">
+          {trainingDays.map((day, index) => (
+            <div
+              key={day.dayKey}
+              className="deadset-plan-reveal flex items-center gap-3 rounded-2xl border border-white/10 bg-[#111214] px-3 py-2.5"
+              style={{ animationDelay: `${index * 55}ms` }}
+            >
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-accent-red/10 text-[10px] font-black text-accent-red">
+                {day.dayKey}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-black uppercase text-grit">{day.shortLabel}</p>
+                <p className="text-[9px] text-grit-dim">
+                  {day.exerciseCount} exercises · about {blueprint.sessionMinutes} min
+                </p>
+              </div>
+              <Check size={14} className="shrink-0 text-emerald-400" />
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-auto pt-5">
+          <button
+            type="button"
+            onClick={() => {
+              hapticSelection();
+              setEditing(true);
+            }}
+            className="btn-ghost mb-2 w-full"
+          >
+            Fine-tune exercises, sets and reps
+          </button>
+          <button onClick={() => onContinue(schedule)} className="btn-grit w-full">
+            Use this week
+          </button>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <p className="label-cap mb-2 flex items-center gap-1.5 text-accent-red">
@@ -907,9 +1394,20 @@ function SchedulePreview({
         Set every target now
       </h1>
       <p className="mb-5 text-sm leading-relaxed text-[#8a8a8a]">
-        Choose the exercises, order, sets and reps before you start. Everything remains editable
-        later.
+        Choose the exercises, order, sets and reps before you start. Working weights are collected
+        one at a time after the blueprint reveal.
       </p>
+
+      <button
+        type="button"
+        onClick={() => {
+          hapticSelection();
+          setEditing(false);
+        }}
+        className="btn-ghost mb-4 w-full"
+      >
+        Back to week overview
+      </button>
 
       <div className="grid grid-cols-7 gap-1.5" aria-label="Training week">
         {DAYS.map((d) => {
@@ -918,7 +1416,10 @@ function SchedulePreview({
           return (
             <button
               key={d}
-              onClick={() => setSelectedDay(d)}
+              onClick={() => {
+                hapticSelection();
+                setSelectedDay(d);
+              }}
               aria-pressed={selectedDay === d}
               aria-label={`${d}, ${isRest ? "rest day" : `${day.exerciseIds.length} exercises`}`}
               className="relative min-w-0 rounded-lg border px-1 py-3 text-center press"
@@ -1170,15 +1671,6 @@ function SchedulePreview({
   );
 }
 
-function emptySchedule(): import("@/lib/types").Schedule {
-  const days = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] as const;
-  const out = {} as Record<string, { label: string; exerciseIds: string[] }>;
-  days.forEach((d) => {
-    out[d] = { label: "REST", exerciseIds: [] };
-  });
-  return out as import("@/lib/types").Schedule;
-}
-
 function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
   return (
     <>
@@ -1210,7 +1702,7 @@ function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
             Build Your Own
           </span>
           <p className="text-xs text-[#8a8a8a] mt-1">
-            Start blank. Map every day yourself — exercises, sets, reps and weight.
+            Start with a safe week, then replace anything — exercises, sets and reps.
           </p>
         </button>
       </div>
@@ -1303,9 +1795,11 @@ function PRStep({ onContinue }: { onContinue: () => void }) {
  */
 function TrainingDaysStep({
   initial,
+  onPreview,
   onSubmit,
 }: {
   initial?: DayKey[];
+  onPreview: (days: DayKey[]) => void;
   onSubmit: (days: DayKey[]) => void;
 }) {
   const [days, setDays] = useState<DayKey[]>(initial ?? ["MON", "WED", "FRI"]);
@@ -1316,11 +1810,17 @@ function TrainingDaysStep({
         Which days do you train?
       </h1>
       <p className="text-sm text-[#8a8a8a] mb-6">
-        Tap the days that suit your week. We'll put your workouts on exactly those
-        days and rest you on the others.
+        Tap the days that suit your week. We'll put your workouts on exactly those days and rest you
+        on the others.
       </p>
 
-      <WeekdayPicker value={days} onChange={setDays} />
+      <WeekdayPicker
+        value={days}
+        onChange={(next) => {
+          setDays(next);
+          onPreview(next);
+        }}
+      />
 
       <p className="text-sm mt-4" style={{ color: enough ? "#f5f5f0" : "#8a8a8a" }}>
         {enough ? (
@@ -1417,21 +1917,25 @@ function FocusStep({
 }
 
 function TargetStep({
+  unit,
   currentKg,
   goal,
   initial,
   onSubmit,
   onSkip,
 }: {
+  unit: WeightUnit;
   currentKg?: number;
   goal?: Goal;
   initial?: number;
   onSubmit: (n: number) => void;
   onSkip: () => void;
 }) {
-  const [v, setV] = useState(initial != null ? String(initial) : "");
+  const [v, setV] = useState(initial != null ? formatWeightValue(initial, unit) : "");
   const n = Number(v);
-  const valid = Number.isFinite(n) && n >= 30 && n <= 250;
+  // Bounds are a human weight range in kilograms; the typed number is not.
+  const targetKg = toKg(n, unit);
+  const valid = Number.isFinite(n) && targetKg >= 30 && targetKg <= 250;
   const hint =
     goal === "BULK"
       ? "Where do you want the scale in 6 months?"
@@ -1443,7 +1947,7 @@ function TargetStep({
       <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">Target weight</h1>
       <p className="text-sm text-[#8a8a8a] mb-6">
         {hint}
-        {currentKg ? ` You're at ${currentKg}kg now.` : ""}
+        {currentKg ? ` You're at ${formatWeightValue(currentKg, unit)}${unit} now.` : ""}
       </p>
       <div className="flex items-center gap-3 mb-6">
         <input
@@ -1454,14 +1958,14 @@ function TargetStep({
             setV(c);
           }}
           inputMode="decimal"
-          placeholder={currentKg ? String(currentKg) : "80"}
+          placeholder={currentKg ? formatWeightValue(currentKg, unit) : "80"}
           className="input-grit text-2xl display font-extrabold"
         />
-        <span className="label-cap text-grit-dim">kg</span>
+        <span className="label-cap text-grit-dim">{unit}</span>
       </div>
       <div className="mt-auto flex flex-col gap-3">
         <button
-          onClick={() => valid && onSubmit(n)}
+          onClick={() => valid && onSubmit(targetKg)}
           disabled={!valid}
           className="btn-grit disabled:opacity-40"
         >
@@ -1475,216 +1979,167 @@ function TargetStep({
   );
 }
 
-function BlueprintStep({ draft, onEnter }: { draft: Partial<Profile>; onEnter: () => void }) {
-  const p = draft as Profile;
-  const calories = p.weightKg && p.heightCm && p.age ? calculateCalories(p) : 0;
-  const macros = calories ? calculateMacros(p, calories) : null;
-  const manualPRs = getState().manualPRs ?? {};
-  const lifts = (
-    [
-      { id: "bench-press", label: "Bench" },
-      { id: "squat", label: "Squat" },
-      { id: "deadlift", label: "Deadlift" },
-    ] as const
-  )
-    .map((l) => {
-      const pr = manualPRs[l.id];
-      const oneRm = pr?.value ?? 0;
-      const std = oneRm && p.weightKg ? strengthStandard(oneRm, p.weightKg, l.id, p.gender) : null;
-      return { ...l, oneRm, std };
-    })
-    .filter((l) => l.std);
-  const program =
-    p.experience === "BEGINNER"
-      ? "StrongLifts 5x5"
-      : p.experience === "ADVANCED"
-        ? (p.daysPerWeek ?? 4) >= 6
-          ? "Arnold Split"
-          : "nSuns 5/3/1"
-        : p.goal === "BULK"
-          ? "PHUL"
-          : "5/3/1 BBB";
-  const focus = (p.focusMuscles ?? []).join(" + ");
-  const delta =
-    p.targetWeightKg && p.weightKg ? Math.round((p.targetWeightKg - p.weightKg) * 10) / 10 : null;
+function BlueprintStep({
+  draft,
+  mode,
+  schedule,
+  onEnter,
+}: {
+  draft: Partial<Profile>;
+  mode: Mode;
+  schedule: Schedule;
+  onEnter: () => void;
+}) {
+  const blueprint = deriveLiveSetupBlueprint(draft, { mode, schedule });
+  const covered = blueprint.coveredMuscles.map(
+    (muscle) => muscle.charAt(0) + muscle.slice(1).toLowerCase(),
+  );
+  const missing = blueprint.missingMuscles.map(
+    (muscle) => muscle.charAt(0) + muscle.slice(1).toLowerCase(),
+  );
 
   return (
-    <>
-      <p className="label-cap text-accent-red text-[10px] mb-1">BUILT FROM YOUR ANSWERS</p>
-      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-5">Your blueprint</h1>
-      <div className="flex flex-col gap-2 mb-6">
-        <div className="bg-grit-card border border-grit p-4">
-          <p className="label-cap text-[9px] text-grit-dim">THE WEEK</p>
-          <p className="text-sm text-grit font-bold mt-1">
-            {p.daysPerWeek} days · {p.exercisesPerSession ?? 5} exercises per workout
-            {focus && ` · extra ${focus.toLowerCase()}`}
+    <div className="flex-1 flex flex-col">
+      <p className="label-cap text-accent-red text-[10px] mb-1">BUILT FROM YOUR REAL ANSWERS</p>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">
+        Your system is ready
+      </h1>
+      <p className="mb-5 text-xs leading-relaxed text-grit-dim">
+        This is planned training, not invented progress. Your Strength Map only earns colour when
+        you log the work.
+      </p>
+
+      <SetupLivePreview draft={draft} mode={mode} schedule={schedule} />
+
+      <StrengthEngineTutorial focus={draft.focusMuscles?.[0]} />
+
+      <div className="mt-4 grid gap-2">
+        <div className="deadset-plan-reveal rounded-2xl border border-white/10 bg-[#111214] p-3">
+          <p className="label-cap text-[8px] text-accent-red">MUSCLE COVERAGE</p>
+          <p className="mt-1 text-xs font-bold text-grit">
+            {covered.length ? covered.join(" · ") : "No exercises set yet"}
           </p>
-        </div>
-        {calories > 0 && macros && (
-          <div className="bg-grit-card border border-grit p-4">
-            <p className="label-cap text-[9px] text-grit-dim">THE FUEL</p>
-            <p className="text-sm text-grit font-bold mt-1">
-              {calories} kcal · {macros.protein}g protein a day
-              {delta !== null && delta !== 0 && (
-                <span className="text-grit-dim font-normal">
-                  {" "}
-                  — {Math.abs(delta)}kg to {delta > 0 ? "gain" : "drop"}
-                </span>
-              )}
+          {missing.length > 0 && (
+            <p className="mt-1 text-[9px] leading-relaxed text-grit-dim">
+              Grey: {missing.join(", ")} — no exercise set for that area.
             </p>
-          </div>
-        )}
-        {lifts.length > 0 && (
-          <div className="bg-grit-card border border-grit p-4">
-            <p className="label-cap text-[9px] text-grit-dim mb-2">WHERE YOU STAND</p>
-            <div className="flex flex-col gap-1.5">
-              {lifts.map((l) => (
-                <div key={l.id} className="flex items-center justify-between">
-                  <span className="text-xs text-grit font-bold">
-                    {l.label} {l.oneRm}kg
-                  </span>
-                  <span
-                    className="label-cap text-[9px] rounded px-1.5 border"
-                    style={{
-                      color: TIER_COLORS[l.std!.tier],
-                      borderColor: `${TIER_COLORS[l.std!.tier]}66`,
-                    }}
-                  >
-                    {l.std!.tier}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        <div className="bg-grit-card border border-accent-red/40 p-4">
-          <p className="label-cap text-[9px] text-accent-red">RECOMMENDED PROGRAM</p>
-          <p className="text-sm text-grit font-bold mt-1">
-            {program}
-            <span className="label-cap text-[8px] text-accent-red border border-accent-red/40 rounded px-1 ml-2">
-              PRO
-            </span>
-          </p>
-          <p className="text-[11px] text-grit-dim mt-1">
-            Matched to your experience, goal and week. Find it in Programs.
+          )}
+        </div>
+        <div
+          className="deadset-plan-reveal rounded-2xl border border-white/10 bg-[#111214] p-3"
+          style={{ animationDelay: "80ms" }}
+        >
+          <p className="label-cap text-[8px] text-accent-red">RECOVERY SPACING</p>
+          <p className="mt-1 text-xs font-bold text-grit">{blueprint.recovery.headline}</p>
+          <p className="mt-1 text-[9px] leading-relaxed text-grit-dim">
+            {blueprint.recovery.detail}
           </p>
         </div>
       </div>
-      <div className="mt-auto">
-        <button onClick={onEnter} className="btn-grit w-full">
+
+      <div className="mt-auto pt-5">
+        <button onClick={onEnter} className="btn-grit w-full min-h-14 animate-subtle-pulse">
           <Zap size={16} className="mr-2" />
-          One last thing
+          Continue to 7-day free trial
         </button>
+        <p className="mt-2 text-center text-[9px] leading-relaxed text-grit-dim">
+          Your setup is saved before Apple opens. Eligible new subscribers get seven days free, then
+          the monthly subscription begins.
+        </p>
       </div>
-    </>
+    </div>
   );
 }
 
-// Web-only conversion moment at the end of onboarding: Free vs Pro with
-// ticks, a monthly/yearly toggle, and a clear "start free" escape hatch.
-// (Never rendered on native iOS — App Store 3.1.1.)
-function ProChoiceStep({ onChoose }: { onChoose: (goPro: boolean) => void }) {
-  const [plan, setPlan] = useState<"monthly" | "yearly">("yearly");
-  const [currency, setCurrency] = useState<SupportedCurrency>("gbp");
-  useEffect(() => {
-    detectCountry().then((c) => setCurrency(currencyForCountry(c)));
-  }, []);
-  const meta = CURRENCY_META[currency];
+function NotificationStep({ onContinue }: { onContinue: () => void }) {
+  const [busy, setBusy] = useState(false);
+
+  async function choose(enabled: boolean) {
+    setBusy(true);
+    try {
+      const granted =
+        enabled && isNativeIos() ? await requestWorkoutNotificationPermission() : false;
+      setState((current) => ({
+        ...current,
+        deviceRemindersEnabled: granted,
+        streakAlertsEnabled: granted,
+        rivalAlertsEnabled: granted,
+        notificationPreferenceConfigured: true,
+      }));
+      if (enabled && !granted && isNativeIos()) {
+        hapticFailure();
+        toast.error("Notifications weren't allowed. You can enable them later in Settings.");
+      } else if (granted) {
+        hapticSaved();
+      } else {
+        hapticSelection();
+      }
+      onContinue();
+    } catch {
+      hapticFailure();
+      toast.error("Notifications couldn't be configured. You can retry in Settings.");
+      setState((current) => ({
+        ...current,
+        deviceRemindersEnabled: false,
+        streakAlertsEnabled: false,
+        rivalAlertsEnabled: false,
+        notificationPreferenceConfigured: true,
+      }));
+      onContinue();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
-    <div className="flex-1 flex flex-col">
-      <p className="label-cap text-accent-red text-[10px] mb-1">One decision left</p>
-      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-1">Choose your edge</h1>
-      <p className="text-xs text-grit-dim mb-5">
-        Everything core is free forever. Pro is for the ones chasing rank.
-      </p>
-
-      {/* Free vs Pro ticks */}
-      <div className="bg-grit-card border border-grit rounded-2xl overflow-hidden mb-4">
-        <div className="grid grid-cols-[1fr_56px_56px] items-center px-4 py-2.5 border-b border-grit">
-          <span className="label-cap text-[9px] text-grit-dim">Feature</span>
-          <span className="label-cap text-[9px] text-grit-dim text-center">Free</span>
-          <span className="label-cap text-[9px] text-accent-red text-center">Pro</span>
-        </div>
-        <div className="grid grid-cols-[1fr_56px_56px] items-center px-4 py-2.5 border-b border-grit/60">
-          <span className="text-xs text-grit font-medium">All core training & social</span>
-          <span className="text-center">
-            <Check size={14} className="inline text-grit" />
-          </span>
-          <span className="text-center">
-            <Check size={14} className="inline text-accent-red" />
-          </span>
-        </div>
-        {PRO_HIGHLIGHTS.map((r) => (
-          <div
-            key={r.label}
-            className="grid grid-cols-[1fr_56px_56px] items-center px-4 py-2.5 border-b border-grit/60 last:border-b-0"
-          >
-            <span className="text-xs text-grit font-medium">{r.label}</span>
-            <span className="text-center text-grit-dim text-xs">
-              {typeof r.free === "string" ? r.free : "—"}
-            </span>
-            <span className="text-center">
-              {typeof r.pro === "string" ? (
-                <span className="text-xs text-accent-red font-bold">{r.pro}</span>
-              ) : (
-                <Check size={14} className="inline text-accent-red" />
-              )}
-            </span>
-          </div>
-        ))}
+    <div className="flex flex-1 flex-col">
+      <div className="relative mb-6 overflow-hidden rounded-[2rem] border border-accent-red/50 bg-[#111214] p-6 text-center shadow-[0_24px_70px_rgba(230,50,34,0.14)]">
+        <div className="absolute inset-x-10 top-0 h-24 rounded-full bg-accent-red/20 blur-3xl" />
+        <span className="relative mx-auto grid h-20 w-20 place-items-center rounded-[1.6rem] border border-accent-red/50 bg-accent-red/15 text-accent-red">
+          <BellRing size={36} />
+        </span>
+        <p className="label-cap relative mt-5 text-[9px] text-accent-red">YOUR PLAN, ON TIME</p>
+        <h1 className="display relative mt-2 text-3xl font-black uppercase leading-[0.95] text-grit">
+          Put DEADSET on your Lock Screen
+        </h1>
+        <p className="relative mx-auto mt-4 max-w-sm text-xs leading-relaxed text-grit-dim">
+          Get one alert on scheduled training days, a warning before a real streak ends, and
+          pressure when a rival duel needs you. No spam and no exact location tracking.
+        </p>
       </div>
 
-      {/* Month vs year */}
-      <div className="grid grid-cols-2 gap-2 mb-5">
-        <button
-          onClick={() => setPlan("yearly")}
-          className="rounded-2xl border p-3 text-left press relative"
-          style={{
-            background: plan === "yearly" ? "rgba(230,50,34,0.12)" : "#141414",
-            borderColor: plan === "yearly" ? "#e63222" : "#262626",
-          }}
-        >
-          <span
-            className="absolute -top-2 left-3 text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-full text-white"
-            style={{ background: "#e63222" }}
-          >
-            Save 33%
-          </span>
-          <p className="label-cap text-[9px] text-grit-dim">Yearly</p>
-          <p className="display text-xl font-extrabold text-white leading-none mt-0.5">
-            {meta.yearly}
-          </p>
-          <p className="text-[10px] text-grit-dim">per year</p>
-        </button>
-        <button
-          onClick={() => setPlan("monthly")}
-          className="rounded-2xl border p-3 text-left press"
-          style={{
-            background: plan === "monthly" ? "rgba(230,50,34,0.12)" : "#141414",
-            borderColor: plan === "monthly" ? "#e63222" : "#262626",
-          }}
-        >
-          <p className="label-cap text-[9px] text-grit-dim">Monthly</p>
-          <p className="display text-xl font-extrabold text-white leading-none mt-0.5">
-            {meta.monthly}
-          </p>
-          <p className="text-[10px] text-grit-dim">per month · cancel anytime</p>
-        </button>
+      <div className="grid gap-2">
+        {["Scheduled workout reminders", "Streak-at-risk warnings", "Rival duel pressure"].map(
+          (label) => (
+            <div
+              key={label}
+              className="flex items-center gap-3 rounded-2xl border border-white/10 bg-grit-card px-4 py-3"
+            >
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-accent-red text-white">
+                <Check size={13} />
+              </span>
+              <span className="text-xs font-bold text-grit">{label}</span>
+            </div>
+          ),
+        )}
       </div>
 
-      <div className="mt-auto">
+      <div className="mt-auto pt-6">
         <button
-          onClick={() => onChoose(true)}
-          className="btn-grit w-full py-4 text-base animate-subtle-pulse"
+          type="button"
+          disabled={busy}
+          onClick={() => void choose(true)}
+          className="btn-grit min-h-14 w-full text-[11px]"
         >
-          <Zap size={16} className="mr-2" />
-          Unlock DEADSET Pro
+          <BellRing size={15} className="mr-2" /> Enable notifications
         </button>
         <button
-          onClick={() => onChoose(false)}
-          className="mt-3 w-full text-center label-cap text-[10px] text-grit-dim press py-2"
+          type="button"
+          disabled={busy}
+          onClick={() => void choose(false)}
+          className="mt-2 min-h-11 w-full text-[10px] font-black uppercase tracking-wider text-grit-dim"
         >
-          Start free — upgrade any time
+          Not now
         </button>
       </div>
     </div>

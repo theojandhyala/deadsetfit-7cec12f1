@@ -6,9 +6,12 @@ import { usePro } from "@/hooks/usePro";
 import { liftSeriesAll, strengthGoalRoadmaps } from "@/lib/pro-intelligence";
 import { openPaywall } from "@/lib/paywall-events";
 import { useAppState } from "@/lib/storage";
+import { useUnit } from "@/hooks/useUnit";
+import { formatWeightValue, toKg } from "@/lib/units";
 
 export function PRRoadmap() {
   const [state, setState] = useAppState();
+  const unit = useUnit();
   const { isPro, loading } = usePro();
   const locked = loading || !isPro;
   const exerciseRef = useRef<HTMLSelectElement>(null);
@@ -24,11 +27,15 @@ export function PRRoadmap() {
       return;
     }
     const exerciseId = exerciseRef.current?.value;
-    const targetKg = Number(targetRef.current?.value);
+    // Typed in the athlete's units; targets are stored in kilograms with
+    // every other weight.
+    const targetKg = toKg(Number(targetRef.current?.value), unit);
     const lift = tracked.find((item) => item.exerciseId === exerciseId);
     const currentKg = lift?.points[lift.points.length - 1]?.e1rm ?? 0;
     if (!exerciseId || !Number.isFinite(targetKg) || targetKg <= currentKg) {
-      toast.error(`Set a target above your current ${currentKg}kg estimated max.`);
+      toast.error(
+        `Set a target above your current ${formatWeightValue(currentKg, unit)}${unit} estimated max.`,
+      );
       return;
     }
     setState((current) => ({
@@ -57,7 +64,9 @@ export function PRRoadmap() {
       </div>
 
       <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-grit-card p-4">
-        <div className={locked ? "pointer-events-none select-none blur-[5px] opacity-55" : undefined}>
+        <div
+          className={locked ? "pointer-events-none select-none blur-[5px] opacity-55" : undefined}
+        >
           <div className="grid grid-cols-[1fr_88px_44px] gap-2">
             <select ref={exerciseRef} className="input-grit min-w-0" aria-label="Tracked lift">
               {tracked.map((lift) => (
@@ -70,8 +79,8 @@ export function PRRoadmap() {
               ref={targetRef}
               className="input-grit min-w-0"
               inputMode="decimal"
-              placeholder="Goal kg"
-              aria-label="Target estimated one-rep max in kilograms"
+              placeholder={`Goal ${unit}`}
+              aria-label={`Target estimated one-rep max in ${unit}`}
             />
             <button
               type="button"
@@ -94,7 +103,10 @@ export function PRRoadmap() {
               </div>
             ) : (
               goals.map((goal) => (
-                <div key={goal.exerciseId} className="rounded-xl border border-white/10 bg-black/30 p-3">
+                <div
+                  key={goal.exerciseId}
+                  className="rounded-xl border border-white/10 bg-black/30 p-3"
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-xs font-bold text-grit">{goal.name}</p>

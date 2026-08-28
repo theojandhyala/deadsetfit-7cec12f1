@@ -32,7 +32,11 @@ export function ReportHistoryCard({ state }: { state: AppState }) {
           <p className="label-cap text-[9px] text-grit-dim">{grades.length} weeks</p>
         </div>
 
-        <div className="flex gap-1.5 mt-3" role="img" aria-label={`Weekly grades, oldest first: ${grades.map((g) => g.grade).join(", ")}. Trend: ${trend}.`}>
+        <div
+          className="flex gap-1.5 mt-3"
+          role="img"
+          aria-label={`Weekly grades, oldest first: ${grades.map((g) => g.grade).join(", ")}. Trend: ${trend}.`}
+        >
           {grades.map((g) => (
             <div
               key={g.weekStart}

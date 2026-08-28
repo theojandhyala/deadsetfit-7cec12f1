@@ -18,6 +18,7 @@ import {
   muscleBalance,
 } from "@/lib/pro-intelligence";
 import { ProBadge } from "@/components/ProBadge";
+import { useUnit } from "@/hooks/useUnit";
 
 const MUSCLE_LABEL: Record<string, string> = {
   CHEST: "Chest",
@@ -54,6 +55,7 @@ function SectionTitle({
 }
 
 export function ProIntelligence({ state }: { state: AppState }) {
+  const unit = useUnit();
   // Stable within a mount — a raw Date.now() would change every render and
   // defeat the memoization below (three full passes over history per render).
   const now = useMemo(() => Date.now(), []);
@@ -200,7 +202,8 @@ export function ProIntelligence({ state }: { state: AppState }) {
                     >
                       <TrendIcon size={11} />
                       {t.perWeek > 0 ? "+" : ""}
-                      {t.perWeek}kg/wk
+                      {t.perWeek}
+                      {unit}/wk
                     </p>
                   </div>
                 </div>

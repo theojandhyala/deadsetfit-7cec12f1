@@ -36,9 +36,9 @@ function privateKeyBytes(pem: string) {
 export function appleOAuthConfigured(env: AppleOAuthEnv) {
   return Boolean(
     env.APPLE_OAUTH_CLIENT_ID?.trim() &&
-      env.APPLE_TEAM_ID?.trim() &&
-      env.APPLE_KEY_ID?.trim() &&
-      env.APPLE_PRIVATE_KEY?.trim(),
+    env.APPLE_TEAM_ID?.trim() &&
+    env.APPLE_KEY_ID?.trim() &&
+    env.APPLE_PRIVATE_KEY?.trim(),
   );
 }
 
@@ -69,11 +69,7 @@ export async function createAppleClientSecret(env: AppleOAuthEnv, now = Date.now
   return `${unsigned}.${base64Url(new Uint8Array(signature))}`;
 }
 
-async function appleRequest(
-  url: string,
-  fields: Record<string, string>,
-  env: AppleOAuthEnv,
-) {
+async function appleRequest(url: string, fields: Record<string, string>, env: AppleOAuthEnv) {
   const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },

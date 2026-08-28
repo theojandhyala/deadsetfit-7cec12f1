@@ -9,22 +9,29 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WorkoutTrackerRouteImport } from './routes/workout-tracker'
 import { Route as UpgradeRouteImport } from './routes/upgrade'
+import { Route as TiktokRouteImport } from './routes/tiktok'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as StopGuessingRouteImport } from './routes/stop-guessing'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as RecoveryRouteImport } from './routes/recovery'
+import { Route as RealWeekRouteImport } from './routes/real-week'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as GuideRouteImport } from './routes/guide'
 import { Route as DisclaimerRouteImport } from './routes/disclaimer'
+import { Route as CreatorRouteImport } from './routes/creator'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as TabsRouteImport } from './routes/_tabs'
+import { Route as R3DayGymPlanRouteImport } from './routes/3-day-gym-plan'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkoutLiveRouteImport } from './routes/workout.live'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as TabsTrainRouteImport } from './routes/_tabs.train'
+import { Route as TabsStrengthRouteImport } from './routes/_tabs.strength'
 import { Route as TabsProgressRouteImport } from './routes/_tabs.progress'
 import { Route as TabsProgramsRouteImport } from './routes/_tabs.programs'
 import { Route as TabsProfileRouteImport } from './routes/_tabs.profile'
@@ -38,14 +45,29 @@ import { Route as TabsProgramsProgramIdRouteImport } from './routes/_tabs.progra
 import { Route as TabsLiftExerciseIdRouteImport } from './routes/_tabs.lift.$exerciseId'
 import { Route as TabsAthleteIdRouteImport } from './routes/_tabs.athlete.$id'
 
+const WorkoutTrackerRoute = WorkoutTrackerRouteImport.update({
+  id: '/workout-tracker',
+  path: '/workout-tracker',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UpgradeRoute = UpgradeRouteImport.update({
   id: '/upgrade',
   path: '/upgrade',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TiktokRoute = TiktokRouteImport.update({
+  id: '/tiktok',
+  path: '/tiktok',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StopGuessingRoute = StopGuessingRouteImport.update({
+  id: '/stop-guessing',
+  path: '/stop-guessing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsRoute = SettingsRouteImport.update({
@@ -56,6 +78,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const RecoveryRoute = RecoveryRouteImport.update({
   id: '/recovery',
   path: '/recovery',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RealWeekRoute = RealWeekRouteImport.update({
+  id: '/real-week',
+  path: '/real-week',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -83,6 +110,11 @@ const DisclaimerRoute = DisclaimerRouteImport.update({
   path: '/disclaimer',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CreatorRoute = CreatorRouteImport.update({
+  id: '/creator',
+  path: '/creator',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -95,6 +127,11 @@ const AdminRoute = AdminRouteImport.update({
 } as any)
 const TabsRoute = TabsRouteImport.update({
   id: '/_tabs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const R3DayGymPlanRoute = R3DayGymPlanRouteImport.update({
+  id: '/3-day-gym-plan',
+  path: '/3-day-gym-plan',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -115,6 +152,11 @@ const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
 const TabsTrainRoute = TabsTrainRouteImport.update({
   id: '/train',
   path: '/train',
+  getParentRoute: () => TabsRoute,
+} as any)
+const TabsStrengthRoute = TabsStrengthRouteImport.update({
+  id: '/strength',
+  path: '/strength',
   getParentRoute: () => TabsRoute,
 } as any)
 const TabsProgressRoute = TabsProgressRouteImport.update({
@@ -180,17 +222,23 @@ const TabsAthleteIdRoute = TabsAthleteIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/3-day-gym-plan': typeof R3DayGymPlanRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/creator': typeof CreatorRoute
   '/disclaimer': typeof DisclaimerRoute
   '/guide': typeof GuideRoute
   '/leaderboard': typeof LeaderboardRoute
   '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
+  '/real-week': typeof RealWeekRoute
   '/recovery': typeof RecoveryRoute
   '/settings': typeof SettingsRoute
+  '/stop-guessing': typeof StopGuessingRoute
   '/terms': typeof TermsRoute
+  '/tiktok': typeof TiktokRoute
   '/upgrade': typeof UpgradeRoute
+  '/workout-tracker': typeof WorkoutTrackerRoute
   '/catalogue': typeof TabsCatalogueRoute
   '/challenges': typeof TabsChallengesRoute
   '/diet': typeof TabsDietRoute
@@ -200,6 +248,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof TabsProfileRoute
   '/programs': typeof TabsProgramsRouteWithChildren
   '/progress': typeof TabsProgressRoute
+  '/strength': typeof TabsStrengthRoute
   '/train': typeof TabsTrainRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/workout/live': typeof WorkoutLiveRoute
@@ -209,17 +258,23 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/3-day-gym-plan': typeof R3DayGymPlanRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/creator': typeof CreatorRoute
   '/disclaimer': typeof DisclaimerRoute
   '/guide': typeof GuideRoute
   '/leaderboard': typeof LeaderboardRoute
   '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
+  '/real-week': typeof RealWeekRoute
   '/recovery': typeof RecoveryRoute
   '/settings': typeof SettingsRoute
+  '/stop-guessing': typeof StopGuessingRoute
   '/terms': typeof TermsRoute
+  '/tiktok': typeof TiktokRoute
   '/upgrade': typeof UpgradeRoute
+  '/workout-tracker': typeof WorkoutTrackerRoute
   '/catalogue': typeof TabsCatalogueRoute
   '/challenges': typeof TabsChallengesRoute
   '/diet': typeof TabsDietRoute
@@ -229,6 +284,7 @@ export interface FileRoutesByTo {
   '/profile': typeof TabsProfileRoute
   '/programs': typeof TabsProgramsRouteWithChildren
   '/progress': typeof TabsProgressRoute
+  '/strength': typeof TabsStrengthRoute
   '/train': typeof TabsTrainRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/workout/live': typeof WorkoutLiveRoute
@@ -239,18 +295,24 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/3-day-gym-plan': typeof R3DayGymPlanRoute
   '/_tabs': typeof TabsRouteWithChildren
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/creator': typeof CreatorRoute
   '/disclaimer': typeof DisclaimerRoute
   '/guide': typeof GuideRoute
   '/leaderboard': typeof LeaderboardRoute
   '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
+  '/real-week': typeof RealWeekRoute
   '/recovery': typeof RecoveryRoute
   '/settings': typeof SettingsRoute
+  '/stop-guessing': typeof StopGuessingRoute
   '/terms': typeof TermsRoute
+  '/tiktok': typeof TiktokRoute
   '/upgrade': typeof UpgradeRoute
+  '/workout-tracker': typeof WorkoutTrackerRoute
   '/_tabs/catalogue': typeof TabsCatalogueRoute
   '/_tabs/challenges': typeof TabsChallengesRoute
   '/_tabs/diet': typeof TabsDietRoute
@@ -260,6 +322,7 @@ export interface FileRoutesById {
   '/_tabs/profile': typeof TabsProfileRoute
   '/_tabs/programs': typeof TabsProgramsRouteWithChildren
   '/_tabs/progress': typeof TabsProgressRoute
+  '/_tabs/strength': typeof TabsStrengthRoute
   '/_tabs/train': typeof TabsTrainRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/workout/live': typeof WorkoutLiveRoute
@@ -271,17 +334,23 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/3-day-gym-plan'
     | '/admin'
     | '/auth'
+    | '/creator'
     | '/disclaimer'
     | '/guide'
     | '/leaderboard'
     | '/onboarding'
     | '/privacy'
+    | '/real-week'
     | '/recovery'
     | '/settings'
+    | '/stop-guessing'
     | '/terms'
+    | '/tiktok'
     | '/upgrade'
+    | '/workout-tracker'
     | '/catalogue'
     | '/challenges'
     | '/diet'
@@ -291,6 +360,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/programs'
     | '/progress'
+    | '/strength'
     | '/train'
     | '/checkout/return'
     | '/workout/live'
@@ -300,17 +370,23 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/3-day-gym-plan'
     | '/admin'
     | '/auth'
+    | '/creator'
     | '/disclaimer'
     | '/guide'
     | '/leaderboard'
     | '/onboarding'
     | '/privacy'
+    | '/real-week'
     | '/recovery'
     | '/settings'
+    | '/stop-guessing'
     | '/terms'
+    | '/tiktok'
     | '/upgrade'
+    | '/workout-tracker'
     | '/catalogue'
     | '/challenges'
     | '/diet'
@@ -320,6 +396,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/programs'
     | '/progress'
+    | '/strength'
     | '/train'
     | '/checkout/return'
     | '/workout/live'
@@ -329,18 +406,24 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/3-day-gym-plan'
     | '/_tabs'
     | '/admin'
     | '/auth'
+    | '/creator'
     | '/disclaimer'
     | '/guide'
     | '/leaderboard'
     | '/onboarding'
     | '/privacy'
+    | '/real-week'
     | '/recovery'
     | '/settings'
+    | '/stop-guessing'
     | '/terms'
+    | '/tiktok'
     | '/upgrade'
+    | '/workout-tracker'
     | '/_tabs/catalogue'
     | '/_tabs/challenges'
     | '/_tabs/diet'
@@ -350,6 +433,7 @@ export interface FileRouteTypes {
     | '/_tabs/profile'
     | '/_tabs/programs'
     | '/_tabs/progress'
+    | '/_tabs/strength'
     | '/_tabs/train'
     | '/checkout/return'
     | '/workout/live'
@@ -360,24 +444,37 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  R3DayGymPlanRoute: typeof R3DayGymPlanRoute
   TabsRoute: typeof TabsRouteWithChildren
   AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
+  CreatorRoute: typeof CreatorRoute
   DisclaimerRoute: typeof DisclaimerRoute
   GuideRoute: typeof GuideRoute
   LeaderboardRoute: typeof LeaderboardRoute
   OnboardingRoute: typeof OnboardingRoute
   PrivacyRoute: typeof PrivacyRoute
+  RealWeekRoute: typeof RealWeekRoute
   RecoveryRoute: typeof RecoveryRoute
   SettingsRoute: typeof SettingsRoute
+  StopGuessingRoute: typeof StopGuessingRoute
   TermsRoute: typeof TermsRoute
+  TiktokRoute: typeof TiktokRoute
   UpgradeRoute: typeof UpgradeRoute
+  WorkoutTrackerRoute: typeof WorkoutTrackerRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   WorkoutLiveRoute: typeof WorkoutLiveRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/workout-tracker': {
+      id: '/workout-tracker'
+      path: '/workout-tracker'
+      fullPath: '/workout-tracker'
+      preLoaderRoute: typeof WorkoutTrackerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/upgrade': {
       id: '/upgrade'
       path: '/upgrade'
@@ -385,11 +482,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UpgradeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tiktok': {
+      id: '/tiktok'
+      path: '/tiktok'
+      fullPath: '/tiktok'
+      preLoaderRoute: typeof TiktokRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/terms': {
       id: '/terms'
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stop-guessing': {
+      id: '/stop-guessing'
+      path: '/stop-guessing'
+      fullPath: '/stop-guessing'
+      preLoaderRoute: typeof StopGuessingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings': {
@@ -404,6 +515,13 @@ declare module '@tanstack/react-router' {
       path: '/recovery'
       fullPath: '/recovery'
       preLoaderRoute: typeof RecoveryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/real-week': {
+      id: '/real-week'
+      path: '/real-week'
+      fullPath: '/real-week'
+      preLoaderRoute: typeof RealWeekRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -441,6 +559,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DisclaimerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/creator': {
+      id: '/creator'
+      path: '/creator'
+      fullPath: '/creator'
+      preLoaderRoute: typeof CreatorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -460,6 +585,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof TabsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/3-day-gym-plan': {
+      id: '/3-day-gym-plan'
+      path: '/3-day-gym-plan'
+      fullPath: '/3-day-gym-plan'
+      preLoaderRoute: typeof R3DayGymPlanRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -488,6 +620,13 @@ declare module '@tanstack/react-router' {
       path: '/train'
       fullPath: '/train'
       preLoaderRoute: typeof TabsTrainRouteImport
+      parentRoute: typeof TabsRoute
+    }
+    '/_tabs/strength': {
+      id: '/_tabs/strength'
+      path: '/strength'
+      fullPath: '/strength'
+      preLoaderRoute: typeof TabsStrengthRouteImport
       parentRoute: typeof TabsRoute
     }
     '/_tabs/progress': {
@@ -599,6 +738,7 @@ interface TabsRouteChildren {
   TabsProfileRoute: typeof TabsProfileRoute
   TabsProgramsRoute: typeof TabsProgramsRouteWithChildren
   TabsProgressRoute: typeof TabsProgressRoute
+  TabsStrengthRoute: typeof TabsStrengthRoute
   TabsTrainRoute: typeof TabsTrainRoute
   TabsAthleteIdRoute: typeof TabsAthleteIdRoute
   TabsLiftExerciseIdRoute: typeof TabsLiftExerciseIdRoute
@@ -614,6 +754,7 @@ const TabsRouteChildren: TabsRouteChildren = {
   TabsProfileRoute: TabsProfileRoute,
   TabsProgramsRoute: TabsProgramsRouteWithChildren,
   TabsProgressRoute: TabsProgressRoute,
+  TabsStrengthRoute: TabsStrengthRoute,
   TabsTrainRoute: TabsTrainRoute,
   TabsAthleteIdRoute: TabsAthleteIdRoute,
   TabsLiftExerciseIdRoute: TabsLiftExerciseIdRoute,
@@ -623,18 +764,24 @@ const TabsRouteWithChildren = TabsRoute._addFileChildren(TabsRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  R3DayGymPlanRoute: R3DayGymPlanRoute,
   TabsRoute: TabsRouteWithChildren,
   AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
+  CreatorRoute: CreatorRoute,
   DisclaimerRoute: DisclaimerRoute,
   GuideRoute: GuideRoute,
   LeaderboardRoute: LeaderboardRoute,
   OnboardingRoute: OnboardingRoute,
   PrivacyRoute: PrivacyRoute,
+  RealWeekRoute: RealWeekRoute,
   RecoveryRoute: RecoveryRoute,
   SettingsRoute: SettingsRoute,
+  StopGuessingRoute: StopGuessingRoute,
   TermsRoute: TermsRoute,
+  TiktokRoute: TiktokRoute,
   UpgradeRoute: UpgradeRoute,
+  WorkoutTrackerRoute: WorkoutTrackerRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   WorkoutLiveRoute: WorkoutLiveRoute,
 }

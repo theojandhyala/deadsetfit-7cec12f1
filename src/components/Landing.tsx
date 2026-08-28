@@ -34,13 +34,13 @@ const navigation = [
 
 function Logo({ large = false }: { large?: boolean }) {
   return (
-    <span
-      className={`display whitespace-nowrap font-bold tracking-[0] ${large ? "text-4xl sm:text-5xl" : "text-xl"}`}
-      aria-label="DEADSET"
-    >
-      <span className="text-[#f4f3ef]">DEAD</span>
-      <span className="text-[#f13a2c]">SET</span>
-    </span>
+    <img
+      src="/brand/deadset-lockup.png"
+      alt="DEADSET — Forge Your Body"
+      width={810}
+      height={360}
+      className={`block h-auto object-contain ${large ? "w-56 sm:w-72" : "w-32"}`}
+    />
   );
 }
 
@@ -150,9 +150,9 @@ export type LandingCampaign = "default" | "stop-guessing" | "real-week";
 
 const campaignCopy: Record<LandingCampaign, { eyebrow: string; headline: string; body: string }> = {
   default: {
-    eyebrow: "Built for the lift, not the feed",
-    headline: "Train like it counts.",
-    body: "Plan your week, log every set, and see what is actually improving.",
+    eyebrow: "The iPhone gym app for serious lifters",
+    headline: "Know what to train. Prove every rep.",
+    body: "Your weekly plan, live workout log, PRs, nutrition, and progress—together in one focused app.",
   },
   "stop-guessing": {
     eyebrow: "A clear answer before you walk in",
@@ -172,33 +172,44 @@ function Hero({ campaign }: { campaign: LandingCampaign }) {
     <section id="top" className="landing-hero relative overflow-hidden border-b border-white/10">
       <div className="landing-hero-lines absolute inset-0" aria-hidden="true" />
 
-      <div className="relative mx-auto grid max-w-[1440px] items-start gap-12 px-5 pb-0 pt-[108px] sm:px-8 sm:pt-[124px] lg:min-h-[820px] lg:grid-cols-[minmax(0,0.92fr)_minmax(500px,1.08fr)] lg:items-center lg:gap-20 lg:px-12 lg:pb-28 lg:pt-32">
+      <div className="relative mx-auto grid max-w-[1440px] items-start gap-7 px-5 pb-0 pt-[100px] sm:px-8 sm:pt-[104px] lg:min-h-[760px] lg:grid-cols-[minmax(0,0.92fr)_minmax(500px,1.08fr)] lg:items-center lg:gap-20 lg:px-12 lg:pb-20 lg:pt-28">
         <div className="relative z-20 max-w-2xl animate-slide-up">
-          <div className="mb-6 inline-flex min-h-9 items-center gap-3 border-l-2 border-[#f13a2c] bg-black/35 px-3 text-[11px] font-bold uppercase text-white/68 backdrop-blur-sm sm:mb-7 sm:min-h-10 sm:px-4 sm:text-xs">
+          <div className="mb-5 inline-flex min-h-9 items-center gap-3 border-l-2 border-[#f13a2c] bg-black/35 px-3 text-[11px] font-bold uppercase text-white/68 backdrop-blur-sm sm:min-h-10 sm:px-4 sm:text-xs">
             <span className="h-2 w-2 bg-[#f13a2c] shadow-[0_0_18px_rgba(241,58,44,0.9)]" />
             {copy.eyebrow}
           </div>
 
-          <h1 className="display text-[clamp(3.1rem,16vw,4.1rem)] font-bold uppercase leading-[0.82] tracking-[0] text-[#f4f3ef] sm:text-8xl lg:text-[7.8rem]">
-            Dead<span className="text-[#f13a2c]">set</span>
-          </h1>
-          <p className="display mt-5 max-w-[12ch] text-[2.15rem] font-bold uppercase leading-[0.94] tracking-[0] text-white sm:mt-6 sm:text-6xl">
+          <h1 className="display max-w-[11ch] text-[3rem] font-bold uppercase leading-[0.86] tracking-[0] text-[#f4f3ef] sm:text-[3.75rem] lg:text-[6.4rem]">
             {copy.headline}
-          </p>
-          <p className="mt-6 max-w-md text-[15px] leading-7 text-white/62 sm:mt-7 sm:max-w-xl sm:text-lg sm:leading-8">
+          </h1>
+          <p className="mt-5 max-w-md text-[15px] leading-7 text-white/62 sm:max-w-xl sm:text-lg sm:leading-8 lg:mt-6">
             {copy.body}
           </p>
 
-          <div className="mt-8 flex max-w-md flex-col items-start gap-4 border-t border-white/12 pt-6 sm:mt-9 sm:flex-row sm:items-center sm:gap-6">
+          <ul
+            className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-xs font-bold text-white/72 lg:mt-6"
+            aria-label="Why lifters choose DEADSET"
+          >
+            {["Plan every session", "Log sets fast", "See real progress"].map((benefit) => (
+              <li key={benefit} className="flex items-center gap-2">
+                <Check size={14} className="text-[#f13a2c]" strokeWidth={3} aria-hidden="true" />
+                {benefit}
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-5 flex max-w-md flex-col items-start gap-3 border-t border-white/12 pt-5 sm:flex-row sm:items-center sm:gap-5 lg:mt-7 lg:pt-6">
             <AppStoreBadge className="shrink-0 shadow-[0_18px_45px_rgba(0,0,0,0.32)]" />
             <div>
-              <p className="text-sm font-extrabold text-white">Available now on the App Store</p>
-              <p className="mt-1 text-xs leading-5 text-white/45">Free to start · Built for iPhone</p>
+              <p className="text-sm font-extrabold text-white">Free to download</p>
+              <p className="mt-1 text-xs leading-5 text-white/45">
+                7-day trial after setup · Made for iPhone
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="landing-device-stage pointer-events-none relative z-10 h-[360px] overflow-hidden sm:h-[480px] lg:h-[650px] lg:overflow-visible">
+        <div className="landing-device-stage pointer-events-none relative z-10 h-[390px] overflow-hidden sm:h-[500px] lg:h-[620px] lg:overflow-visible">
           <Phone
             src="/screenshots/logger.webp"
             alt="DEADSET live workout logger"
@@ -520,14 +531,12 @@ function Pro() {
             Turn your history into an advantage.
           </h2>
           <p className="mt-6 max-w-lg text-base leading-7 text-white/55">
-            Free handles the workout. Pro goes deeper across recovery, trends, competition, and the
-            long view of your training.
+            One membership unlocks the complete training system: Strength Map, recovery, trends,
+            competition, and the long view of your training.
           </p>
           <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-            <StoreButton label="Start free on iPhone" />
-            <span className="text-xs text-white/40">
-              Upgrade inside the app · Cancel through Apple
-            </span>
+            <StoreButton label="Start 7-day trial on iPhone" />
+            <span className="text-xs text-white/40">Then £5.99/month · Cancel through Apple</span>
           </div>
         </div>
 
@@ -551,9 +560,9 @@ const faqs = [
       "Yes. Choose each training day, add exercises from the catalogue, and set sets and rep targets before you train. You can edit any day later.",
   },
   {
-    question: "Is DEADSET free to use?",
+    question: "How much does DEADSET cost?",
     answer:
-      "Yes. The core planning, workout logging, PR tracking, nutrition, progress, and community experience is free. Pro adds deeper analysis and advanced tools.",
+      "Eligible new members get a seven-day free trial, then DEADSET is £5.99 per month in the UK. Apple shows the exact local price and renewal terms before you confirm, and you can cancel anytime.",
   },
   {
     question: "Does it connect to Apple Health and Apple Watch?",

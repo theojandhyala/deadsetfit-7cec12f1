@@ -14,6 +14,7 @@ export default tseslint.config(
       "android",
       "node_modules",
       "coverage",
+      "artifacts",
       "public",
       "worker-configuration.d.ts",
       "src/routeTree.gen.ts",

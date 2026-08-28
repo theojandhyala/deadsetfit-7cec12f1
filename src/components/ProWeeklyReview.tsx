@@ -1,6 +1,14 @@
 import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { ArrowRight, Check, ClipboardCheck, Crown, Lock, Target, TriangleAlert } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  ClipboardCheck,
+  Crown,
+  Lock,
+  Target,
+  TriangleAlert,
+} from "lucide-react";
 
 import { usePro } from "@/hooks/usePro";
 import { openPaywall } from "@/lib/paywall-events";
@@ -39,7 +47,10 @@ export function ProWeeklyReview() {
             Log the workout. DEADSET will turn your volume, PRs, balance and progression into a
             short action list.
           </p>
-          <Link to="/train" className="btn-grit mt-4 flex min-h-11 items-center justify-center gap-2">
+          <Link
+            to="/train"
+            className="btn-grit mt-4 flex min-h-11 items-center justify-center gap-2"
+          >
             Start training <ArrowRight size={14} />
           </Link>
         </div>
@@ -57,7 +68,9 @@ export function ProWeeklyReview() {
           boxShadow: "0 22px 52px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06)",
         }}
       >
-        <div className={locked ? "pointer-events-none select-none blur-[5px] opacity-55" : undefined}>
+        <div
+          className={locked ? "pointer-events-none select-none blur-[5px] opacity-55" : undefined}
+        >
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="label-cap flex items-center gap-1.5 text-[9px] text-pro">
@@ -109,9 +122,7 @@ export function ProWeeklyReview() {
                     <Icon size={15} />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="label-cap text-[8px] text-grit-dim">
-                      MOVE {index + 1}
-                    </span>
+                    <span className="label-cap text-[8px] text-grit-dim">MOVE {index + 1}</span>
                     <span className="block text-xs font-bold text-grit">{action.title}</span>
                     <span className="block text-[9px] leading-snug text-grit-dim">
                       {action.detail}

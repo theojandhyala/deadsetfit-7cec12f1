@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Search, Trophy, ChevronDown } from "lucide-react";
 import type { PRGroup } from "@/lib/pr-groups";
+import { useUnit } from "@/hooks/useUnit";
+import { formatWeightValue } from "@/lib/units";
 
 export type PRRecord = {
   exerciseId: string;
@@ -35,6 +37,7 @@ function formatDate(iso: string) {
 }
 
 function PRRow({ pr }: { pr: PRRecord }) {
+  const unit = useUnit();
   const fresh = isFresh(pr.date);
   return (
     <div className="flex items-center justify-between gap-3 px-3 py-2.5 bg-grit-card border border-grit">
@@ -47,9 +50,9 @@ function PRRow({ pr }: { pr: PRRecord }) {
       </div>
       <div className="flex items-baseline gap-1 flex-shrink-0">
         <span className="display text-xl font-extrabold text-accent-red leading-none">
-          {pr.weight}
+          {formatWeightValue(pr.weight, unit)}
         </span>
-        <span className="text-[10px] font-bold text-grit-dim uppercase tracking-wider">kg</span>
+        <span className="text-[10px] font-bold text-grit-dim uppercase tracking-wider">{unit}</span>
         {pr.reps > 0 && (
           <span className="text-[10px] font-bold text-grit uppercase tracking-wider ml-1">
             ×{pr.reps}

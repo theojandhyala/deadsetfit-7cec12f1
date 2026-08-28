@@ -91,7 +91,7 @@ function LibraryPage() {
   }
 
   return (
-    <div className="px-4 pt-6">
+    <div className="deadset-page px-4 pt-6">
       <div className="flex items-end justify-between mb-1">
         <h1 className="label-cap text-grit text-2xl">Library</h1>
         <span className="label-cap text-grit-dim text-xs">
@@ -144,7 +144,7 @@ function LibraryPage() {
       {isLoading ? (
         <p className="text-grit-dim text-sm label-cap">Loading…</p>
       ) : (
-        <ul className="space-y-2 pb-6">
+        <ul className="stagger space-y-2 pb-6">
           {exercises.map((ex) => (
             <li key={ex.id}>
               <button

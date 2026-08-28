@@ -457,7 +457,7 @@ function ProgramsPage() {
   }
 
   return (
-    <div className="px-5 pt-4 pb-4">
+    <div className="deadset-page px-5 pt-4 pb-4">
       <div className="flex items-center justify-between mb-1">
         <h1 className="display text-3xl font-extrabold uppercase text-grit">Programs</h1>
         <Link to="/train" className="label-cap text-grit-dim text-xs">
@@ -465,9 +465,9 @@ function ProgramsPage() {
         </Link>
       </div>
       <p className="text-xs text-grit-dim mb-5 leading-relaxed">
-        A program is a ready-made week you can swap in. Making one won't change
-        anything — it only takes over your training week once you set it active,
-        and you can switch back to your own schedule any time.
+        A program is a ready-made week you can swap in. Making one won't change anything — it only
+        takes over your training week once you set it active, and you can switch back to your own
+        schedule any time.
       </p>
 
       {state.programs.length === 0 && (
@@ -481,7 +481,7 @@ function ProgramsPage() {
         </div>
       )}
 
-      <ul className="space-y-2 mb-6">
+      <ul className="stagger space-y-2 mb-6">
         {state.programs.map((p) => {
           const filled = DAYS.reduce((a, d) => a + p.days[d].items.length, 0);
           const trainingDays = DAYS.filter((d) => p.days[d].label !== "REST").length;
@@ -606,8 +606,7 @@ function ProgramsPage() {
       <p className="label-cap text-grit-dim text-xs mb-2">+ New from template</p>
       {locked && customProgramCount >= 1 && (
         <p className="text-[10px] text-grit-dim mb-2">
-          Free includes 1 custom program — <span className="text-accent-red">Pro</span> unlocks
-          unlimited.
+          Your membership unlocks unlimited custom programmes.
         </p>
       )}
       <ul className="space-y-2">

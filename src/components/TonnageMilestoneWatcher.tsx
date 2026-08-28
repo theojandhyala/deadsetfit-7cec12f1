@@ -3,10 +3,8 @@ import { Dumbbell } from "lucide-react";
 
 import { useAppState, getHydrationCount } from "@/lib/storage";
 import { lifetimeStats } from "@/lib/lifetime-stats";
-import {
-  currentTonnageMilestone,
-  type TonnageMilestone,
-} from "@/lib/tonnage-milestones";
+import { currentTonnageMilestone, type TonnageMilestone } from "@/lib/tonnage-milestones";
+import { SocialShareButton } from "@/components/SocialShareButton";
 
 const SEEN_KEY = "deadset_tonnage_milestone_seen";
 
@@ -69,7 +67,8 @@ export function TonnageMilestoneWatcher() {
   return (
     <div
       className="fixed inset-0 z-[120] flex items-center justify-center px-6"
-      style={{ background: "rgba(8,4,2,0.84)", backdropFilter: "blur(6px)" }}
+      // No backdrop-filter: composites as solid black while scrolling in WKWebView/iOS Safari.
+      style={{ background: "rgba(8,4,2,0.93)" }}
       role="dialog"
       aria-modal="true"
       onClick={() => setHit(null)}
@@ -100,18 +99,22 @@ export function TonnageMilestoneWatcher() {
         >
           <Dumbbell size={26} strokeWidth={2.5} className="text-white" />
         </div>
-        <p className="label-cap text-[10px] tracking-[0.28em] text-accent-red">
-          Lifetime tonnage
-        </p>
+        <p className="label-cap text-[10px] tracking-[0.28em] text-accent-red">Lifetime tonnage</p>
         <h2 className="display text-4xl font-extrabold uppercase text-grit leading-none mt-1">
           {hit.label}
         </h2>
         <p className="text-xs text-[#b7a9a4] mt-3 mb-5">
           You&apos;ve now lifted {hit.flavor} — every kilo of it logged, rep by rep.
         </p>
-        <button onClick={() => setHit(null)} className="btn-grit w-full rounded-xl">
-          Keep Lifting
-        </button>
+        <div className="grid grid-cols-2 gap-2">
+          <SocialShareButton
+            text={`I just lifted ${hit.flavor} total on DEADSET. ${hit.label} unlocked.`}
+            className="btn-ghost flex min-h-11 items-center justify-center gap-2 rounded-xl text-xs"
+          />
+          <button onClick={() => setHit(null)} className="btn-grit rounded-xl text-xs">
+            Keep Lifting
+          </button>
+        </div>
       </div>
     </div>
   );

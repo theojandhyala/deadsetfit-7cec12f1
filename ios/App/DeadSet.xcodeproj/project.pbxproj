@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		00B4D17EC3B2C37AFDCB3718 /* RestActivityPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D0504D4790907242FD0024 /* RestActivityPlugin.swift */; };
 		A11E4C0A2E0B11F0AA010101 /* StoreKitPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E4C092E0B11F0AA010100 /* StoreKitPlugin.swift */; };
+		B77A4C0A2E0B11F0AA010101 /* AppReviewPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B77A4C092E0B11F0AA010100 /* AppReviewPlugin.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		316C2D96387D8DBFE8B2CADA /* RestActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9774CA8A1B7939BB8417C6C0 /* RestActivityAttributes.swift */; };
 		341E5676EB8D09FFD5859E8F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 90732EDC0FD9422339C4BA5E /* Assets.xcassets */; };
@@ -26,6 +27,29 @@
 		E34AFE3633C961B9F18A0330 /* DeadSetRestActivity.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6355C7A498F942A0B16A5857 /* DeadSetRestActivity.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		E40CC4A5E6A990F00D69F904 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C57BC35B9CF5AEFC028BB38F /* Foundation.framework */; };
 		EEB7161F538A742A62782921 /* RestLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7676950F92E00726A64E17C /* RestLiveActivity.swift */; };
+		DEADFA00000000000000001D /* DeadSetWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA00000000000000000F /* DeadSetWatchApp.swift */; };
+		DEADFA00000000000000001E /* WatchConnector.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000010 /* WatchConnector.swift */; };
+		DEADFA00000000000000001F /* WatchHaptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000011 /* WatchHaptics.swift */; };
+		DEADFA000000000000000020 /* WorkoutKeepAlive.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000012 /* WorkoutKeepAlive.swift */; };
+		DEADFA000000000000000021 /* SessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000013 /* SessionView.swift */; };
+		DEADFA000000000000000022 /* ExerciseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000014 /* ExerciseView.swift */; };
+		DEADFA000000000000000023 /* TimedExerciseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000015 /* TimedExerciseView.swift */; };
+		DEADFA000000000000000024 /* RestTimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000016 /* RestTimerView.swift */; };
+		DEADFA000000000000000025 /* WatchProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000019 /* WatchProtocol.swift */; };
+		DEADFA000000000000000026 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DEADFA00000000000000001C /* Assets.xcassets */; };
+		DEADFA000000000000000027 /* WatchConnectivityHub.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000017 /* WatchConnectivityHub.swift */; };
+		DEADFA000000000000000028 /* WatchBridgePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000018 /* WatchBridgePlugin.swift */; };
+		DEADFA00000000000000002B /* HapticsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA00000000000000002A /* HapticsPlugin.swift */; };
+		DEADFA000000000000000029 /* WatchProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000019 /* WatchProtocol.swift */; };
+		DEADFA00000000000000000C /* DeadSetWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000002 /* DeadSetWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		DEADFA000000000000000042 /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000041 /* WidgetSnapshot.swift */; };
+		DEADFA000000000000000043 /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000041 /* WidgetSnapshot.swift */; };
+		DEADFA000000000000000045 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000044 /* WorkoutActivityAttributes.swift */; };
+		DEADFA000000000000000046 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000044 /* WorkoutActivityAttributes.swift */; };
+		DEADFA000000000000000048 /* WidgetBridgePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000047 /* WidgetBridgePlugin.swift */; };
+		DEADFA00000000000000004A /* WorkoutActivityPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA000000000000000049 /* WorkoutActivityPlugin.swift */; };
+		DEADFA00000000000000004C /* DeadSetWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA00000000000000004B /* DeadSetWidgets.swift */; };
+		DEADFA00000000000000004E /* WorkoutLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEADFA00000000000000004D /* WorkoutLiveActivity.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -35,6 +59,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 8E0CAE2B398FD0B9471F0FF4;
 			remoteInfo = DeadSetRestActivity;
+		};
+		DEADFA00000000000000000E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DEADFA000000000000000001;
+			remoteInfo = DeadSetWatch;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -50,11 +81,23 @@
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		DEADFA00000000000000000B /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				DEADFA00000000000000000C /* DeadSetWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		09D0504D4790907242FD0024 /* RestActivityPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RestActivityPlugin.swift; sourceTree = "<group>"; };
 		A11E4C092E0B11F0AA010100 /* StoreKitPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitPlugin.swift; sourceTree = "<group>"; };
+		B77A4C092E0B11F0AA010100 /* AppReviewPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppReviewPlugin.swift; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* DeadSet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeadSet.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -75,6 +118,29 @@
 		DD5E4C0B2E0B11F0AA010002 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		DD5E4C0D2E0B11F0AA010004 /* MyViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyViewController.swift; sourceTree = "<group>"; };
 		DD5E4C0F2E0B11F0AA010005 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		DEADFA000000000000000002 /* DeadSetWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeadSetWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		DEADFA00000000000000000F /* DeadSetWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeadSetWatchApp.swift; sourceTree = "<group>"; };
+		DEADFA000000000000000010 /* WatchConnector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnector.swift; sourceTree = "<group>"; };
+		DEADFA000000000000000011 /* WatchHaptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchHaptics.swift; sourceTree = "<group>"; };
+		DEADFA000000000000000012 /* WorkoutKeepAlive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutKeepAlive.swift; sourceTree = "<group>"; };
+		DEADFA000000000000000013 /* SessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionView.swift; sourceTree = "<group>"; };
+		DEADFA000000000000000014 /* ExerciseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseView.swift; sourceTree = "<group>"; };
+		DEADFA000000000000000015 /* TimedExerciseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimedExerciseView.swift; sourceTree = "<group>"; };
+		DEADFA000000000000000016 /* RestTimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestTimerView.swift; sourceTree = "<group>"; };
+		DEADFA000000000000000017 /* WatchConnectivityHub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityHub.swift; sourceTree = "<group>"; };
+		DEADFA000000000000000018 /* WatchBridgePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBridgePlugin.swift; sourceTree = "<group>"; };
+		DEADFA00000000000000002A /* HapticsPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticsPlugin.swift; sourceTree = "<group>"; };
+		DEADFA000000000000000019 /* WatchProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchProtocol.swift; sourceTree = "<group>"; };
+		DEADFA00000000000000001A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		DEADFA00000000000000001B /* DeadSetWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DeadSetWatch.entitlements; sourceTree = "<group>"; };
+		DEADFA00000000000000001C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		DEADFA000000000000000041 /* WidgetSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshot.swift; sourceTree = "<group>"; };
+		DEADFA000000000000000044 /* WorkoutActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutActivityAttributes.swift; sourceTree = "<group>"; };
+		DEADFA000000000000000047 /* WidgetBridgePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetBridgePlugin.swift; sourceTree = "<group>"; };
+		DEADFA000000000000000049 /* WorkoutActivityPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutActivityPlugin.swift; sourceTree = "<group>"; };
+		DEADFA00000000000000004B /* DeadSetWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeadSetWidgets.swift; sourceTree = "<group>"; };
+		DEADFA00000000000000004D /* WorkoutLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivity.swift; sourceTree = "<group>"; };
+		DEADFA00000000000000004F /* DeadSetRestActivity.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DeadSetRestActivity.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -91,6 +157,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DEADFA000000000000000007 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -122,6 +195,8 @@
 				504EC3051FED79650016851F /* Products */,
 				20C5C3F652F5EB9BE26929A1 /* Frameworks */,
 				FA178EE0662B3E2CF1AFBE13 /* DeadSetRestActivity */,
+				DEADFA000000000000000003 /* DeadSetWatch */,
+				DEADFA000000000000000004 /* Shared */,
 			);
 			sourceTree = "<group>";
 		};
@@ -130,6 +205,7 @@
 			children = (
 				504EC3041FED79650016851F /* DeadSet.app */,
 				6355C7A498F942A0B16A5857 /* DeadSetRestActivity.appex */,
+				DEADFA000000000000000002 /* DeadSetWatch.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -137,6 +213,8 @@
 		504EC3061FED79650016851F /* App */ = {
 			isa = PBXGroup;
 			children = (
+				DEADFA000000000000000047 /* WidgetBridgePlugin.swift */,
+				DEADFA000000000000000049 /* WorkoutActivityPlugin.swift */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				DD5E4C092E0B11F0AA010001 /* HealthKitPlugin.swift */,
@@ -151,6 +229,10 @@
 				50B271D01FEDC1A000F3C39B /* public */,
 				09D0504D4790907242FD0024 /* RestActivityPlugin.swift */,
 				A11E4C092E0B11F0AA010100 /* StoreKitPlugin.swift */,
+				DEADFA000000000000000017 /* WatchConnectivityHub.swift */,
+				DEADFA000000000000000018 /* WatchBridgePlugin.swift */,
+				DEADFA00000000000000002A /* HapticsPlugin.swift */,
+				B77A4C092E0B11F0AA010100 /* AppReviewPlugin.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -165,6 +247,9 @@
 		FA178EE0662B3E2CF1AFBE13 /* DeadSetRestActivity */ = {
 			isa = PBXGroup;
 			children = (
+				DEADFA00000000000000004B /* DeadSetWidgets.swift */,
+				DEADFA00000000000000004D /* WorkoutLiveActivity.swift */,
+				DEADFA00000000000000004F /* DeadSetRestActivity.entitlements */,
 				9774CA8A1B7939BB8417C6C0 /* RestActivityAttributes.swift */,
 				B7676950F92E00726A64E17C /* RestLiveActivity.swift */,
 				90732EDC0FD9422339C4BA5E /* Assets.xcassets */,
@@ -172,6 +257,34 @@
 			);
 			name = DeadSetRestActivity;
 			path = DeadSetRestActivity;
+			sourceTree = "<group>";
+		};
+		DEADFA000000000000000003 /* DeadSetWatch */ = {
+			isa = PBXGroup;
+			children = (
+				DEADFA00000000000000000F /* DeadSetWatchApp.swift */,
+				DEADFA000000000000000010 /* WatchConnector.swift */,
+				DEADFA000000000000000011 /* WatchHaptics.swift */,
+				DEADFA000000000000000012 /* WorkoutKeepAlive.swift */,
+				DEADFA000000000000000013 /* SessionView.swift */,
+				DEADFA000000000000000014 /* ExerciseView.swift */,
+				DEADFA000000000000000015 /* TimedExerciseView.swift */,
+				DEADFA000000000000000016 /* RestTimerView.swift */,
+				DEADFA00000000000000001C /* Assets.xcassets */,
+				DEADFA00000000000000001A /* Info.plist */,
+				DEADFA00000000000000001B /* DeadSetWatch.entitlements */,
+			);
+			path = DeadSetWatch;
+			sourceTree = "<group>";
+		};
+		DEADFA000000000000000004 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				DEADFA000000000000000041 /* WidgetSnapshot.swift */,
+				DEADFA000000000000000044 /* WorkoutActivityAttributes.swift */,
+				DEADFA000000000000000019 /* WatchProtocol.swift */,
+			);
+			path = Shared;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -185,11 +298,13 @@
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
 				CAD969FF87D84F3FCF248AC5 /* Embed Foundation Extensions */,
+				DEADFA00000000000000000B /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				2119C2B06A865ACEE7130858 /* PBXTargetDependency */,
+				DEADFA00000000000000000D /* PBXTargetDependency */,
 			);
 			name = DeadSet;
 			packageProductDependencies = (
@@ -215,6 +330,23 @@
 			productName = DeadSetRestActivity;
 			productReference = 6355C7A498F942A0B16A5857 /* DeadSetRestActivity.appex */;
 			productType = "com.apple.product-type.app-extension";
+		};
+		DEADFA000000000000000001 /* DeadSetWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DEADFA000000000000000008 /* Build configuration list for PBXNativeTarget "DeadSetWatch" */;
+			buildPhases = (
+				DEADFA000000000000000005 /* Sources */,
+				DEADFA000000000000000007 /* Frameworks */,
+				DEADFA000000000000000006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DeadSetWatch;
+			productName = DeadSetWatch;
+			productReference = DEADFA000000000000000002 /* DeadSetWatch.app */;
+			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
@@ -251,6 +383,7 @@
 			targets = (
 				504EC3031FED79650016851F /* DeadSet */,
 				8E0CAE2B398FD0B9471F0FF4 /* DeadSetRestActivity */,
+				DEADFA000000000000000001 /* DeadSetWatch */,
 			);
 		};
 /* End PBXProject section */
@@ -278,6 +411,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		DEADFA000000000000000006 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DEADFA000000000000000026 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -285,12 +426,21 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DEADFA000000000000000042 /* WidgetSnapshot.swift in Sources */,
+				DEADFA000000000000000045 /* WorkoutActivityAttributes.swift in Sources */,
+				DEADFA000000000000000048 /* WidgetBridgePlugin.swift in Sources */,
+				DEADFA00000000000000004A /* WorkoutActivityPlugin.swift in Sources */,
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				DD5E4C0A2E0B11F0AA010001 /* HealthKitPlugin.swift in Sources */,
 				DD5E4C0C2E0B11F0AA010003 /* MyViewController.swift in Sources */,
 				808D7B97039BA0A8513C1A7F /* RestActivityAttributes.swift in Sources */,
 				00B4D17EC3B2C37AFDCB3718 /* RestActivityPlugin.swift in Sources */,
 				A11E4C0A2E0B11F0AA010101 /* StoreKitPlugin.swift in Sources */,
+				DEADFA000000000000000027 /* WatchConnectivityHub.swift in Sources */,
+				DEADFA000000000000000028 /* WatchBridgePlugin.swift in Sources */,
+				DEADFA00000000000000002B /* HapticsPlugin.swift in Sources */,
+				DEADFA000000000000000029 /* WatchProtocol.swift in Sources */,
+				B77A4C0A2E0B11F0AA010101 /* AppReviewPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -298,8 +448,28 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DEADFA000000000000000043 /* WidgetSnapshot.swift in Sources */,
+				DEADFA000000000000000046 /* WorkoutActivityAttributes.swift in Sources */,
+				DEADFA00000000000000004C /* DeadSetWidgets.swift in Sources */,
+				DEADFA00000000000000004E /* WorkoutLiveActivity.swift in Sources */,
 				316C2D96387D8DBFE8B2CADA /* RestActivityAttributes.swift in Sources */,
 				EEB7161F538A742A62782921 /* RestLiveActivity.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DEADFA000000000000000005 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DEADFA00000000000000001D /* DeadSetWatchApp.swift in Sources */,
+				DEADFA00000000000000001E /* WatchConnector.swift in Sources */,
+				DEADFA00000000000000001F /* WatchHaptics.swift in Sources */,
+				DEADFA000000000000000020 /* WorkoutKeepAlive.swift in Sources */,
+				DEADFA000000000000000021 /* SessionView.swift in Sources */,
+				DEADFA000000000000000022 /* ExerciseView.swift in Sources */,
+				DEADFA000000000000000023 /* TimedExerciseView.swift in Sources */,
+				DEADFA000000000000000024 /* RestTimerView.swift in Sources */,
+				DEADFA000000000000000025 /* WatchProtocol.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -311,6 +481,12 @@
 			name = DeadSetRestActivity;
 			target = 8E0CAE2B398FD0B9471F0FF4 /* DeadSetRestActivity */;
 			targetProxy = 0AA63689DE854F5F780703BF /* PBXContainerItemProxy */;
+		};
+		DEADFA00000000000000000D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = DeadSetWatch;
+			target = DEADFA000000000000000001 /* DeadSetWatch */;
+			targetProxy = DEADFA00000000000000000E /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -462,7 +638,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 129;
+				CURRENT_PROJECT_VERSION = 146;
 				DEVELOPMENT_TEAM = 89JWMU95AH;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
@@ -471,7 +647,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.2;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = org.deadsetfit.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -487,7 +663,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 129;
+				CURRENT_PROJECT_VERSION = 146;
 				DEVELOPMENT_TEAM = 89JWMU95AH;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
@@ -496,7 +672,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = org.deadsetfit.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
@@ -511,14 +687,15 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = "";
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 129;
+				CURRENT_PROJECT_VERSION = 146;
 				DEVELOPMENT_TEAM = 89JWMU95AH;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = DeadSetRestActivity/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Rest Timer";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
-				MARKETING_VERSION = 1.0;
+				CODE_SIGN_ENTITLEMENTS = DeadSetRestActivity/DeadSetRestActivity.entitlements;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = org.deadsetfit.app.RestActivity;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -536,14 +713,15 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = "";
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 129;
+				CURRENT_PROJECT_VERSION = 146;
 				DEVELOPMENT_TEAM = 89JWMU95AH;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = DeadSetRestActivity/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Rest Timer";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
-				MARKETING_VERSION = 1.0;
+				CODE_SIGN_ENTITLEMENTS = DeadSetRestActivity/DeadSetRestActivity.entitlements;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = org.deadsetfit.app.RestActivity;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -553,6 +731,73 @@
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
+		};
+		DEADFA000000000000000009 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGN_ENTITLEMENTS = DeadSetWatch/DeadSetWatch.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 146;
+				DEVELOPMENT_TEAM = 89JWMU95AH;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DeadSetWatch/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.2;
+				PRODUCT_BUNDLE_IDENTIFIER = org.deadsetfit.app.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchsimulator watchos";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 9.0;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		DEADFA00000000000000000A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGN_ENTITLEMENTS = DeadSetWatch/DeadSetWatch.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 146;
+				DEVELOPMENT_TEAM = 89JWMU95AH;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DeadSetWatch/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.2;
+				PRODUCT_BUNDLE_IDENTIFIER = org.deadsetfit.app.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchsimulator watchos";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 9.0;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
@@ -580,6 +825,15 @@
 			buildConfigurations = (
 				A76D42C165E82C40567F3461 /* Release */,
 				ADACD0E20326994F3FC86278 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DEADFA000000000000000008 /* Build configuration list for PBXNativeTarget "DeadSetWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DEADFA000000000000000009 /* Debug */,
+				DEADFA00000000000000000A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

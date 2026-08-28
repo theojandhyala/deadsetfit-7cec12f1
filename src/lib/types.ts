@@ -25,6 +25,11 @@ export interface Profile {
   username?: string;
   /** Real/display name shown on the athlete card (distinct from @username) */
   displayName?: string;
+  /** Public profile introduction, deliberately separate from private training notes. */
+  bio?: string;
+  /** City-level social discovery only; exact coordinates are never stored. */
+  city?: string;
+  country?: string;
   avatarDataUrl?: string;
   startingWeightKg?: number;
   /** Up to two muscle groups the lifter wants to prioritise */
@@ -74,10 +79,17 @@ export interface Exercise {
   youtubeQuery?: string;
   /** Specific equipment label used by the full exercise database. */
   equipmentLabel?: string;
+  /** Granular catalogue anatomy labels retained alongside the broad muscle group. */
+  primaryMuscles?: string[];
   secondaryMuscles?: string[];
   proTip?: string;
   isCompound?: boolean;
   isCustom?: boolean;
+  /**
+   * How the movement is measured. Omitted means load x reps, which is also
+   * what `trackingModeFor` infers for anything that isn't a hold or cardio.
+   */
+  tracking?: "WEIGHT" | "DURATION" | "DISTANCE";
   /** Start time in seconds for action clip (defaults to 5) */
   clipStart?: number;
   /** End time in seconds for action clip (defaults to clipStart + 6) */
@@ -103,6 +115,8 @@ export interface ExercisePlan {
   note?: string;
   /** Runs this exercise directly into the next movement before resting. */
   supersetWithNext?: boolean;
+  /** Weight of the bar this movement is loaded on, in kg. Defaults to 20. */
+  barKg?: number;
 }
 
 export interface DaySchedule {
@@ -127,6 +141,10 @@ export interface ProgramExerciseRef {
   youtube_query: string;
   sets: number;
   reps: string;
+  /** Per-exercise rest interval carried into sessions built from this programme. */
+  restSeconds?: number;
+  /** Working load chosen during programme setup; stored in kilograms. */
+  weightKg?: number;
 }
 
 export interface ProgramDay {
@@ -151,7 +169,17 @@ export interface SetLog {
 
 export interface CheckIn {
   date: string;
-  photoDataUrl: string;
+  /**
+   * Object path in the `progress-photos` bucket. The modern form.
+   */
+  photoPath?: string;
+  /**
+   * Inline base64 bytes. The original form, kept readable forever so existing
+   * photos survive, but never written for a new check-in: a stored photo is
+   * ~122 KB and the synced state blob is capped at 2,000,000 bytes, so a
+   * handful of them used to pause cloud backup of all training data.
+   */
+  photoDataUrl?: string;
 }
 
 export interface WeightEntry {
@@ -190,8 +218,22 @@ export interface CompletedSet {
   rpe?: number;
   isPR?: boolean;
   isAmrap?: boolean;
-  /** Warm-up sets are excluded from volume and PRs; drop sets count as volume but never PR. */
-  kind?: "warmup" | "drop";
+  /**
+   * Warm-up sets are excluded from volume and PRs. Drop sets and sets taken to
+   * failure both count as volume but never set a record: the load was not the
+   * limiting factor in either.
+   */
+  kind?: "warmup" | "drop" | "failure";
+  /**
+   * Set to measure this effort in time or distance instead of reps. Such sets
+   * always store `reps: 0`, so every load x reps volume and PR calculation in
+   * the app contributes nothing for them without needing to know they exist.
+   */
+  mode?: "duration" | "distance";
+  /** Time under tension for a hold, or elapsed time for a distance effort. */
+  seconds?: number;
+  /** Distance covered, in metres. */
+  meters?: number;
 }
 
 export interface WorkoutSessionExercise {
@@ -209,6 +251,14 @@ export interface WorkoutSessionExercise {
   note?: string;
   /** Stable within a session; exercises sharing an id are performed as one round. */
   supersetId?: string;
+  /** How this movement is logged. Resolved once when the session is built. */
+  tracking?: "WEIGHT" | "DURATION" | "DISTANCE";
+  /** Target hold or effort length in seconds, for time-based movements. */
+  targetSeconds?: number;
+  /** Added mid-session rather than planned, so the plan can offer to keep it. */
+  addedLive?: boolean;
+  /** Bar this movement is loaded on, in kg, driving plate and warm-up maths. */
+  barKg?: number;
   sets: CompletedSet[];
 }
 
@@ -284,6 +334,12 @@ export interface AppState {
   hydrationAlertsEnabled: boolean;
   challengeRecords?: ChallengeRecord[];
   manualPRs?: Record<string, { value: number; reps?: number; date: string }>;
+  /** Weekly guided confirmation that keeps planned loads and the Strength Map current. */
+  strengthCheckIn?: {
+    lastCompletedAt?: string;
+    snoozedUntil?: string;
+    completedCount?: number;
+  };
   units?: "kg" | "lb";
   remindersEnabled?: boolean;
   /** Opt-in iOS notifications sent on scheduled training days. */
@@ -292,6 +348,16 @@ export interface AppState {
   workoutReminderMinute?: number;
   /** Auto rest-timer duration after each logged set (seconds); 0 = off. Default 90. */
   restTimerSeconds?: number;
+  /** Native haptics on set logs, PRs, rest and milestones. Default on. */
+  hapticsEnabled?: boolean;
+  /** Evening warning when an unlogged day would end the streak. Default on. */
+  streakAlertsEnabled?: boolean;
+  /** Local hour (0-23) the streak warning fires. Default 19. */
+  streakAlertHour?: number;
+  /** Nudges when a duel rival is ahead or a duel is running out. Default on. */
+  rivalAlertsEnabled?: boolean;
+  /** True after the athlete has made an explicit Lock Screen notification choice. */
+  notificationPreferenceConfigured?: boolean;
   /** Auto-post finished workouts to the social feed. Explicit opt-in only. */
   autoShareWorkouts?: boolean;
   streakArmor?: StreakArmor;

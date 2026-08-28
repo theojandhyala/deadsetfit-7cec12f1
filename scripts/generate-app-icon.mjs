@@ -1,66 +1,60 @@
 import { dirname } from "node:path";
-import { mkdir } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import sharp from "sharp";
 
 /**
- * The App Store icon: the full DEADSET wordmark. Restored deliberately — this
- * script previously emitted the DS monogram everywhere, so re-running it would
- * quietly replace the store icon again.
+ * Every DEADSET brand surface is derived from the user-approved artwork in
+ * public/brand/deadset-logo-source.jpg. Do not redraw the wordmark with fonts:
+ * even a close substitute changes the shape and spacing of the real logo.
  */
-const wordmark = Buffer.from(`
-  <svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-    <rect width="1024" height="1024" fill="#070707"/>
-    <g transform="skewX(-8)">
-      <text x="150" y="545" fill="#f5f5f0"
-        font-family="Arial Black, Arial, sans-serif" font-size="150" font-weight="900">DEAD</text>
-      <text x="580" y="545" fill="#ef3829"
-        font-family="Arial Black, Arial, sans-serif" font-size="150" font-weight="900">SET</text>
-    </g>
-    <text x="512" y="660" text-anchor="middle" fill="#9b9ba3"
-      font-family="Arial, sans-serif" font-size="48" font-weight="800" letter-spacing="16">FORGE YOUR BODY</text>
-  </svg>
-`);
+const SOURCE = "public/brand/deadset-logo-source.jpg";
+const source = await readFile(SOURCE);
 
-/**
- * Small square marks — the Live Activity badge and the tab favicons. The
- * wordmark is stacked over two lines and the tagline dropped, so DEADSET still
- * reads in a 34pt Dynamic Island slot instead of collapsing into a grey bar.
- */
-const stacked = Buffer.from(`
-  <svg width="384" height="384" viewBox="0 0 384 384" xmlns="http://www.w3.org/2000/svg">
-    <rect width="384" height="384" fill="#0a0a0a"/>
-    <g transform="skewX(-8)">
-      <text x="200" y="170" text-anchor="middle" fill="#f5f5f0"
-        font-family="Arial Black, Arial, sans-serif" font-size="106" font-weight="900">DEAD</text>
-      <text x="200" y="288" text-anchor="middle" fill="#e10600"
-        font-family="Arial Black, Arial, sans-serif" font-size="106" font-weight="900">SET</text>
-    </g>
-  </svg>
-`);
-
-/* The DS monogram lived here. It carried the red bracket, which is not part of
-   the DEADSET mark, so nothing generates it any more. */
-
-const outputs = [
-  // Anywhere the icon represents "the app" — the App Store listing and the
-  // home-screen tile — carries the wordmark.
-  ["ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png", 1024, wordmark],
-  ["public/icon-512.png", 512, wordmark],
-  ["public/icon-192.png", 192, wordmark],
-  ["public/apple-touch-icon.png", 180, wordmark],
-  // The rest-timer badge on the Lock Screen and Dynamic Island. It was the last
-  // place the DS monogram survived.
-  ["ios/App/DeadSetRestActivity/Assets.xcassets/RestMark.imageset/RestMark.png", 192, stacked],
-  // Tab favicons use the stacked wordmark. Two short lines survive 16px far
-  // better than the full lockup would.
-  ["public/favicon-48.png", 48, stacked],
-  ["public/favicon-32.png", 32, stacked],
-  ["public/favicon-16.png", 16, stacked],
-];
-
-for (const [path, size, source] of outputs) {
-  await mkdir(dirname(path), { recursive: true });
-  await sharp(source).resize(size, size).png({ compressionLevel: 9 }).toFile(path);
+const sourceMeta = await sharp(source).metadata();
+if (sourceMeta.width !== 1206 || sourceMeta.height !== 1082) {
+  throw new Error(
+    `Unexpected DEADSET logo source dimensions: ${sourceMeta.width}x${sourceMeta.height}`,
+  );
 }
 
-console.log(`Generated ${outputs.length} DEADSET icon assets.`);
+// The full supplied artwork, padded only with the same sampled near-black so
+// iOS receives a compliant square icon without cropping any part of the mark.
+const square = await sharp(source)
+  .resize(1024, 1024, {
+    fit: "contain",
+    background: { r: 7, g: 7, b: 7, alpha: 1 },
+  })
+  .png({ compressionLevel: 9 })
+  .toBuffer();
+
+// A tighter, still pixel-for-pixel crop for headers where the full square's
+// generous breathing room would make the official lockup unreadably small.
+const lockup = await sharp(source)
+  .extract({ left: 205, top: 350, width: 810, height: 360 })
+  .png({ compressionLevel: 9 })
+  .toBuffer();
+
+const outputs = [
+  ["ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png", 1024, square],
+  ["ios/App/DeadSetWatch/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png", 1024, square],
+  ["ios/App/App/Assets.xcassets/Splash.imageset/splash-2732x2732.png", 2732, square],
+  ["ios/App/App/Assets.xcassets/Splash.imageset/splash-2732x2732-1.png", 2732, square],
+  ["ios/App/App/Assets.xcassets/Splash.imageset/splash-2732x2732-2.png", 2732, square],
+  ["public/icon-512.png", 512, square],
+  ["public/icon-192.png", 192, square],
+  ["public/apple-touch-icon.png", 180, square],
+  ["ios/App/DeadSetRestActivity/Assets.xcassets/RestMark.imageset/RestMark.png", 192, square],
+  ["public/favicon-48.png", 48, square],
+  ["public/favicon-32.png", 32, square],
+  ["public/favicon-16.png", 16, square],
+];
+
+for (const [path, size, image] of outputs) {
+  await mkdir(dirname(path), { recursive: true });
+  await sharp(image).resize(size, size).png({ compressionLevel: 9 }).toFile(path);
+}
+
+await mkdir("public/brand", { recursive: true });
+await sharp(lockup).toFile("public/brand/deadset-lockup.png");
+
+console.log(`Generated ${outputs.length + 1} assets from ${SOURCE}.`);

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Flame, Sparkles, Trophy, Zap } from "lucide-react";
 
 import { onGritEarned, type GritAnimationEvent } from "@/lib/grit-events";
+import { hapticMilestone, hapticPersonalRecord } from "@/lib/haptics";
 
 const ICONS = {
   grit: Zap,
@@ -17,6 +18,12 @@ export function GritEarnedLayer() {
 
   useEffect(() => {
     const off = onGritEarned((event) => {
+      // Keep the tactile language as specific as the visual language. Records
+      // get the unmistakable PR pattern, while only rank and streak milestones
+      // get the longer milestone pattern. Ordinary grit/quest bursts stay
+      // visual so finishing a workout does not stack two success patterns.
+      if (event.kind === "pr") hapticPersonalRecord();
+      else if (event.kind === "rank" || event.kind === "streak") hapticMilestone();
       // PR and rank moments get the full-screen CelebrationLayer — showing
       // the small burst underneath it would double-fire the same event.
       if (event.kind === "pr" || event.kind === "rank") return;

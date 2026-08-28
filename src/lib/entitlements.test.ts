@@ -131,13 +131,12 @@ describe("subscriptionStillUnlocksPro", () => {
   const future = "2026-08-24T00:00:00.000Z";
   const past = "2026-07-01T00:00:00.000Z";
 
-  it("keeps Pro through a failed payment retry window", () => {
-    expect(subscriptionStillUnlocksPro("past_due", future, NOW)).toBe(true);
-  });
-
-  it("unlocks for active and trialing", () => {
+  it("unlocks active members and a live, time-bounded trial", () => {
     expect(subscriptionStillUnlocksPro("active", future, NOW)).toBe(true);
-    expect(subscriptionStillUnlocksPro("trialing", null, NOW)).toBe(true);
+    expect(subscriptionStillUnlocksPro("trialing", future, NOW)).toBe(true);
+    expect(subscriptionStillUnlocksPro("trialing", past, NOW)).toBe(false);
+    expect(subscriptionStillUnlocksPro("trialing", null, NOW)).toBe(false);
+    expect(subscriptionStillUnlocksPro("past_due", future, NOW)).toBe(false);
   });
 
   it("honours a cancelled subscription until the paid period ends", () => {

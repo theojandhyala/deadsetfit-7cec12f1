@@ -27,15 +27,25 @@ import {
 import { toast } from "sonner";
 
 import { usePro } from "@/hooks/usePro";
+import { WeeklySetGrid } from "@/components/WeeklySetGrid";
 import { askConfirm } from "@/lib/confirm";
 import { defaultSchedule, todayKey, updateScheduleDay } from "@/lib/calc";
 import { currentWeekStart, getWeeklyCompetitionStats } from "@/lib/competition";
 import { allExercises, EXERCISES, getExercise } from "@/lib/exercises";
 import { libraryExerciseToExercise } from "@/lib/exercise-library";
+import {
+  hapticFailure,
+  hapticPlanUpdated,
+  hapticSelection,
+  hapticUndo,
+  hapticWorkoutStart,
+} from "@/lib/haptics";
 import { listExercises } from "@/lib/library.functions";
 import { openPaywall } from "@/lib/paywall-events";
 import { useAppState } from "@/lib/storage";
 import type { DayKey, DaySchedule, Exercise, ExercisePlan, Schedule } from "@/lib/types";
+import { useUnit } from "@/hooks/useUnit";
+import { formatWeightValue, toKg } from "@/lib/units";
 
 export const Route = createFileRoute("/_tabs/plan")({
   head: () => ({ meta: [{ title: "DEADSET - Weekly Plan" }] }),
@@ -107,6 +117,7 @@ function programMuscle(muscles: string[]): Exercise["muscleGroup"] {
 }
 
 function PlanPage() {
+  const unit = useUnit();
   const [state, set] = useAppState();
   const { isPro, loading: proLoading } = usePro();
   const [selectedDay, setSelectedDay] = useState<DayKey>(todayKey());
@@ -117,6 +128,7 @@ function PlanPage() {
   const [muscleFilter, setMuscleFilter] = useState<Exercise["muscleGroup"] | "ALL">("ALL");
   const [equipmentFilter, setEquipmentFilter] = useState("ALL");
   const [showCustom, setShowCustom] = useState(false);
+  const [showPlanDefaults, setShowPlanDefaults] = useState(false);
   const [advancedExerciseId, setAdvancedExerciseId] = useState<string | null>(null);
   const [swapExerciseId, setSwapExerciseId] = useState<string | null>(null);
   const [customName, setCustomName] = useState("");
@@ -278,6 +290,7 @@ function PlanPage() {
     setEditingDay(false);
     setShowCopy(false);
     setShowPicker(false);
+    hapticSelection();
     requestAnimationFrame(() => {
       document.getElementById("week-map")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
@@ -353,16 +366,19 @@ function PlanPage() {
       sets: 3,
       reps: "8-12",
     }));
+    hapticPlanUpdated();
     toast.success(`${DAY_NAMES[selectedDay]} set to ${preset.label}`);
   }
 
   function setRestDay() {
     updateSelected(() => ({ label: "REST", exerciseIds: [] }));
     setShowPicker(false);
+    hapticPlanUpdated();
     toast.success(`${DAY_NAMES[selectedDay]} is now a rest day`);
   }
 
   function toggleExercise(exercise: Exercise) {
+    const removing = selected.exerciseIds.includes(exercise.id);
     if (!EXERCISES.some((builtIn) => builtIn.id === exercise.id)) {
       set((current) =>
         current.savedExercises.some((saved) => saved.id === exercise.id)
@@ -371,7 +387,6 @@ function PlanPage() {
       );
     }
     updateSelected((day) => {
-      const removing = day.exerciseIds.includes(exercise.id);
       const exerciseIds = removing
         ? day.exerciseIds.filter((id) => id !== exercise.id)
         : [...day.exerciseIds, exercise.id];
@@ -388,6 +403,8 @@ function PlanPage() {
         exerciseConfig: Object.keys(exerciseConfig).length ? exerciseConfig : undefined,
       };
     });
+    if (removing) hapticUndo();
+    else hapticSelection();
   }
 
   function replaceExercise(replacement: Exercise) {
@@ -417,12 +434,14 @@ function PlanPage() {
     setShowPicker(false);
     setSwapExerciseId(null);
     scrollToBuilder("day-movements");
+    hapticPlanUpdated();
     toast.success(`${original?.name ?? "Exercise"} swapped for ${replacement.name}`);
   }
 
   function createCustomExercise() {
     const name = customName.trim().slice(0, 60);
     if (name.length < 2) {
+      hapticFailure();
       toast.error("Enter an exercise name");
       return;
     }
@@ -459,6 +478,7 @@ function PlanPage() {
     });
     setCustomName("");
     setShowCustom(false);
+    hapticPlanUpdated();
     toast.success(`${name} added to ${DAY_NAMES[selectedDay]}`);
   }
 
@@ -509,6 +529,7 @@ function PlanPage() {
         : current.profile,
       schedule: nextSchedule,
     }));
+    hapticPlanUpdated();
     toast.success(`Workouts set to ${size} exercises`);
   }
 
@@ -518,6 +539,7 @@ function PlanPage() {
     const exerciseIds = [...selected.exerciseIds];
     [exerciseIds[index], exerciseIds[target]] = [exerciseIds[target], exerciseIds[index]];
     updateSelected((day) => ({ ...day, exerciseIds }));
+    hapticSelection();
   }
 
   function updateExercise(exerciseId: string, patch: Partial<ExercisePlan>) {
@@ -558,6 +580,7 @@ function PlanPage() {
       },
     });
     setShowCopy(false);
+    hapticPlanUpdated();
     toast.success(`Copied to ${DAY_NAMES[target]}`);
   }
 
@@ -576,6 +599,7 @@ function PlanPage() {
     if (!confirmed) return;
     saveSchedule(defaultSchedule(state.profile));
     setSelectedDay(todayKey());
+    hapticPlanUpdated();
     toast.success("Your week has been rebalanced");
   }
 
@@ -682,60 +706,98 @@ function PlanPage() {
 
       {!activeProgram && (
         <section className="deadset-section">
-          <div className="deadset-panel-muted flex items-center justify-between gap-4 p-4">
-            <div className="min-w-0">
-              <p className="deadset-kicker">Session build</p>
-              <h2 className="display mt-2 text-xl font-black uppercase text-grit">
-                Movements per workout
-              </h2>
-              <p className="mt-1 text-xs text-grit-dim">
-                Set the default. Fine-tune each day below.
-              </p>
-            </div>
-            <div className="flex shrink-0 items-center rounded-md border border-white/12 bg-black">
-              <button
-                onClick={() =>
-                  setWorkoutSize(
-                    Math.max(3, (state.profile?.exercisesPerSession ?? 5) - 1) as
-                      | 3
-                      | 4
-                      | 5
-                      | 6
-                      | 7
-                      | 8,
-                  )
-                }
-                disabled={(state.profile?.exercisesPerSession ?? 5) <= 3}
-                aria-label="Use fewer exercises per workout"
-                className="grid h-11 w-10 place-items-center text-xl font-bold text-grit-dim disabled:opacity-30"
-              >
-                -
-              </button>
-              <span className="display grid h-11 w-11 place-items-center border-x border-white/10 text-xl font-black text-grit">
-                {state.profile?.exercisesPerSession ?? 5}
+          <div className="overflow-hidden rounded-xl border border-white/10 bg-black/20">
+            <button
+              type="button"
+              onClick={() => setShowPlanDefaults((current) => !current)}
+              aria-expanded={showPlanDefaults}
+              className="flex min-h-14 w-full items-center gap-3 px-4 text-left press"
+            >
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-white/10 bg-black/30 text-grit-dim">
+                <Settings2 size={16} />
               </span>
-              <button
-                onClick={() =>
-                  setWorkoutSize(
-                    Math.min(8, (state.profile?.exercisesPerSession ?? 5) + 1) as
-                      | 3
-                      | 4
-                      | 5
-                      | 6
-                      | 7
-                      | 8,
-                  )
-                }
-                disabled={(state.profile?.exercisesPerSession ?? 5) >= 8}
-                aria-label="Use more exercises per workout"
-                className="grid h-11 w-10 place-items-center text-xl font-bold text-grit-dim disabled:opacity-30"
-              >
-                +
-              </button>
-            </div>
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs font-bold text-grit">Plan defaults</span>
+                <span className="mt-0.5 block text-[10px] text-grit-dim">
+                  {state.profile?.exercisesPerSession ?? 5} movements per workout
+                </span>
+              </span>
+              <ChevronRight
+                size={16}
+                className={`shrink-0 text-grit-dim transition-transform ${showPlanDefaults ? "rotate-90" : ""}`}
+              />
+            </button>
+            {showPlanDefaults && (
+              <div className="deadset-view-switch flex items-center justify-between gap-4 border-t border-white/10 p-4">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-grit">Movements per workout</p>
+                  <p className="mt-1 text-[10px] leading-relaxed text-grit-dim">
+                    Used when DEADSET rebuilds your week. Each day can still be adjusted separately.
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center rounded-md border border-white/12 bg-black">
+                  <button
+                    onClick={() =>
+                      setWorkoutSize(
+                        Math.max(3, (state.profile?.exercisesPerSession ?? 5) - 1) as
+                          | 3
+                          | 4
+                          | 5
+                          | 6
+                          | 7
+                          | 8,
+                      )
+                    }
+                    disabled={(state.profile?.exercisesPerSession ?? 5) <= 3}
+                    aria-label="Use fewer exercises per workout"
+                    className="grid h-11 w-10 place-items-center text-xl font-bold text-grit-dim disabled:opacity-30"
+                  >
+                    -
+                  </button>
+                  <span className="display grid h-11 w-11 place-items-center border-x border-white/10 text-xl font-black text-grit">
+                    {state.profile?.exercisesPerSession ?? 5}
+                  </span>
+                  <button
+                    onClick={() =>
+                      setWorkoutSize(
+                        Math.min(8, (state.profile?.exercisesPerSession ?? 5) + 1) as
+                          | 3
+                          | 4
+                          | 5
+                          | 6
+                          | 7
+                          | 8,
+                      )
+                    }
+                    disabled={(state.profile?.exercisesPerSession ?? 5) >= 8}
+                    aria-label="Use more exercises per workout"
+                    className="grid h-11 w-10 place-items-center text-xl font-bold text-grit-dim disabled:opacity-30"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </section>
       )}
+
+      <section className="deadset-section">
+        <div className="deadset-section-title">
+          <div>
+            <p className="deadset-kicker">Volume at a glance</p>
+            <h2 className="display mt-2 text-2xl font-black uppercase text-grit">Set pattern</h2>
+          </div>
+          <Link
+            to="/strength"
+            onClick={hapticSelection}
+            className="flex min-h-11 items-center gap-1.5 text-[10px] font-bold uppercase text-accent-red"
+          >
+            Muscle map <ChevronRight size={13} />
+          </Link>
+        </div>
+        <WeeklySetGrid state={state} />
+      </section>
 
       <section id="week-map" className="deadset-section scroll-mt-4">
         <div className="deadset-section-title">
@@ -781,16 +843,18 @@ function PlanPage() {
             return (
               <div
                 key={dayKey}
-                className="border-b border-white/10 last:border-b-0"
+                className={`border-b border-white/10 last:border-b-0 ${
+                  active ? "deadset-plan-day-active" : ""
+                }`}
                 style={{
                   background: active
                     ? "linear-gradient(90deg, rgba(230,50,34,.12), rgba(23,24,27,.98) 46%)"
                     : "#111214",
-                  boxShadow: active ? "inset 3px 0 0 #e63222" : undefined,
                 }}
               >
                 <button
                   onClick={() => {
+                    if (dayKey !== selectedDay) hapticSelection();
                     setSelectedDay(dayKey);
                     setEditingDay(false);
                     setShowCopy(false);
@@ -843,7 +907,7 @@ function PlanPage() {
                 </button>
 
                 {active && !isRest && (
-                  <div className="border-t border-white/10 bg-black/20 px-3 pb-4 pt-3 sm:px-4">
+                  <div className="deadset-plan-reveal border-t border-white/10 bg-black/20 px-3 pb-4 pt-3 sm:px-4">
                     <div className="space-y-2">
                       {day.exerciseIds.map((exerciseId, index) => {
                         const exercise = getExercise(exerciseId, savedAndProgramExercises);
@@ -880,6 +944,7 @@ function PlanPage() {
                           day: dayKey,
                           source: activeProgram ? "program" : "schedule",
                         }}
+                        onClick={hapticWorkoutStart}
                         className="btn-grit flex min-h-11 items-center justify-center gap-2 text-xs"
                       >
                         <Play size={14} />
@@ -906,7 +971,7 @@ function PlanPage() {
                 )}
 
                 {active && isRest && !activeProgram && (
-                  <div className="border-t border-white/10 bg-black/20 px-3 py-4 sm:px-4">
+                  <div className="deadset-plan-reveal border-t border-white/10 bg-black/20 px-3 py-4 sm:px-4">
                     <p className="text-xs leading-relaxed text-grit-dim">
                       No workout is scheduled. Keep it as recovery or build a session for this day.
                     </p>
@@ -1173,18 +1238,22 @@ function PlanPage() {
                       />
                       <PlanInput
                         key={`weight-${selectedDay}-${exerciseId}`}
-                        label="Weight kg"
-                        ariaLabel={`${exercise.name} working weight in kilograms`}
-                        defaultValue={config.weightKg ? String(config.weightKg) : ""}
+                        label={`Weight ${unit}`}
+                        ariaLabel={`${exercise.name} working weight in ${unit}`}
+                        defaultValue={
+                          config.weightKg ? formatWeightValue(config.weightKg, unit) : ""
+                        }
                         placeholder="Optional"
                         inputMode="decimal"
                         onCommit={(value) => {
-                          const weightKg = Number(value.replace(/[^0-9.]/g, ""));
+                          // Typed in the athlete's units, stored in kilograms.
+                          const typed = Number(value.replace(/[^0-9.]/g, ""));
+                          const weightKg =
+                            Number.isFinite(typed) && typed > 0 ? toKg(typed, unit) : 0;
                           updateExercise(exerciseId, {
-                            weightKg:
-                              Number.isFinite(weightKg) && weightKg > 0 ? weightKg : undefined,
+                            weightKg: weightKg > 0 ? weightKg : undefined,
                           });
-                          return Number.isFinite(weightKg) && weightKg > 0 ? String(weightKg) : "";
+                          return weightKg > 0 ? formatWeightValue(weightKg, unit) : "";
                         }}
                       />
                     </div>
@@ -1333,10 +1402,8 @@ function PlanPage() {
                         <Link2 size={14} />
                         {config.supersetWithNext
                           ? `Superset with ${
-                              getExercise(
-                                selected.exerciseIds[index + 1]!,
-                                state.savedExercises,
-                              )?.name ?? "next exercise"
+                              getExercise(selected.exerciseIds[index + 1]!, state.savedExercises)
+                                ?.name ?? "next exercise"
                             }`
                           : "Link with next exercise"}
                       </button>
@@ -1396,7 +1463,11 @@ function PlanPage() {
               {MUSCLE_FILTERS.map((muscle) => (
                 <button
                   key={muscle}
-                  onClick={() => setMuscleFilter(muscle)}
+                  onClick={() => {
+                    if (muscle === muscleFilter) return;
+                    setMuscleFilter(muscle);
+                    hapticSelection();
+                  }}
                   aria-pressed={muscleFilter === muscle}
                   className={`shrink-0 rounded-md border px-3 py-2 text-[10px] font-black uppercase ${
                     muscleFilter === muscle
@@ -1411,7 +1482,11 @@ function PlanPage() {
             <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
               <select
                 value={equipmentFilter}
-                onChange={(event) => setEquipmentFilter(event.target.value)}
+                onChange={(event) => {
+                  if (event.target.value === equipmentFilter) return;
+                  setEquipmentFilter(event.target.value);
+                  hapticSelection();
+                }}
                 aria-label="Filter exercises by equipment"
                 className="input-grit min-h-11 text-xs uppercase"
               >

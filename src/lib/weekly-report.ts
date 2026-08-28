@@ -82,8 +82,7 @@ function currentGradeFor(
   const daysElapsed = weekday === 0 ? 7 : weekday;
   const expectedDays = Math.max(1, Math.floor(plannedDays * (daysElapsed / 7)));
   const consistency = Math.min(1, totals.days / expectedDays);
-  const score =
-    consistency * 60 + Math.min(20, totals.prs * 10) + Math.min(20, totals.sets / 2);
+  const score = consistency * 60 + Math.min(20, totals.prs * 10) + Math.min(20, totals.sets / 2);
   if (score >= 85) return "A";
   if (score >= 65) return "B";
   if (score >= 40) return "C";
@@ -199,7 +198,11 @@ export function gradeHistory(state: AppState, weeks = 8, now = new Date()): Week
     end.setDate(end.getDate() + 6);
     if (isoDay(end) < firstSession) continue;
     const totals = totalsFor(state, start, end);
-    out.push({ weekStart: isoDay(start), grade: gradeFor(totals, plannedDays), sessions: totals.sessions });
+    out.push({
+      weekStart: isoDay(start),
+      grade: gradeFor(totals, plannedDays),
+      sessions: totals.sessions,
+    });
   }
   return out;
 }

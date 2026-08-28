@@ -16,8 +16,7 @@ export function MonthRankCard({ state }: { state: AppState }) {
 
   if (!rank) return null;
 
-  const standing =
-    rank.rank <= 3 ? ORDINAL[rank.rank] : `#${rank.rank} of ${rank.totalMonths}`;
+  const standing = rank.rank <= 3 ? ORDINAL[rank.rank] : `#${rank.rank} of ${rank.totalMonths}`;
 
   return (
     <section className="px-5 mb-6">
@@ -26,16 +25,17 @@ export function MonthRankCard({ state }: { state: AppState }) {
           <p className="label-cap text-[10px] text-accent-red flex items-center gap-1.5">
             <CalendarRange size={12} /> {rank.label}
           </p>
-          <p className="label-cap text-[9px] text-grit-dim">
-            {rank.totalMonths} months tracked
-          </p>
+          <p className="label-cap text-[9px] text-grit-dim">{rank.totalMonths} months tracked</p>
         </div>
 
         <div className="flex items-baseline gap-2 mt-1.5">
           <p className="display text-2xl font-extrabold text-grit leading-none whitespace-nowrap">
             {rank.volumeKg.toLocaleString()} kg
           </p>
-          <p className="label-cap text-[9px]" style={{ color: rank.rank === 1 ? "#22c55e" : undefined }}>
+          <p
+            className="label-cap text-[9px]"
+            style={{ color: rank.rank === 1 ? "#22c55e" : undefined }}
+          >
             {rank.rank <= 3 ? `your ${standing} month ever` : standing}
           </p>
         </div>

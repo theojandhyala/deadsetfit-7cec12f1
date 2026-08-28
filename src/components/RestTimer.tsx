@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { X, Plus } from "lucide-react";
 import { restDoneChime } from "@/lib/feedback";
+import { hapticRestTick, hapticSelection } from "@/lib/haptics";
 import {
   cancelRestAlert,
   extendDeadline,
@@ -27,14 +28,18 @@ export function RestTimer({
   const [endsAt, setEndsAt] = useState(() => Date.now() + seconds * 1000);
   const [state, setState] = useState(() => restTimerState(endsAt, seconds));
   const finished = useRef(false);
+  const playedCountdownTicks = useRef(new Set<number>());
 
-  const finish = useCallback(() => {
-    if (finished.current) return;
-    finished.current = true;
-    void cancelRestAlert();
-    restDoneChime();
-    onDone();
-  }, [onDone]);
+  const endRest = useCallback(
+    (completedNaturally: boolean) => {
+      if (finished.current) return;
+      finished.current = true;
+      void cancelRestAlert();
+      if (completedNaturally) restDoneChime();
+      onDone();
+    },
+    [onDone],
+  );
 
   // What makes rest survive leaving the app. The notification is delivered by
   // iOS at the deadline even if the app is suspended or killed; the Live Activity
@@ -50,9 +55,17 @@ export function RestTimer({
 
   useEffect(() => {
     const tick = () => {
+      if (finished.current) return;
       const next = restTimerState(endsAt, state.total);
       setState(next);
-      if (next.done) finish();
+      if (
+        (next.remaining === 3 || next.remaining === 2 || next.remaining === 1) &&
+        !playedCountdownTicks.current.has(next.remaining)
+      ) {
+        playedCountdownTicks.current.add(next.remaining);
+        hapticRestTick();
+      }
+      if (next.done) endRest(true);
     };
     const interval = window.setInterval(tick, 250);
     // Recompute the instant we regain focus rather than waiting for a tick, so
@@ -64,7 +77,7 @@ export function RestTimer({
       document.removeEventListener("visibilitychange", tick);
       window.removeEventListener("focus", tick);
     };
-  }, [endsAt, state.total, finish]);
+  }, [endsAt, state.total, endRest]);
 
   // Skipping or unmounting must not leave a notification to fire later.
   useEffect(() => () => void cancelRestAlert(), []);
@@ -87,13 +100,23 @@ export function RestTimer({
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setEndsAt((current) => extendDeadline(current, 15))}
+              onClick={() => {
+                hapticSelection();
+                playedCountdownTicks.current.clear();
+                setEndsAt((current) => extendDeadline(current, 15));
+              }}
               className="btn-ghost px-3 py-2 text-xs"
             >
               <Plus size={14} className="mr-1" />
               15s
             </button>
-            <button onClick={finish} className="btn-grit px-3 py-2 text-xs">
+            <button
+              onClick={() => {
+                hapticSelection();
+                endRest(false);
+              }}
+              className="btn-grit px-3 py-2 text-xs"
+            >
               <X size={14} className="mr-1" />
               Skip
             </button>

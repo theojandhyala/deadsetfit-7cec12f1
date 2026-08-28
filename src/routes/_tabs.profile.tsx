@@ -14,6 +14,8 @@ import {
   Heart,
   Check,
   Share2,
+  Users,
+  UserPlus,
 } from "lucide-react";
 import { useAppState, flushRemoteState } from "@/lib/storage";
 import { askConfirm, withDeadline } from "@/lib/confirm";
@@ -58,6 +60,8 @@ import { currentMilestone, nextMilestone, milestoneProgress } from "@/lib/streak
 import { emitGritEarned } from "@/lib/grit-events";
 import { saveProfile } from "@/lib/profile.functions";
 import { deleteMyAccount } from "@/lib/account.functions";
+import { finishLocalAccountExit } from "@/lib/account-exit";
+import { hapticFailure, hapticSaved, hapticSelection, hapticUndo } from "@/lib/haptics";
 import { usePro } from "@/hooks/usePro";
 import { isNativeIos } from "@/lib/platform";
 import { FifaCard } from "@/components/FifaCard";
@@ -74,6 +78,13 @@ import {
   buildHeadlinePRs,
   type PRDef,
 } from "@/lib/fifa-stats";
+import { useUnit } from "@/hooks/useUnit";
+import { formatWeight, formatWeightValue, toKg, type WeightUnit } from "@/lib/units";
+import {
+  getFriendConnections,
+  updateMyLocation,
+  type FriendConnections,
+} from "@/lib/social.functions";
 
 export const Route = createFileRoute("/_tabs/profile")({
   head: () => ({ meta: [{ title: "DEADSET — Profile" }] }),
@@ -82,6 +93,7 @@ export const Route = createFileRoute("/_tabs/profile")({
 
 function ProfilePage() {
   const [state, set] = useAppState();
+  const unit = useUnit();
   const navigate = useNavigate();
   const persist = saveProfile;
   const deleteAcct = deleteMyAccount;
@@ -91,18 +103,25 @@ function ProfilePage() {
   const [goal, setGoal] = useState<string>(p?.goal || "BULK");
   const [exp, setExp] = useState<string>(p?.experience || "BEGINNER");
   const [equip, setEquip] = useState<string>(p?.equipment || "FULL_GYM");
+  const [gender, setGender] = useState<string>(p?.gender || "OTHER");
   // Edit-form inputs are DOM-owned (defaultValue + ref, read on save) — the
   // controlled value/onChange pattern freezes typing in the iOS WKWebView.
   const usernameRef = useRef<HTMLInputElement>(null);
+  const displayNameRef = useRef<HTMLInputElement>(null);
+  const bioRef = useRef<HTMLTextAreaElement>(null);
+  const cityRef = useRef<HTMLInputElement>(null);
+  const countryRef = useRef<HTMLInputElement>(null);
+  const ageRef = useRef<HTMLInputElement>(null);
   const weightRef = useRef<HTMLInputElement>(null);
   const heightRef = useRef<HTMLInputElement>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [session, setSession] = useState<{ userId: string } | null | "loading">("loading");
+  const [social, setSocial] = useState<FriendConnections | null>(null);
   const [editingPR, setEditingPR] = useState<PRDef | null>(null);
   const [showStreakShare, setShowStreakShare] = useState(false);
   const {
     // Identity/badging reflects a real paid subscription, not the blanket
-    // iOS entitlement — a free iOS user shouldn't wear a PRO badge.
+    // iOS entitlement — identity/badging must still reflect a verified membership.
     isPaidPro: isPro,
     status: proStatus,
     currentPeriodEnd,
@@ -145,6 +164,13 @@ function ProfilePage() {
       sub.subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!session || session === "loading") return;
+    getFriendConnections()
+      .then(setSocial)
+      .catch(() => setSocial({ friends: [], incoming: [], outgoing: [] }));
+  }, [session]);
 
   // Auto-push public_stats + grit whenever logs / manualPRs / sessions change.
   // grit_points powers the RANK leaderboard and league placement server-side.
@@ -219,6 +245,16 @@ function ProfilePage() {
   const startW = p.startingWeightKg ?? p.weightKg;
   const delta = p.weightKg - startW;
   const bmi = (p.weightKg / Math.pow(p.heightCm / 100, 2)).toFixed(1);
+  const profileSignals = [
+    Boolean(p.avatarDataUrl),
+    Boolean(p.displayName?.trim()),
+    Boolean(p.username?.trim()),
+    Boolean(p.bio?.trim()),
+    Boolean(p.city?.trim() && p.country?.trim()),
+  ];
+  const profileCompletion = Math.round(
+    (profileSignals.filter(Boolean).length / profileSignals.length) * 100,
+  );
 
   async function save() {
     if (!p) return;
@@ -226,9 +262,34 @@ function ProfilePage() {
       .toLowerCase()
       .replace(/[^a-z0-9_]/g, "")
       .slice(0, 20);
-    const newWeight = Number(weightRef.current?.value) || p.weightKg;
+    // Typed in the athlete's units, stored in kilograms. Without the
+    // conversion a pound user setting "180" would be recorded as 180 kg and
+    // every bodyweight-relative number — strength grades included — would be
+    // wrong for them forever.
+    const typedWeight = Number(weightRef.current?.value);
+    const newWeight = typedWeight > 0 ? toKg(typedWeight, unit) : p.weightKg;
     const newHeight = Number(heightRef.current?.value) || p.heightCm;
+    const requestedAge = Number(ageRef.current?.value);
+    const newAge =
+      Number.isFinite(requestedAge) && requestedAge >= 13 && requestedAge <= 90
+        ? Math.round(requestedAge)
+        : p.age;
     const newUsername = clean || p.username;
+    const newDisplayName = (
+      displayNameRef.current?.value ??
+      p.displayName ??
+      newUsername ??
+      "Athlete"
+    )
+      .trim()
+      .slice(0, 60);
+    const newBio = (bioRef.current?.value ?? p.bio ?? "").trim().slice(0, 500);
+    const newCity = (cityRef.current?.value ?? p.city ?? "").trim().slice(0, 80);
+    const newCountry = (countryRef.current?.value ?? p.country ?? "").trim().slice(0, 80);
+    if ((newCity && !newCountry) || (!newCity && newCountry)) {
+      toast.error("Add both city and country, or leave both blank");
+      return;
+    }
     const newEquip = equip as typeof p.equipment;
     // Exercise choices are derived from equipment, so a change leaves the saved
     // week full of kit the lifter no longer has. Offer to rebuild rather than
@@ -247,25 +308,34 @@ function ProfilePage() {
       await persist({
         data: {
           username: newUsername,
-          // Never clobber a distinct display name with the @handle.
-          display_name: (p.displayName?.trim() || newUsername || "Athlete").slice(0, 60),
+          display_name: newDisplayName,
+          bio: newBio,
           goal: goal as "BULK" | "CUT" | "MAINTAIN" | "ATHLETIC",
           experience: exp as "BEGINNER" | "INTERMEDIATE" | "ADVANCED",
+          gender: gender as "MALE" | "FEMALE" | "OTHER",
+          age: newAge,
           equipment: newEquip,
           weight_kg: newWeight,
           height_cm: newHeight,
         },
       });
+      await updateMyLocation({ data: { city: newCity, country: newCountry, region: null } });
       set((s) => {
         if (!s.profile) return s;
         const profile = {
           ...s.profile,
           goal: goal as typeof s.profile.goal,
           experience: exp as typeof s.profile.experience,
+          gender: gender as typeof s.profile.gender,
+          age: newAge,
           equipment: newEquip,
           weightKg: newWeight,
           heightCm: newHeight,
           username: newUsername,
+          displayName: newDisplayName,
+          bio: newBio,
+          city: newCity || undefined,
+          country: newCountry || undefined,
         };
         return {
           ...s,
@@ -321,6 +391,7 @@ function ProfilePage() {
   }
 
   async function logout() {
+    hapticSelection();
     toast.loading("Saving your data…", { id: "logout" });
     try {
       // Push any unsaved local state to the server BEFORE auth is dropped —
@@ -337,14 +408,20 @@ function ProfilePage() {
     } finally {
       toast.dismiss("logout");
     }
-    window.dispatchEvent(new CustomEvent("deadset:explicit-logout"));
-    clearSessionBackup();
+    finishLocalAccountExit({
+      removeLocalTrainingState: false,
+      removeItem: (key) => localStorage.removeItem(key),
+      dispatchExplicitLogout: () =>
+        window.dispatchEvent(new CustomEvent("deadset:explicit-logout")),
+      clearSessionBackup,
+    });
     try {
       await withDeadline(supabase.auth.signOut(), 4000);
     } catch {
       // Local session is already cleared by the explicit-logout event.
     }
     toast.success("Signed out — your data is saved");
+    hapticSaved();
     navigate({ to: "/auth", replace: true });
   }
 
@@ -361,6 +438,7 @@ function ProfilePage() {
   }
 
   async function deleteAccount() {
+    hapticSelection();
     const ok = await askConfirm({
       title: "Delete your account?",
       message:
@@ -372,21 +450,23 @@ function ProfilePage() {
     if (!ok) return;
     try {
       await deleteAcct();
-      try {
-        localStorage.removeItem("grit_app_state_v1");
-      } catch {
-        /* ignore */
-      }
-      window.dispatchEvent(new CustomEvent("deadset:explicit-logout"));
-      clearSessionBackup();
+      finishLocalAccountExit({
+        removeLocalTrainingState: true,
+        removeItem: (key) => localStorage.removeItem(key),
+        dispatchExplicitLogout: () =>
+          window.dispatchEvent(new CustomEvent("deadset:explicit-logout")),
+        clearSessionBackup,
+      });
       try {
         await withDeadline(supabase.auth.signOut(), 4000);
       } catch {
         /* session already dropped */
       }
       toast.success("Account deleted");
+      hapticUndo();
       navigate({ to: "/auth", replace: true });
     } catch (e) {
+      hapticFailure();
       toast.error(e instanceof Error ? e.message : "Couldn't delete account");
     }
   }
@@ -398,14 +478,48 @@ function ProfilePage() {
           <p className="label-cap">YOUR CARD</p>
           {isPro && <ProBadge size="sm" />}
         </div>
-        <button
-          onClick={() => (editing ? save() : setEditing(true))}
-          disabled={savingProfile}
-          className="label-cap tap-44 mt-1 text-accent-red disabled:opacity-50"
-        >
-          {editing ? (savingProfile ? "..." : "Save") : "Edit"}
-        </button>
+        <div className="flex items-center gap-1">
+          <Link
+            to="/settings"
+            aria-label="Open settings"
+            className="icon-btn h-10 min-h-10 w-10 min-w-10 rounded-xl text-grit-dim press"
+          >
+            <Settings size={17} />
+          </Link>
+          <button
+            onClick={() => (editing ? save() : setEditing(true))}
+            disabled={savingProfile}
+            className="min-h-10 rounded-xl px-3 label-cap text-accent-red disabled:opacity-50 press"
+          >
+            {editing ? (savingProfile ? "..." : "Save") : "Edit"}
+          </button>
+        </div>
       </header>
+
+      {!isPro && (
+        <section className="mx-5 mb-4 rounded-2xl border border-accent-red/40 bg-accent-red/[0.08] p-4">
+          <p className="label-cap text-[9px] text-accent-red">ACCOUNT & PRIVACY ACCESS</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-grit-dim">
+            You can always restore a purchase, sign out, or permanently delete your account even
+            without an active membership.
+          </p>
+          <Link to="/upgrade" className="btn-grit mt-3 block min-h-11 text-center text-[11px]">
+            Return to membership
+          </Link>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <button type="button" onClick={logout} className="btn-ghost min-h-11 text-[10px]">
+              <LogOut size={14} className="mr-1.5 inline" /> Sign out
+            </button>
+            <button
+              type="button"
+              onClick={deleteAccount}
+              className="btn-ghost min-h-11 text-[10px] text-accent-red"
+            >
+              <Trash2 size={14} className="mr-1.5 inline" /> Delete account
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* === FIFA card === */}
       <section className="px-5 mb-5 relative">
@@ -440,7 +554,108 @@ function ProfilePage() {
         />
       </section>
 
-      <section className="px-5 mb-4">
+      <nav className="px-5 mb-4" aria-label="Profile shortcuts">
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { href: "#profile-rank", label: "Rank", Icon: Flame },
+            { href: "#profile-prs", label: "PRs", Icon: Trophy },
+            { href: "#profile-details", label: "Details", Icon: Pencil },
+            { href: "#profile-account", label: "Account", Icon: Settings },
+          ].map(({ href, label, Icon }) => (
+            <a
+              key={href}
+              href={href}
+              className="press flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl border border-white/10 bg-grit-card px-1"
+            >
+              <Icon size={15} className="text-accent-red" />
+              <span className="text-[8px] font-black uppercase text-grit-dim">{label}</span>
+            </a>
+          ))}
+        </div>
+      </nav>
+
+      {profileCompletion < 100 && (
+        <section className="mx-5 mb-4 rounded-2xl border border-white/10 bg-grit-card p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="label-cap text-[9px] text-accent-red">ATHLETE PROFILE</p>
+              <p className="display mt-1 text-lg font-black uppercase text-grit">
+                Make your card recognisable
+              </p>
+            </div>
+            <span className="display text-xl font-black text-grit">{profileCompletion}%</span>
+          </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-black/45">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-accent-red to-[#ff6b5f] transition-[width] duration-500"
+              style={{ width: `${profileCompletion}%` }}
+            />
+          </div>
+          <p className="mt-2 text-[10px] leading-relaxed text-grit-dim">
+            Add a photo, display name, bio and city so friends know they found the right athlete.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              hapticSelection();
+              setEditing(true);
+              requestAnimationFrame(() =>
+                document.getElementById("profile-details")?.scrollIntoView({ behavior: "smooth" }),
+              );
+            }}
+            className="btn-ghost mt-3 min-h-11 w-full text-[10px]"
+          >
+            Complete profile
+          </button>
+        </section>
+      )}
+
+      <section className="mx-5 mb-4 overflow-hidden rounded-2xl border border-accent-red/35 bg-[radial-gradient(circle_at_90%_0%,rgba(230,50,34,0.2),transparent_36%),linear-gradient(145deg,#17181c,#0c0c0e)] p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="label-cap text-[9px] text-accent-red">YOUR SOCIAL LIFTING CARD</p>
+            <p className="display mt-1 text-xl font-black uppercase text-grit">Friends & rivals</p>
+            <p className="mt-1 max-w-[30ch] text-[10px] leading-relaxed text-grit-dim">
+              Compare Strength Maps, PRs and streaks with athletes you accept.
+            </p>
+          </div>
+          <Users size={24} className="text-accent-red" />
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          <div className="rounded-xl border border-white/10 bg-black/25 p-2.5 text-center">
+            <p className="display text-xl font-black text-grit">{social?.friends.length ?? "—"}</p>
+            <p className="label-cap text-[7px] text-grit-dim">Friends</p>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-black/25 p-2.5 text-center">
+            <p className="display text-xl font-black text-grit">{social?.incoming.length ?? "—"}</p>
+            <p className="label-cap text-[7px] text-grit-dim">Requests</p>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-black/25 p-2.5 text-center">
+            <p className="display text-xl font-black text-grit">{score.total}</p>
+            <p className="label-cap text-[7px] text-grit-dim">DS score</p>
+          </div>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <Link to="/friends" className="btn-grit min-h-11 text-center text-[10px]">
+            <UserPlus size={13} className="mr-1.5 inline" /> Add friends
+          </Link>
+          {session && session !== "loading" ? (
+            <Link
+              to="/athlete/$id"
+              params={{ id: session.userId }}
+              className="btn-ghost min-h-11 text-center text-[10px]"
+            >
+              View public card
+            </Link>
+          ) : (
+            <Link to="/friends" className="btn-ghost min-h-11 text-center text-[10px]">
+              Open social
+            </Link>
+          )}
+        </div>
+      </section>
+
+      <section id="profile-rank" className="scroll-mt-28 px-5 mb-4">
         <RankedArena state={state} compact />
       </section>
 
@@ -506,7 +721,7 @@ function ProfilePage() {
       <TrophyCase state={state} />
 
       {/* === Personal Records — flat list === */}
-      <section className="px-5 mb-6">
+      <section id="profile-prs" className="scroll-mt-28 px-5 mb-6">
         <div className="flex items-center justify-between mb-2">
           <p className="label-cap flex items-center gap-1.5">
             <Trophy size={12} className="text-accent-red" /> Personal Records
@@ -532,11 +747,20 @@ function ProfilePage() {
       )}
 
       {/* === Athlete Stats === */}
-      <section className="px-5 mb-6">
+      <section id="profile-details" className="scroll-mt-28 px-5 mb-6">
         <p className="label-cap mb-2">Athlete Stats</p>
         <div className="bg-grit-card border border-grit divide-y divide-[#262626]">
           {editing ? (
             <>
+              <Field label="Display name">
+                <input
+                  ref={displayNameRef}
+                  defaultValue={p.displayName}
+                  className="input-grit w-full"
+                  maxLength={60}
+                  autoComplete="name"
+                />
+              </Field>
               <Field label="Username">
                 <input
                   ref={usernameRef}
@@ -546,6 +770,35 @@ function ProfilePage() {
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck={false}
+                />
+              </Field>
+              <Field label="Bio">
+                <textarea
+                  ref={bioRef}
+                  defaultValue={p.bio}
+                  className="input-grit min-h-24 w-full resize-none py-3"
+                  maxLength={500}
+                  placeholder="What are you training for?"
+                />
+              </Field>
+              <Field label="City">
+                <input
+                  ref={cityRef}
+                  defaultValue={p.city}
+                  className="input-grit w-full"
+                  maxLength={80}
+                  autoComplete="address-level2"
+                  placeholder="Optional"
+                />
+              </Field>
+              <Field label="Country">
+                <input
+                  ref={countryRef}
+                  defaultValue={p.country}
+                  className="input-grit w-full"
+                  maxLength={80}
+                  autoComplete="country-name"
+                  placeholder="Optional"
                 />
               </Field>
               <Field label="Goal">
@@ -572,10 +825,26 @@ function ProfilePage() {
                   opts={["FULL_GYM", "HOME_GYM", "BODYWEIGHT"]}
                 />
               </Field>
-              <Field label="Weight (kg)">
+              {/* Age and gender are not vanity fields: strength grades are
+                  computed against standards for both, so a wrong one grades
+                  the athlete against the wrong population. */}
+              <Field label="Age">
+                <input
+                  ref={ageRef}
+                  defaultValue={String(p.age ?? "")}
+                  inputMode="numeric"
+                  min={13}
+                  max={90}
+                  className="input-grit text-right w-full"
+                />
+              </Field>
+              <Field label="Gender">
+                <Select value={gender} onChange={setGender} opts={["MALE", "FEMALE", "OTHER"]} />
+              </Field>
+              <Field label={`Weight (${unit})`}>
                 <input
                   ref={weightRef}
-                  defaultValue={String(p.weightKg ?? "")}
+                  defaultValue={p.weightKg ? formatWeightValue(p.weightKg, unit) : ""}
                   inputMode="decimal"
                   className="input-grit text-right w-full"
                 />
@@ -596,6 +865,17 @@ function ProfilePage() {
             </>
           ) : (
             <>
+              <Stat label="Display Name" v={p.displayName || "Not set"} />
+              <Stat label="Username" v={p.username ? `@${p.username}` : "Not set"} />
+              <Stat label="Bio" v={p.bio || "Add a short introduction"} />
+              <Stat
+                label="Location"
+                v={
+                  p.city && p.country
+                    ? `${p.city}, ${p.country}`
+                    : "Private until you choose a city"
+                }
+              />
               <Stat label="Goal" v={p.goal} />
               <Stat label="Experience" v={p.experience} />
               <Stat
@@ -604,11 +884,11 @@ function ProfilePage() {
                   p.trainingDays?.length ? describeDays(p.trainingDays) : `${p.daysPerWeek} / week`
                 }
               />
-              <Stat label="Current Weight" v={`${p.weightKg} kg`} />
+              <Stat label="Current Weight" v={formatWeight(p.weightKg, unit)} />
               <div className="flex justify-between items-center px-4 py-3">
                 <span className="label-cap">Start → Now</span>
                 <span className="text-sm font-bold uppercase text-grit">
-                  {startW} → {p.weightKg} kg{" "}
+                  {formatWeightValue(startW, unit)} → {formatWeight(p.weightKg, unit)}{" "}
                   <span style={{ color: delta === 0 ? "#8a8a8a" : "#e63222" }}>
                     ({delta > 0 ? "+" : ""}
                     {delta.toFixed(1)})
@@ -632,7 +912,9 @@ function ProfilePage() {
               {p.motivation && (
                 <Stat label="Why You Train" v={MOTIVATION_LABEL[p.motivation] ?? p.motivation} />
               )}
-              {p.targetWeightKg && <Stat label="Target Weight" v={`${p.targetWeightKg} kg`} />}
+              {p.targetWeightKg && (
+                <Stat label="Target Weight" v={formatWeight(p.targetWeightKg, unit)} />
+              )}
             </>
           )}
         </div>
@@ -712,7 +994,7 @@ function ProfilePage() {
         </div>
       </section>
 
-      <section className="px-5 mb-6 flex flex-col gap-2">
+      <section id="profile-account" className="scroll-mt-28 px-5 mb-6 flex flex-col gap-2">
         <Link to="/recovery" className="btn-ghost w-full inline-flex items-center justify-center">
           <Heart size={14} className="mr-2" /> Recovery & Mobility
         </Link>
@@ -740,11 +1022,17 @@ function ProfilePage() {
 
       <section className="px-5 pb-10 flex flex-col items-center gap-2">
         <div className="flex justify-center gap-4 label-cap text-[10px] text-grit-dim">
-          <Link to="/privacy" className="tap-44">Privacy</Link>
+          <Link to="/privacy" className="tap-44">
+            Privacy
+          </Link>
           <span>·</span>
-          <Link to="/terms" className="tap-44">Terms</Link>
+          <Link to="/terms" className="tap-44">
+            Terms
+          </Link>
           <span>·</span>
-          <Link to="/disclaimer" className="tap-44">Disclaimer</Link>
+          <Link to="/disclaimer" className="tap-44">
+            Disclaimer
+          </Link>
         </div>
         <p className="label-cap text-[10px] text-grit-dim">DEADSET — made by Theo Jandhyala</p>
       </section>
@@ -761,8 +1049,8 @@ function ProfilePage() {
   );
 }
 
-function prUnit(def: PRDef) {
-  return def.kind === "1RM" ? "kg" : def.kind === "REPS" ? "reps" : "sec";
+function prUnit(def: PRDef, weightUnit: WeightUnit) {
+  return def.kind === "1RM" ? weightUnit : def.kind === "REPS" ? "reps" : "sec";
 }
 
 function PRRow({
@@ -774,7 +1062,8 @@ function PRRow({
   pr?: { value: number; reps?: number };
   onEdit: () => void;
 }) {
-  const unit = prUnit(def);
+  const weightUnit = useUnit();
+  const unit = prUnit(def, weightUnit);
   return (
     <button
       type="button"
@@ -818,7 +1107,8 @@ function PREditSheet({
   const valRef = useRef<HTMLInputElement>(null);
   const repsRef = useRef<HTMLInputElement>(null);
   const [shadowVal, setShadowVal] = useState(pr ? String(pr.value) : "");
-  const unit = prUnit(def);
+  const weightUnit = useUnit();
+  const unit = prUnit(def, weightUnit);
   const n = Number(shadowVal);
   const valid = Number.isFinite(n) && n > 0;
   const isImprovement = valid && (!pr || n > pr.value);

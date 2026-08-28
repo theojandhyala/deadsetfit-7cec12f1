@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 
 import { buildHeatmap } from "@/lib/training-heatmap";
+import { buildWorkoutHistory } from "@/lib/workout-history";
 import { isoDay } from "@/lib/calc";
 import type { AppState } from "@/lib/types";
 
@@ -24,6 +25,10 @@ export function TrainingHeatmap({ state }: { state: AppState }) {
     [state.sessions, state.completedDates],
   );
   const trainedDays = columns.flat().filter((c) => c.trained).length;
+  const years = useMemo(
+    () => buildWorkoutHistory(state.sessions, state.completedDates, isoDay()),
+    [state.sessions, state.completedDates],
+  );
 
   return (
     <div className="bg-grit-card border border-grit rounded-2xl p-4">
@@ -34,7 +39,11 @@ export function TrainingHeatmap({ state }: { state: AppState }) {
         </p>
       </div>
 
-      <div className="flex gap-[3px]" role="img" aria-label={`Training heatmap: ${trainedDays} session days in the last 12 weeks`}>
+      <div
+        className="flex gap-[3px]"
+        role="img"
+        aria-label={`Training heatmap: ${trainedDays} session days in the last 12 weeks`}
+      >
         {columns.map((week, i) => (
           <div key={i} className="flex flex-col gap-[3px] flex-1">
             {week.map((cell) => (
@@ -58,6 +67,48 @@ export function TrainingHeatmap({ state }: { state: AppState }) {
           More{maxVolume > 0 ? ` · peak ${Math.round(maxVolume).toLocaleString()} kg` : ""}
         </span>
       </div>
+
+      {years.length > 0 && (
+        <div className="mt-5 border-t border-grit pt-4">
+          <div className="mb-3 flex items-baseline justify-between">
+            <p className="label-cap text-[10px] text-grit">ALL-TIME HISTORY</p>
+            <p className="label-cap text-[8px] text-grit-dim">REAL COMPLETED DAYS</p>
+          </div>
+          <div className="space-y-4">
+            {years.map((year) => (
+              <div key={year.year}>
+                <div className="mb-1.5 flex items-baseline justify-between">
+                  <span className="display text-lg font-extrabold text-grit">{year.year}</span>
+                  <span className="label-cap text-[9px] text-grit-dim">
+                    {year.workoutCount} workouts
+                  </span>
+                </div>
+                <div
+                  className="flex gap-px overflow-hidden"
+                  role="img"
+                  aria-label={`${year.year}: ${year.workoutCount} workout days`}
+                >
+                  {year.columns.map((week, index) => (
+                    <div key={index} className="flex min-w-0 flex-1 flex-col gap-px">
+                      {Array.from({ length: 7 }, (_, day) => {
+                        const cell = week[day] ?? null;
+                        return (
+                          <span
+                            key={day}
+                            className="aspect-square rounded-[1px]"
+                            style={{ background: cell ? LEVEL_BG[cell.level] : "transparent" }}
+                            title={cell?.date}
+                          />
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

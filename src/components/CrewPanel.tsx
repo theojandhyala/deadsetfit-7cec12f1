@@ -287,10 +287,7 @@ export function CrewPanel() {
             crew.
           </p>
           <div className="mt-4 grid grid-cols-2 gap-2">
-            <button
-              onClick={() => setMode("join")}
-              className="btn-ghost min-h-[44px] text-xs"
-            >
+            <button onClick={() => setMode("join")} className="btn-ghost min-h-[44px] text-xs">
               Join with code
             </button>
             <button

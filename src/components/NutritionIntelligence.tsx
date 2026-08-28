@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { TrendingDown, TrendingUp, Minus, Target } from "lucide-react";
 import { isoDay } from "@/lib/calc";
 import type { FoodLogItem, Goal } from "@/lib/types";
+import { useUnit } from "@/hooks/useUnit";
 
 /**
  * Deterministic 7-day nutrition coaching (no AI). Turns the food log into an
@@ -19,6 +20,7 @@ export function NutritionIntelligence({
   proteinTarget: number;
   goal?: Goal;
 }) {
+  const unit = useUnit();
   const r = useMemo(() => {
     const days = Array.from({ length: 7 }, (_, i) => isoDay(new Date(Date.now() - i * 86400000)));
     const perDay = days.map((d) => {
@@ -54,12 +56,12 @@ export function NutritionIntelligence({
     if (r.balance > 0) {
       verdict = "You're in a surplus — tighten calories to actually cut.";
       aligned = false;
-    } else verdict = `On track — about ${Math.abs(r.weeklyKg)}kg/week down at this pace.`;
+    } else verdict = `On track — about ${Math.abs(r.weeklyKg)}${unit}/week down at this pace.`;
   } else if (goal === "BULK") {
     if (r.balance < 0) {
       verdict = "You're in a deficit — add calories to grow.";
       aligned = false;
-    } else verdict = `Fueling growth — about ${Math.abs(r.weeklyKg)}kg/week up at this pace.`;
+    } else verdict = `Fueling growth — about ${Math.abs(r.weeklyKg)}${unit}/week up at this pace.`;
   } else {
     if (Math.abs(r.balance) > 250) {
       verdict = `Drifting ${r.balance > 0 ? "over" : "under"} maintenance — nudge back to hold weight.`;
@@ -117,7 +119,8 @@ export function NutritionIntelligence({
           </p>
           <p className="text-[10px] text-grit-dim mt-0.5">
             ≈ {r.weeklyKg > 0 ? "+" : ""}
-            {r.weeklyKg}kg/week
+            {r.weeklyKg}
+            {unit}/week
           </p>
         </div>
       </div>

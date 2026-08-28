@@ -1,6 +1,7 @@
 import type { DayKey } from "@/lib/types";
 import { WEEK } from "@/lib/calc";
 import { DAY_FULL, DAY_LETTER, MAX_TRAINING_DAYS } from "@/lib/training-days";
+import { hapticSelection } from "@/lib/haptics";
 
 /**
  * A row of seven day toggles. Used both in onboarding and in the Train tab so a
@@ -16,6 +17,7 @@ export function WeekdayPicker({
   disabled?: boolean;
 }) {
   function toggle(day: DayKey) {
+    hapticSelection();
     const next = value.includes(day) ? value.filter((d) => d !== day) : [...value, day];
     // Keep the list in week order so callers never have to sort it themselves.
     onChange(WEEK.filter((d) => next.includes(d)));
