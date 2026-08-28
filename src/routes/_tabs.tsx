@@ -27,6 +27,7 @@ import { buildWidgetSnapshot, publishWidgets } from "@/lib/widgets";
 import { ProgrammeWeightSetup } from "@/components/ProgrammeWeightSetup";
 import { programmeWeightRows } from "@/lib/programme-weight-setup";
 import { requiresPaidAccess } from "@/lib/paid-access";
+import { WeeklyStrengthCheckIn } from "@/components/WeeklyStrengthCheckIn";
 
 export const Route = createFileRoute("/_tabs")({
   component: TabsLayout,
@@ -64,6 +65,7 @@ function TabsLayout() {
   // Start ready=true if local state already has a profile — render INSTANTLY
   // on hot refresh / navigation; remote sync continues in the background.
   const [ready, setReady] = useState(false);
+  const [strengthCheckInOpen, setStrengthCheckInOpen] = useState(false);
   const paidAccessRequired = requiresPaidAccess({
     ready,
     hasProfile: !!state.profile,
@@ -242,16 +244,25 @@ function TabsLayout() {
         paddingBottom: "calc(104px + env(safe-area-inset-bottom))",
       }}
     >
-      <div inert={needsWeightSetup ? true : undefined} aria-hidden={needsWeightSetup || undefined}>
+      <div
+        inert={needsWeightSetup || strengthCheckInOpen ? true : undefined}
+        aria-hidden={needsWeightSetup || strengthCheckInOpen || undefined}
+      >
         <TopBar />
         <div key={pathname} className="deadset-route-shell">
           <Outlet />
         </div>
         <BottomNav />
       </div>
-      <FeatureTour active={!accountEscapeMode && !!state.profile && weightsSettled} />
+      <FeatureTour
+        active={!accountEscapeMode && !!state.profile && weightsSettled && !strengthCheckInOpen}
+      />
       <GritEarnedLayer />
       {!accountEscapeMode && <ProgrammeWeightSetup rows={weightSetupRows} />}
+      <WeeklyStrengthCheckIn
+        enabled={!accountEscapeMode && weightsSettled}
+        onVisibilityChange={setStrengthCheckInOpen}
+      />
     </div>
   );
 }

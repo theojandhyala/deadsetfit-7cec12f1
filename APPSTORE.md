@@ -7,7 +7,7 @@ This repository ships DEADSET as a bundled Capacitor iPhone app. The public webs
 - App Store ID: `6783511541`
 - Bundle identifier: `org.deadsetfit.app`
 - Version: `1.2`
-- Build: `134`
+- Build: `135`
 - Device family: iPhone
 - Minimum iOS version: iOS 15
 - Category: Health & Fitness
@@ -117,7 +117,7 @@ Suggested release notes:
 4. Choose Product > Archive.
 5. In Organizer, run Validate App before Distribute App.
 6. Upload to App Store Connect and wait for processing.
-7. Attach build 134 to version 1.2 and complete export compliance and content-rights questions. The approved monthly subscription remains available to the app; do not present the annual legacy product as a new plan.
+7. Attach build 135 to version 1.2 and complete export compliance and content-rights questions. The approved monthly subscription remains available to the app; do not present the annual legacy product as a new plan.
 8. Test the processed build in TestFlight before submitting it for review.
 
 Every bundled product update requires a new App Store build and review. Website deployment alone does not update the installed app.

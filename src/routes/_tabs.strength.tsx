@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ChevronRight, Lock, Info, Share2, TrendingUp } from "lucide-react";
+import { ChevronRight, Lock, Info, RefreshCw, Share2, TrendingUp } from "lucide-react";
 
 import { useAppState } from "@/lib/storage";
 import { allExercises } from "@/lib/exercises";
@@ -14,6 +14,7 @@ import { MuscleDiagram } from "@/components/MuscleDiagram";
 import { MuscleGrowthCoach } from "@/components/MuscleGrowthCoach";
 import { StrengthMapShareCard } from "@/components/StrengthMapShareCard";
 import { WeeklySetGrid } from "@/components/WeeklySetGrid";
+import { openStrengthCheckIn } from "@/lib/strength-check-in-events";
 import type { GrowthTarget } from "@/lib/muscle-growth-recommendations";
 import { toMuscleGroup } from "@/lib/recovery";
 import {
@@ -150,6 +151,34 @@ function StrengthPage() {
         onSelectMuscle={openGrowthPlan}
         onShare={openStrengthShare}
       />
+
+      <section className="px-5 mt-3">
+        <button
+          type="button"
+          onClick={() => {
+            hapticSelection();
+            openStrengthCheckIn();
+          }}
+          className="press flex min-h-16 w-full items-center justify-between gap-3 rounded-2xl border border-accent-red/45 bg-[linear-gradient(110deg,rgba(230,50,34,.22),rgba(230,50,34,.06))] px-4 text-left"
+        >
+          <span className="flex min-w-0 items-center gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent-red text-white">
+              <RefreshCw size={18} strokeWidth={2.6} />
+            </span>
+            <span>
+              <span className="display block text-lg font-black uppercase leading-none text-white">
+                Update lifts & map
+              </span>
+              <span className="mt-1 block text-[10px] leading-relaxed text-grit-dim">
+                {state.strengthCheckIn?.lastCompletedAt
+                  ? `Last synced ${new Date(state.strengthCheckIn.lastCompletedAt).toLocaleDateString()}`
+                  : "Confirm every exercise once, then DEADSET checks in weekly"}
+              </span>
+            </span>
+          </span>
+          <ChevronRight size={18} className="shrink-0 text-accent-red" />
+        </button>
+      </section>
 
       <section className="px-5 mt-5">
         <WeeklySetGrid state={state} onSelectMuscle={openGrowthPlan} />

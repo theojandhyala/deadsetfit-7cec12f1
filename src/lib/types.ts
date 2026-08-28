@@ -319,6 +319,12 @@ export interface AppState {
   hydrationAlertsEnabled: boolean;
   challengeRecords?: ChallengeRecord[];
   manualPRs?: Record<string, { value: number; reps?: number; date: string }>;
+  /** Weekly guided confirmation that keeps planned loads and the Strength Map current. */
+  strengthCheckIn?: {
+    lastCompletedAt?: string;
+    snoozedUntil?: string;
+    completedCount?: number;
+  };
   units?: "kg" | "lb";
   remindersEnabled?: boolean;
   /** Opt-in iOS notifications sent on scheduled training days. */

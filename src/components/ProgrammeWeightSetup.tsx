@@ -13,6 +13,7 @@ import { useAppState } from "@/lib/storage";
 import { hapticFailure, hapticSelection, hapticSetupComplete } from "@/lib/haptics";
 import { lockBodyScroll } from "@/lib/body-scroll-lock";
 import type { DayKey } from "@/lib/types";
+import { applyWeeklyStrengthCheckIn, type StrengthCheckInAnswer } from "@/lib/weekly-strength-check-in";
 
 const DAY_LABEL: Record<DayKey, string> = {
   MON: "Monday",
@@ -28,7 +29,7 @@ export function ProgrammeWeightSetup({ rows: derivedRows }: { rows: WeightRow[] 
   const [state, set] = useAppState();
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState(0);
-  const answers = useRef(new Map<string, number>());
+  const answers = useRef(new Map<string, StrengthCheckInAnswer>());
   const unit = unitOf(state);
   const automaticValues = useMemo(
     () =>
@@ -54,6 +55,8 @@ export function ProgrammeWeightSetup({ rows: derivedRows }: { rows: WeightRow[] 
   if (!state.profile || rows.length === 0) return null;
   const activeStep = Math.min(step, rows.length - 1);
   const row = rows[activeStep]!;
+  const savedAnswer = answers.current.get(row.exerciseId);
+  const initialWeightKg = savedAnswer?.value ?? row.weightKg;
   const definition = getExercise(row.exerciseId, state.savedExercises);
   const highlightedMuscles = definition?.primaryMuscles?.length
     ? definition.primaryMuscles
@@ -113,20 +116,26 @@ export function ProgrammeWeightSetup({ rows: derivedRows }: { rows: WeightRow[] 
             event.preventDefault();
             const data = new FormData(event.currentTarget);
             const display = parseDisplayWeight(data.get("weight"));
-            if (display == null) {
+            const reps = Math.round(Number(data.get("reps")));
+            if (display == null || !Number.isFinite(reps) || reps < 1 || reps > 100) {
               hapticFailure();
-              setError(`Enter a weight above 0 ${unit} for ${row.name}. Decimals are allowed.`);
+              setError(`Enter the load and 1–100 reps you can honestly complete for ${row.name}.`);
               return;
             }
-            answers.current.set(row.exerciseId, toKg(display, unit));
+            answers.current.set(row.exerciseId, {
+              exerciseId: row.exerciseId,
+              kind: "RATIO",
+              value: toKg(display, unit),
+              reps,
+            });
             setError(null);
             if (activeStep < rows.length - 1) {
               hapticSelection();
               setStep(activeStep + 1);
               return;
             }
-            const values = new Map(answers.current);
-            set((current) => applyProgrammeWeights(current, values));
+            const values = [...answers.current.values()];
+            set((current) => applyWeeklyStrengthCheckIn(current, values));
             answers.current.clear();
             setStep(0);
             hapticSetupComplete();
@@ -147,22 +156,37 @@ export function ProgrammeWeightSetup({ rows: derivedRows }: { rows: WeightRow[] 
                 <MuscleDiagram primary={highlightedMuscles} size={86} view="both" />
               </span>
             </span>
-            <span className="mt-5 flex items-center gap-2">
-              <input
-                key={row.key}
-                name="weight"
-                autoFocus
-                type="text"
-                inputMode="decimal"
-                autoComplete="off"
-                defaultValue={trimNumber(
-                  toDisplay(answers.current.get(row.exerciseId) ?? row.weightKg, unit),
-                )}
-                placeholder={`e.g. ${unit === "kg" ? "62.5" : "135"}`}
-                className="min-h-14 min-w-0 flex-1 rounded-xl border border-grit bg-black px-4 text-2xl font-black tabular-nums text-white outline-none focus:border-accent-red"
-              />
-              <span className="display w-8 text-sm font-extrabold uppercase text-grit-dim">
-                {unit}
+            <span className="mt-5 grid grid-cols-[1fr_90px] gap-2">
+              <span>
+                <span className="label-cap mb-1 block text-[8px] text-grit-dim">WORKING LOAD</span>
+                <span className="flex min-h-14 items-center rounded-xl border border-grit bg-black px-3 focus-within:border-accent-red">
+                  <input
+                    key={`${row.key}-weight`}
+                    name="weight"
+                    autoFocus
+                    type="text"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    defaultValue={
+                      initialWeightKg > 0 ? trimNumber(toDisplay(initialWeightKg, unit)) : ""
+                    }
+                    placeholder={unit === "kg" ? "62.5" : "135"}
+                    className="min-w-0 flex-1 bg-transparent text-2xl font-black tabular-nums text-white outline-none"
+                  />
+                  <span className="label-cap text-[8px] text-grit-dim">{unit}</span>
+                </span>
+              </span>
+              <span>
+                <span className="label-cap mb-1 block text-[8px] text-grit-dim">REPS</span>
+                <input
+                  key={`${row.key}-reps`}
+                  name="reps"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  defaultValue={String(savedAnswer?.reps ?? row.reps)}
+                  className="min-h-14 w-full rounded-xl border border-grit bg-black px-3 text-center text-2xl font-black tabular-nums text-white outline-none focus:border-accent-red"
+                />
               </span>
             </span>
           </label>

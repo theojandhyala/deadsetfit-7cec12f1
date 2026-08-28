@@ -18,6 +18,7 @@ export const DEFAULT_STATE: AppState = {
   waterTargetMl: 3000,
   hydrationAlertsEnabled: true,
   manualPRs: {},
+  strengthCheckIn: {},
   units: "kg",
   remindersEnabled: true,
   autoShareWorkouts: false,

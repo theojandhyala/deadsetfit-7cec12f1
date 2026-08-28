@@ -134,6 +134,22 @@ export function hapticSetupComplete(): void {
   notify("success", [45, 55, 70]);
 }
 
+/** A confirmed lift review changed the athlete's visible Strength Map. */
+export function hapticStrengthMapUpdated(): void {
+  if (!hapticsEnabled()) return;
+  if (isNativeIos()) {
+    void Native.pattern({
+      steps: [
+        { style: "rigid", delayMs: 75 },
+        { style: "medium", delayMs: 75 },
+        { style: "heavy", delayMs: 0 },
+      ],
+    }).catch(() => {});
+    return;
+  }
+  vibrate([18, 45, 32, 45, 70]);
+}
+
 /** A lightweight check-in or preference was saved. */
 export function hapticSaved(): void {
   impact("light", 10);

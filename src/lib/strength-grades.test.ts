@@ -7,6 +7,7 @@ import {
   pointsToNextTier,
   STANDARDS,
   strengthReport,
+  strengthReportAsOf,
   tierForScore,
   TIERS,
 } from "./strength-grades";
@@ -64,6 +65,22 @@ describe("the standards table", () => {
 });
 
 describe("personalBests", () => {
+  it("uses dated manual references from setup and weekly sync", () => {
+    const bests = personalBests(
+      state([], {
+        manualPRs: {
+          "bench-press": { value: 100, reps: 5, date: "2026-08-20T12:00:00.000Z" },
+          "pull-ups": { value: 14, date: "2026-08-20T12:00:00.000Z" },
+          plank: { value: 75, date: "2026-08-20T12:00:00.000Z" },
+        },
+      }),
+    );
+
+    expect(bests.get("bench-press")!.e1rmKg).toBeGreaterThan(116);
+    expect(bests.get("pull-ups")!.reps).toBe(14);
+    expect(bests.get("plank")!.seconds).toBe(75);
+  });
+
   it("takes the best estimated 1RM across sessions", () => {
     const bests = personalBests(
       state([
@@ -196,6 +213,32 @@ describe("gradeExercise", () => {
 });
 
 describe("strengthReport", () => {
+  it("turns a confirmed setup lift into a visible muscle grade", () => {
+    const report = strengthReport(
+      state([], {
+        manualPRs: {
+          "bench-press": { value: 80, reps: 8, date: "2026-08-20T12:00:00.000Z" },
+        },
+      }),
+      library,
+    );
+
+    expect(report.muscles.find((muscle) => muscle.muscle === "CHEST")?.exercises[0]).toMatchObject({
+      exerciseId: "bench-press",
+    });
+  });
+
+  it("keeps future manual references out of an earlier baseline", () => {
+    const withReference = state([], {
+      manualPRs: {
+        squat: { value: 140, reps: 3, date: "2026-08-20T12:00:00.000Z" },
+      },
+    });
+
+    expect(strengthReportAsOf(withReference, library, "2026-08-19").gradedCount).toBe(0);
+    expect(strengthReportAsOf(withReference, library, "2026-08-20").gradedCount).toBe(1);
+  });
+
   it("keeps the full report ungraded until bodyweight and reference are set", () => {
     const trained = [session("pull-ups", "Pull Ups", [{ weight: 0, reps: 20 }])];
     const missingWeight = strengthReport(

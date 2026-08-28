@@ -2,7 +2,7 @@
 // ship. The card hides once dismissed at the current version, so stale
 // announcements never linger.
 
-export const WHATS_NEW_VERSION = 202608282;
+export const WHATS_NEW_VERSION = 202608283;
 export const WHATS_NEW_SEEN_KEY = "deadset_whats_new_seen";
 
 export interface WhatsNewEntry {
@@ -13,6 +13,11 @@ export interface WhatsNewEntry {
 }
 
 export const WHATS_NEW: WhatsNewEntry[] = [
+  {
+    title: "Keep every lift and muscle current",
+    body: "A guided weekly sync confirms one exercise at a time, updates repeated plan loads together and immediately refreshes the Strength Map from the records you enter.",
+    where: "Strength",
+  },
   {
     title: "See your weekly set pattern",
     body: "The new square map connects every planned working set to its muscle and day, so gaps and overloaded areas are obvious.",

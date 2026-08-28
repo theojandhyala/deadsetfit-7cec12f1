@@ -57,11 +57,11 @@ export const TIER_BLURB: Record<StrengthTier, string> = {
  * - REPS: best reps in a single set (bodyweight movements).
  * - SECONDS: longest hold.
  */
-type StandardKind = "RATIO" | "REPS" | "SECONDS";
+export type StrengthStandardKind = "RATIO" | "REPS" | "SECONDS";
 
 interface ExerciseStandard {
   muscle: MuscleGroup;
-  kind: StandardKind;
+  kind: StrengthStandardKind;
   /** Entry thresholds for NOVICE, INTERMEDIATE, ADVANCED, ELITE. */
   male: [number, number, number, number];
   female: [number, number, number, number];
@@ -69,7 +69,7 @@ interface ExerciseStandard {
 
 const S = (
   muscle: MuscleGroup,
-  kind: StandardKind,
+  kind: StrengthStandardKind,
   male: [number, number, number, number],
   female: [number, number, number, number],
 ): ExerciseStandard => ({ muscle, kind, male, female });
@@ -145,11 +145,20 @@ export const GRADED_MUSCLES = [
   "CORE",
 ] as const satisfies readonly MuscleGroup[];
 
+/** How a planned movement can contribute to the Strength Map. */
+export function strengthStandardKind(
+  exerciseId: string,
+  fallbackMuscle?: MuscleGroup,
+): StrengthStandardKind | null {
+  return (STANDARDS[exerciseId] ?? (fallbackMuscle ? GENERIC_STANDARD[fallbackMuscle] : undefined))
+    ?.kind ?? null;
+}
+
 export interface ExerciseGrade {
   exerciseId: string;
   name: string;
   muscle: MuscleGroup;
-  kind: StandardKind;
+  kind: StrengthStandardKind;
   tier: StrengthTier;
   /** 0-100 across the whole ladder, so a bar can be drawn from one number. */
   score: number;
@@ -258,6 +267,23 @@ export function personalBests(state: AppState): Map<string, Bests> {
       entry.e1rmKg = Math.max(entry.e1rmKg, estimate1RM(log.weight, log.reps));
     } else if (log.reps > 0) {
       entry.reps = Math.max(entry.reps, log.reps);
+    }
+  }
+
+  // Setup and weekly check-ins are dated, athlete-confirmed references. They
+  // must feed the same map as logged sets or the app can accept an answer and
+  // still stay grey. The raw load + reps are retained so the same e1RM formula
+  // is used everywhere rather than storing a precomputed score.
+  for (const [exerciseId, record] of Object.entries(state.manualPRs ?? {})) {
+    if (!record || !Number.isFinite(record.value) || record.value <= 0) continue;
+    const entry = touch(exerciseId);
+    const kind = strengthStandardKind(exerciseId);
+    if (kind === "SECONDS") {
+      entry.seconds = Math.max(entry.seconds, record.value);
+    } else if (kind === "REPS") {
+      entry.reps = Math.max(entry.reps, record.value);
+    } else {
+      entry.e1rmKg = Math.max(entry.e1rmKg, estimate1RM(record.value, record.reps ?? 1));
     }
   }
 
@@ -410,6 +436,11 @@ export function strengthReportAsOf(
       ...state,
       sessions: state.sessions.filter((session) => session.date.slice(0, 10) <= cutoffIso),
       logs: (state.logs ?? []).filter((log) => log.date.slice(0, 10) <= cutoffIso),
+      manualPRs: Object.fromEntries(
+        Object.entries(state.manualPRs ?? {}).filter(
+          ([, record]) => record.date.slice(0, 10) <= cutoffIso,
+        ),
+      ),
     },
     library,
   );

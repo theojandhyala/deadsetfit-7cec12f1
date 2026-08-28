@@ -8,6 +8,8 @@ export type WeightRow = {
   exerciseId: string;
   name: string;
   weightKg: number;
+  /** Honest working-set reps paired with the starting load. */
+  reps: number;
   days: DayKey[];
   /** Safe to fill silently because exactly one configured load already exists. */
   autoApply: boolean;
@@ -47,9 +49,18 @@ export function programmeWeightRows(state: ProgrammeWeightSource): WeightRow[] {
       rememberKnown(item.id, item.weightKg ?? 0);
     }
   }
-  const missing = new Map<string, { exerciseId: string; name: string; days: Set<DayKey> }>();
-  const addMissing = (exerciseId: string, name: string, day: DayKey) => {
-    const row = missing.get(exerciseId) ?? { exerciseId, name, days: new Set<DayKey>() };
+  const missing = new Map<
+    string,
+    { exerciseId: string; name: string; days: Set<DayKey>; targetReps: number }
+  >();
+  const addMissing = (exerciseId: string, name: string, day: DayKey, reps: string) => {
+    const targetReps = Math.max(1, Math.round(Number(reps.match(/\d+/)?.[0]) || 1));
+    const row = missing.get(exerciseId) ?? {
+      exerciseId,
+      name,
+      days: new Set<DayKey>(),
+      targetReps,
+    };
     row.days.add(day);
     missing.set(exerciseId, row);
   };
@@ -65,7 +76,7 @@ export function programmeWeightRows(state: ProgrammeWeightSource): WeightRow[] {
         if (!requiresWorkingWeight({ tracking }, exercise.equipment)) continue;
         const stored = plan.exerciseConfig?.[exerciseId]?.weightKg ?? 0;
         if (stored > 0) continue;
-        addMissing(exerciseId, exercise.name, day);
+        addMissing(exerciseId, exercise.name, day, reps);
       }
     }
   }
@@ -77,7 +88,7 @@ export function programmeWeightRows(state: ProgrammeWeightSource): WeightRow[] {
         const tracking = trackingModeFor(definition ?? { name: item.name }, item.reps);
         if (!requiresWorkingWeight({ tracking }, definition?.equipment ?? item.equipment)) return;
         if ((item.weightKg ?? 0) > 0) return;
-        addMissing(item.id, item.name, day);
+        addMissing(item.id, item.name, day, item.reps);
       });
     }
   }
@@ -87,6 +98,7 @@ export function programmeWeightRows(state: ProgrammeWeightSource): WeightRow[] {
   // History is only a suggested starting value. Search newest-first, skip
   // warm-ups/drop sets, and stop as soon as every unresolved prompt has one.
   const historyWeights = new Map<string, number>();
+  const historyReps = new Map<string, number>();
   const unresolved = new Set(
     [...missing.keys()].filter((exerciseId) => (known.get(exerciseId)?.size ?? 0) === 0),
   );
@@ -101,6 +113,7 @@ export function programmeWeightRows(state: ProgrammeWeightSource): WeightRow[] {
           .find((set) => set.weight > 0 && isWorkingSet(set));
         if (!weighted) continue;
         historyWeights.set(exercise.exerciseId, weighted.weight);
+        historyReps.set(exercise.exerciseId, weighted.reps);
         unresolved.delete(exercise.exerciseId);
       }
       if (unresolved.size === 0) break;
@@ -117,6 +130,7 @@ export function programmeWeightRows(state: ProgrammeWeightSource): WeightRow[] {
       // One configured value is safe to propagate. Conflicting configured
       // values remain a visible, user-confirmed choice instead.
       weightKg: configured[0] ?? historyWeights.get(row.exerciseId) ?? 0,
+      reps: historyReps.get(row.exerciseId) ?? row.targetReps,
       autoApply: configured.length === 1,
     };
   });
