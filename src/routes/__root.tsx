@@ -27,6 +27,7 @@ import { StreakMilestoneWatcher } from "../components/StreakMilestoneWatcher";
 import { AchievementWatcher } from "../components/AchievementWatcher";
 import { TonnageMilestoneWatcher } from "../components/TonnageMilestoneWatcher";
 import { captureAttribution } from "../lib/attribution";
+import { routeForDeepLink } from "../lib/deep-links";
 import { capturePendingCrew } from "../lib/crew-invite";
 import { WeeklyRecapNudge } from "../components/WeeklyRecapNudge";
 import { DeviceReminderSync } from "../components/DeviceReminderSync";
@@ -184,6 +185,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const router = useRouter();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const isAuthRoute = pathname === "/auth" || pathname.startsWith("/auth/");
   const nativeIos = isNativeIos();
@@ -214,6 +216,42 @@ function RootComponent() {
   useEffect(() => {
     if (!nativeIos && isPublicWebsiteRoute) finishAppBoot();
   }, [isPublicWebsiteRoute, nativeIos]);
+
+  // A tap on the Live Activity, a widget or the Watch lands here. Without it
+  // the app opened wherever it was last left, which mid-session is the one
+  // moment somebody taps expecting to get back to the set they are on.
+  useEffect(() => {
+    if (!nativeIos) return;
+    let disposed = false;
+    let remove: (() => void) | undefined;
+
+    const go = (url: string) => {
+      const to = routeForDeepLink(url);
+      // Unrecognised links are normal — OAuth callbacks arrive on this
+      // listener too — so an unmatched URL is left for whoever owns it.
+      if (to) void router.navigate({ to, replace: true });
+    };
+
+    void (async () => {
+      const { App } = await import("@capacitor/app");
+      if (disposed) return;
+      const handle = await App.addListener("appUrlOpen", ({ url }) => go(url));
+      if (disposed) {
+        void handle.remove();
+        return;
+      }
+      remove = () => void handle.remove();
+      // A cold launch from a Live Activity delivers the URL here rather than
+      // through the listener, which is registered a moment too late.
+      const launch = await App.getLaunchUrl();
+      if (!disposed && launch?.url) go(launch.url);
+    })();
+
+    return () => {
+      disposed = true;
+      remove?.();
+    };
+  }, [nativeIos, router]);
 
   if (!nativeIos && !setupPreview) {
     return (

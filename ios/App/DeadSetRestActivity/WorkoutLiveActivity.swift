@@ -4,6 +4,58 @@ import WidgetKit
 
 private let workoutRed = Color(red: 225 / 255, green: 6 / 255, blue: 0)
 
+/// Tapping the activity returns to the set you are on, not wherever the app was
+/// last left. The host is a coarse target the web layer maps to a route; see
+/// `src/lib/deep-links.ts`.
+private let liveWorkoutLink = URL(string: "org.deadsetfit.app://workout-live")
+
+/// The short head of a session name.
+///
+/// Labels read "UPPER — CHEST / BACK / ARMS". The Dynamic Island's leading
+/// region is barely wide enough for the first word, so the full string wrapped
+/// to three lines and lost its first glyph to the tracking. Everything before
+/// the dash is the part that identifies the session; the rest is the muscle
+/// list already visible on the screen you came from.
+private func sessionHead(_ label: String) -> String {
+    let trimmed = label.trimmingCharacters(in: .whitespaces)
+    for separator in ["—", "–", " - ", "/"] {
+        if let range = trimmed.range(of: separator) {
+            let head = trimmed[..<range.lowerBound].trimmingCharacters(in: .whitespaces)
+            if !head.isEmpty { return head.uppercased() }
+        }
+    }
+    return trimmed.uppercased()
+}
+
+/// Sets completed, as a ring.
+///
+/// The collapsed pill and the minimal presentation have room for a glyph and
+/// nothing else. A static red dot said only "a workout is running"; the ring
+/// says how far through it you are, which is the question people unlock the
+/// phone to answer.
+private struct SetsRing: View {
+    let done: Int
+    let planned: Int
+    var size: CGFloat = 18
+
+    private var fraction: Double {
+        let total = Double(max(planned, done, 1))
+        return min(1, Double(done) / total)
+    }
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(workoutRed.opacity(0.25), lineWidth: size * 0.18)
+            Circle()
+                .trim(from: 0, to: fraction)
+                .stroke(workoutRed, style: StrokeStyle(lineWidth: size * 0.18, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+        }
+        .frame(width: size, height: size)
+    }
+}
+
 /// The live workout on the Lock Screen and Dynamic Island.
 ///
 /// Sits alongside the rest-timer activity rather than replacing it: they answer
@@ -18,6 +70,7 @@ struct WorkoutLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: WorkoutActivityAttributes.self) { context in
             lockScreen(context)
+                .widgetURL(liveWorkoutLink)
                 .activityBackgroundTint(Color.black.opacity(0.92))
                 .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
@@ -29,7 +82,7 @@ struct WorkoutLiveActivity: Widget {
                 // One line, tight tracking, and a little left padding.
                 DynamicIslandExpandedRegion(.leading) {
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(context.attributes.label.uppercased())
+                        Text(sessionHead(context.attributes.label))
                             .font(.system(size: 9, weight: .black))
                             .tracking(0.6)
                             .lineLimit(1)
@@ -81,11 +134,16 @@ struct WorkoutLiveActivity: Widget {
                 }
             } compactLeading: {
                 if context.state.prCount > 0 {
+                    // A record beats progress: it is the thing worth glancing at.
                     Image(systemName: "flame.fill")
                         .font(.system(size: 12))
                         .foregroundStyle(workoutRed)
                 } else {
-                    Circle().fill(workoutRed).frame(width: 8, height: 8)
+                    SetsRing(
+                        done: context.state.setsDone,
+                        planned: context.state.setsPlanned,
+                        size: 16
+                    )
                 }
             } compactTrailing: {
                 Text("\(context.state.setsDone)/\(context.state.setsPlanned)")
@@ -93,8 +151,13 @@ struct WorkoutLiveActivity: Widget {
                     .monospacedDigit()
                     .foregroundStyle(.white)
             } minimal: {
-                Circle().fill(workoutRed).frame(width: 8, height: 8)
+                SetsRing(
+                    done: context.state.setsDone,
+                    planned: context.state.setsPlanned,
+                    size: 18
+                )
             }
+            .widgetURL(liveWorkoutLink)
             .keylineTint(workoutRed)
         }
     }
@@ -110,8 +173,13 @@ private func lockScreen(
                 Text(context.attributes.label.uppercased())
                     .font(.system(size: 10, weight: .black))
                     .tracking(1.4)
-                    .lineLimit(1)
+                    // Two lines, not one: the Lock Screen has the width for the
+                    // full "UPPER — CHEST / BACK / ARMS", and truncating it
+                    // there would drop the muscle list to fix a problem the
+                    // Dynamic Island has and this card does not.
+                    .lineLimit(2)
                     .truncationMode(.tail)
+                    .fixedSize(horizontal: false, vertical: true)
                     .foregroundStyle(workoutRed)
                 Text(context.state.exerciseName)
                     .font(.system(size: 16, weight: .heavy))

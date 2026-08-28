@@ -18,6 +18,10 @@ struct DeadSetWidgetBundle: WidgetBundle {
 
 private let brandRed = Color(red: 225 / 255, green: 6 / 255, blue: 0)
 
+/// Rest is part of the session, so tapping it goes back to the live workout
+/// rather than to wherever the app was last left.
+private let restWorkoutLink = URL(string: "org.deadsetfit.app://workout-live")
+
 /// The rest timer as it appears outside the app: Dynamic Island when the phone is
 /// in use, Lock Screen when it is face-down on a bench.
 ///
@@ -54,6 +58,7 @@ struct RestLiveActivity: Widget {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
+            .widgetURL(restWorkoutLink)
             .activityBackgroundTint(Color.black.opacity(0.92))
             .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
@@ -106,6 +111,7 @@ struct RestLiveActivity: Widget {
                     .monospacedDigit()
                     .foregroundStyle(brandRed)
             }
+            .widgetURL(restWorkoutLink)
             .keylineTint(brandRed)
         }
     }
