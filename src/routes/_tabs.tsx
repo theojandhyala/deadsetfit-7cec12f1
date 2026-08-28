@@ -251,7 +251,9 @@ function TabsLayout() {
         <TopBar />
         <div key={pathname} className="deadset-route-shell">
           <NotificationPermissionBanner
-            active={pathname === "/train" && !!state.profile && !needsWeightSetup && !strengthCheckInOpen}
+            active={
+              pathname === "/train" && !!state.profile && !needsWeightSetup && !strengthCheckInOpen
+            }
           />
           <Outlet />
         </div>

@@ -70,10 +70,7 @@ export function buildPlannedSetGrid(
 ): PlannedSetGrid {
   const counts = new Map<FocusMuscle, Map<DayKey, { sets: number; exercises: number }>>();
   for (const muscle of SET_GRID_MUSCLES) {
-    counts.set(
-      muscle,
-      new Map(SET_GRID_DAYS.map((day) => [day, { sets: 0, exercises: 0 }])),
-    );
+    counts.set(muscle, new Map(SET_GRID_DAYS.map((day) => [day, { sets: 0, exercises: 0 }])));
   }
 
   const active = state.programs.find((program) => program.id === state.activeProgramId);

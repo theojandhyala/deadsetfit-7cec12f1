@@ -37,11 +37,7 @@ import type {
 import { WeekdayPicker } from "@/components/WeekdayPicker";
 import { daysPerWeekFor, describeDays, MIN_TRAINING_DAYS } from "@/lib/training-days";
 import { buildPublicStats } from "@/lib/fifa-stats";
-import {
-  currencyForCountry,
-  detectCountry,
-  type SupportedCurrency,
-} from "@/lib/currency";
+import { currencyForCountry, detectCountry, type SupportedCurrency } from "@/lib/currency";
 import { formatWeightValue, toKg, type WeightUnit } from "@/lib/units";
 import {
   onboardingOrder,

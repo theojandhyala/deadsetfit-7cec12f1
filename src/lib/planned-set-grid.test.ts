@@ -53,10 +53,13 @@ describe("buildPlannedSetGrid", () => {
       name: "Active",
       splitType: "CUSTOM",
       createdAt: "2026-08-28T00:00:00Z",
-      days: days.reduce((result, day) => {
-        result[day] = { label: "REST", items: [] };
-        return result;
-      }, {} as Program["days"]),
+      days: days.reduce(
+        (result, day) => {
+          result[day] = { label: "REST", items: [] };
+          return result;
+        },
+        {} as Program["days"],
+      ),
     };
     program.days.TUE = {
       label: "PULL",

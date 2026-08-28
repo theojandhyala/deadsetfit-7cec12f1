@@ -105,14 +105,26 @@ export function NotificationPermissionBanner({ active }: { active: boolean }) {
         </div>
       </div>
       <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
-        <button type="button" disabled={busy} onClick={() => void enable()} className="btn-grit min-h-11 text-[10px]">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void enable()}
+          className="btn-grit min-h-11 text-[10px]"
+        >
           {permission === "denied" ? (
-            <><Settings size={13} className="mr-1.5" /> Open iPhone Settings</>
+            <>
+              <Settings size={13} className="mr-1.5" /> Open iPhone Settings
+            </>
           ) : (
             "Enable notifications"
           )}
         </button>
-        <button type="button" disabled={busy} onClick={dismiss} className="btn-ghost min-h-11 px-4 text-[10px]">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={dismiss}
+          className="btn-ghost min-h-11 px-4 text-[10px]"
+        >
           Not now
         </button>
       </div>

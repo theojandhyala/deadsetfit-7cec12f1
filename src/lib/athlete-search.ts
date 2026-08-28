@@ -16,10 +16,7 @@ export function normalizeAthleteSearchQuery(raw: string): string {
       return code >= 32 && code !== 127;
     })
     .join("");
-  return visible
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 40);
+  return visible.replace(/\s+/g, " ").trim().slice(0, 40);
 }
 
 export function athleteSearchRank(

@@ -3,10 +3,7 @@ import { Dumbbell } from "lucide-react";
 
 import { useAppState, getHydrationCount } from "@/lib/storage";
 import { lifetimeStats } from "@/lib/lifetime-stats";
-import {
-  currentTonnageMilestone,
-  type TonnageMilestone,
-} from "@/lib/tonnage-milestones";
+import { currentTonnageMilestone, type TonnageMilestone } from "@/lib/tonnage-milestones";
 import { SocialShareButton } from "@/components/SocialShareButton";
 
 const SEEN_KEY = "deadset_tonnage_milestone_seen";
@@ -102,9 +99,7 @@ export function TonnageMilestoneWatcher() {
         >
           <Dumbbell size={26} strokeWidth={2.5} className="text-white" />
         </div>
-        <p className="label-cap text-[10px] tracking-[0.28em] text-accent-red">
-          Lifetime tonnage
-        </p>
+        <p className="label-cap text-[10px] tracking-[0.28em] text-accent-red">Lifetime tonnage</p>
         <h2 className="display text-4xl font-extrabold uppercase text-grit leading-none mt-1">
           {hit.label}
         </h2>

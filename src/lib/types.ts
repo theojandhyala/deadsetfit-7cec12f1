@@ -169,7 +169,17 @@ export interface SetLog {
 
 export interface CheckIn {
   date: string;
-  photoDataUrl: string;
+  /**
+   * Object path in the `progress-photos` bucket. The modern form.
+   */
+  photoPath?: string;
+  /**
+   * Inline base64 bytes. The original form, kept readable forever so existing
+   * photos survive, but never written for a new check-in: a stored photo is
+   * ~122 KB and the synced state blob is capped at 2,000,000 bytes, so a
+   * handful of them used to pause cloud backup of all training data.
+   */
+  photoDataUrl?: string;
 }
 
 export interface WeightEntry {

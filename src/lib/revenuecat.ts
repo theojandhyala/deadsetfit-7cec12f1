@@ -13,7 +13,9 @@ export const REVENUECAT_PRO_ENTITLEMENT = "pro";
 // RevenueCat public SDK keys are designed to ship in the client binary. The
 // environment override keeps alternate builds possible without making the App
 // Store build dependent on a deployment dashboard setting.
-const revenueCatEnvKey = (import.meta.env.VITE_REVENUECAT_IOS_API_KEY as string | undefined)?.trim();
+const revenueCatEnvKey = (
+  import.meta.env.VITE_REVENUECAT_IOS_API_KEY as string | undefined
+)?.trim();
 const REVENUECAT_IOS_API_KEY =
   revenueCatEnvKey?.startsWith("appl_") && revenueCatEnvKey.length > 12
     ? revenueCatEnvKey

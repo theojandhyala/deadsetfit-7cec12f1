@@ -24,8 +24,9 @@
     "format": "prettier --write .",
     "start": "node server.js",
     "check:xcodeproj": "node scripts/check-xcodeproj.mjs",
-    "render:cards": "node scripts/render-cards.mjs",
-    "render:body": "node scripts/render-cards.mjs --body"
+    "render:diagram": "node scripts/render-cards.mjs --diagram",
+    "render:pr": "node scripts/render-cards.mjs --pr",
+    "render:photo": "node scripts/render-cards.mjs --photo"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",

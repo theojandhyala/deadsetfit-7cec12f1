@@ -2,10 +2,7 @@ import { allExercises, getExercise } from "./exercises";
 import { estimate1RM } from "./calc";
 import { applyProgrammeWeights } from "./programme-weight-setup";
 import { countsForRecords } from "./set-tracking";
-import {
-  strengthStandardKind,
-  type StrengthStandardKind,
-} from "./strength-grades";
+import { strengthStandardKind, type StrengthStandardKind } from "./strength-grades";
 import { toMuscleGroup } from "./recovery";
 import type { AppState, DayKey, MuscleGroup } from "./types";
 
@@ -155,7 +152,9 @@ export function weeklyStrengthCheckInRows(state: AppState): StrengthCheckInRow[]
           day,
           definition.muscleGroup,
           plan.exerciseConfig?.[exerciseId]?.weightKg ?? 0,
-          parseFirstRepTarget(plan.exerciseConfig?.[exerciseId]?.reps ?? plan.reps ?? definition.reps),
+          parseFirstRepTarget(
+            plan.exerciseConfig?.[exerciseId]?.reps ?? plan.reps ?? definition.reps,
+          ),
         );
       }
     }
@@ -167,10 +166,7 @@ export function weeklyStrengthCheckInRows(state: AppState): StrengthCheckInRow[]
     return {
       ...row,
       value: manual?.value ?? logged.value,
-      reps:
-        row.kind === "RATIO"
-          ? (manual?.reps ?? logged.reps ?? targetReps)
-          : 1,
+      reps: row.kind === "RATIO" ? (manual?.reps ?? logged.reps ?? targetReps) : 1,
     };
   });
 }
@@ -198,9 +194,7 @@ export function applyWeeklyStrengthCheckIn(
   answers: readonly StrengthCheckInAnswer[],
   now = new Date(),
 ): AppState {
-  const valid = answers.filter(
-    (answer) => Number.isFinite(answer.value) && answer.value > 0,
-  );
+  const valid = answers.filter((answer) => Number.isFinite(answer.value) && answer.value > 0);
   const weights = new Map(
     valid
       .filter((answer) => answer.kind === "RATIO")

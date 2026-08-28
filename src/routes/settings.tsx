@@ -697,11 +697,19 @@ function SettingsPage() {
             />
           </div>
           <div className="mt-2 grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => void sendNotificationTest()} className="btn-ghost min-h-11 text-[9px]">
+            <button
+              type="button"
+              onClick={() => void sendNotificationTest()}
+              className="btn-ghost min-h-11 text-[9px]"
+            >
               <BellRing size={12} className="mr-1.5" /> Send 5s test
             </button>
             {notificationPermission === "denied" ? (
-              <button type="button" onClick={() => void openIosAppSettings()} className="btn-grit min-h-11 text-[9px]">
+              <button
+                type="button"
+                onClick={() => void openIosAppSettings()}
+                className="btn-grit min-h-11 text-[9px]"
+              >
                 Open iPhone Settings
               </button>
             ) : (

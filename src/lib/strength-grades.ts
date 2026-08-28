@@ -150,8 +150,10 @@ export function strengthStandardKind(
   exerciseId: string,
   fallbackMuscle?: MuscleGroup,
 ): StrengthStandardKind | null {
-  return (STANDARDS[exerciseId] ?? (fallbackMuscle ? GENERIC_STANDARD[fallbackMuscle] : undefined))
-    ?.kind ?? null;
+  return (
+    (STANDARDS[exerciseId] ?? (fallbackMuscle ? GENERIC_STANDARD[fallbackMuscle] : undefined))
+      ?.kind ?? null
+  );
 }
 
 export interface ExerciseGrade {

@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { getInviteUrl } from "@/lib/referral";
 import { PHOTO_CARD_H, PHOTO_CARD_W, drawPhotoCard } from "@/lib/photo-card-draw";
 import { spanLabel } from "@/lib/progress-photos";
+import { useCheckInSrc } from "@/hooks/useCheckInSrc";
+import type { CheckIn } from "@/lib/types";
 import type { WeightUnit } from "@/lib/units";
 
 /**
@@ -15,31 +17,33 @@ import type { WeightUnit } from "@/lib/units";
  * themselves, so it is built to be posted — 1080x1920, clear of the caption
  * strip, carrying an invite link.
  *
- * Nothing leaves the device to make it. The photos are already local data
- * URLs; the card is drawn on a canvas here and handed to the system share
- * sheet, so a person deciding not to post it means it was never anywhere.
+ * The card itself is composed on the device — the photos are fetched from the
+ * athlete's own private bucket, drawn to a canvas here, and handed to the
+ * system share sheet. Deciding not to post it means it was never anywhere.
  */
 export function ProgressPhotoShareCard({
-  beforeSrc,
-  nowSrc,
-  beforeDate,
-  nowDate,
+  before,
+  now,
   daysApart,
   weightDeltaKg,
   unit,
   displayName,
   onClose,
 }: {
-  beforeSrc: string;
-  nowSrc: string;
-  beforeDate: string;
-  nowDate: string;
+  before: CheckIn;
+  now: CheckIn;
   daysApart: number;
   weightDeltaKg: number | null;
   unit: WeightUnit;
   displayName: string;
   onClose: () => void;
 }) {
+  // Stored photos need a signed URL before the canvas can draw them; legacy
+  // inline ones resolve immediately.
+  const beforeSrc = useCheckInSrc(before);
+  const nowSrc = useCheckInSrc(now);
+  const beforeDate = before.date;
+  const nowDate = now.date;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dataUrl, setDataUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
@@ -47,11 +51,14 @@ export function ProgressPhotoShareCard({
   useEffect(() => {
     let cancelled = false;
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !beforeSrc || !nowSrc) return;
 
     const load = (src: string) =>
       new Promise<HTMLImageElement>((resolve, reject) => {
         const image = new Image();
+        // Signed storage URLs are cross-origin; without this the canvas is
+        // tainted and `toDataURL` throws instead of producing a card.
+        image.crossOrigin = "anonymous";
         image.onload = () => resolve(image);
         image.onerror = () => reject(new Error("Could not read that photo."));
         image.src = src;
@@ -61,15 +68,15 @@ export function ProgressPhotoShareCard({
       try {
         // Both must decode before anything is drawn — canvas cannot await
         // mid-composition, and a half-drawn card is worse than a spinner.
-        const [before, now] = await Promise.all([load(beforeSrc), load(nowSrc)]);
+        const [beforeImage, nowImage] = await Promise.all([load(beforeSrc), load(nowSrc)]);
         if (cancelled) return;
         canvas.width = PHOTO_CARD_W;
         canvas.height = PHOTO_CARD_H;
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
         drawPhotoCard(ctx, {
-          before,
-          now,
+          before: beforeImage,
+          now: nowImage,
           beforeDate,
           nowDate,
           daysApart,

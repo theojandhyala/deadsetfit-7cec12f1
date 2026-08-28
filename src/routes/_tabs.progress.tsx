@@ -44,6 +44,9 @@ import { TrainingAutopilot } from "@/components/TrainingAutopilot";
 import { ProWeeklyReview } from "@/components/ProWeeklyReview";
 import { PRRoadmap } from "@/components/PRRoadmap";
 import { useUnit } from "@/hooks/useUnit";
+import { captureCheckIn, deleteStoredPhoto } from "@/lib/progress-photo-store";
+import { useProgressPhotoMigration } from "@/hooks/useProgressPhotoMigration";
+import { CheckInImage } from "@/components/CheckInImage";
 import { ProgressPhotoHero } from "@/components/ProgressPhotoHero";
 import { ProgressPhotoShareCard } from "@/components/ProgressPhotoShareCard";
 import { photoJourney } from "@/lib/progress-photos";
@@ -63,6 +66,8 @@ function ProgressPage() {
   const photoRef = useRef<HTMLInputElement>(null);
   const [compare, setCompare] = useState<string[]>([]);
   const [sharingPhotos, setSharingPhotos] = useState(false);
+  // Moves any photos still inlined from an older build into storage, once.
+  const userIdRef = useProgressPhotoMigration();
   const journey = photoJourney(state);
   // Log inputs are DOM-owned (defaultValue + ref, read on submit) — controlled
   // value/onChange freezes typing in the iOS WKWebView.
@@ -78,31 +83,15 @@ function ProgressPage() {
   const totalPRs = state.sessions.reduce((a, s) => a + (s.prCount || 0), 0);
 
   function addPhoto(file: File) {
-    // Downscale to a bounded JPEG — raw camera photos are multi-MB base64
-    // strings that live inside the state blob: they blow the 2MB sync cap
-    // and make every state parse/stringify visibly janky on phones.
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      const max = 900;
-      const scale = Math.min(1, max / Math.max(img.width, img.height));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
-      URL.revokeObjectURL(url);
-      set((s) => ({
-        ...s,
-        checkIns: [...s.checkIns, { date: new Date().toISOString(), photoDataUrl: dataUrl }],
-      }));
-      hapticSaved();
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      hapticFailure();
-    };
-    img.src = url;
+    // Uploaded to the athlete's private bucket, not inlined into the synced
+    // state blob: a stored photo is ~122 KB against a 2,000,000-byte cap, so a
+    // handful of check-ins used to pause cloud backup of all training data.
+    void captureCheckIn(file, userIdRef.current)
+      .then((checkIn) => {
+        set((s) => ({ ...s, checkIns: [...s.checkIns, checkIn] }));
+        hapticSaved();
+      })
+      .catch(() => hapticFailure());
   }
 
   function togglePhoto(id: string) {
@@ -193,6 +182,8 @@ function ProgressPage() {
       danger: true,
     });
     if (!ok) return;
+    const removed = state.checkIns.find((c) => c.date === date);
+    if (removed?.photoPath) void deleteStoredPhoto(removed.photoPath);
     set((s) => ({ ...s, checkIns: s.checkIns.filter((c) => c.date !== date) }));
     setCompare((c) => c.filter((d) => d !== date));
     hapticUndo();
@@ -440,10 +431,8 @@ function ProgressPage() {
 
       {sharingPhotos && journey.first && journey.latest && (
         <ProgressPhotoShareCard
-          beforeSrc={journey.first.photoDataUrl}
-          nowSrc={journey.latest.photoDataUrl}
-          beforeDate={journey.first.date}
-          nowDate={journey.latest.date}
+          before={journey.first}
+          now={journey.latest}
           daysApart={journey.daysApart}
           weightDeltaKg={journey.weightDeltaKg}
           unit={unit}
@@ -970,11 +959,9 @@ function ProgressPage() {
                   const w = weightNear(d);
                   return (
                     <div key={d} className="rounded-2xl">
-                      <img
-                        src={p?.photoDataUrl}
-                        alt=""
-                        className="w-full aspect-[3/4] object-cover"
-                      />
+                      {p && (
+                        <CheckInImage checkIn={p} className="w-full aspect-[3/4] object-cover" />
+                      )}
                       <div className="text-[10px] p-1 label-cap text-center">
                         {p?.date.slice(0, 10)}
                         {w !== null && (
@@ -1031,11 +1018,7 @@ function ProgressPage() {
                         className="relative border block w-full"
                         style={{ borderColor: sel ? "#e63222" : "#262626" }}
                       >
-                        <img
-                          src={c.photoDataUrl}
-                          alt=""
-                          className="w-full aspect-[3/4] object-cover"
-                        />
+                        <CheckInImage checkIn={c} className="w-full aspect-[3/4] object-cover" />
                         <span
                           className="absolute bottom-0 inset-x-0 text-[9px] text-center label-cap py-0.5"
                           style={{ background: "rgba(0,0,0,0.7)" }}

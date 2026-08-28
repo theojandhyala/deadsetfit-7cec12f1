@@ -818,22 +818,52 @@ const handlers: Record<string, Handler> = {
     const { supabase, userId } = await requireAuth(req);
     const { data, error } = await supabase
       .from("user_state")
-      .select("data")
+      .select("data, updated_at")
       .eq("user_id", userId)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    return { data: data?.data ? JSON.stringify(data.data) : null };
+    // `updatedAt` is the version the client must hand back on its next save.
+    // Without it two devices are last-write-wins and the slower one silently
+    // erases the faster one's session.
+    return {
+      data: data?.data ? JSON.stringify(data.data) : null,
+      updatedAt: data?.updated_at ?? null,
+    };
   },
 
   async saveUserState(data, req) {
     const { supabase, userId } = await requireAuth(req);
-    const d = z.object({ data: z.string().max(2_000_000) }).parse(data);
+    const d = z
+      .object({
+        data: z.string().max(2_000_000),
+        // The `updated_at` this client last saw. Absent from older clients,
+        // which keep the previous last-write-wins behaviour rather than being
+        // locked out by a guard they cannot satisfy.
+        baseUpdatedAt: z.string().nullable().optional(),
+      })
+      .parse(data);
     let parsed: unknown;
     try {
       parsed = JSON.parse(d.data);
     } catch {
       throw new Error("Invalid JSON");
     }
+
+    if (d.baseUpdatedAt !== undefined) {
+      const { data: current } = await supabase
+        .from("user_state")
+        .select("updated_at")
+        .eq("user_id", userId)
+        .maybeSingle();
+      const stored = current?.updated_at ?? null;
+      // A row that moved on since this client read it belongs to another
+      // device. Refuse rather than overwrite: the client reloads, merges and
+      // retries, which is recoverable. An overwrite is not.
+      if (stored && stored !== d.baseUpdatedAt) {
+        return { ok: false, conflict: true, updatedAt: stored };
+      }
+    }
+
     const { error } = await supabase
       .from("user_state")
       .upsert({ user_id: userId, data: parsed as never }, { onConflict: "user_id" });
@@ -876,7 +906,14 @@ const handlers: Record<string, Handler> = {
     } catch {
       /* leaderboard derive is best-effort — never block the sync */
     }
-    return { ok: true };
+    // Hand back the new version so the client can guard its next save without
+    // a round trip.
+    const { data: saved } = await supabase
+      .from("user_state")
+      .select("updated_at")
+      .eq("user_id", userId)
+      .maybeSingle();
+    return { ok: true, updatedAt: saved?.updated_at ?? null };
   },
 
   // === Profile ===

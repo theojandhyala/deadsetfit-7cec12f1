@@ -1560,7 +1560,11 @@ function Friends() {
         >
           <p className="text-xs font-bold text-grit">Friends couldn't refresh</p>
           <p className="mt-1 text-[10px] leading-relaxed text-grit-dim">{friendsError}</p>
-          <button type="button" onClick={loadFriendsHome} className="btn-ghost mt-3 min-h-10 px-4 text-[10px]">
+          <button
+            type="button"
+            onClick={loadFriendsHome}
+            className="btn-ghost mt-3 min-h-10 px-4 text-[10px]"
+          >
             Try again
           </button>
         </div>
@@ -1763,9 +1767,18 @@ function Friends() {
           </div>
 
           {searchError && (
-            <div role="alert" className="mb-4 rounded-xl border border-accent-red/40 bg-accent-red/10 p-3">
-              <p className="text-xs text-grit">Search couldn't load. Check your connection and try again.</p>
-              <button type="button" onClick={() => void retrySearch()} className="mt-2 text-[10px] font-black uppercase tracking-wider text-accent-red">
+            <div
+              role="alert"
+              className="mb-4 rounded-xl border border-accent-red/40 bg-accent-red/10 p-3"
+            >
+              <p className="text-xs text-grit">
+                Search couldn't load. Check your connection and try again.
+              </p>
+              <button
+                type="button"
+                onClick={() => void retrySearch()}
+                className="mt-2 text-[10px] font-black uppercase tracking-wider text-accent-red"
+              >
                 Retry search
               </button>
             </div>

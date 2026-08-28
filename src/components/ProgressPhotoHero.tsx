@@ -1,5 +1,6 @@
 import { Camera, ChevronRight, Share2, Sparkles } from "lucide-react";
 
+import { CheckInImage } from "@/components/CheckInImage";
 import { hapticSelection } from "@/lib/haptics";
 import { daysSinceLastCheckIn, isCheckInDue, photoJourney, spanLabel } from "@/lib/progress-photos";
 import type { CheckIn, WeightEntry } from "@/lib/types";
@@ -82,11 +83,12 @@ export function ProgressPhotoHero({
       <section className="px-5 mt-4">
         <div className="rounded-2xl border border-grit bg-grit-card p-4">
           <div className="flex items-start gap-3">
-            <img
-              src={journey.latest?.photoDataUrl}
-              alt=""
-              className="h-24 w-[72px] shrink-0 rounded-xl object-cover"
-            />
+            {journey.latest && (
+              <CheckInImage
+                checkIn={journey.latest}
+                className="h-24 w-[72px] shrink-0 rounded-xl object-cover"
+              />
+            )}
             <div className="min-w-0">
               <p className="label-cap text-[10px] text-accent-red">PROGRESS PHOTOS</p>
               <p className="display mt-0.5 text-lg font-extrabold uppercase leading-tight text-grit">
@@ -135,12 +137,8 @@ export function ProgressPhotoHero({
         </div>
 
         <div className="grid grid-cols-2 gap-0.5 border-y border-grit bg-black">
-          <PhotoPane
-            src={journey.first!.photoDataUrl}
-            caption="BEFORE"
-            date={journey.first!.date}
-          />
-          <PhotoPane src={journey.latest!.photoDataUrl} caption="NOW" date={journey.latest!.date} />
+          <PhotoPane checkIn={journey.first!} caption="BEFORE" />
+          <PhotoPane checkIn={journey.latest!} caption="NOW" />
         </div>
 
         {delta !== null && delta !== 0 && (
@@ -184,10 +182,11 @@ export function ProgressPhotoHero({
   );
 }
 
-function PhotoPane({ src, caption, date }: { src: string; caption: string; date: string }) {
+function PhotoPane({ checkIn, caption }: { checkIn: CheckIn; caption: string }) {
+  const date = checkIn.date;
   return (
     <figure className="relative">
-      <img src={src} alt="" className="aspect-[3/4] w-full object-cover" />
+      <CheckInImage checkIn={checkIn} className="aspect-[3/4] w-full object-cover" />
       <figcaption className="absolute inset-x-0 bottom-0 flex items-baseline justify-between bg-black/70 px-2 py-1">
         <span className="label-cap text-[9px] text-grit">{caption}</span>
         <span className="text-[9px] text-grit-dim">{date.slice(0, 10)}</span>

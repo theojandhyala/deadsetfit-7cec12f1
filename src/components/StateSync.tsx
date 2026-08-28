@@ -35,6 +35,9 @@ export function StateSync() {
   useEffect(() => {
     let cancelled = false;
     let activeUserId: string | null = null;
+    // The row version this device last saw. Sent with every save so the server
+    // can refuse a write from a device that has fallen behind another one.
+    let baseUpdatedAt: string | null | undefined;
     setSyncIssueHandler((msg) => toast.error(msg, { id: "sync-issue" }));
 
     function prepareLocalState(userId: string) {
@@ -44,6 +47,32 @@ export function StateSync() {
       // onboarding and save its first setup instead of having it wiped.
       const owner = getLocalStateOwner();
       if (owner && owner !== userId) clearLocalState();
+    }
+
+    /**
+     * Push local state, guarded by the version this device last saw.
+     *
+     * A refused write means another device saved since we read. Overwriting it
+     * would erase a whole session; refusing loses at most the one change in
+     * flight, so we take the remote and let the athlete's next edit push from
+     * there.
+     */
+    async function push(json: string) {
+      const result = await save({ data: { data: json, baseUpdatedAt: baseUpdatedAt ?? null } });
+      if (result.conflict) {
+        baseUpdatedAt = result.updatedAt;
+        const fresh = await load();
+        baseUpdatedAt = fresh.updatedAt;
+        if (fresh.data && activeUserId) {
+          try {
+            hydrateFromRemote(JSON.parse(fresh.data), activeUserId);
+          } catch {
+            /* a malformed remote blob is not worth losing local state over */
+          }
+        }
+        return;
+      }
+      if (result.updatedAt !== undefined) baseUpdatedAt = result.updatedAt;
     }
 
     async function pull(userId: string) {
@@ -62,6 +91,7 @@ export function StateSync() {
           // push stale local over newer remote we simply couldn't fetch).
           // Enable sync so the user's own later edits still save; skip auto-push.
         } else if (res.data) {
+          baseUpdatedAt = res.updatedAt;
           // A foreign/unowned local blob must not merge into this account's
           // remote — clear it first so hydrate is clean.
           if (getLocalStateOwner() !== userId) clearLocalState();
@@ -71,7 +101,7 @@ export function StateSync() {
           const localIsNewer =
             getLocalStateOwner() === userId &&
             (await reconcilePendingRemoteState(async (json) => {
-              await save({ data: { data: json } });
+              await push(json);
             }));
           if (!localIsNewer) {
             try {
@@ -81,17 +111,16 @@ export function StateSync() {
             }
           }
         } else {
+          baseUpdatedAt = res.updatedAt ?? null;
           // Genuinely empty account: back up local ONLY if it already belongs
           // to this user — never push unowned (possibly another user's) state.
           const local = getState();
           if (local.profile && getLocalStateOwner() === userId) {
-            await save({ data: { data: JSON.stringify(local) } }).catch(() => {});
+            await push(JSON.stringify(local)).catch(() => {});
           }
           setLocalStateOwner(userId);
         }
-        enableRemoteSync(async (json) => {
-          await save({ data: { data: json } });
-        });
+        enableRemoteSync(push);
       } catch (e) {
         console.warn("state pull failed", e);
       } finally {

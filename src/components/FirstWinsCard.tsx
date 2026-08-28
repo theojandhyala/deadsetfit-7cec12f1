@@ -32,12 +32,30 @@ function StepLink({
   className: string;
   children: React.ReactNode;
 }) {
-  if (id === "PLAN") return <Link to="/plan" className={className}>{children}</Link>;
+  if (id === "PLAN")
+    return (
+      <Link to="/plan" className={className}>
+        {children}
+      </Link>
+    );
   if (id === "WORKOUT") {
-    return <Link to="/workout/live" search={{}} className={className}>{children}</Link>;
+    return (
+      <Link to="/workout/live" search={{}} className={className}>
+        {children}
+      </Link>
+    );
   }
-  if (id === "NUTRITION") return <Link to="/diet" className={className}>{children}</Link>;
-  return <Link to="/progress" hash="progress-body" className={className}>{children}</Link>;
+  if (id === "NUTRITION")
+    return (
+      <Link to="/diet" className={className}>
+        {children}
+      </Link>
+    );
+  return (
+    <Link to="/progress" hash="progress-body" className={className}>
+      {children}
+    </Link>
+  );
 }
 
 export function FirstWinsCard() {
@@ -59,11 +77,15 @@ export function FirstWinsCard() {
           </span>
           <div className="min-w-0 flex-1">
             <p className="deadset-kicker">First wins</p>
-            <h2 id="first-wins-title" className="display mt-1 text-xl font-black uppercase text-grit">
+            <h2
+              id="first-wins-title"
+              className="display mt-1 text-xl font-black uppercase text-grit"
+            >
               Build your baseline
             </h2>
             <p className="mt-1 text-xs leading-relaxed text-grit-dim">
-              {completed} of {steps.length} complete. Finish these once and DEADSET becomes much more useful.
+              {completed} of {steps.length} complete. Finish these once and DEADSET becomes much
+              more useful.
             </p>
           </div>
           <button
@@ -111,7 +133,10 @@ export function FirstWinsCard() {
             className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 text-[10px] font-black uppercase text-grit-dim"
           >
             {expanded ? "Hide checklist" : "See all steps"}
-            <ChevronDown size={14} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
+            <ChevronDown
+              size={14}
+              className={`transition-transform ${expanded ? "rotate-180" : ""}`}
+            />
           </button>
         </div>
 
@@ -133,10 +158,14 @@ export function FirstWinsCard() {
                   </span>
                 )}
                 <span className="min-w-0 flex-1">
-                  <span className={`block text-xs font-bold ${step.done ? "text-grit-dim" : "text-grit"}`}>
+                  <span
+                    className={`block text-xs font-bold ${step.done ? "text-grit-dim" : "text-grit"}`}
+                  >
                     {step.title}
                   </span>
-                  <span className="mt-0.5 block truncate text-[10px] text-grit-dim">{step.detail}</span>
+                  <span className="mt-0.5 block truncate text-[10px] text-grit-dim">
+                    {step.detail}
+                  </span>
                 </span>
                 <ChevronRight size={14} className="shrink-0 text-grit-dim" />
               </StepLink>

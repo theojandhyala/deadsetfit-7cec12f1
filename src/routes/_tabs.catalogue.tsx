@@ -9,6 +9,10 @@ import { topSetHistory } from "@/lib/progression";
 import { WeeklyRecapCard, type WeeklyRecap } from "@/components/WeeklyRecapCard";
 import { PRShareCard } from "@/components/PRShareCard";
 import type { PRShareDetails } from "@/lib/grit-events";
+import type { CheckIn } from "@/lib/types";
+import { CheckInImage } from "@/components/CheckInImage";
+import { captureCheckIn } from "@/lib/progress-photo-store";
+import { useProgressPhotoMigration } from "@/hooks/useProgressPhotoMigration";
 import { useUnit } from "@/hooks/useUnit";
 import { formatWeight } from "@/lib/units";
 
@@ -71,9 +75,11 @@ function fmtDate(iso: string) {
 
 function CataloguePage() {
   const [state, set] = useAppState();
+  // Moves any photos still inlined from an older build into storage, once.
+  const userIdRef = useProgressPhotoMigration();
   const unit = useUnit();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [lightbox, setLightbox] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<CheckIn | null>(null);
 
   const photos = useMemo(
     () => [...state.checkIns].sort((a, b) => a.date.localeCompare(b.date)),
@@ -164,24 +170,9 @@ function CataloguePage() {
       : null;
 
   function addPhoto(file: File) {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      const max = 900;
-      const scale = Math.min(1, max / Math.max(img.width, img.height));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
-      URL.revokeObjectURL(url);
-      set((s) => ({
-        ...s,
-        checkIns: [...s.checkIns, { date: new Date().toISOString(), photoDataUrl: dataUrl }],
-      }));
-    };
-    img.onerror = () => URL.revokeObjectURL(url);
-    img.src = url;
+    void captureCheckIn(file, userIdRef.current).then((checkIn) => {
+      set((s) => ({ ...s, checkIns: [...s.checkIns, checkIn] }));
+    });
   }
 
   const stats: { icon: typeof Flame; label: string; value: string }[] = [
@@ -267,15 +258,10 @@ function CataloguePage() {
           <div className="deadset-3d-panel border border-grit bg-[#080808] p-3">
             <div className="grid grid-cols-2 gap-2">
               {[first, latest].map((p, i) => (
-                <button
-                  key={p.date}
-                  onClick={() => setLightbox(p.photoDataUrl)}
-                  className="text-left press"
-                >
+                <button key={p.date} onClick={() => setLightbox(p)} className="text-left press">
                   <div className="relative">
-                    <img
-                      src={p.photoDataUrl}
-                      alt=""
+                    <CheckInImage
+                      checkIn={p}
                       className="w-full aspect-[3/4] object-cover rounded-lg"
                     />
                     <span className="absolute top-2 left-2 label-cap text-[9px] px-1.5 py-0.5 rounded bg-black/70 text-white">
@@ -294,13 +280,9 @@ function CataloguePage() {
           </div>
         ) : photos.length === 1 ? (
           <div className="deadset-3d-panel border border-grit bg-[#080808] p-3">
-            <button
-              onClick={() => setLightbox(first.photoDataUrl)}
-              className="w-1/2 mx-auto block press"
-            >
-              <img
-                src={first.photoDataUrl}
-                alt=""
+            <button onClick={() => setLightbox(first)} className="w-1/2 mx-auto block press">
+              <CheckInImage
+                checkIn={first}
                 className="w-full aspect-[3/4] object-cover rounded-lg"
               />
               <p className="text-[10px] text-grit-dim mt-1.5 text-center">{fmtDate(first.date)}</p>
@@ -337,12 +319,8 @@ function CataloguePage() {
           </div>
           <div className="grid grid-cols-3 gap-2">
             {[...photos].reverse().map((p) => (
-              <button key={p.date} onClick={() => setLightbox(p.photoDataUrl)} className="press">
-                <img
-                  src={p.photoDataUrl}
-                  alt=""
-                  className="w-full aspect-[3/4] object-cover rounded-lg"
-                />
+              <button key={p.date} onClick={() => setLightbox(p)} className="press">
+                <CheckInImage checkIn={p} className="w-full aspect-[3/4] object-cover rounded-lg" />
                 <p className="text-[9px] text-grit-dim mt-1 text-center">{fmtDate(p.date)}</p>
               </button>
             ))}
@@ -427,9 +405,8 @@ function CataloguePage() {
           >
             <X size={18} />
           </button>
-          <img
-            src={lightbox}
-            alt=""
+          <CheckInImage
+            checkIn={lightbox}
             className="max-h-[85vh] max-w-full rounded-xl object-contain"
           />
         </div>

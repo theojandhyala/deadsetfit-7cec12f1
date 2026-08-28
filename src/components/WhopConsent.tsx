@@ -20,33 +20,33 @@ export function WhopConsentBanner() {
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <p className="min-w-0 flex-1 text-xs leading-5 text-white/65">
-          <span className="font-extrabold text-white">Optional analytics.</span>{" "}
-          Help us measure App Store clicks. You can decline and still use everything.{" "}
+          <span className="font-extrabold text-white">Optional analytics.</span> Help us measure App
+          Store clicks. You can decline and still use everything.{" "}
           <Link className="underline underline-offset-2 hover:text-white" to="/privacy">
             Privacy
           </Link>
         </p>
         <div className="flex shrink-0 gap-2">
-        <button
-          className="min-h-10 rounded-lg bg-[#f13a2c] px-4 text-xs font-extrabold text-white"
-          onClick={() => {
-            setWhopConsent("granted");
-            setConsent("granted");
-          }}
-          type="button"
-        >
-          Allow
-        </button>
-        <button
-          className="min-h-10 rounded-lg border border-white/20 px-4 text-xs font-bold text-white/75"
-          onClick={() => {
-            setWhopConsent("denied");
-            setConsent("denied");
-          }}
-          type="button"
-        >
-          Decline
-        </button>
+          <button
+            className="min-h-10 rounded-lg bg-[#f13a2c] px-4 text-xs font-extrabold text-white"
+            onClick={() => {
+              setWhopConsent("granted");
+              setConsent("granted");
+            }}
+            type="button"
+          >
+            Allow
+          </button>
+          <button
+            className="min-h-10 rounded-lg border border-white/20 px-4 text-xs font-bold text-white/75"
+            onClick={() => {
+              setWhopConsent("denied");
+              setConsent("denied");
+            }}
+            type="button"
+          >
+            Decline
+          </button>
         </div>
       </div>
     </aside>

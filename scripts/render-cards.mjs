@@ -1,15 +1,13 @@
 #!/usr/bin/env node
 /**
- * Render share cards and body diagrams to PNG, headless.
+ * Render the app's canvas and SVG output to PNG, headless.
  *
- * Canvas and SVG output is the one part of this app that cannot be checked by
- * reading it. The strength card shipped with muscles floating beside the body,
- * a detached head and legs tapering to a point — none of which any amount of
+ * These are the one part of the app that cannot be checked by reading them. A
+ * body diagram once shipped with muscles floating beside the figure, a
+ * detached head and legs tapering to a point — none of which any amount of
  * re-reading the path data would have caught, and all of which were obvious in
  * one look at the rendered image.
  *
- *   node scripts/render-cards.mjs            # writes into .render-out/
- *   node scripts/render-cards.mjs --body     # just the body diagram, large
  *   node scripts/render-cards.mjs --diagram  # the <MuscleDiagram> that ships
  *   node scripts/render-cards.mjs --pr       # the PR card people post
  *   node scripts/render-cards.mjs --photo    # the before/after card
@@ -29,7 +27,6 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = join(root, ".render-out");
-const bodyOnly = process.argv.includes("--body");
 const diagramOnly = process.argv.includes("--diagram");
 const prOnly = process.argv.includes("--pr");
 const photoOnly = process.argv.includes("--photo");
@@ -61,28 +58,6 @@ async function bundleModule(entry, globalName) {
   });
   return result.outputFiles[0].text;
 }
-
-const grade = (muscle, tier, score) => ({ muscle, tier, score, exercises: [], weakest: null });
-
-const SAMPLE = {
-  start: [
-    grade("CHEST", "NOVICE", 25),
-    grade("BACK", "BEGINNER", 10),
-    grade("LEGS", "NOVICE", 22),
-    grade("ARMS", "BEGINNER", 8),
-  ],
-  now: [
-    grade("CHEST", "ADVANCED", 68),
-    grade("BACK", "INTERMEDIATE", 52),
-    grade("LEGS", "ELITE", 85),
-    grade("SHOULDERS", "INTERMEDIATE", 48),
-    grade("ARMS", "NOVICE", 30),
-    grade("CORE", "WORLD CLASS", 96),
-  ],
-  tier: "ADVANCED",
-  displayName: "Theo Jandhyala",
-  sinceLabel: "Since Sep 2025",
-};
 
 mkdirSync(outDir, { recursive: true });
 
@@ -176,73 +151,23 @@ if (photoOnly) {
   const out = join(outDir, "diagram.png");
   await page.screenshot({ path: out, fullPage: true });
   console.log("wrote", out);
-} else if (bodyOnly) {
-  // Every muscle coloured differently, so a shape that is missing, misplaced
-  // or overlapping another is impossible to miss.
-  const shapes = await bundleModule("src/lib/body-shapes.ts", "Body");
-  await page.addScriptTag({ content: shapes });
+} else if (prOnly) {
+  const card = await bundleModule("src/lib/pr-card-draw.ts", "PRCard");
+  await page.addScriptTag({ content: card });
   const dataUrl = await page.evaluate(() => {
     const c = document.getElementById("c");
-    const scale = 3;
-    const { x, y, width, height } = Body.BODY_CONTENT;
-    c.width = width * 2 * scale + 60;
-    c.height = height * scale + 40;
-    const ctx = c.getContext("2d");
-    ctx.fillStyle = "#0a0a0a";
-    ctx.fillRect(0, 0, c.width, c.height);
-    const palette = [
-      "#e63222",
-      "#5bd07a",
-      "#fbbf24",
-      "#7fb3d5",
-      "#b06cf0",
-      "#ff8a3d",
-      "#4dd0e1",
-      "#f06292",
-      "#aed581",
-      "#ffd54f",
-    ];
-    let index = 0;
-    for (const side of ["f", "b"]) {
-      ctx.save();
-      ctx.translate(20 + (side === "b" ? width * scale + 20 : 0), 20);
-      ctx.scale(scale, scale);
-      ctx.translate(-x, -y);
-      ctx.fillStyle = "#161616";
-      ctx.strokeStyle = "#4a4a4a";
-      ctx.lineWidth = 1.2;
-      const outline = new Path2D(Body.bodySilhouette());
-      ctx.fill(outline);
-      ctx.stroke(outline);
-      for (const [, shape] of Object.entries(Body.MUSCLE_SHAPES)) {
-        const color = palette[index++ % palette.length];
-        for (const d of shape[side] ?? []) {
-          const path = new Path2D(d);
-          ctx.fillStyle = color;
-          ctx.fill(path);
-          ctx.strokeStyle = "rgba(0,0,0,0.5)";
-          ctx.lineWidth = 0.5;
-          ctx.stroke(path);
-        }
-      }
-      ctx.restore();
-    }
+    c.width = PRCard.PR_CARD_W;
+    c.height = PRCard.PR_CARD_H;
+    PRCard.drawPRCard(c.getContext("2d"), {
+      pr: { exercise: "Incline Dumbbell Press", weight: 18, reps: 8, previousBest: 16 },
+      displayName: "Theo",
+      username: "theo",
+      unit: "kg",
+      date: new Date("2026-08-27T00:00:00Z"),
+    });
     return c.toDataURL("image/png");
   });
-  const out = join(outDir, "body.png");
-  writeFileSync(out, Buffer.from(dataUrl.split(",")[1], "base64"));
-  console.log("wrote", out);
-} else {
-  const card = await bundleModule("src/lib/strength-card-draw.ts", "Card");
-  await page.addScriptTag({ content: card });
-  const dataUrl = await page.evaluate((input) => {
-    const c = document.getElementById("c");
-    c.width = Card.STRENGTH_CARD_W;
-    c.height = Card.STRENGTH_CARD_H;
-    Card.drawStrengthCard(c.getContext("2d"), input);
-    return c.toDataURL("image/png");
-  }, SAMPLE);
-  const out = join(outDir, "strength-card.png");
+  const out = join(outDir, "pr-card.png");
   writeFileSync(out, Buffer.from(dataUrl.split(",")[1], "base64"));
   console.log("wrote", out);
 }

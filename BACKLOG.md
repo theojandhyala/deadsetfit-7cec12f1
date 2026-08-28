@@ -42,7 +42,11 @@ is **status and competition** (grit points, ranks, leagues, head-to-head, PRs),
 not AI. Hard constraints that must not be violated:
 
 - **No AI / $0-per-user** — every feature must be free to run at scale (rule-based, not model-based).
-- **Web-only Pro on iOS** — no in-app purchase UI or prices on native iOS (App Store 3.1.1). Pro sells on the web; iOS stays gated. (Safari link-out is planned as v1.1 — see ROADMAP.md.)
+- **Pro sells through Apple on iOS** — monthly (`org.deadsetfit.pro.monthly`)
+  and annual (`org.deadsetfit.pro.annual`), each with a one-week introductory
+  free trial, purchased through Apple's own sheet and observed by RevenueCat.
+  Stripe still serves the web. The app never promises a trial Apple has not
+  actually returned for that account.
 - **Brand** — dark-only, `#E10600` red, heavy italic wordmark, "FORGE YOUR BODY".
 - Keep all inputs DOM-owned (defaultValue + ref) — controlled `value=` freezes typing in iOS WKWebView.
 
@@ -50,23 +54,25 @@ not AI. Hard constraints that must not be violated:
 
 ## TIER 0 — Harden before you scale (these bite the moment real users arrive)
 
-1. **Server-authoritative ranked stats.** `grit_points` and `public_stats` are
-   currently client-writable via `saveProfile`, so leaderboards are trivially
-   spoofable. Compute/validate rank and PR values server-side. _Why: the entire
-   Pro pitch is status and competition — if the leaderboard can be faked, the
-   moat is gone._
-2. **Move progress photos out of the 2 MB sync blob** into Supabase Storage.
-   Today, crossing the blob cap silently pauses cloud backup of ALL training
-   data. _Why: silent, permanent data loss for your most engaged users._
-3. **Add an `updated_at` conflict guard** to `user_state` sync. Two devices are
-   last-write-wins and can clobber newer data. _Why: data loss once anyone uses
-   phone + web._
-4. **Wire the existing `RestTimer`** into the live workout (it's built but never
-   mounted). _Why: a core gym-floor feature is missing for zero build cost._
-5. **Fix the FifaCard 1RM vs PR-list mismatch** (card shows Epley-estimated 1RM,
+- ✅ **Server-authoritative ranked stats.** `saveProfile` rejects `grit_points`
+  and `public_stats` outright; both are derived server-side in `saveUserState`
+  under the service role, behind a `leaderboard-integrity` verdict.
+- ✅ **Progress photos out of the 2 MB sync blob.** They live in a private
+  `progress-photos` bucket, read through short-lived signed URLs. A stored
+  photo measured ~122 KB for an ordinary shot and ~640 KB for a noisy one, so
+  between three and sixteen check-ins filled the entire payload and paused
+  cloud backup of _all_ training data. Existing inline photos migrate in the
+  background on first load.
+- ✅ **`updated_at` conflict guard on `user_state` sync.** The client sends the
+  row version it last saw; a save from a device that has fallen behind is
+  refused rather than allowed to clobber. Clients that send no version keep the
+  old behaviour rather than being locked out.
+- ✅ **`RestTimer` wired into the live workout.**
+
+1. **Fix the FifaCard 1RM vs PR-list mismatch** (card shows Epley-estimated 1RM,
    list shows raw stored value — same lift, two numbers). _Why: reads as a bug,
    erodes trust in the stats._
-6. **account-restore completeness** — stop dropping `injuries`/`weakness` and
+2. **account-restore completeness** — stop dropping `injuries`/`weakness` and
    faking `startingWeightKg` on fresh-device rebuild.
 
 ## TIER 1 — Retention (make them come back daily)
