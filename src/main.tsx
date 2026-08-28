@@ -7,7 +7,7 @@ import "./styles.css";
 
 // Exposes the bundled release in diagnostics and scopes asset recovery to this
 // deployment so one old CDN race cannot strand later versions.
-const RELEASE_ID = "2026-07-28-release1";
+const RELEASE_ID = "2026-08-28-release4";
 const PRELOAD_RETRY_KEY = `deadset_preload_retry_${RELEASE_ID}`;
 document.documentElement.dataset.deadsetRelease = RELEASE_ID;
 
@@ -71,19 +71,12 @@ window.addEventListener("vite:preloadError", async () => {
 // copied into a new tab from disabling future release repairs.
 window.setTimeout(() => sessionStorage.removeItem(PRELOAD_RETRY_KEY), 10_000);
 
-function withBootTimeout<T>(promise: Promise<T>, timeoutMs = 2500): Promise<T | undefined> {
-  return Promise.race([
-    promise,
-    new Promise<undefined>((resolve) => window.setTimeout(resolve, timeoutMs)),
-  ]);
-}
-
 try {
   createRoot(root).render(<RouterProvider router={router} />);
 } catch (error) {
   renderBootFailure(error);
 }
 
-void withBootTimeout(restoreSupabaseSession()).catch((error) => {
+void restoreSupabaseSession().catch((error) => {
   console.warn("Session restore failed; continuing app boot", error);
 });

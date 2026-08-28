@@ -28,6 +28,7 @@ import { ProgrammeWeightSetup } from "@/components/ProgrammeWeightSetup";
 import { programmeWeightRows } from "@/lib/programme-weight-setup";
 import { requiresPaidAccess } from "@/lib/paid-access";
 import { WeeklyStrengthCheckIn } from "@/components/WeeklyStrengthCheckIn";
+import { finishAppBoot } from "@/lib/app-boot";
 
 export const Route = createFileRoute("/_tabs")({
   component: TabsLayout,
@@ -154,13 +155,10 @@ function TabsLayout() {
       }
     })();
 
-    const safety = setTimeout(finish, 3000);
-
     const { data } = supabase.auth.onAuthStateChange((event, s) => {
       if (event === "SIGNED_IN" && s) finish();
     });
     return () => {
-      clearTimeout(safety);
       data.subscription.unsubscribe();
     };
   }, []);
@@ -169,6 +167,11 @@ function TabsLayout() {
     if (!paidAccessRequired) return;
     navigate({ to: "/upgrade", replace: true });
   }, [navigate, paidAccessRequired]);
+
+  useEffect(() => {
+    if (!ready || !state.profile || proLoading || paidAccessRequired) return;
+    finishAppBoot();
+  }, [paidAccessRequired, proLoading, ready, state.profile]);
 
   useEffect(() => {
     if (!ready || !state.profile) return;
@@ -230,11 +233,7 @@ function TabsLayout() {
   }, [ready, state]);
 
   if (!ready || paidAccessRequired) {
-    return (
-      <div className="min-h-screen bg-grit flex items-center justify-center">
-        <span className="label-cap text-grit-dim text-xs animate-pulse">Loading…</span>
-      </div>
-    );
+    return <div className="min-h-[100dvh] bg-[#080808]" aria-hidden="true" />;
   }
   return (
     <div

@@ -166,9 +166,7 @@ const strengthTutorial = existsSync("src/components/StrengthEngineTutorial.tsx")
 const onboardingPage = existsSync("src/routes/onboarding.tsx")
   ? read("src/routes/onboarding.tsx")
   : "";
-const planPage = existsSync("src/routes/_tabs.plan.tsx")
-  ? read("src/routes/_tabs.plan.tsx")
-  : "";
+const planPage = existsSync("src/routes/_tabs.plan.tsx") ? read("src/routes/_tabs.plan.tsx") : "";
 const strengthPage = existsSync("src/routes/_tabs.strength.tsx")
   ? read("src/routes/_tabs.strength.tsx")
   : "";
@@ -186,9 +184,9 @@ check(
 check(
   "first update version",
   (xcodeProject.match(/MARKETING_VERSION = 1\.2;/g)?.length ?? 0) >= 6 &&
-    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 135;/g)?.length ?? 0) >= 6 &&
-    whatsNew.includes("WHATS_NEW_VERSION = 202608283"),
-  "The app, activity extension and watch targets are versioned as 1.2 (135), with a matching in-app update summary.",
+    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 136;/g)?.length ?? 0) >= 6 &&
+    whatsNew.includes("WHATS_NEW_VERSION = 202608284"),
+  "The app, activity extension and watch targets are versioned as 1.2 (136), with a matching in-app update summary.",
 );
 check(
   "full check script",
@@ -269,10 +267,12 @@ check(
   "native cold-start experience",
   infoPlist.includes("<string>LaunchScreen</string>") &&
     launchStoryboard.includes('image="Splash"') &&
-    indexHtml.includes("Loading your training") &&
+    indexHtml.includes('id="deadset-boot-screen"') &&
+    indexHtml.includes("Preparing your training") &&
     indexRoute.includes("NativeSessionLoading") &&
+    indexRoute.includes("finishAppBoot") &&
     indexRoute.includes("NativeWelcome"),
-  "The native launch image hands off to a branded session loader and a focused first-run welcome screen.",
+  "The native launch image hands off to a persistent readiness loader and only reveals a fully painted destination.",
 );
 check(
   "signup-first native welcome",

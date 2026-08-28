@@ -44,6 +44,7 @@ import {
   type AppleProduct,
 } from "@/lib/storekit";
 import { getStripeEnvironment } from "@/lib/stripe";
+import { finishAppBoot } from "@/lib/app-boot";
 
 export const Route = createFileRoute("/upgrade")({
   head: () => ({ meta: [{ title: "DEADSET — Start your trial" }] }),
@@ -133,6 +134,11 @@ function UpgradePage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!sessionChecked || !appleProductsChecked || entitlementLoading) return;
+    finishAppBoot();
+  }, [appleProductsChecked, entitlementLoading, sessionChecked]);
 
   const appleMonthly = appleProducts.find((product) => product.id === APPLE_PRO_PRODUCTS.monthly);
   const exactAppleTrial = isSevenDayFreeTrial(appleMonthly?.introductoryOffer);

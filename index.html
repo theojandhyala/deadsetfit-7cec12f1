@@ -50,12 +50,27 @@
          or not Inter has arrived. An earlier version asked for Impact, which
          iOS does not ship; the stack below ends in the platform sans, so there
          is always a real face to fall back to. */
+      html,
+      body,
+      #root {
+        min-height: 100%;
+        background: #080808;
+      }
+      body {
+        margin: 0;
+      }
       .boot {
-        min-height: 100vh;
-        min-height: 100dvh;
+        position: fixed;
+        inset: 0;
+        z-index: 2147483000;
         display: grid;
         place-items: center;
-        background: radial-gradient(120% 90% at 50% 0%, #1a0b0b 0%, #0a0a0a 55%);
+        min-height: 100vh;
+        min-height: 100dvh;
+        overflow: hidden;
+        background:
+          radial-gradient(60% 42% at 50% 46%, rgba(225, 6, 0, 0.12), transparent 72%),
+          radial-gradient(120% 90% at 50% 0%, #180a0a 0%, #080808 55%);
         color: #f5f5f0;
         font-family:
           Inter,
@@ -64,6 +79,63 @@
           sans-serif;
         padding: 24px;
         text-align: center;
+        box-sizing: border-box;
+        opacity: 1;
+        transform: scale(1);
+        transition:
+          opacity 0.42s ease,
+          transform 0.42s cubic-bezier(0.4, 0, 1, 1),
+          visibility 0s linear 0.42s;
+      }
+      .boot::before {
+        content: "";
+        position: absolute;
+        inset: -20%;
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+        background-size: 34px 34px;
+        transform: perspective(500px) rotateX(62deg) translateY(24%);
+        -webkit-mask-image: linear-gradient(to bottom, transparent 8%, black 52%, transparent 88%);
+        mask-image: linear-gradient(to bottom, transparent 8%, black 52%, transparent 88%);
+        pointer-events: none;
+      }
+      .boot::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        bottom: -16vh;
+        width: min(88vw, 430px);
+        aspect-ratio: 1;
+        border: 1px solid rgba(225, 6, 0, 0.14);
+        border-radius: 50%;
+        box-shadow:
+          0 0 0 34px rgba(225, 6, 0, 0.025),
+          0 0 0 68px rgba(225, 6, 0, 0.018);
+        transform: translateX(-50%);
+        pointer-events: none;
+      }
+      .boot--finished {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transform: scale(1.018);
+      }
+      .boot-shell {
+        position: relative;
+        z-index: 1;
+        width: min(100%, 360px);
+      }
+      .boot-kicker {
+        margin: 0 0 18px;
+        color: #e10600;
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: 0.34em;
+        text-indent: 0.34em;
+        text-transform: uppercase;
+        opacity: 0;
+        animation: boot-rise 0.55s ease-out 0.28s forwards;
       }
       /* The wordmark is drawn as live text rather than a bitmap: it stays sharp
          on every display, animates per-half, and costs no image bytes on the
@@ -128,9 +200,9 @@
         }
       }
       .boot-track {
-        width: 132px;
+        width: 156px;
         height: 2px;
-        margin: 26px auto 0;
+        margin: 30px auto 0;
         overflow: hidden;
         border-radius: 2px;
         background: #262626;
@@ -143,12 +215,47 @@
         animation: boot-sweep 1.25s cubic-bezier(0.45, 0, 0.55, 1) infinite;
       }
       .boot-label {
-        margin: 16px 0 0;
+        margin: 0;
         color: #8a8a8a;
         font-size: 11px;
         font-weight: 800;
         letter-spacing: 0.28em;
         text-transform: uppercase;
+      }
+      .boot-status {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 24px;
+        margin-top: 14px;
+      }
+      .boot-status-dot {
+        width: 5px;
+        height: 5px;
+        flex: 0 0 auto;
+        border-radius: 50%;
+        background: #e10600;
+        box-shadow: 0 0 12px rgba(225, 6, 0, 0.8);
+        animation: boot-dot 1.25s ease-in-out infinite;
+      }
+      .boot-retry {
+        display: none;
+        min-height: 44px;
+        margin: 18px auto 0;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        color: #f5f5f0;
+        padding: 0 20px;
+        font: inherit;
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+      .boot--stalled .boot-retry {
+        display: block;
       }
       @keyframes boot-breathe {
         0%,
@@ -169,18 +276,32 @@
           transform: translateX(340%);
         }
       }
+      @keyframes boot-dot {
+        0%,
+        100% {
+          opacity: 0.45;
+          transform: scale(0.85);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1.15);
+        }
+      }
       /* Respect a stated preference for stillness: motion sickness and
          vestibular disorders are not edge cases. */
       @media (prefers-reduced-motion: reduce) {
         .boot-mark,
         .boot-mark span,
+        .boot-kicker,
         .boot-tagline,
-        .boot-bar {
+        .boot-bar,
+        .boot-status-dot {
           animation: none;
         }
         /* Without the entrance animation these would stay at opacity 0 and the
            logo would never appear at all. */
         .boot-mark span,
+        .boot-kicker,
         .boot-tagline {
           opacity: 1;
           transform: none;
@@ -203,18 +324,40 @@
     </script>
   </head>
   <body>
-    <div id="root">
-      <main class="boot">
-        <div>
-          <div class="boot-mark" role="img" aria-label="DEADSET">
-            <span class="boot-dead">DEAD</span><span class="boot-set">SET</span>
-          </div>
-          <p class="boot-tagline">Forge your body</p>
-          <div class="boot-track"><div class="boot-bar"></div></div>
-          <p class="boot-label">Loading your training</p>
+    <div id="root"></div>
+    <main id="deadset-boot-screen" class="boot" role="status" aria-live="polite">
+      <div class="boot-shell">
+        <p class="boot-kicker">Your training system</p>
+        <div class="boot-mark" role="img" aria-label="DEADSET">
+          <span class="boot-dead">DEAD</span><span class="boot-set">SET</span>
         </div>
-      </main>
-    </div>
+        <p class="boot-tagline">Forge your body</p>
+        <div class="boot-track"><div class="boot-bar"></div></div>
+        <div class="boot-status">
+          <span class="boot-status-dot" aria-hidden="true"></span>
+          <p id="deadset-boot-label" class="boot-label">Preparing your training</p>
+        </div>
+        <button class="boot-retry" type="button" onclick="window.location.reload()">
+          Retry safely
+        </button>
+      </div>
+    </main>
+    <script>
+      // Progress messaging never dismisses the launch layer. It only explains
+      // a slow account restore and offers recovery if readiness never arrives.
+      (function () {
+        var screen = document.getElementById("deadset-boot-screen");
+        var label = document.getElementById("deadset-boot-label");
+        setTimeout(function () {
+          if (screen && screen.isConnected && label) label.textContent = "Syncing your training";
+        }, 3200);
+        setTimeout(function () {
+          if (!screen || !screen.isConnected || !label) return;
+          screen.classList.add("boot--stalled");
+          label.textContent = "Still getting things ready";
+        }, 11000);
+      })();
+    </script>
     <script>
       // Boot watchdog: if the entry module or the app stylesheet never load
       // (e.g. a poisoned immutable cache entry after a deploy), re-fetch them
@@ -233,7 +376,8 @@
           } catch (e) {
             /* diagnostic only */
           }
-          var root = document.getElementById("root");
+          var root =
+            document.getElementById("deadset-boot-screen") || document.getElementById("root");
           if (!root) return;
           root.innerHTML =
             '<main style="min-height:100vh;display:grid;place-items:center;background:#0a0a0a;color:#f5f5f0;font-family:Inter,system-ui,sans-serif;padding:24px;text-align:center">' +

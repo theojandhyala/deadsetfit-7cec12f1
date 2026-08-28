@@ -36,6 +36,7 @@ import { FirstWeekActivationNudge } from "../components/FirstWeekActivationNudge
 import { FeedbackPulse } from "../components/FeedbackPulse";
 import { isNativeIos } from "../lib/platform";
 import { WhopConsentBanner } from "../components/WhopConsent";
+import { finishAppBoot } from "../lib/app-boot";
 
 function NotFoundComponent() {
   return (
@@ -207,6 +208,10 @@ function RootComponent() {
     if (!isAuthRoute) captureAttribution();
     capturePendingCrew();
   }, [isAuthRoute]);
+
+  useEffect(() => {
+    if (!nativeIos && isPublicWebsiteRoute) finishAppBoot();
+  }, [isPublicWebsiteRoute, nativeIos]);
 
   if (!nativeIos && !setupPreview) {
     return (

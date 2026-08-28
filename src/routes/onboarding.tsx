@@ -45,6 +45,7 @@ import {
 import { hapticFailure, hapticSaved, hapticSelection } from "@/lib/haptics";
 import { deriveLiveSetupBlueprint } from "@/lib/setup-blueprint";
 import { normaliseDecimalInput } from "@/lib/programme-weight-setup";
+import { finishAppBoot } from "@/lib/app-boot";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "DEADSET — Onboarding" }] }),
@@ -131,6 +132,10 @@ function Onboarding() {
   const getProfile = getMyProfile;
   const ORDER = useMemo(() => onboardingOrder(mode) as Step[], [mode]);
   const step = ORDER[idx];
+
+  useEffect(() => {
+    if (userId) finishAppBoot();
+  }, [userId]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
