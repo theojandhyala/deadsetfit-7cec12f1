@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import {
@@ -25,6 +25,7 @@ import {
   MoreVertical,
   Flag,
   Ban,
+  X,
 } from "lucide-react";
 import { restoreSupabaseSession, supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/account-restore";
@@ -46,13 +47,17 @@ import {
   updateMyProfile,
   searchAthletes,
   getSuggestedAthletes,
-  toggleFollow,
-  getMyFollowStats,
+  getFriendConnections,
+  updateFriendship,
   updateMyLocation,
   getMyLocation,
   getNearbyAthletes,
+  type FriendAction,
+  type FriendConnections,
+  type FriendStatus,
   type FeedScope,
 } from "@/lib/social.functions";
+import { hapticFailure, hapticPlanUpdated, hapticSelection } from "@/lib/haptics";
 import { RankShareCard } from "@/components/RankShareCard";
 import { toast } from "sonner";
 import { useUnit } from "@/hooks/useUnit";
@@ -1042,7 +1047,7 @@ function Invite() {
             </p>
           </>
         ) : (
-          <p className="text-sm text-[#8a8a8a]">Free tier. Earn Pro by inviting mates.</p>
+          <p className="text-sm text-[#8a8a8a]">Invite mates to earn bonus membership time.</p>
         )}
       </div>
 
@@ -1162,6 +1167,7 @@ function Invite() {
 // ============ FRIENDS ============
 type SearchHit = Awaited<ReturnType<typeof searchAthletes>>[number];
 type Suggested = Awaited<ReturnType<typeof getSuggestedAthletes>>[number];
+type FriendView = "CREW" | "REQUESTS" | "DISCOVER";
 
 const COUNTRY_ALIASES: Record<string, string> = {
   "united kingdom of great britain and northern ireland": "United Kingdom",
@@ -1196,8 +1202,8 @@ function normalizeCountry(raw: string | null | undefined): string {
 function Friends() {
   const _search = searchAthletes;
   const _suggest = getSuggestedAthletes;
-  const _toggle = toggleFollow;
-  const _stats = getMyFollowStats;
+  const _connections = getFriendConnections;
+  const _updateFriendship = updateFriendship;
   const _nearby = getNearbyAthletes;
   const _getLoc = getMyLocation;
   const _setLoc = updateMyLocation;
@@ -1205,13 +1211,18 @@ function Friends() {
   const [q, setQ] = useState("");
   const [results, setResults] = useState<SearchHit[] | null>(null);
   const [suggested, setSuggested] = useState<Suggested[] | null>(null);
-  const [stats, setStats] = useState<{ following: number; followers: number } | null>(null);
+  const [connections, setConnections] = useState<FriendConnections | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [nearby, setNearby] = useState<Awaited<ReturnType<typeof getNearbyAthletes>> | null>(null);
   const [myLoc, setMyLoc] = useState<{ city: string | null; country: string | null } | null>(null);
+  const [friendsError, setFriendsError] = useState<string | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchBusy, setSearchBusy] = useState(false);
   const [locBusy, setLocBusy] = useState(false);
   const [cityInput, setCityInput] = useState("");
   const [countryInput, setCountryInput] = useState("");
+  const [view, setView] = useState<FriendView>("CREW");
   // These DOM-owned fields are also set programmatically (initial load, GPS,
   // normalize-on-save), so their .value must be synced imperatively — a
   // defaultValue alone only applies at mount.
@@ -1219,15 +1230,20 @@ function Friends() {
   const countryRef = useRef<HTMLInputElement>(null);
 
   const loadFriendsHome = useCallback(() => {
+    setFriendsError(null);
+    setLocationError(null);
     _suggest()
       .then(setSuggested)
-      .catch(() => {
+      .catch((error) => {
         // Failed suggestions render as an empty list, not an endless spinner.
         setSuggested((cur) => cur ?? []);
+        setFriendsError(error instanceof Error ? error.message : "Couldn't load athletes");
       });
-    _stats()
-      .then(setStats)
-      .catch(() => {});
+    _connections()
+      .then(setConnections)
+      .catch((error) => {
+        setFriendsError(error instanceof Error ? error.message : "Couldn't load your friends");
+      });
     _getLoc()
       .then((l) => {
         const c = normalizeCountry(l.country);
@@ -1239,11 +1255,15 @@ function Friends() {
         if (cityRef.current) cityRef.current.value = city;
         if (countryRef.current) countryRef.current.value = country;
       })
-      .catch(() => {});
+      .catch((error) => {
+        setLocationError(error instanceof Error ? error.message : "Couldn't load your city");
+      });
     _nearby()
       .then(setNearby)
-      .catch(() => {});
-  }, [_getLoc, _nearby, _stats, _suggest]);
+      .catch((error) => {
+        setLocationError(error instanceof Error ? error.message : "Couldn't load nearby athletes");
+      });
+  }, [_connections, _getLoc, _nearby, _suggest]);
 
   useEffect(() => {
     loadFriendsHome();
@@ -1253,58 +1273,98 @@ function Friends() {
     return _search({ data: { q: q.trim() } });
   }, [_search, q]);
 
+  const retrySearch = useCallback(async () => {
+    setSearchBusy(true);
+    setSearchError(null);
+    try {
+      setResults(await runSearch());
+    } catch (error) {
+      setSearchError(error instanceof Error ? error.message : "Search failed");
+    } finally {
+      setSearchBusy(false);
+    }
+  }, [runSearch]);
+
   useEffect(() => {
     if (q.trim().length < 2) {
       setResults(null);
+      setSearchError(null);
+      setSearchBusy(false);
       return;
     }
+    let cancelled = false;
+    setSearchBusy(true);
+    setSearchError(null);
     const id = setTimeout(async () => {
       try {
-        setResults(await runSearch());
+        const nextResults = await runSearch();
+        if (!cancelled) setResults(nextResults);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Search failed");
+        if (!cancelled) {
+          setResults(null);
+          setSearchError(e instanceof Error ? e.message : "Search failed");
+        }
+      } finally {
+        if (!cancelled) setSearchBusy(false);
       }
     }, 250);
-    return () => clearTimeout(id);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
   }, [q, runSearch]);
 
-  async function follow(id: string, currentlyFollowing: boolean) {
+  const statusById = useMemo(() => {
+    const statuses = new Map<string, FriendStatus>();
+    connections?.friends.forEach((person) => statuses.set(person.id, "FRIEND"));
+    connections?.incoming.forEach((person) => statuses.set(person.id, "INCOMING"));
+    connections?.outgoing.forEach((person) => statuses.set(person.id, "OUTGOING"));
+    return statuses;
+  }, [connections]);
+
+  async function changeConnection(id: string, status: FriendStatus, forcedAction?: FriendAction) {
+    const action =
+      forcedAction ??
+      (status === "NONE"
+        ? "send"
+        : status === "INCOMING"
+          ? "accept"
+          : status === "OUTGOING"
+            ? "cancel"
+            : "remove");
+    if (action === "remove") {
+      const confirmed = await askConfirm({
+        title: "Remove this friend?",
+        message: "Their PRs and Strength Map will no longer appear in your friends comparisons.",
+        confirmLabel: "Remove friend",
+        danger: true,
+      });
+      if (!confirmed) return;
+    }
     setBusy(id);
-    setResults(
-      (arr) =>
-        arr?.map((r) => (r.id === id ? { ...r, following: !currentlyFollowing } : r)) ?? null,
-    );
-    setSuggested((arr) => arr?.filter((r) => r.id !== id) ?? null);
-    setNearby((n) =>
-      n
-        ? {
-            ...n,
-            athletes: n.athletes.map((a) =>
-              a.id === id ? { ...a, following: !currentlyFollowing } : a,
-            ),
-          }
-        : n,
-    );
     try {
-      await _toggle({ data: { userId: id } });
-      setStats((s) => (s ? { ...s, following: s.following + (currentlyFollowing ? -1 : 1) } : s));
+      const result = await _updateFriendship({ data: { userId: id, action } });
+      hapticPlanUpdated();
+      toast.success(
+        result.status === "FRIEND"
+          ? "Friend added — open their profile to compare"
+          : result.status === "OUTGOING"
+            ? "Friend request sent"
+            : action === "decline"
+              ? "Request declined"
+              : action === "cancel"
+                ? "Request cancelled"
+                : "Friend removed",
+      );
+      setConnections(await _connections());
+      setSuggested((current) =>
+        result.status === "OUTGOING" || result.status === "FRIEND"
+          ? (current?.filter((person) => person.id !== id) ?? null)
+          : current,
+      );
     } catch (e) {
+      hapticFailure();
       toast.error(e instanceof Error ? e.message : "Failed");
-      // Revert the optimistic flip — the server recorded nothing.
-      setResults(
-        (arr) =>
-          arr?.map((r) => (r.id === id ? { ...r, following: currentlyFollowing } : r)) ?? null,
-      );
-      setNearby((n) =>
-        n
-          ? {
-              ...n,
-              athletes: n.athletes.map((a) =>
-                a.id === id ? { ...a, following: currentlyFollowing } : a,
-              ),
-            }
-          : n,
-      );
     } finally {
       setBusy(null);
     }
@@ -1316,6 +1376,7 @@ function Friends() {
       return;
     }
     setLocBusy(true);
+    setLocationError(null);
     try {
       const pos = await new Promise<GeolocationPosition>((res, rej) =>
         navigator.geolocation.getCurrentPosition(res, rej, {
@@ -1331,7 +1392,13 @@ function Friends() {
       const r = await fetch(
         `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`,
       );
-      const j = await r.json();
+      if (!r.ok) throw new Error("City lookup is temporarily unavailable. Type your city below.");
+      const j = (await r.json()) as {
+        city?: string;
+        locality?: string;
+        principalSubdivision?: string;
+        countryName?: string;
+      };
       const city = j.city || j.locality || j.principalSubdivision || "";
       const country = normalizeCountry(j.countryName) || j.countryName || "";
       if (!city || !country) throw new Error("Couldn't resolve city");
@@ -1340,11 +1407,24 @@ function Friends() {
       if (cityRef.current) cityRef.current.value = city;
       if (countryRef.current) countryRef.current.value = country;
       await _setLoc({ data: { city, country, region: j.principalSubdivision || null } });
+      hapticPlanUpdated();
       toast.success(`Set to ${city}, ${country}`);
       setMyLoc({ city, country });
       setNearby(await _nearby());
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Location denied");
+      hapticFailure();
+      const geolocationCode =
+        typeof e === "object" && e !== null && "code" in e ? Number(e.code) : null;
+      const message =
+        geolocationCode !== null
+          ? geolocationCode === 1
+            ? "Location access is off. Allow it in iPhone Settings, or type your city instead."
+            : "Your location couldn't be read. Type your city instead."
+          : e instanceof Error
+            ? e.message
+            : "Location couldn't be read. Type your city instead.";
+      setLocationError(message);
+      toast.error(message);
     } finally {
       setLocBusy(false);
     }
@@ -1356,6 +1436,7 @@ function Friends() {
       return;
     }
     setLocBusy(true);
+    setLocationError(null);
     try {
       const city = cityInput.trim();
       const country = normalizeCountry(countryInput) || countryInput.trim();
@@ -1365,10 +1446,14 @@ function Friends() {
         data: { city, country, region: null },
       });
       setMyLoc({ city, country });
+      hapticPlanUpdated();
       toast.success("Saved");
       setNearby(await _nearby());
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed");
+      hapticFailure();
+      const message = e instanceof Error ? e.message : "Couldn't save your city";
+      setLocationError(message);
+      toast.error(message);
     } finally {
       setLocBusy(false);
     }
@@ -1410,142 +1495,327 @@ function Friends() {
         </div>
       </div>
 
-      {/* stats */}
+      {/* Friendship stats */}
       <div className="grid grid-cols-2 gap-2 mb-4">
         <div className="bg-grit-card border border-grit rounded-2xl p-3 text-center">
           <p className="display font-extrabold text-grit text-2xl leading-none">
-            {stats?.following ?? "—"}
+            {connections?.friends.length ?? "—"}
           </p>
-          <p className="label-cap text-[10px] text-[#8a8a8a] mt-1">Following</p>
+          <p className="label-cap text-[10px] text-[#8a8a8a] mt-1">Friends</p>
         </div>
         <div className="bg-grit-card border border-grit rounded-2xl p-3 text-center">
           <p className="display font-extrabold text-grit text-2xl leading-none">
-            {stats?.followers ?? "—"}
+            {connections?.incoming.length ?? "—"}
           </p>
-          <p className="label-cap text-[10px] text-[#8a8a8a] mt-1">Followers</p>
+          <p className="label-cap text-[10px] text-[#8a8a8a] mt-1">Requests</p>
         </div>
       </div>
 
-      {/* Location card */}
-      <div className="bg-grit-card border border-grit rounded-2xl p-4 mb-4">
-        <p className="label-cap mb-2 flex items-center gap-2">
-          <MapPin size={12} className="text-accent-red" /> Your city
-        </p>
-        {myLoc?.city ? (
-          <p className="text-sm text-grit mb-3 break-words">
-            <span className="font-bold">{myLoc.city}</span>
-            {myLoc.country ? `, ${myLoc.country}` : ""}
+      <div
+        className="mb-4 grid grid-cols-3 gap-1 rounded-2xl border border-white/10 bg-black/30 p-1"
+        role="tablist"
+        aria-label="Friend sections"
+      >
+        {(
+          [
+            ["CREW", "Crew", connections?.friends.length ?? 0, Users],
+            ["REQUESTS", "Requests", connections?.incoming.length ?? 0, UserPlus],
+            ["DISCOVER", "Discover", null, Search],
+          ] as const
+        ).map(([id, label, count, Icon]) => {
+          const active = view === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => {
+                hapticSelection();
+                setView(id);
+              }}
+              className={`relative flex min-h-12 items-center justify-center gap-1.5 rounded-xl px-2 text-[9px] font-black uppercase tracking-[0.09em] transition-colors ${
+                active ? "bg-accent-red text-white shadow-lg" : "text-grit-dim"
+              }`}
+            >
+              <Icon size={13} /> {label}
+              {count ? (
+                <span
+                  className={`grid h-5 min-w-5 place-items-center rounded-full px-1 text-[8px] ${
+                    active ? "bg-white text-accent-red" : "bg-accent-red text-white"
+                  }`}
+                >
+                  {count}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+
+      {friendsError && (
+        <div
+          role="alert"
+          className="mb-4 rounded-2xl border border-accent-red/40 bg-accent-red/10 p-3"
+        >
+          <p className="text-xs font-bold text-grit">Friends couldn't refresh</p>
+          <p className="mt-1 text-[10px] leading-relaxed text-grit-dim">{friendsError}</p>
+          <button type="button" onClick={loadFriendsHome} className="btn-ghost mt-3 min-h-10 px-4 text-[10px]">
+            Try again
+          </button>
+        </div>
+      )}
+
+      {view === "REQUESTS" && connections && connections.incoming.length > 0 && (
+        <div className="mb-4">
+          <p className="label-cap mb-2 flex items-center gap-1.5 text-accent-red">
+            <UserPlus size={11} /> Friend requests
           </p>
-        ) : (
-          <p className="text-xs text-[#8a8a8a] mb-3">
-            Add your city to find lifters near you. City only — never exact location.
+          {connections.incoming.map((person) => (
+            <AthleteRow
+              key={person.id}
+              a={person}
+              status="INCOMING"
+              busy={busy === person.id}
+              onToggle={() => changeConnection(person.id, "INCOMING")}
+              onDecline={() => changeConnection(person.id, "INCOMING", "decline")}
+            />
+          ))}
+        </div>
+      )}
+
+      {view === "REQUESTS" && connections && connections.outgoing.length > 0 && (
+        <div className="mb-4">
+          <p className="label-cap mb-2 flex items-center gap-1.5 text-grit-dim">
+            <Send size={11} /> Sent requests
           </p>
+          {connections.outgoing.map((person) => (
+            <AthleteRow
+              key={person.id}
+              a={person}
+              status="OUTGOING"
+              busy={busy === person.id}
+              onToggle={() => changeConnection(person.id, "OUTGOING")}
+            />
+          ))}
+        </div>
+      )}
+
+      {view === "REQUESTS" &&
+        connections &&
+        connections.incoming.length === 0 &&
+        connections.outgoing.length === 0 && (
+          <div className="mb-4 rounded-2xl border border-white/10 bg-grit-card p-6 text-center">
+            <UserCheck size={24} className="mx-auto text-accent-red" />
+            <p className="display mt-3 text-xl font-black uppercase text-grit">All caught up</p>
+            <p className="mt-1 text-xs leading-relaxed text-grit-dim">
+              Incoming requests and requests you have sent will live here.
+            </p>
+            <button
+              type="button"
+              onClick={() => setView("DISCOVER")}
+              className="btn-ghost mt-4 min-h-11 w-full text-[10px]"
+            >
+              Find athletes
+            </button>
+          </div>
         )}
-        <div className="grid grid-cols-1 sm:grid-cols-[1fr_9rem] gap-2 mb-2">
-          <input
-            ref={cityRef}
-            defaultValue={cityInput}
-            onChange={(e) => setCityInput(e.target.value)}
-            placeholder="City"
-            className="input-grit min-w-0"
-            maxLength={80}
-          />
-          <input
-            ref={countryRef}
-            defaultValue={countryInput}
-            onChange={(e) => setCountryInput(e.target.value)}
-            placeholder="Country"
-            className="input-grit min-w-0"
-            maxLength={80}
-          />
-        </div>
-        <div className="grid grid-cols-[1fr_auto] gap-2">
-          <button onClick={saveCity} disabled={locBusy} className="btn-grit flex-1 py-2 text-xs">
-            {locBusy ? <Loader2 size={12} className="animate-spin" /> : "Save"}
-          </button>
-          <button
-            onClick={useGPS}
-            disabled={locBusy}
-            className="btn-ghost px-3 py-2 text-xs flex items-center gap-1.5"
-          >
-            <MapPin size={12} /> Use GPS
-          </button>
-        </div>
-      </div>
 
-      {/* Nearby */}
-      {nearby?.myCity && (
-        <>
-          <p className="label-cap text-[#8a8a8a] mb-2 flex items-center gap-1">
-            <MapPin size={10} /> In {nearby.myCity}
+      {view === "CREW" && connections && connections.friends.length > 0 && (
+        <div className="mb-4">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <p className="label-cap flex items-center gap-1.5 text-grit">
+              <Users size={11} className="text-accent-red" /> Your friends
+            </p>
+            <span className="label-cap text-[7px] text-grit-dim">TAP TO COMPARE</span>
+          </div>
+          {connections.friends.map((person) => (
+            <AthleteRow
+              key={person.id}
+              a={person}
+              status="FRIEND"
+              busy={busy === person.id}
+              onToggle={() => changeConnection(person.id, "FRIEND")}
+            />
+          ))}
+        </div>
+      )}
+
+      {view === "CREW" && connections?.friends.length === 0 && (
+        <div className="mb-4 rounded-2xl border border-white/10 bg-grit-card p-6 text-center">
+          <Users size={25} className="mx-auto text-accent-red" />
+          <p className="display mt-3 text-xl font-black uppercase text-grit">
+            Build your first crew
           </p>
-          {nearby.athletes.length === 0 ? (
-            <p className="bg-grit-card border border-grit p-4 text-xs text-[#8a8a8a] text-center mb-4">
-              No one else here yet — invite a gym mate.
-            </p>
-          ) : (
-            <div className="mb-4">
-              {nearby.athletes.map((a) => (
-                <AthleteRow
-                  key={a.id}
-                  a={a}
-                  busy={busy === a.id}
-                  onToggle={() => follow(a.id, a.following)}
-                />
-              ))}
-            </div>
-          )}
-        </>
+          <p className="mt-1 text-xs leading-relaxed text-grit-dim">
+            Add a gym mate to unlock side-by-side Strength Maps, PR comparisons and challenges.
+          </p>
+          <button
+            type="button"
+            onClick={() => setView("DISCOVER")}
+            className="btn-grit mt-4 min-h-11 w-full text-[10px]"
+          >
+            Discover athletes
+          </button>
+        </div>
       )}
 
-      {/* search */}
-      <div className="bg-grit-card border border-grit p-3 mb-4 flex items-center gap-2">
-        <Search size={16} className="text-[#8a8a8a]" />
-        <input
-          defaultValue={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search by name or @username"
-          className="input-grit flex-1 border-0 bg-transparent"
-          maxLength={40}
-        />
-      </div>
-
-      {results && results.length === 0 && (
-        <p className="text-center text-sm text-[#8a8a8a] py-6">No athletes match "{q}".</p>
-      )}
-
-      {results &&
-        results.map((r) => (
-          <AthleteRow
-            key={r.id}
-            a={r}
-            busy={busy === r.id}
-            onToggle={() => follow(r.id, r.following)}
-          />
-        ))}
-
-      {!results && (
+      {view === "DISCOVER" && (
         <>
-          <p className="label-cap text-[#8a8a8a] mb-2 mt-2">Suggested rivals</p>
-          {!suggested && (
-            <div className="flex justify-center py-6">
-              <Loader2 className="animate-spin text-accent-red" />
+          {/* Location card */}
+          <div className="bg-grit-card border border-grit rounded-2xl p-4 mb-4">
+            <p className="label-cap mb-2 flex items-center gap-2">
+              <MapPin size={12} className="text-accent-red" /> Your city
+            </p>
+            {myLoc?.city ? (
+              <p className="text-sm text-grit mb-3 break-words">
+                <span className="font-bold">{myLoc.city}</span>
+                {myLoc.country ? `, ${myLoc.country}` : ""}
+              </p>
+            ) : (
+              <p className="text-xs text-[#8a8a8a] mb-3">
+                Add your city to find lifters near you. City only — never exact location.
+              </p>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_9rem] gap-2 mb-2">
+              <input
+                ref={cityRef}
+                defaultValue={cityInput}
+                onChange={(e) => setCityInput(e.target.value)}
+                placeholder="City"
+                className="input-grit min-w-0"
+                maxLength={80}
+              />
+              <input
+                ref={countryRef}
+                defaultValue={countryInput}
+                onChange={(e) => setCountryInput(e.target.value)}
+                placeholder="Country"
+                className="input-grit min-w-0"
+                maxLength={80}
+              />
+            </div>
+            <div className="grid grid-cols-[1fr_auto] gap-2">
+              <button
+                onClick={saveCity}
+                disabled={locBusy}
+                className="btn-grit flex-1 py-2 text-xs"
+              >
+                {locBusy ? <Loader2 size={12} className="animate-spin" /> : "Save"}
+              </button>
+              <button
+                onClick={useGPS}
+                disabled={locBusy}
+                className="btn-ghost px-3 py-2 text-xs flex items-center gap-1.5"
+              >
+                <MapPin size={12} /> Use GPS
+              </button>
+            </div>
+            {locationError && (
+              <p role="alert" className="mt-2 text-[10px] leading-relaxed text-accent-red">
+                {locationError}
+              </p>
+            )}
+          </div>
+
+          {/* Nearby */}
+          {nearby?.myCity && (
+            <>
+              <p className="label-cap text-[#8a8a8a] mb-2 flex items-center gap-1">
+                <MapPin size={10} /> In {nearby.myCity}
+              </p>
+              {nearby.athletes.length === 0 ? (
+                <p className="bg-grit-card border border-grit p-4 text-xs text-[#8a8a8a] text-center mb-4">
+                  No one else here yet — invite a gym mate.
+                </p>
+              ) : (
+                <div className="mb-4">
+                  {nearby.athletes.map((a) => (
+                    <AthleteRow
+                      key={a.id}
+                      a={a}
+                      status={statusById.get(a.id) ?? (a.following ? "OUTGOING" : "NONE")}
+                      busy={busy === a.id}
+                      onToggle={() =>
+                        changeConnection(
+                          a.id,
+                          statusById.get(a.id) ?? (a.following ? "OUTGOING" : "NONE"),
+                        )
+                      }
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* search */}
+          <div className="bg-grit-card border border-grit p-3 mb-2 flex items-center gap-2">
+            <Search size={16} className="text-[#8a8a8a]" />
+            <input
+              defaultValue={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search by name or @username"
+              className="input-grit flex-1 border-0 bg-transparent"
+              maxLength={80}
+            />
+            {searchBusy && <Loader2 size={15} className="shrink-0 animate-spin text-accent-red" />}
+          </div>
+
+          {searchError && (
+            <div role="alert" className="mb-4 rounded-xl border border-accent-red/40 bg-accent-red/10 p-3">
+              <p className="text-xs text-grit">Search couldn't load. Check your connection and try again.</p>
+              <button type="button" onClick={() => void retrySearch()} className="mt-2 text-[10px] font-black uppercase tracking-wider text-accent-red">
+                Retry search
+              </button>
             </div>
           )}
-          {suggested && suggested.length === 0 && (
-            <p className="text-sm text-[#8a8a8a] text-center py-4">
-              No suggestions yet — invite mates to get started.
-            </p>
+
+          {results && results.length === 0 && (
+            <p className="text-center text-sm text-[#8a8a8a] py-6">No athletes match "{q}".</p>
           )}
-          {suggested &&
-            suggested.map((r) => (
+
+          {results &&
+            results.map((r) => (
               <AthleteRow
                 key={r.id}
-                a={{ ...r, following: false }}
+                a={r}
+                status={statusById.get(r.id) ?? (r.following ? "OUTGOING" : "NONE")}
                 busy={busy === r.id}
-                onToggle={() => follow(r.id, false)}
+                onToggle={() =>
+                  changeConnection(
+                    r.id,
+                    statusById.get(r.id) ?? (r.following ? "OUTGOING" : "NONE"),
+                  )
+                }
               />
             ))}
+
+          {!results && (
+            <>
+              <p className="label-cap text-[#8a8a8a] mb-2 mt-2">Suggested rivals</p>
+              {!suggested && (
+                <div className="flex justify-center py-6">
+                  <Loader2 className="animate-spin text-accent-red" />
+                </div>
+              )}
+              {suggested && suggested.length === 0 && (
+                <p className="text-sm text-[#8a8a8a] text-center py-4">
+                  No suggestions yet — invite mates to get started.
+                </p>
+              )}
+              {suggested &&
+                suggested.map((r) => (
+                  <AthleteRow
+                    key={r.id}
+                    a={{ ...r, following: false }}
+                    status={statusById.get(r.id) ?? "NONE"}
+                    busy={busy === r.id}
+                    onToggle={() => changeConnection(r.id, statusById.get(r.id) ?? "NONE")}
+                  />
+                ))}
+            </>
+          )}
         </>
       )}
     </div>
@@ -1554,8 +1824,10 @@ function Friends() {
 
 function AthleteRow({
   a,
+  status,
   busy,
   onToggle,
+  onDecline,
 }: {
   a: {
     id: string;
@@ -1563,20 +1835,29 @@ function AthleteRow({
     display_name: string | null;
     avatar_url: string | null;
     level: string | null;
-    following: boolean;
+    following?: boolean;
     grit_points?: number | null;
+    bio?: string | null;
+    city?: string | null;
+    country?: string | null;
+    public_stats?: Record<string, unknown> | null;
   };
+  status: FriendStatus;
   busy: boolean;
   onToggle: () => void;
+  onDecline?: () => void;
 }) {
+  const overall = Number(a.public_stats?.overall) || 0;
+  const streak = Number(a.public_stats?.streak) || 0;
+  const location = [a.city, a.country].filter(Boolean).join(", ");
   return (
-    <div className="bg-grit-card border border-grit p-3 mb-2 flex items-center gap-3">
+    <div className="mb-2 flex items-center gap-3 rounded-2xl border border-grit bg-grit-card p-3 shadow-[0_14px_32px_rgba(0,0,0,0.18)]">
       <Link
         to="/athlete/$id"
         params={{ id: a.id }}
         className="flex items-center gap-3 flex-1 min-w-0"
       >
-        <div className="w-10 h-10 bg-[#1a1a1a] border border-grit flex items-center justify-center display font-extrabold text-grit overflow-hidden">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-grit bg-[#1a1a1a] display font-extrabold text-grit">
           {a.avatar_url ? (
             <img src={a.avatar_url} alt="" className="w-full h-full object-cover" />
           ) : (
@@ -1590,31 +1871,68 @@ function AthleteRow({
           <p className="text-[10px] text-[#8a8a8a] label-cap truncate">
             {a.username ? `@${a.username} · ` : ""}
             {a.level}
-            {a.grit_points ? ` · ${a.grit_points} DS` : ""}
           </p>
+          <div className="mt-1 flex items-center gap-2 overflow-hidden text-[9px] font-bold text-grit-dim">
+            {overall > 0 && <span className="text-accent-red">{overall} OVR</span>}
+            {streak > 0 && (
+              <span className="flex items-center gap-0.5">
+                <Flame size={9} className="text-accent-red" /> {streak}d
+              </span>
+            )}
+            {location && (
+              <span className="flex min-w-0 items-center gap-0.5 truncate">
+                <MapPin size={9} /> {location}
+              </span>
+            )}
+          </div>
         </div>
       </Link>
-      <button
-        onClick={onToggle}
-        disabled={busy}
-        className={
-          a.following
-            ? "btn-ghost px-3 py-2 text-xs flex items-center gap-1.5"
-            : "btn-grit px-3 py-2 text-xs flex items-center gap-1.5"
-        }
-      >
-        {busy ? (
-          <Loader2 size={12} className="animate-spin" />
-        ) : a.following ? (
-          <>
-            <UserCheck size={12} /> FOLLOWING
-          </>
-        ) : (
-          <>
-            <UserPlus size={12} /> FOLLOW
-          </>
+      <div className="flex shrink-0 items-center gap-1">
+        {status === "INCOMING" && onDecline && (
+          <button
+            type="button"
+            onClick={() => {
+              hapticSelection();
+              onDecline();
+            }}
+            disabled={busy}
+            className="grid h-10 w-10 place-items-center rounded-lg border border-grit text-grit-dim press"
+            aria-label="Decline friend request"
+          >
+            <X size={13} />
+          </button>
         )}
-      </button>
+        <button
+          onClick={() => {
+            hapticSelection();
+            onToggle();
+          }}
+          disabled={busy}
+          className={`px-3 py-2 text-xs flex min-h-10 items-center gap-1.5 ${
+            status === "NONE" || status === "INCOMING" ? "btn-grit" : "btn-ghost"
+          }`}
+        >
+          {busy ? (
+            <Loader2 size={12} className="animate-spin" />
+          ) : status === "FRIEND" ? (
+            <>
+              <UserCheck size={12} /> FRIENDS
+            </>
+          ) : status === "INCOMING" ? (
+            <>
+              <UserPlus size={12} /> ACCEPT
+            </>
+          ) : status === "OUTGOING" ? (
+            <>
+              <Check size={12} /> REQUESTED
+            </>
+          ) : (
+            <>
+              <UserPlus size={12} /> ADD
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 }

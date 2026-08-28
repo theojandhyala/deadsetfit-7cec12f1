@@ -30,12 +30,16 @@ struct RootView: View {
                 IdleView()
             }
         }
-        .task { await keepAlive.requestAuthorization() }
-        // Single-parameter onChange: the two-parameter form is watchOS 10, and
-        // this target supports watchOS 9.
-        .onChange(of: connector.displayState.isLive) { live in
-            // Hold the app awake for exactly as long as there is a workout.
-            if live { keepAlive.start() } else { keepAlive.stop() }
+        .task(id: connector.displayState.isLive) {
+            // Ask for Health access only when a live workout needs it. The idle
+            // companion stays useful and uncluttered before the phone starts a
+            // session, and refusing access still degrades quietly.
+            if connector.displayState.isLive {
+                await keepAlive.requestAuthorization()
+                keepAlive.start()
+            } else {
+                keepAlive.stop()
+            }
         }
     }
 }

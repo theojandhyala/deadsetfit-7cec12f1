@@ -13,6 +13,9 @@ type AccountProfile = {
   username?: string | null;
   display_name?: string | null;
   avatar_url?: string | null;
+  bio?: string | null;
+  city?: string | null;
+  country?: string | null;
   public_stats?: {
     prefs?: {
       focusMuscles?: string[];
@@ -73,6 +76,9 @@ export function profileFromAccount(row: AccountProfile | null | undefined): Prof
     username: row.username ?? undefined,
     displayName: row.display_name ?? undefined,
     avatarDataUrl: row.avatar_url ?? undefined,
+    bio: row.bio ?? undefined,
+    city: row.city ?? undefined,
+    country: row.country ?? undefined,
     startingWeightKg: Number(row.weight_kg ?? 75),
     ...restorePrefs(row),
   };

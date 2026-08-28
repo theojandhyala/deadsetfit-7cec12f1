@@ -606,8 +606,7 @@ function ProgramsPage() {
       <p className="label-cap text-grit-dim text-xs mb-2">+ New from template</p>
       {locked && customProgramCount >= 1 && (
         <p className="text-[10px] text-grit-dim mb-2">
-          Free includes 1 custom program — <span className="text-accent-red">Pro</span> unlocks
-          unlimited.
+          Your membership unlocks unlimited custom programmes.
         </p>
       )}
       <ul className="space-y-2">

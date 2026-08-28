@@ -99,7 +99,7 @@ const FEATURE_PITCH: Record<
     title: "Unlimited Custom Programs",
     tagline: "Build every block you'll ever run.",
     bullets: [
-      "Free covers one custom program — Pro removes the cap",
+      "Build, save and switch between unlimited custom programmes",
       "Design, save and switch between full training blocks",
       "Keep old blocks for reference and re-runs",
     ],
@@ -318,7 +318,7 @@ export function PaywallSheet() {
               }}
               className="btn-grit w-full mt-6 py-3.5"
             >
-              View Pro options
+              View membership
             </button>
             <button
               onClick={close}
@@ -332,7 +332,7 @@ export function PaywallSheet() {
             <div className="mt-6 flex items-baseline gap-2 border-l-2 border-pro pl-3">
               <span className="display text-4xl font-black text-grit">{money.monthly}</span>
               <span className="label-cap text-[10px]">/ month</span>
-              <span className="ml-auto label-cap text-[10px]">or {money.yearly}/yr</span>
+              <span className="ml-auto label-cap text-[10px]">7-day trial</span>
             </div>
 
             <button
@@ -342,7 +342,7 @@ export function PaywallSheet() {
               }}
               className="btn-grit w-full mt-4 py-3.5"
             >
-              Go Pro
+              View membership
             </button>
             <button
               onClick={close}

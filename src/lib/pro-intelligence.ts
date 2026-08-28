@@ -9,6 +9,7 @@
 import type { AppState } from "./types";
 import { estimate1RM } from "./calc";
 import { toMuscleGroup, MUSCLE_GROUPS, type MuscleGroup } from "./recovery";
+import { isWorkingSet } from "./set-tracking";
 
 const DAY_MS = 86_400_000;
 
@@ -31,10 +32,18 @@ function volumeByMuscle(
     const at = new Date(s.startedAt).getTime();
     if (!Number.isFinite(at) || at < since) continue;
     for (const ex of s.exercises) {
-      // Warm-ups don't drive growth — count only real working sets. Gate on
-      // reps (not weight) so bodyweight work (push-ups, pull-ups, planks — all
-      // logged at weight 0) still counts toward weekly volume and balance.
-      const working = ex.sets.filter((set) => set.kind !== "warmup" && set.reps > 0).length;
+      // Count genuine work in its own unit. Timed/distance sets intentionally
+      // store reps: 0, so gating every set on reps would erase hangs, carries,
+      // planks and conditioning from muscle-volume guidance.
+      const working = ex.sets.filter(
+        (set) =>
+          isWorkingSet(set) &&
+          (set.mode === "duration"
+            ? (set.seconds ?? 0) > 0
+            : set.mode === "distance"
+              ? (set.meters ?? 0) > 0
+              : set.reps > 0),
+      ).length;
       if (!working) continue;
       const groups = new Set<MuscleGroup>();
       for (const raw of ex.primary_muscles ?? []) {

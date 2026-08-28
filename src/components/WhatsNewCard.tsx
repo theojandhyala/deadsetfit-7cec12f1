@@ -18,7 +18,7 @@ export function WhatsNewCard() {
       <div className="relative overflow-hidden rounded-2xl border border-accent-red/50 bg-grit-card p-4">
         <div className="flex items-start justify-between">
           <p className="label-cap text-[10px] text-accent-red flex items-center gap-1.5">
-            <Sparkles size={12} /> New in 1.1
+            <Sparkles size={12} /> New in 1.2
           </p>
           <button
             type="button"

@@ -14,6 +14,8 @@ import {
   Heart,
   Check,
   Share2,
+  Users,
+  UserPlus,
 } from "lucide-react";
 import { useAppState, flushRemoteState } from "@/lib/storage";
 import { askConfirm, withDeadline } from "@/lib/confirm";
@@ -58,6 +60,8 @@ import { currentMilestone, nextMilestone, milestoneProgress } from "@/lib/streak
 import { emitGritEarned } from "@/lib/grit-events";
 import { saveProfile } from "@/lib/profile.functions";
 import { deleteMyAccount } from "@/lib/account.functions";
+import { finishLocalAccountExit } from "@/lib/account-exit";
+import { hapticFailure, hapticSaved, hapticSelection, hapticUndo } from "@/lib/haptics";
 import { usePro } from "@/hooks/usePro";
 import { isNativeIos } from "@/lib/platform";
 import { FifaCard } from "@/components/FifaCard";
@@ -76,6 +80,11 @@ import {
 } from "@/lib/fifa-stats";
 import { useUnit } from "@/hooks/useUnit";
 import { formatWeight, formatWeightValue, toKg, type WeightUnit } from "@/lib/units";
+import {
+  getFriendConnections,
+  updateMyLocation,
+  type FriendConnections,
+} from "@/lib/social.functions";
 
 export const Route = createFileRoute("/_tabs/profile")({
   head: () => ({ meta: [{ title: "DEADSET — Profile" }] }),
@@ -98,16 +107,21 @@ function ProfilePage() {
   // Edit-form inputs are DOM-owned (defaultValue + ref, read on save) — the
   // controlled value/onChange pattern freezes typing in the iOS WKWebView.
   const usernameRef = useRef<HTMLInputElement>(null);
+  const displayNameRef = useRef<HTMLInputElement>(null);
+  const bioRef = useRef<HTMLTextAreaElement>(null);
+  const cityRef = useRef<HTMLInputElement>(null);
+  const countryRef = useRef<HTMLInputElement>(null);
   const ageRef = useRef<HTMLInputElement>(null);
   const weightRef = useRef<HTMLInputElement>(null);
   const heightRef = useRef<HTMLInputElement>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [session, setSession] = useState<{ userId: string } | null | "loading">("loading");
+  const [social, setSocial] = useState<FriendConnections | null>(null);
   const [editingPR, setEditingPR] = useState<PRDef | null>(null);
   const [showStreakShare, setShowStreakShare] = useState(false);
   const {
     // Identity/badging reflects a real paid subscription, not the blanket
-    // iOS entitlement — a free iOS user shouldn't wear a PRO badge.
+    // iOS entitlement — identity/badging must still reflect a verified membership.
     isPaidPro: isPro,
     status: proStatus,
     currentPeriodEnd,
@@ -150,6 +164,13 @@ function ProfilePage() {
       sub.subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!session || session === "loading") return;
+    getFriendConnections()
+      .then(setSocial)
+      .catch(() => setSocial({ friends: [], incoming: [], outgoing: [] }));
+  }, [session]);
 
   // Auto-push public_stats + grit whenever logs / manualPRs / sessions change.
   // grit_points powers the RANK leaderboard and league placement server-side.
@@ -224,6 +245,16 @@ function ProfilePage() {
   const startW = p.startingWeightKg ?? p.weightKg;
   const delta = p.weightKg - startW;
   const bmi = (p.weightKg / Math.pow(p.heightCm / 100, 2)).toFixed(1);
+  const profileSignals = [
+    Boolean(p.avatarDataUrl),
+    Boolean(p.displayName?.trim()),
+    Boolean(p.username?.trim()),
+    Boolean(p.bio?.trim()),
+    Boolean(p.city?.trim() && p.country?.trim()),
+  ];
+  const profileCompletion = Math.round(
+    (profileSignals.filter(Boolean).length / profileSignals.length) * 100,
+  );
 
   async function save() {
     if (!p) return;
@@ -244,6 +275,21 @@ function ProfilePage() {
         ? Math.round(requestedAge)
         : p.age;
     const newUsername = clean || p.username;
+    const newDisplayName = (
+      displayNameRef.current?.value ??
+      p.displayName ??
+      newUsername ??
+      "Athlete"
+    )
+      .trim()
+      .slice(0, 60);
+    const newBio = (bioRef.current?.value ?? p.bio ?? "").trim().slice(0, 500);
+    const newCity = (cityRef.current?.value ?? p.city ?? "").trim().slice(0, 80);
+    const newCountry = (countryRef.current?.value ?? p.country ?? "").trim().slice(0, 80);
+    if ((newCity && !newCountry) || (!newCity && newCountry)) {
+      toast.error("Add both city and country, or leave both blank");
+      return;
+    }
     const newEquip = equip as typeof p.equipment;
     // Exercise choices are derived from equipment, so a change leaves the saved
     // week full of kit the lifter no longer has. Offer to rebuild rather than
@@ -262,8 +308,8 @@ function ProfilePage() {
       await persist({
         data: {
           username: newUsername,
-          // Never clobber a distinct display name with the @handle.
-          display_name: (p.displayName?.trim() || newUsername || "Athlete").slice(0, 60),
+          display_name: newDisplayName,
+          bio: newBio,
           goal: goal as "BULK" | "CUT" | "MAINTAIN" | "ATHLETIC",
           experience: exp as "BEGINNER" | "INTERMEDIATE" | "ADVANCED",
           gender: gender as "MALE" | "FEMALE" | "OTHER",
@@ -273,6 +319,7 @@ function ProfilePage() {
           height_cm: newHeight,
         },
       });
+      await updateMyLocation({ data: { city: newCity, country: newCountry, region: null } });
       set((s) => {
         if (!s.profile) return s;
         const profile = {
@@ -285,6 +332,10 @@ function ProfilePage() {
           weightKg: newWeight,
           heightCm: newHeight,
           username: newUsername,
+          displayName: newDisplayName,
+          bio: newBio,
+          city: newCity || undefined,
+          country: newCountry || undefined,
         };
         return {
           ...s,
@@ -340,6 +391,7 @@ function ProfilePage() {
   }
 
   async function logout() {
+    hapticSelection();
     toast.loading("Saving your data…", { id: "logout" });
     try {
       // Push any unsaved local state to the server BEFORE auth is dropped —
@@ -356,14 +408,20 @@ function ProfilePage() {
     } finally {
       toast.dismiss("logout");
     }
-    window.dispatchEvent(new CustomEvent("deadset:explicit-logout"));
-    clearSessionBackup();
+    finishLocalAccountExit({
+      removeLocalTrainingState: false,
+      removeItem: (key) => localStorage.removeItem(key),
+      dispatchExplicitLogout: () =>
+        window.dispatchEvent(new CustomEvent("deadset:explicit-logout")),
+      clearSessionBackup,
+    });
     try {
       await withDeadline(supabase.auth.signOut(), 4000);
     } catch {
       // Local session is already cleared by the explicit-logout event.
     }
     toast.success("Signed out — your data is saved");
+    hapticSaved();
     navigate({ to: "/auth", replace: true });
   }
 
@@ -380,6 +438,7 @@ function ProfilePage() {
   }
 
   async function deleteAccount() {
+    hapticSelection();
     const ok = await askConfirm({
       title: "Delete your account?",
       message:
@@ -391,21 +450,23 @@ function ProfilePage() {
     if (!ok) return;
     try {
       await deleteAcct();
-      try {
-        localStorage.removeItem("grit_app_state_v1");
-      } catch {
-        /* ignore */
-      }
-      window.dispatchEvent(new CustomEvent("deadset:explicit-logout"));
-      clearSessionBackup();
+      finishLocalAccountExit({
+        removeLocalTrainingState: true,
+        removeItem: (key) => localStorage.removeItem(key),
+        dispatchExplicitLogout: () =>
+          window.dispatchEvent(new CustomEvent("deadset:explicit-logout")),
+        clearSessionBackup,
+      });
       try {
         await withDeadline(supabase.auth.signOut(), 4000);
       } catch {
         /* session already dropped */
       }
       toast.success("Account deleted");
+      hapticUndo();
       navigate({ to: "/auth", replace: true });
     } catch (e) {
+      hapticFailure();
       toast.error(e instanceof Error ? e.message : "Couldn't delete account");
     }
   }
@@ -434,6 +495,31 @@ function ProfilePage() {
           </button>
         </div>
       </header>
+
+      {!isPro && (
+        <section className="mx-5 mb-4 rounded-2xl border border-accent-red/40 bg-accent-red/[0.08] p-4">
+          <p className="label-cap text-[9px] text-accent-red">ACCOUNT & PRIVACY ACCESS</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-grit-dim">
+            You can always restore a purchase, sign out, or permanently delete your account even
+            without an active membership.
+          </p>
+          <Link to="/upgrade" className="btn-grit mt-3 block min-h-11 text-center text-[11px]">
+            Return to membership
+          </Link>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <button type="button" onClick={logout} className="btn-ghost min-h-11 text-[10px]">
+              <LogOut size={14} className="mr-1.5 inline" /> Sign out
+            </button>
+            <button
+              type="button"
+              onClick={deleteAccount}
+              className="btn-ghost min-h-11 text-[10px] text-accent-red"
+            >
+              <Trash2 size={14} className="mr-1.5 inline" /> Delete account
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* === FIFA card === */}
       <section className="px-5 mb-5 relative">
@@ -487,6 +573,87 @@ function ProfilePage() {
           ))}
         </div>
       </nav>
+
+      {profileCompletion < 100 && (
+        <section className="mx-5 mb-4 rounded-2xl border border-white/10 bg-grit-card p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="label-cap text-[9px] text-accent-red">ATHLETE PROFILE</p>
+              <p className="display mt-1 text-lg font-black uppercase text-grit">
+                Make your card recognisable
+              </p>
+            </div>
+            <span className="display text-xl font-black text-grit">{profileCompletion}%</span>
+          </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-black/45">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-accent-red to-[#ff6b5f] transition-[width] duration-500"
+              style={{ width: `${profileCompletion}%` }}
+            />
+          </div>
+          <p className="mt-2 text-[10px] leading-relaxed text-grit-dim">
+            Add a photo, display name, bio and city so friends know they found the right athlete.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              hapticSelection();
+              setEditing(true);
+              requestAnimationFrame(() =>
+                document.getElementById("profile-details")?.scrollIntoView({ behavior: "smooth" }),
+              );
+            }}
+            className="btn-ghost mt-3 min-h-11 w-full text-[10px]"
+          >
+            Complete profile
+          </button>
+        </section>
+      )}
+
+      <section className="mx-5 mb-4 overflow-hidden rounded-2xl border border-accent-red/35 bg-[radial-gradient(circle_at_90%_0%,rgba(230,50,34,0.2),transparent_36%),linear-gradient(145deg,#17181c,#0c0c0e)] p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="label-cap text-[9px] text-accent-red">YOUR SOCIAL LIFTING CARD</p>
+            <p className="display mt-1 text-xl font-black uppercase text-grit">Friends & rivals</p>
+            <p className="mt-1 max-w-[30ch] text-[10px] leading-relaxed text-grit-dim">
+              Compare Strength Maps, PRs and streaks with athletes you accept.
+            </p>
+          </div>
+          <Users size={24} className="text-accent-red" />
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          <div className="rounded-xl border border-white/10 bg-black/25 p-2.5 text-center">
+            <p className="display text-xl font-black text-grit">{social?.friends.length ?? "—"}</p>
+            <p className="label-cap text-[7px] text-grit-dim">Friends</p>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-black/25 p-2.5 text-center">
+            <p className="display text-xl font-black text-grit">{social?.incoming.length ?? "—"}</p>
+            <p className="label-cap text-[7px] text-grit-dim">Requests</p>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-black/25 p-2.5 text-center">
+            <p className="display text-xl font-black text-grit">{score.total}</p>
+            <p className="label-cap text-[7px] text-grit-dim">DS score</p>
+          </div>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <Link to="/friends" className="btn-grit min-h-11 text-center text-[10px]">
+            <UserPlus size={13} className="mr-1.5 inline" /> Add friends
+          </Link>
+          {session && session !== "loading" ? (
+            <Link
+              to="/athlete/$id"
+              params={{ id: session.userId }}
+              className="btn-ghost min-h-11 text-center text-[10px]"
+            >
+              View public card
+            </Link>
+          ) : (
+            <Link to="/friends" className="btn-ghost min-h-11 text-center text-[10px]">
+              Open social
+            </Link>
+          )}
+        </div>
+      </section>
 
       <section id="profile-rank" className="scroll-mt-28 px-5 mb-4">
         <RankedArena state={state} compact />
@@ -585,6 +752,15 @@ function ProfilePage() {
         <div className="bg-grit-card border border-grit divide-y divide-[#262626]">
           {editing ? (
             <>
+              <Field label="Display name">
+                <input
+                  ref={displayNameRef}
+                  defaultValue={p.displayName}
+                  className="input-grit w-full"
+                  maxLength={60}
+                  autoComplete="name"
+                />
+              </Field>
               <Field label="Username">
                 <input
                   ref={usernameRef}
@@ -594,6 +770,35 @@ function ProfilePage() {
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck={false}
+                />
+              </Field>
+              <Field label="Bio">
+                <textarea
+                  ref={bioRef}
+                  defaultValue={p.bio}
+                  className="input-grit min-h-24 w-full resize-none py-3"
+                  maxLength={500}
+                  placeholder="What are you training for?"
+                />
+              </Field>
+              <Field label="City">
+                <input
+                  ref={cityRef}
+                  defaultValue={p.city}
+                  className="input-grit w-full"
+                  maxLength={80}
+                  autoComplete="address-level2"
+                  placeholder="Optional"
+                />
+              </Field>
+              <Field label="Country">
+                <input
+                  ref={countryRef}
+                  defaultValue={p.country}
+                  className="input-grit w-full"
+                  maxLength={80}
+                  autoComplete="country-name"
+                  placeholder="Optional"
                 />
               </Field>
               <Field label="Goal">
@@ -660,6 +865,17 @@ function ProfilePage() {
             </>
           ) : (
             <>
+              <Stat label="Display Name" v={p.displayName || "Not set"} />
+              <Stat label="Username" v={p.username ? `@${p.username}` : "Not set"} />
+              <Stat label="Bio" v={p.bio || "Add a short introduction"} />
+              <Stat
+                label="Location"
+                v={
+                  p.city && p.country
+                    ? `${p.city}, ${p.country}`
+                    : "Private until you choose a city"
+                }
+              />
               <Stat label="Goal" v={p.goal} />
               <Stat label="Experience" v={p.experience} />
               <Stat

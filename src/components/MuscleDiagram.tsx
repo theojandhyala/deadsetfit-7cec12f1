@@ -1,100 +1,249 @@
-/**
- * The DEADSET figure: front and back, one shape per muscle.
- *
- * Two very different callers share it. The exercise library lights the muscles
- * a movement works; the strength map colours every region by its grade. Both
- * draw from `body-shapes.ts`, which is also what the shareable strength card
- * renders through Path2D — so the anatomy on a screenshot people post can
- * never disagree with the anatomy in the app.
- *
- * The paths are original DEADSET artwork. No third-party anatomical asset or
- * path data is embedded here.
- */
-import { BODY_CONTENT, HEAD, MUSCLE_SHAPES, bodySilhouette } from "@/lib/body-shapes";
+import {
+  MALE_BACK,
+  MALE_FRONT,
+  type BodyDiagram,
+  type MusclePath,
+  type OutlinePath,
+} from "@musclemap/assets";
 
 type Muscle = string;
+type DiagramView = "front" | "back" | "both";
+type GradeGroup = "CHEST" | "BACK" | "LEGS" | "SHOULDERS" | "ARMS" | "CORE";
+type AnatomyGroup = MusclePath["group"];
 
 interface Props {
   primary?: Muscle[];
   secondary?: Muscle[];
   /** Optional broad-muscle colour map used by the strength report. */
-  gradeColors?: Partial<Record<"CHEST" | "BACK" | "LEGS" | "SHOULDERS" | "ARMS" | "CORE", string>>;
+  gradeColors?: Partial<Record<GradeGroup, string>>;
+  /** Figure height in CSS pixels. */
   size?: number;
   /** Render one side for comparison layouts, or both for exercise detail. */
-  view?: "front" | "back" | "both";
+  view?: DiagramView;
 }
-
-type Side = "f" | "b";
 
 const ACCENT = "#f04432";
-const DIM = "#6b211b";
-/** Ungraded muscle: visibly a muscle, visibly not scored. */
-const BASE = "#292b2f";
-const BODY_BASE = "#1d2024";
-const HEAD_FILL = "#24272c";
-const OUTLINE = "#85888f";
-const SEPARATOR = "#0d0e10";
+const SECONDARY = "#6b211b";
+const MUSCLE_BASE = "#292b30";
+/**
+ * Head, hands and feet carry no grade, so they are the body rather than an
+ * ungraded muscle — light enough to read as part of the figure instead of a
+ * hole cut out of it.
+ */
+const BODY_BASE = "#1b1e22";
+/**
+ * Bellies are separated by a dark line, the way an anatomy chart does it.
+ *
+ * They were outlined in near-white, which at the size the strength screen
+ * actually renders turned the figure into a white mesh: what you saw was the
+ * outlines, and the muscles read as stickers laid on a mannequin.
+ */
+const MUSCLE_OUTLINE = "#0c0d10";
+const BODY_OUTLINE = "#9a9da3";
+/** In a 1024x1536 viewBox, so ~1px once the figure is drawn on a phone. */
+const BODY_STROKE_WIDTH = 6;
+const MUSCLE_STROKE_WIDTH = 5;
 
 /**
- * A broad label such as "shoulders" needs to light every visible subdivision,
- * while a precise label such as "rear-delts" should only light that region.
+ * MuscleMap reserves HIP_FLEXORS in its public group contract but does not yet
+ * ship a traced male path. Keep the missing iliopsoas region independently
+ * colourable instead of silently dropping Deadset's hip-flexor exercises.
  */
-const BROAD_MUSCLE_SHAPES: Record<string, string[]> = {
-  chest: ["chest", "upper-chest"],
-  // "back" is the erectors and lumbar — a key in its own right, and the one
-  // most easily left out, which renders a grey hole in the middle of a graded
-  // back.
-  back: ["lats", "mid-back", "upper-back", "traps", "rotator-cuff", "back"],
-  legs: ["quads", "hamstrings", "glutes", "calves", "hip-flexors"],
-  shoulders: ["front-delts", "side-delts", "rear-delts"],
-  arms: ["biceps", "triceps", "forearms", "brachialis"],
-  core: ["core", "obliques"],
+const FRONT_HIP_FLEXORS: MusclePath[] = [
+  {
+    id: "HIP_FLEXOR_LEFT",
+    group: "HIP_FLEXORS",
+    side: "LEFT",
+    d: "M447 688C455 681 466 679 478 683C481 695 480 708 476 722C473 734 468 746 461 756C453 747 447 736 443 722C440 708 441 696 447 688Z",
+  },
+];
+
+const ALL_BACK: AnatomyGroup[] = ["BACK_UPPER", "BACK_LOWER", "TRAPEZIUS", "RHOMBOIDS", "LATS"];
+const ALL_LEGS: AnatomyGroup[] = [
+  "GLUTES",
+  "QUADS",
+  "HAMSTRINGS",
+  "CALVES",
+  "HIP_FLEXORS",
+  "ADDUCTORS",
+  "ABDUCTORS",
+];
+const ALL_SHOULDERS: AnatomyGroup[] = ["SHOULDERS_FRONT", "SHOULDERS_SIDE", "SHOULDERS_REAR"];
+const ALL_ARMS: AnatomyGroup[] = ["BICEPS", "TRICEPS", "FOREARMS"];
+const ALL_CORE: AnatomyGroup[] = ["CORE", "OBLIQUES"];
+
+const GRADE_GROUPS: Record<GradeGroup, AnatomyGroup[]> = {
+  CHEST: ["CHEST"],
+  BACK: ALL_BACK,
+  LEGS: ALL_LEGS,
+  SHOULDERS: ALL_SHOULDERS,
+  ARMS: ALL_ARMS,
+  CORE: ALL_CORE,
 };
 
-const MUSCLE_ALIASES: Record<string, string> = {
-  abs: "core",
-  abdominals: "core",
-  abdominal: "core",
-  arm: "arms",
-  delts: "shoulders",
-  deltoids: "shoulders",
-  glute: "glutes",
-  leg: "legs",
-  pecs: "chest",
-  pectorals: "chest",
-  quadriceps: "quads",
+/**
+ * Exercise data includes broad labels ("back") and precise labels
+ * ("rear delts", "hamstrings"). Both resolve to the same anatomical atlas.
+ */
+const LABEL_GROUPS: Record<string, AnatomyGroup[]> = {
+  chest: ["CHEST"],
+  pec: ["CHEST"],
+  pecs: ["CHEST"],
+  pectoral: ["CHEST"],
+  pectorals: ["CHEST"],
+  "upper-chest": ["CHEST"],
+
+  back: ALL_BACK,
+  "upper-back": ["BACK_UPPER", "TRAPEZIUS", "RHOMBOIDS"],
+  "mid-back": ["BACK_UPPER", "RHOMBOIDS"],
+  "lower-back": ["BACK_LOWER"],
+  erector: ["BACK_LOWER"],
+  erectors: ["BACK_LOWER"],
+  lat: ["LATS"],
+  lats: ["LATS"],
+  rhomboid: ["RHOMBOIDS"],
+  rhomboids: ["RHOMBOIDS"],
+  trap: ["TRAPEZIUS"],
+  traps: ["TRAPEZIUS"],
+  trapezius: ["TRAPEZIUS"],
+
+  shoulder: ALL_SHOULDERS,
+  shoulders: ALL_SHOULDERS,
+  delt: ALL_SHOULDERS,
+  delts: ALL_SHOULDERS,
+  deltoid: ALL_SHOULDERS,
+  deltoids: ALL_SHOULDERS,
+  "front-delt": ["SHOULDERS_FRONT"],
+  "front-delts": ["SHOULDERS_FRONT"],
+  "side-delt": ["SHOULDERS_SIDE"],
+  "side-delts": ["SHOULDERS_SIDE"],
+  "rear-delt": ["SHOULDERS_REAR"],
+  "rear-delts": ["SHOULDERS_REAR"],
+  rotator: ["SHOULDERS_REAR"],
+  "rotator-cuff": ["SHOULDERS_REAR"],
+
+  arm: ALL_ARMS,
+  arms: ALL_ARMS,
+  bicep: ["BICEPS"],
+  biceps: ["BICEPS"],
+  brachialis: ["BICEPS"],
+  tricep: ["TRICEPS"],
+  triceps: ["TRICEPS"],
+  forearm: ["FOREARMS"],
+  forearms: ["FOREARMS"],
+
+  core: ALL_CORE,
+  ab: ["CORE"],
+  abs: ["CORE"],
+  abdominal: ["CORE"],
+  abdominals: ["CORE"],
+  oblique: ["OBLIQUES"],
+  obliques: ["OBLIQUES"],
+
+  leg: ALL_LEGS,
+  legs: ALL_LEGS,
+  quad: ["QUADS"],
+  quads: ["QUADS"],
+  quadricep: ["QUADS"],
+  quadriceps: ["QUADS"],
+  hamstring: ["HAMSTRINGS"],
+  hamstrings: ["HAMSTRINGS"],
+  glute: ["GLUTES"],
+  glutes: ["GLUTES"],
+  calf: ["CALVES"],
+  calves: ["CALVES"],
+  "hip-flexor": ["HIP_FLEXORS"],
+  "hip-flexors": ["HIP_FLEXORS"],
+  adductor: ["ADDUCTORS"],
+  adductors: ["ADDUCTORS"],
+  abductor: ["ABDUCTORS"],
+  abductors: ["ABDUCTORS"],
 };
 
-const normaliseMuscle = (muscle: string) => {
-  const key = muscle
+function normaliseMuscle(muscle: string) {
+  return muscle
     .trim()
     .toLowerCase()
-    .replace(/[\s_]+/g, "-");
-  return MUSCLE_ALIASES[key] ?? key;
-};
-
-const GRADE_SHAPES: Record<string, string[]> = {
-  CHEST: BROAD_MUSCLE_SHAPES.chest,
-  BACK: BROAD_MUSCLE_SHAPES.back,
-  LEGS: BROAD_MUSCLE_SHAPES.legs,
-  SHOULDERS: BROAD_MUSCLE_SHAPES.shoulders,
-  ARMS: BROAD_MUSCLE_SHAPES.arms,
-  CORE: BROAD_MUSCLE_SHAPES.core,
-};
-
-/**
- * `shoulders` is both a region in its own right and the umbrella for the three
- * delt heads, so it would draw twice. Drop the umbrella when a head covers it.
- */
-const REDUNDANT = new Set(["shoulders"]);
-
-const SILHOUETTE = bodySilhouette();
-
-function requestedFill(set: Set<string>, key: string) {
-  if (set.has(key)) return true;
-  return [...set].some((requested) => BROAD_MUSCLE_SHAPES[requested]?.includes(key));
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
+function requestedGroups(labels: Muscle[]) {
+  const groups = new Set<AnatomyGroup>();
+  for (const label of labels) {
+    for (const group of LABEL_GROUPS[normaliseMuscle(label)] ?? []) groups.add(group);
+  }
+  return groups;
+}
+
+function expandPath(path: MusclePath | OutlinePath, mirror: string) {
+  const paths = [{ d: path.d, transform: undefined as string | undefined }];
+  if (path.side === "LEFT") paths.push({ d: path.d, transform: mirror });
+  return paths;
+}
+
+function AnatomyFigure({
+  diagram,
+  size,
+  fillFor,
+}: {
+  diagram: BodyDiagram;
+  size: number;
+  fillFor: (group: AnatomyGroup) => string;
+}) {
+  const mirror = `matrix(-1 0 0 1 ${2 * diagram.centerX} 0)`;
+  const width = Math.round(size * (2 / 3));
+
+  return (
+    <svg
+      viewBox={diagram.viewBox}
+      width={width}
+      height={size}
+      preserveAspectRatio="xMidYMid meet"
+      role="img"
+      aria-label={`${diagram.view === "FRONT" ? "Front" : "Back"} muscle anatomy`}
+      className="block max-w-full"
+    >
+      <g
+        fill={BODY_BASE}
+        stroke={BODY_OUTLINE}
+        strokeWidth={BODY_STROKE_WIDTH}
+        strokeLinejoin="round"
+      >
+        {diagram.outline.flatMap((path, index) =>
+          expandPath(path, mirror).map((part, partIndex) => (
+            <path
+              key={`outline-${path.id}-${index}-${partIndex}`}
+              d={part.d}
+              transform={part.transform}
+            />
+          )),
+        )}
+      </g>
+
+      <g stroke={MUSCLE_OUTLINE} strokeWidth={MUSCLE_STROKE_WIDTH} strokeLinejoin="round">
+        {[...diagram.muscles, ...(diagram.view === "FRONT" ? FRONT_HIP_FLEXORS : [])].flatMap(
+          (path, index) =>
+            expandPath(path, mirror).map((part, partIndex) => (
+              <path
+                key={`${path.id ?? path.group}-${index}-${partIndex}`}
+                d={part.d}
+                fill={fillFor(path.group)}
+                transform={part.transform}
+                data-muscle-group={path.group}
+              />
+            )),
+        )}
+      </g>
+    </svg>
+  );
+}
+
+/**
+ * Detailed, independently colourable front/back muscular anatomy. The atlas is
+ * rendered as SVG image data so it remains sharp and every region can reflect
+ * the athlete's exercise selection or strength grade.
+ */
 export function MuscleDiagram({
   primary = [],
   secondary = [],
@@ -102,63 +251,31 @@ export function MuscleDiagram({
   size = 220,
   view = "both",
 }: Props) {
-  const prim = new Set(primary.map(normaliseMuscle));
-  const sec = new Set(secondary.map(normaliseMuscle));
-  const graded = new Map<string, string>();
+  const primaryGroups = requestedGroups(primary);
+  const secondaryGroups = requestedGroups(secondary);
+  const graded = new Map<AnatomyGroup, string>();
 
-  for (const [group, color] of Object.entries(gradeColors ?? {})) {
+  for (const [group, color] of Object.entries(gradeColors ?? {}) as Array<
+    [GradeGroup, string | undefined]
+  >) {
     if (!color) continue;
-    for (const shape of GRADE_SHAPES[group] ?? []) graded.set(shape, color);
+    for (const anatomyGroup of GRADE_GROUPS[group] ?? []) graded.set(anatomyGroup, color);
   }
 
-  const fill = (key: string) =>
-    graded.get(key) ?? (requestedFill(prim, key) ? ACCENT : requestedFill(sec, key) ? DIM : BASE);
+  const fillFor = (group: AnatomyGroup) =>
+    graded.get(group) ??
+    (primaryGroups.has(group) ? ACCENT : secondaryGroups.has(group) ? SECONDARY : MUSCLE_BASE);
 
-  const render = (side: Side) =>
-    Object.entries(MUSCLE_SHAPES).flatMap(([key, shape]) =>
-      REDUNDANT.has(key)
-        ? []
-        : (shape[side] ?? []).map((d, index) => (
-            <path
-              key={`${side}-${key}-${index}`}
-              d={d}
-              fill={fill(key)}
-              stroke={SEPARATOR}
-              strokeWidth={0.8}
-              strokeLinejoin="round"
-            />
-          )),
-    );
-
-  const sides: Side[] = view === "front" ? ["f"] : view === "back" ? ["b"] : ["f", "b"];
-  const { x, y, width, height } = BODY_CONTENT;
-  // Scale by the figure's own bounds, never the raw grid — the grid carries a
-  // wide empty margin, and scaling by it renders the body a third too small.
-  const figureWidth = (size * width) / height;
+  const diagrams =
+    view === "front" ? [MALE_FRONT] : view === "back" ? [MALE_BACK] : [MALE_FRONT, MALE_BACK];
 
   return (
-    <div className="flex justify-center gap-3" style={{ width: "100%" }}>
-      {sides.map((side) => (
-        <svg
-          key={side}
-          viewBox={`${x} ${y} ${width} ${height}`}
-          width={figureWidth}
-          height={size}
-          preserveAspectRatio="xMidYMid meet"
-          aria-hidden
-        >
-          <path
-            d={SILHOUETTE}
-            fill={BODY_BASE}
-            stroke={OUTLINE}
-            strokeWidth={1.1}
-            strokeLinejoin="round"
-          />
-          {/* Head and hands carry no grade, so they read as the figure rather
-              than as ungraded muscle. */}
-          <path d={HEAD} fill={HEAD_FILL} stroke={OUTLINE} strokeWidth={1.1} />
-          {render(side)}
-        </svg>
+    <div
+      className="flex w-full items-end justify-center gap-1.5"
+      aria-label={view === "both" ? "Front and back muscle map" : `${view} muscle map`}
+    >
+      {diagrams.map((diagram) => (
+        <AnatomyFigure key={diagram.id} diagram={diagram} size={size} fillFor={fillFor} />
       ))}
     </div>
   );

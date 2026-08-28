@@ -24,7 +24,7 @@ function AuthRedirect() {
   return (
     <div className="min-h-screen bg-[#080507] text-grit grid place-items-center px-6 text-center">
       <div>
-        <h1 className="display text-5xl font-extrabold italic tracking-[-0.045em] text-white">
+        <h1 className="display m-0 text-6xl font-bold italic leading-none tracking-[-0.045em] text-white [text-shadow:0_0_36px_rgba(230,50,34,0.4)]">
           DEAD<span className="text-accent-red">SET</span>
         </h1>
         <p className="label-cap text-grit-dim mt-4">Opening account setup…</p>

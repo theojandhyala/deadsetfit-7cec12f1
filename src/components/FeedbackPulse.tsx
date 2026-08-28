@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useRouterState } from "@tanstack/react-router";
 import { MessageCircle, X } from "lucide-react";
 
 import { useAppState } from "@/lib/storage";
@@ -25,17 +26,22 @@ function dismissForThreeWeeks() {
 /** A low-frequency question for engaged users, routed to the existing support inbox. */
 export function FeedbackPulse() {
   const [state] = useAppState();
+  const pathname = useRouterState({ select: (routerState) => routerState.location.pathname });
   const [open, setOpen] = useState(false);
   const [answer, setAnswer] = useState("");
   const completed = state.sessions.filter((session) => !!session.endedAt).length;
+  const eligible = pathname === "/train" && !state.activeSessionId && completed >= 2;
 
   useEffect(() => {
-    if (completed < 2 || !mayShow()) return;
+    if (!eligible || !mayShow()) {
+      setOpen(false);
+      return;
+    }
     const timer = window.setTimeout(() => setOpen(true), 10_000);
     return () => window.clearTimeout(timer);
-  }, [completed]);
+  }, [eligible]);
 
-  if (!open || completed < 2) return null;
+  if (!open || !eligible) return null;
 
   function close() {
     dismissForThreeWeeks();
@@ -62,12 +68,19 @@ export function FeedbackPulse() {
         className="relative w-full max-w-sm rounded-2xl border border-white/15 bg-[#121011] p-5 shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <button onClick={close} aria-label="Close" className="icon-btn absolute right-3 top-3 text-grit-dim">
+        <button
+          onClick={close}
+          aria-label="Close"
+          className="icon-btn absolute right-3 top-3 text-grit-dim"
+        >
           <X size={18} />
         </button>
         <MessageCircle size={21} className="text-accent-red" />
         <p className="label-cap mt-3 text-[10px] text-accent-red">Quick question</p>
-        <h2 id="feedback-pulse-title" className="display mt-1 text-2xl font-extrabold uppercase leading-none text-grit">
+        <h2
+          id="feedback-pulse-title"
+          className="display mt-1 text-2xl font-extrabold uppercase leading-none text-grit"
+        >
           What nearly stopped you starting?
         </h2>
         <p className="mt-3 text-xs leading-relaxed text-grit-dim">

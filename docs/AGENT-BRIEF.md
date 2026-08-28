@@ -28,10 +28,15 @@ already cost something.
    free to run at scale. A previous build called a model API per user with no
    revenue behind it — an unbounded bill — and every one of those features was
    removed. Do not reintroduce it in any form, including "just one small call".
-2. **No in-app purchase UI, prices, or purchase links on native iOS.** Pro
-   sells on the web only. This is a deliberate App Store Guideline 3.1.1
-   position, documented in `ROADMAP.md`. An agent without this context will
-   confidently suggest adding a buy button; acted on, that is a rejection.
+2. **iPhone subscriptions use StoreKit only.** Never expose Stripe or an
+   external purchase link in the native app. The active offer is the monthly
+   product `org.deadsetfit.pro.monthly`; the annual ID remains immutable for
+   legacy entitlements but is not sold in the current setup. A seven-day free
+   introductory offer and the UK £5.99 price are configured in App Store
+   Connect, not invented by the client. `StoreKitPlugin.swift` returns Apple's
+   localized price, offer and eligibility, and the paywall only advertises the
+   trial when those values confirm it. Preserve purchase, restore, manage,
+   terms, privacy, logout and deletion access around the mandatory gate.
 3. **Inputs must be DOM-owned** (`defaultValue` + ref). A controlled `value=`
    freezes typing in the iOS WKWebView.
 4. **Brand:** dark only, `#E10600` red, heavy italic wordmark.

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 
 import { Landing } from "@/components/Landing";
 import { NativeWelcome } from "@/components/NativeWelcome";
+import { finishAppBoot } from "@/lib/app-boot";
 import { isNativeApp } from "@/lib/platform";
 
 export const Route = createFileRoute("/")({
@@ -44,7 +45,7 @@ export const Route = createFileRoute("/")({
           description:
             "Plan workouts, log every set, track nutrition and recovery, and see strength progress clearly.",
           downloadUrl: "https://apps.apple.com/app/deadset/id6783511541",
-          offers: { "@type": "Offer", price: "0", priceCurrency: "GBP" },
+          offers: { "@type": "Offer", price: "5.99", priceCurrency: "GBP" },
         }),
       },
     ],
@@ -69,7 +70,7 @@ function IndexRoute() {
 
     (async () => {
       try {
-        const { supabase } = await import("@/integrations/supabase/client");
+        const { restoreSupabaseSession, supabase } = await import("@/integrations/supabase/client");
         const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
           if (!cancelled && session) navigate({ to: "/train", replace: true });
         });
@@ -79,16 +80,13 @@ function IndexRoute() {
           return;
         }
 
-        // A stalled token refresh must never strand native users on a blank
-        // boot view. The listener still catches a valid session restored later.
+        // Keep the branded launch layer up while the persisted session and its
+        // cookie backup are genuinely resolved. A retry appears on the launch
+        // layer if this stalls; we never reveal a false signed-out screen.
+        await restoreSupabaseSession();
         const {
           data: { session },
-        } = await Promise.race([
-          supabase.auth.getSession(),
-          new Promise<{ data: { session: null } }>((resolve) =>
-            setTimeout(() => resolve({ data: { session: null } }), 3000),
-          ),
-        ]);
+        } = await supabase.auth.getSession();
         if (cancelled) return;
         if (session) {
           navigate({ to: "/train", replace: true });
@@ -106,7 +104,16 @@ function IndexRoute() {
     };
   }, [navigate]);
 
-  if (!entryReady) return <div className="min-h-[100dvh] bg-[#070708]" />;
+  useEffect(() => {
+    if (entryReady) finishAppBoot();
+  }, [entryReady]);
+
+  if (!entryReady) return <NativeSessionLoading />;
   if (native) return <NativeWelcome />;
   return <Landing />;
+}
+
+/** Keeps the branded launch experience continuous while the saved session is restored. */
+function NativeSessionLoading() {
+  return <main className="min-h-[100dvh] bg-[#080808]" aria-hidden="true" />;
 }

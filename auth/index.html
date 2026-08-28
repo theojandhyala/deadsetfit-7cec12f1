@@ -67,6 +67,7 @@
         min-height: 100dvh;
         overflow-x: hidden;
         overflow-y: auto;
+        scrollbar-width: none;
         padding: max(72px, calc(env(safe-area-inset-top) + 52px)) 24px
           max(28px, calc(env(safe-area-inset-bottom) + 20px));
         background:
@@ -77,6 +78,10 @@
             transparent 62%
           ),
           linear-gradient(180deg, #140609 0%, #080507 72%);
+      }
+
+      .page::-webkit-scrollbar {
+        display: none;
       }
 
       .page::before {
@@ -140,7 +145,6 @@
       .brand-row {
         display: inline-flex;
         align-items: center;
-        gap: 12px;
       }
 
       .brand {
@@ -152,11 +156,16 @@
         font-weight: 700;
         letter-spacing: -0.045em;
         line-height: 0.92;
-        text-shadow: 0 0 36px rgba(230, 50, 34, 0.34);
+        text-shadow:
+          0 0 12px rgba(255, 255, 255, 0.12),
+          0 0 36px rgba(230, 50, 34, 0.4);
       }
 
       .brand span {
         color: var(--red);
+        text-shadow:
+          0 0 10px rgba(240, 6, 6, 0.42),
+          0 0 30px rgba(240, 6, 6, 0.28);
       }
 
       .tagline {
@@ -165,6 +174,7 @@
         font-size: 14px;
         font-weight: 800;
         letter-spacing: 0.42em;
+        text-indent: 0.42em;
         text-transform: uppercase;
       }
 
@@ -836,7 +846,9 @@
 
             <button class="forgot" id="forgot" type="button" hidden>Forgot password?</button>
             <button class="submit" id="submit" type="submit">Create Account</button>
-            <p class="free-note" id="free-note">Free to join. No card required.</p>
+            <p class="free-note" id="free-note">
+              Set up first. Trial terms are shown before purchase.
+            </p>
             <div class="message" id="message" role="status" aria-live="polite"></div>
           </form>
 

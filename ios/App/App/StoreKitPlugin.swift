@@ -41,9 +41,13 @@ public class StoreKitPlugin: CAPPlugin, CAPBridgedPlugin {
         Task {
             do {
                 let products = try await Product.products(for: Self.productIDs)
-                let payload = products
-                    .sorted { Self.productIDs.firstIndex(of: $0.id) ?? 0 < Self.productIDs.firstIndex(of: $1.id) ?? 0 }
-                    .map(Self.productPayload)
+                let sorted = products.sorted {
+                    Self.productIDs.firstIndex(of: $0.id) ?? 0 < Self.productIDs.firstIndex(of: $1.id) ?? 0
+                }
+                var payload: [[String: Any]] = []
+                for product in sorted {
+                    payload.append(await Self.productPayload(product))
+                }
                 call.resolve(["products": payload])
             } catch {
                 call.reject("Unable to load App Store products", error.localizedDescription, error)
@@ -149,17 +153,52 @@ public class StoreKitPlugin: CAPPlugin, CAPBridgedPlugin {
         return payload
     }
 
-    private static func productPayload(_ product: Product) -> [String: Any] {
+    private static func productPayload(_ product: Product) async -> [String: Any] {
         var payload: [String: Any] = [
             "id": product.id,
             "displayName": product.displayName,
             "description": product.description,
             "displayPrice": product.displayPrice
         ]
-        if let period = product.subscription?.subscriptionPeriod {
-            payload["periodUnit"] = String(describing: period.unit)
+        if let subscription = product.subscription {
+            let period = subscription.subscriptionPeriod
+            payload["periodUnit"] = periodUnitWireValue(period.unit)
             payload["periodValue"] = period.value
+            payload["eligibleForIntroOffer"] = await subscription.isEligibleForIntroOffer
+            if let offer = subscription.introductoryOffer {
+                payload["introductoryOffer"] = [
+                    "paymentMode": paymentModeWireValue(offer.paymentMode),
+                    "displayPrice": offer.displayPrice,
+                    "periodUnit": periodUnitWireValue(offer.period.unit),
+                    "periodValue": offer.period.value,
+                    "periodCount": offer.periodCount
+                ]
+            }
         }
         return payload
+    }
+
+    /// StoreKit's raw values are capitalised (for example `FreeTrial` and
+    /// `Week`). Keep the Capacitor bridge contract stable and JavaScript-like
+    /// so the paywall cannot silently misclassify an eligible Apple offer.
+    private static func paymentModeWireValue(
+        _ mode: Product.SubscriptionOffer.PaymentMode
+    ) -> String {
+        switch mode {
+        case .freeTrial: return "freeTrial"
+        case .payAsYouGo: return "payAsYouGo"
+        case .payUpFront: return "payUpFront"
+        default: return mode.rawValue.prefix(1).lowercased() + mode.rawValue.dropFirst()
+        }
+    }
+
+    private static func periodUnitWireValue(_ unit: Product.SubscriptionPeriod.Unit) -> String {
+        switch unit {
+        case .day: return "day"
+        case .week: return "week"
+        case .month: return "month"
+        case .year: return "year"
+        default: return String(describing: unit).lowercased()
+        }
     }
 }

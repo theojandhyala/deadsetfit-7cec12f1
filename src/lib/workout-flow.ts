@@ -55,8 +55,8 @@ export function requiresWorkingWeight(
   equipment: string | string[] | undefined,
 ): boolean {
   const bodyweight = Array.isArray(equipment)
-    ? equipment.includes("BODYWEIGHT")
-    : equipment?.includes("BODYWEIGHT");
+    ? equipment.some((item) => item.toUpperCase().includes("BODYWEIGHT"))
+    : equipment?.toUpperCase().includes("BODYWEIGHT");
   return (exercise.tracking ?? "WEIGHT") === "WEIGHT" && !bodyweight;
 }
 

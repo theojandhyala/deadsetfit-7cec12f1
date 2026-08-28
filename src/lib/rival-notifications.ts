@@ -27,7 +27,7 @@ const HOUR_MS = 3_600_000;
 
 export type RivalAlertDraft = Pick<
   LocalNotificationSchema,
-  "id" | "title" | "body" | "schedule" | "extra" | "threadIdentifier"
+  "id" | "title" | "body" | "schedule" | "sound" | "extra" | "threadIdentifier"
 >;
 
 function rivalIds() {
@@ -144,6 +144,7 @@ export function buildRivalAlertDrafts(
       title: candidate.title,
       body: candidate.body,
       schedule: { at: candidate.at },
+      sound: "default.wav",
       extra: { path: "/challenges" },
       threadIdentifier: "deadset-rivals",
     }));

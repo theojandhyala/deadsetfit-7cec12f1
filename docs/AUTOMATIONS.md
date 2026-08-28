@@ -48,11 +48,10 @@ is generated from things that really happened, not invented.
 
 ## Not worth automating
 
-**Anything touching App Store compliance.** `ROADMAP.md` and `BACKLOG.md`
-document a deliberate, high-stakes position on Guideline 3.1.1 — free app, Pro
-on the web only, no in-app purchase UI or prices on iOS. A scheduled assistant
-without that context will confidently suggest adding a purchase button. That
-suggestion, acted on, costs a rejection.
+**Anything touching App Store compliance.** Native subscriptions are
+StoreKit-only, and the paywall must read Apple's localized product, offer and
+eligibility. A scheduled assistant must not add Stripe, external purchase
+links, invented prices or unverified trial copy to iOS.
 
 **Code changes.** No repo, no `npm run check`, no `check-xcodeproj`. A patch
 that cannot be validated is a liability, not a contribution.

@@ -1,7 +1,54 @@
 import { getExercise } from "./exercises";
-import type { Profile, AppState, DayKey, DaySchedule, Schedule, SetLog } from "./types";
+import type {
+  Profile,
+  AppState,
+  DayKey,
+  DaySchedule,
+  Equipment,
+  FocusMuscle,
+  Schedule,
+  SetLog,
+} from "./types";
 
 export const WEEK: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+
+export const FOCUS_EXERCISE_CANDIDATES: Record<FocusMuscle, { ids: string[]; days: string[] }> = {
+  CHEST: {
+    ids: ["cable-fly", "incline-db-press", "push-ups"],
+    days: ["PUSH", "UPPER", "FULL BODY", "CHEST"],
+  },
+  BACK: {
+    ids: ["seated-row", "inverted-row", "superman"],
+    days: ["PULL", "UPPER", "FULL BODY"],
+  },
+  SHOULDERS: {
+    ids: ["lateral-raise", "pike-push-up"],
+    days: ["PUSH", "UPPER", "SHOULDERS", "FULL BODY"],
+  },
+  ARMS: {
+    ids: ["hammer-curl", "close-grip-push-up"],
+    days: ["PULL", "UPPER", "ARMS"],
+  },
+  LEGS: {
+    ids: ["leg-press", "goblet-squat", "split-squat"],
+    days: ["LEGS", "LOWER", "FULL BODY"],
+  },
+  CORE: {
+    ids: ["plank", "dead-bug"],
+    days: ["LEGS", "LOWER", "CORE", "FULL BODY"],
+  },
+};
+
+export function focusExerciseRecommendation(
+  focus: FocusMuscle,
+  equipment: Equipment,
+): { id: string; name: string } | null {
+  for (const id of FOCUS_EXERCISE_CANDIDATES[focus].ids) {
+    const exercise = getExercise(id);
+    if (exercise?.equipment.includes(equipment)) return { id, name: exercise.name };
+  }
+  return null;
+}
 
 /** The weekday spread used when a lifter hasn't picked their own training days. */
 const DEFAULT_TRAINING_DAYS: Record<number, DayKey[]> = {
@@ -162,33 +209,21 @@ export function defaultSchedule(p: Profile) {
   });
 
   // Personalisation: bias the split toward the lifter's focus muscles by
-  // appending one extra exercise on the days that already hit that muscle.
-  const FOCUS_EXTRA: Record<string, { ids: string[]; days: string[] }> = {
-    CHEST: {
-      ids: ["cable-fly", "incline-db-press", "push-ups"],
-      days: ["PUSH", "UPPER", "FULL BODY", "CHEST"],
-    },
-    BACK: { ids: ["seated-row", "inverted-row", "superman"], days: ["PULL", "UPPER", "FULL BODY"] },
-    SHOULDERS: {
-      ids: ["lateral-raise", "pike-push-up"],
-      days: ["PUSH", "UPPER", "SHOULDERS", "FULL BODY"],
-    },
-    ARMS: { ids: ["hammer-curl", "close-grip-push-up"], days: ["PULL", "UPPER", "ARMS"] },
-    LEGS: {
-      ids: ["leg-press", "goblet-squat", "split-squat"],
-      days: ["LEGS", "LOWER", "FULL BODY"],
-    },
-    CORE: { ids: ["plank", "dead-bug"], days: ["LEGS", "LOWER", "CORE", "FULL BODY"] },
-  };
+  // adding one targeted exercise on the days that already hit that muscle.
+  // Keep track of those choices so the session cap cannot silently remove the
+  // very movements the lifter asked us to prioritise.
+  const focusedIdsByDay = new Map<Day, string[]>();
   for (const focus of p.focusMuscles ?? []) {
-    const extra = FOCUS_EXTRA[focus];
+    const extra = FOCUS_EXERCISE_CANDIDATES[focus];
     if (!extra) continue;
     const extraId = available(extra.ids)[0];
     if (!extraId) continue;
     for (const day of plan) {
-      if (extra.days.some((k) => day.label.includes(k)) && !day.ids.includes(extraId)) {
-        day.ids = [...day.ids, extraId];
-      }
+      if (!extra.days.some((k) => day.label.includes(k))) continue;
+      if (!day.ids.includes(extraId)) day.ids = [...day.ids, extraId];
+
+      const focusedIds = focusedIdsByDay.get(day) ?? [];
+      if (!focusedIds.includes(extraId)) focusedIdsByDay.set(day, [...focusedIds, extraId]);
     }
   }
 
@@ -198,7 +233,28 @@ export function defaultSchedule(p: Profile) {
     p.exercisesPerSession ??
     (p.sessionMinutes === 30 ? 3 : p.sessionMinutes === 45 ? 4 : p.sessionMinutes === 90 ? 7 : 5);
   for (const day of plan) {
-    if (day.ids.length > cap) day.ids = day.ids.slice(0, cap);
+    if (day.ids.length <= cap) continue;
+
+    const cappedIds = day.ids.slice(0, cap);
+    const focusedIds = focusedIdsByDay.get(day) ?? [];
+    const focusedSet = new Set(focusedIds);
+
+    for (const focusedId of focusedIds) {
+      if (cappedIds.includes(focusedId)) continue;
+
+      // Replace the latest non-priority movement so compounds retain their
+      // original order while every focus choice that can fit remains present.
+      let replacementIndex = -1;
+      for (let i = cappedIds.length - 1; i >= 0; i--) {
+        if (!focusedSet.has(cappedIds[i])) {
+          replacementIndex = i;
+          break;
+        }
+      }
+      if (replacementIndex >= 0) cappedIds[replacementIndex] = focusedId;
+    }
+
+    day.ids = cappedIds;
   }
 
   const result: Record<string, { label: string; exerciseIds: string[] }> = {};

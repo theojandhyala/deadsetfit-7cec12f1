@@ -4,6 +4,7 @@ import {
   calculateMacros,
   defaultSchedule,
   estimate1RM,
+  focusExerciseRecommendation,
   plateBreakdown,
   updateScheduleDay,
   warmupRamp,
@@ -27,6 +28,16 @@ function profile(overrides: Partial<Profile> = {}): Profile {
 }
 
 describe("defaultSchedule", () => {
+  it("names an equipment-valid recommendation for every onboarding focus", () => {
+    for (const equipment of ["FULL_GYM", "HOME_GYM", "BODYWEIGHT"] as const) {
+      for (const focus of ["CHEST", "BACK", "SHOULDERS", "ARMS", "LEGS", "CORE"] as const) {
+        const recommendation = focusExerciseRecommendation(focus, equipment);
+        expect(recommendation, `${focus}/${equipment}`).not.toBeNull();
+        expect(getExercise(recommendation!.id)?.equipment).toContain(equipment);
+      }
+    }
+  });
+
   it.each<Equipment>(["FULL_GYM", "HOME_GYM", "BODYWEIGHT"])(
     "only schedules exercises available for %s",
     (equipment) => {
@@ -53,6 +64,39 @@ describe("defaultSchedule", () => {
 
     for (const day of Object.values(schedule)) {
       expect(day.exerciseIds.length).toBeLessThanOrEqual(3);
+      expect(new Set(day.exerciseIds).size).toBe(day.exerciseIds.length);
+    }
+  });
+
+  it("keeps core inside four-movement full-body sessions when core is a focus", () => {
+    const schedule = defaultSchedule(
+      profile({
+        daysPerWeek: 3,
+        exercisesPerSession: 4,
+        focusMuscles: ["CORE"],
+      }),
+    );
+
+    const trainingDays = Object.values(schedule).filter((day) => day.exerciseIds.length > 0);
+    expect(trainingDays).toHaveLength(3);
+    for (const day of trainingDays) {
+      expect(day.exerciseIds).toHaveLength(4);
+      expect(day.exerciseIds).toContain("plank");
+    }
+  });
+
+  it("reserves capped full-body slots for multiple selected focus muscles", () => {
+    const schedule = defaultSchedule(
+      profile({
+        daysPerWeek: 3,
+        exercisesPerSession: 4,
+        focusMuscles: ["CHEST", "CORE"],
+      }),
+    );
+
+    for (const day of Object.values(schedule).filter((candidate) => candidate.exerciseIds.length)) {
+      expect(day.exerciseIds).toHaveLength(4);
+      expect(day.exerciseIds).toEqual(expect.arrayContaining(["cable-fly", "plank"]));
       expect(new Set(day.exerciseIds).size).toBe(day.exerciseIds.length);
     }
   });

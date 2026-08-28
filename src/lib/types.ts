@@ -25,6 +25,11 @@ export interface Profile {
   username?: string;
   /** Real/display name shown on the athlete card (distinct from @username) */
   displayName?: string;
+  /** Public profile introduction, deliberately separate from private training notes. */
+  bio?: string;
+  /** City-level social discovery only; exact coordinates are never stored. */
+  city?: string;
+  country?: string;
   avatarDataUrl?: string;
   startingWeightKg?: number;
   /** Up to two muscle groups the lifter wants to prioritise */
@@ -74,6 +79,8 @@ export interface Exercise {
   youtubeQuery?: string;
   /** Specific equipment label used by the full exercise database. */
   equipmentLabel?: string;
+  /** Granular catalogue anatomy labels retained alongside the broad muscle group. */
+  primaryMuscles?: string[];
   secondaryMuscles?: string[];
   proTip?: string;
   isCompound?: boolean;
@@ -134,6 +141,8 @@ export interface ProgramExerciseRef {
   youtube_query: string;
   sets: number;
   reps: string;
+  /** Per-exercise rest interval carried into sessions built from this programme. */
+  restSeconds?: number;
   /** Working load chosen during programme setup; stored in kilograms. */
   weightKg?: number;
 }
@@ -315,6 +324,12 @@ export interface AppState {
   hydrationAlertsEnabled: boolean;
   challengeRecords?: ChallengeRecord[];
   manualPRs?: Record<string, { value: number; reps?: number; date: string }>;
+  /** Weekly guided confirmation that keeps planned loads and the Strength Map current. */
+  strengthCheckIn?: {
+    lastCompletedAt?: string;
+    snoozedUntil?: string;
+    completedCount?: number;
+  };
   units?: "kg" | "lb";
   remindersEnabled?: boolean;
   /** Opt-in iOS notifications sent on scheduled training days. */
@@ -331,6 +346,8 @@ export interface AppState {
   streakAlertHour?: number;
   /** Nudges when a duel rival is ahead or a duel is running out. Default on. */
   rivalAlertsEnabled?: boolean;
+  /** True after the athlete has made an explicit Lock Screen notification choice. */
+  notificationPreferenceConfigured?: boolean;
   /** Auto-post finished workouts to the social feed. Explicit opt-in only. */
   autoShareWorkouts?: boolean;
   streakArmor?: StreakArmor;

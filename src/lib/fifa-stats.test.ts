@@ -111,3 +111,54 @@ describe("buildPublicStats badges", () => {
     }
   });
 });
+
+describe("buildPublicStats strength map", () => {
+  it("publishes an empty calibrated snapshot without inventing muscle scores", () => {
+    const publicStats = buildPublicStats(state({}));
+    expect(publicStats.strengthMap).toEqual({
+      score: 0,
+      tier: "BEGINNER",
+      muscles: [],
+    });
+  });
+});
+
+describe("buildPublicStats training summary", () => {
+  it("publishes real workouts, working sets, volume and PR totals for profiles", () => {
+    const sessions = [
+      {
+        id: "session-1",
+        date: "2026-08-28",
+        dayKey: "MON",
+        label: "Push",
+        programId: null,
+        startedAt: "2026-08-28T10:00:00Z",
+        endedAt: "2026-08-28T11:00:00Z",
+        totalVolume: 4321.4,
+        prCount: 2,
+        exercises: [
+          {
+            exerciseId: "bench-press",
+            name: "Bench Press",
+            primary_muscles: ["chest"],
+            targetSets: 3,
+            targetReps: "8",
+            sets: [
+              { weight: 20, reps: 10, kind: "warmup" },
+              { weight: 80, reps: 8 },
+              { weight: 82.5, reps: 8 },
+              { weight: 0, reps: 0, mode: "duration", seconds: 45 },
+            ],
+          },
+        ],
+      },
+    ] as AppState["sessions"];
+
+    const summary = buildPublicStats(state({ sessions }));
+
+    expect(summary.totalWorkouts).toBe(1);
+    expect(summary.totalWorkingSets).toBe(3);
+    expect(summary.lifetimeVolumeKg).toBe(4321);
+    expect(summary.totalPRs).toBe(2);
+  });
+});

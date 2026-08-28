@@ -57,11 +57,11 @@ export const TIER_BLURB: Record<StrengthTier, string> = {
  * - REPS: best reps in a single set (bodyweight movements).
  * - SECONDS: longest hold.
  */
-type StandardKind = "RATIO" | "REPS" | "SECONDS";
+export type StrengthStandardKind = "RATIO" | "REPS" | "SECONDS";
 
 interface ExerciseStandard {
   muscle: MuscleGroup;
-  kind: StandardKind;
+  kind: StrengthStandardKind;
   /** Entry thresholds for NOVICE, INTERMEDIATE, ADVANCED, ELITE. */
   male: [number, number, number, number];
   female: [number, number, number, number];
@@ -69,7 +69,7 @@ interface ExerciseStandard {
 
 const S = (
   muscle: MuscleGroup,
-  kind: StandardKind,
+  kind: StrengthStandardKind,
   male: [number, number, number, number],
   female: [number, number, number, number],
 ): ExerciseStandard => ({ muscle, kind, male, female });
@@ -136,13 +136,29 @@ export const STANDARDS: Record<string, ExerciseStandard> = {
   "bicycle-crunch": S("CORE", "REPS", [15, 30, 50, 80], [15, 30, 50, 80]),
 };
 
-export const GRADED_MUSCLES: MuscleGroup[] = ["CHEST", "BACK", "LEGS", "SHOULDERS", "ARMS", "CORE"];
+export const GRADED_MUSCLES = [
+  "CHEST",
+  "BACK",
+  "LEGS",
+  "SHOULDERS",
+  "ARMS",
+  "CORE",
+] as const satisfies readonly MuscleGroup[];
+
+/** How a planned movement can contribute to the Strength Map. */
+export function strengthStandardKind(
+  exerciseId: string,
+  fallbackMuscle?: MuscleGroup,
+): StrengthStandardKind | null {
+  return (STANDARDS[exerciseId] ?? (fallbackMuscle ? GENERIC_STANDARD[fallbackMuscle] : undefined))
+    ?.kind ?? null;
+}
 
 export interface ExerciseGrade {
   exerciseId: string;
   name: string;
   muscle: MuscleGroup;
-  kind: StandardKind;
+  kind: StrengthStandardKind;
   tier: StrengthTier;
   /** 0-100 across the whole ladder, so a bar can be drawn from one number. */
   score: number;
@@ -200,6 +216,7 @@ function placeOnLadder(
  * with a 20% minimum increase so closely packed tables still demand a leap.
  */
 function thresholdsWithWorldClass(standard: ExerciseStandard, gender: string | null | undefined) {
+  if (gender !== "MALE" && gender !== "FEMALE") return null;
   const published = gender === "FEMALE" ? standard.female : standard.male;
   const elite = published[3];
   const advanced = published[2];
@@ -253,6 +270,23 @@ export function personalBests(state: AppState): Map<string, Bests> {
     }
   }
 
+  // Setup and weekly check-ins are dated, athlete-confirmed references. They
+  // must feed the same map as logged sets or the app can accept an answer and
+  // still stay grey. The raw load + reps are retained so the same e1RM formula
+  // is used everywhere rather than storing a precomputed score.
+  for (const [exerciseId, record] of Object.entries(state.manualPRs ?? {})) {
+    if (!record || !Number.isFinite(record.value) || record.value <= 0) continue;
+    const entry = touch(exerciseId);
+    const kind = strengthStandardKind(exerciseId);
+    if (kind === "SECONDS") {
+      entry.seconds = Math.max(entry.seconds, record.value);
+    } else if (kind === "REPS") {
+      entry.reps = Math.max(entry.reps, record.value);
+    } else {
+      entry.e1rmKg = Math.max(entry.e1rmKg, estimate1RM(record.value, record.reps ?? 1));
+    }
+  }
+
   return bests;
 }
 
@@ -269,6 +303,7 @@ export function gradeExercise(
     STANDARDS[exerciseId] ?? (fallbackMuscle ? GENERIC_STANDARD[fallbackMuscle] : undefined);
   if (!standard) return null;
   const thresholds = thresholdsWithWorldClass(standard, gender);
+  if (!thresholds) return null;
 
   let value: number;
   if (standard.kind === "RATIO") {
@@ -320,11 +355,25 @@ export function strengthReport(
   state: AppState,
   library: Array<Pick<Exercise, "id" | "name"> & Partial<Pick<Exercise, "muscleGroup">>>,
 ): StrengthReport {
+  const bodyweightKg = state.profile?.weightKg ?? 0;
+  const gender = state.profile?.gender;
+
+  // All six areas remain discoverable as grey, but no lift is graded until
+  // both calibration inputs exist. This avoids silently treating an
+  // unspecified reference as male or grading only bodyweight movements.
+  if (bodyweightKg <= 0 || (gender !== "MALE" && gender !== "FEMALE")) {
+    return {
+      muscles: [],
+      tier: TIERS[0],
+      score: 0,
+      ungraded: [...GRADED_MUSCLES],
+      gradedCount: 0,
+    };
+  }
+
   const bests = personalBests(state);
   const names = new Map(library.map((exercise) => [exercise.id, exercise.name]));
   const muscles = new Map(library.map((exercise) => [exercise.id, exercise.muscleGroup]));
-  const bodyweightKg = state.profile?.weightKg ?? 0;
-  const gender = state.profile?.gender;
 
   const byMuscle = new Map<MuscleGroup, ExerciseGrade[]>();
   for (const [exerciseId, best] of bests) {
@@ -387,6 +436,11 @@ export function strengthReportAsOf(
       ...state,
       sessions: state.sessions.filter((session) => session.date.slice(0, 10) <= cutoffIso),
       logs: (state.logs ?? []).filter((log) => log.date.slice(0, 10) <= cutoffIso),
+      manualPRs: Object.fromEntries(
+        Object.entries(state.manualPRs ?? {}).filter(
+          ([, record]) => record.date.slice(0, 10) <= cutoffIso,
+        ),
+      ),
     },
     library,
   );

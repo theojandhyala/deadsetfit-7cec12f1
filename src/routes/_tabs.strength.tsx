@@ -1,16 +1,22 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ChevronRight, Lock, Info, Share2, TrendingUp } from "lucide-react";
+import { ChevronRight, Lock, Info, RefreshCw, Share2, TrendingUp } from "lucide-react";
 
 import { useAppState } from "@/lib/storage";
 import { allExercises } from "@/lib/exercises";
+import { defaultSchedule } from "@/lib/calc";
 import { usePro } from "@/hooks/usePro";
 import { useCountUp } from "@/hooks/useCountUp";
 import { openPaywall } from "@/lib/paywall-events";
 import { formatWeight, unitOf } from "@/lib/units";
 import { hapticSelection } from "@/lib/haptics";
 import { MuscleDiagram } from "@/components/MuscleDiagram";
-import { StrengthShareCard } from "@/components/StrengthShareCard";
+import { MuscleGrowthCoach } from "@/components/MuscleGrowthCoach";
+import { StrengthMapShareCard } from "@/components/StrengthMapShareCard";
+import { WeeklySetGrid } from "@/components/WeeklySetGrid";
+import { openStrengthCheckIn } from "@/lib/strength-check-in-events";
+import type { GrowthTarget } from "@/lib/muscle-growth-recommendations";
+import { toMuscleGroup } from "@/lib/recovery";
 import {
   GRADED_MUSCLES,
   TIER_BLURB,
@@ -19,12 +25,10 @@ import {
   pointsToNextTier,
   strengthReport,
   strengthReportAsOf,
-  strengthTrend,
   type ExerciseGrade,
   type MuscleGrade,
   type StrengthReport,
   type StrengthTier,
-  type StrengthTrend,
 } from "@/lib/strength-grades";
 
 export const Route = createFileRoute("/_tabs/strength")({
@@ -34,18 +38,32 @@ export const Route = createFileRoute("/_tabs/strength")({
 
 function StrengthPage() {
   const [state] = useAppState();
+  const [growthTarget, setGrowthTarget] = useState<GrowthTarget>("BACK");
+  const [growthOpen, setGrowthOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const { isPro, loading: proLoading } = usePro();
   const unit = unitOf(state);
 
-  const library = useMemo(
-    () =>
-      allExercises(state.savedExercises).map((e) => ({
-        id: e.id,
-        name: e.name,
-        muscleGroup: e.muscleGroup,
-      })),
-    [state.savedExercises],
-  );
+  const library = useMemo(() => {
+    const byId = new Map(
+      allExercises(state.savedExercises).map((exercise) => [
+        exercise.id,
+        { id: exercise.id, name: exercise.name, muscleGroup: exercise.muscleGroup },
+      ]),
+    );
+    const active = state.programs.find((program) => program.id === state.activeProgramId);
+    for (const day of Object.values(active?.days ?? {})) {
+      for (const item of day.items) {
+        const muscleGroup = item.primary_muscles
+          .map(toMuscleGroup)
+          .find((muscle): muscle is NonNullable<typeof muscle> => Boolean(muscle));
+        if (muscleGroup && !byId.has(item.id)) {
+          byId.set(item.id, { id: item.id, name: item.name, muscleGroup });
+        }
+      }
+    }
+    return [...byId.values()];
+  }, [state.savedExercises, state.programs, state.activeProgramId]);
   const report = useMemo(() => strengthReport(state, library), [state, library]);
   const firstDay = useMemo(
     () =>
@@ -58,6 +76,7 @@ function StrengthPage() {
   const baselineDay = useMemo(() => {
     if (!firstDay) return null;
     const date = new Date(`${firstDay}T00:00:00Z`);
+    if (!Number.isFinite(date.getTime())) return null;
     date.setUTCDate(date.getUTCDate() + 89);
     return date.toISOString().slice(0, 10);
   }, [firstDay]);
@@ -68,32 +87,50 @@ function StrengthPage() {
   const plannedMuscles = useMemo(() => {
     const covered = new Set<string>();
     const definitions = allExercises(state.savedExercises);
-    for (const day of Object.values(state.schedule ?? {})) {
-      for (const exerciseId of day.exerciseIds) {
-        const muscle = definitions.find((exercise) => exercise.id === exerciseId)?.muscleGroup;
-        if (muscle) covered.add(muscle);
-      }
-    }
     const active = state.programs.find((program) => program.id === state.activeProgramId);
-    for (const day of Object.values(active?.days ?? {})) {
-      for (const exercise of day.items) {
-        exercise.primary_muscles.forEach((muscle) => covered.add(muscle.toUpperCase()));
+    if (active) {
+      for (const day of Object.values(active.days)) {
+        for (const exercise of day.items) {
+          exercise.primary_muscles.forEach((muscle) => {
+            const group = toMuscleGroup(muscle);
+            if (group) covered.add(group);
+          });
+        }
+      }
+    } else {
+      const schedule = state.schedule ?? (state.profile ? defaultSchedule(state.profile) : null);
+      for (const day of Object.values(schedule ?? {})) {
+        for (const exerciseId of day.exerciseIds) {
+          const muscle = definitions.find((exercise) => exercise.id === exerciseId)?.muscleGroup;
+          if (muscle) covered.add(muscle);
+        }
       }
     }
     return covered;
-  }, [state.schedule, state.programs, state.activeProgramId, state.savedExercises]);
-  const trend = useMemo(() => strengthTrend(state, library, 7), [state, library]);
-  const [sharing, setSharing] = useState(false);
+  }, [state.schedule, state.programs, state.activeProgramId, state.savedExercises, state.profile]);
   const displayScore = useCountUp(report.score, 900);
-  const locked = !proLoading && !isPro;
+  const locked = proLoading || !isPro;
 
-  const needsBodyweight = !state.profile?.weightKg;
+  const needsBodyweight = (state.profile?.weightKg ?? 0) <= 0;
+  const needsStrengthReference = state.profile?.gender === "OTHER";
+  const needsStrengthProfile = needsBodyweight || needsStrengthReference;
+
+  function openGrowthPlan(target: GrowthTarget) {
+    setGrowthTarget(target);
+    setGrowthOpen(true);
+    hapticSelection();
+  }
+
+  function openStrengthShare() {
+    hapticSelection();
+    setShareOpen(true);
+  }
 
   return (
     <div className="deadset-page min-h-screen pb-28">
       <header className="px-5 pt-6 pb-3 flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="label-cap text-grit-dim">YOUR STRENGTH</p>
+          <p className="label-cap text-grit-dim">YOUR STRENGTH MAP</p>
           <h1 className="display text-2xl font-extrabold uppercase text-grit">
             How strong are you?
           </h1>
@@ -107,24 +144,78 @@ function StrengthPage() {
         </Link>
       </header>
 
-      {needsBodyweight ? (
-        <MissingBodyweight />
-      ) : (
-        <>
-          <StrengthBodyComparison
-            baseline={baseline}
-            current={report}
-            plannedMuscles={plannedMuscles}
-            onShare={report.gradedCount > 0 ? () => setSharing(true) : null}
-          />
+      <StrengthBodyComparison
+        baseline={needsStrengthProfile ? null : baseline}
+        current={report}
+        plannedMuscles={plannedMuscles}
+        onSelectMuscle={openGrowthPlan}
+        onShare={openStrengthShare}
+      />
 
+      <section className="px-5 mt-3">
+        <button
+          type="button"
+          onClick={() => {
+            hapticSelection();
+            openStrengthCheckIn();
+          }}
+          className="press flex min-h-16 w-full items-center justify-between gap-3 rounded-2xl border border-accent-red/45 bg-[linear-gradient(110deg,rgba(230,50,34,.22),rgba(230,50,34,.06))] px-4 text-left"
+        >
+          <span className="flex min-w-0 items-center gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent-red text-white">
+              <RefreshCw size={18} strokeWidth={2.6} />
+            </span>
+            <span>
+              <span className="display block text-lg font-black uppercase leading-none text-white">
+                Update lifts & map
+              </span>
+              <span className="mt-1 block text-[10px] leading-relaxed text-grit-dim">
+                {state.strengthCheckIn?.lastCompletedAt
+                  ? `Last synced ${new Date(state.strengthCheckIn.lastCompletedAt).toLocaleDateString()}`
+                  : "Confirm every exercise once, then DEADSET checks in weekly"}
+              </span>
+            </span>
+          </span>
+          <ChevronRight size={18} className="shrink-0 text-accent-red" />
+        </button>
+      </section>
+
+      <section className="px-5 mt-5">
+        <WeeklySetGrid state={state} onSelectMuscle={openGrowthPlan} />
+      </section>
+
+      {needsStrengthProfile && (
+        <MissingStrengthProfile
+          needsBodyweight={needsBodyweight}
+          needsStrengthReference={needsStrengthReference}
+        />
+      )}
+
+      <MuscleGrowthCoach
+        selectedTarget={growthTarget}
+        onTargetChange={setGrowthTarget}
+        open={growthOpen}
+        onOpenChange={setGrowthOpen}
+      />
+
+      {shareOpen && (
+        <StrengthMapShareCard
+          current={report}
+          baseline={baseline}
+          gradeColors={reportColors(report, plannedMuscles)}
+          displayName={state.profile?.displayName}
+          username={state.profile?.username}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
+
+      {!needsStrengthProfile && (
+        <>
           {report.gradedCount > 0 ? (
             <>
               <div className="mt-5">
                 <OverallCard tier={report.tier} score={report.score} displayScore={displayScore} />
               </div>
-
-              <WeekTrend trend={trend} />
 
               <section className="px-5 mt-5">
                 <p className="label-cap text-[10px] text-grit-dim mb-2">BY MUSCLE GROUP</p>
@@ -157,24 +248,6 @@ function StrengthPage() {
             </section>
           )}
 
-          {sharing && (
-            <StrengthShareCard
-              start={baseline?.muscles ?? []}
-              now={report.muscles}
-              tier={report.tier}
-              displayName={state.profile?.displayName || state.profile?.username || "DEADSET"}
-              sinceLabel={
-                firstDay
-                  ? `Since ${new Date(`${firstDay}T00:00:00`).toLocaleDateString(undefined, {
-                      month: "short",
-                      year: "numeric",
-                    })}`
-                  : "Your strength"
-              }
-              onClose={() => setSharing(false)}
-            />
-          )}
-
           <p className="px-5 mt-5 text-[10px] leading-relaxed text-grit-dim">
             Grades compare your best estimated one-rep max against typical standards for your
             bodyweight and sex. A muscle's grade is the average of its movements — one strong lift
@@ -200,12 +273,14 @@ function StrengthBodyComparison({
   baseline,
   current,
   plannedMuscles,
+  onSelectMuscle,
   onShare,
 }: {
   baseline: StrengthReport | null;
   current: StrengthReport;
   plannedMuscles: Set<string>;
-  onShare: (() => void) | null;
+  onSelectMuscle: (muscle: GrowthTarget) => void;
+  onShare: () => void;
 }) {
   const hasBaseline = Boolean(baseline?.gradedCount);
   const baselineColors = reportColors(hasBaseline ? baseline : null);
@@ -272,15 +347,6 @@ function StrengthBodyComparison({
           </div>
         </div>
 
-        {onShare && (
-          <div className="px-4 pt-3">
-            <button onClick={onShare} className="btn-grit w-full">
-              <Share2 size={15} className="mr-2" />
-              Share my progress
-            </button>
-          </div>
-        )}
-
         <p className="px-4 pt-3 text-center text-[10px] leading-relaxed text-grit-dim">
           Every colour is earned from your actual lifts, adjusted for bodyweight. Grey areas are
           missing data—not a made-up score.
@@ -290,21 +356,55 @@ function StrengthBodyComparison({
             const grade = current.muscles.find((item) => item.muscle === muscle);
             const planned = plannedMuscles.has(muscle);
             return (
-              <div key={muscle} className="rounded-xl border border-grit bg-black/30 px-3 py-2">
-                <p className="label-cap text-[9px] text-grit">{muscle}</p>
-                <p
-                  className="mt-0.5 text-[9px] leading-tight"
-                  style={{ color: grade ? TIER_COLOR[grade.tier] : "#777" }}
-                >
-                  {grade
-                    ? `${grade.tier} · ${grade.exercises.length} lift${grade.exercises.length === 1 ? "" : "s"}`
-                    : planned
-                      ? "Exercises set · log weighted sets"
-                      : "No exercises set for that"}
-                </p>
-              </div>
+              <button
+                key={muscle}
+                type="button"
+                onClick={() => onSelectMuscle(muscle)}
+                aria-label={`Open ${muscle.toLowerCase()} growth game plan`}
+                className="flex min-h-14 items-center justify-between rounded-xl border border-grit bg-black/30 px-3 py-2 text-left press"
+              >
+                <span>
+                  <span className="label-cap block text-[9px] text-grit">{muscle}</span>
+                  <span
+                    className="mt-0.5 block text-[9px] leading-tight"
+                    style={{ color: grade ? TIER_COLOR[grade.tier] : "#777" }}
+                  >
+                    {grade
+                      ? `${grade.tier} · ${grade.exercises.length} lift${grade.exercises.length === 1 ? "" : "s"}`
+                      : planned
+                        ? "Exercises set · log weighted sets"
+                        : "No exercises set for that"}
+                  </span>
+                  <span className="label-cap mt-1 block text-[6px] text-accent-red">
+                    BUILD THIS AREA
+                  </span>
+                </span>
+                <ChevronRight size={15} className="shrink-0 text-accent-red" />
+              </button>
             );
           })}
+        </div>
+        <div className="border-t border-grit p-4 pt-3">
+          <button
+            type="button"
+            onClick={onShare}
+            className="press flex min-h-14 w-full items-center justify-between gap-3 rounded-xl border border-accent-red/45 bg-[linear-gradient(110deg,rgba(230,50,34,.24),rgba(230,50,34,.07))] px-4 text-left"
+          >
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-accent-red text-white shadow-[0_8px_22px_rgba(230,50,34,.3)]">
+                <Share2 size={17} strokeWidth={2.5} />
+              </span>
+              <span className="min-w-0">
+                <span className="display block truncate text-base font-black uppercase text-grit">
+                  Share my Strength Map
+                </span>
+                <span className="block text-[9px] font-semibold text-grit-dim">
+                  9:16 card built from your real lifts
+                </span>
+              </span>
+            </span>
+            <ChevronRight size={17} className="shrink-0 text-accent-red" />
+          </button>
         </div>
       </div>
     </section>
@@ -365,55 +465,6 @@ function MapKey({ color, label }: { color: string; label: string }) {
       <span className="h-2 w-2 rounded-sm border border-white/10" style={{ background: color }} />
       {label}
     </span>
-  );
-}
-
-/**
- * What moved this week.
- *
- * A static grade is read once. "Chest went 42 to 47" is a reason to come back,
- * which is the whole difference between a stat and a habit.
- */
-function WeekTrend({ trend }: { trend: StrengthTrend }) {
-  if (trend.movers.length === 0) {
-    return (
-      <section className="px-5 mt-3">
-        <div className="rounded-2xl border border-grit px-4 py-3">
-          <p className="label-cap text-[9px] text-grit-dim">THIS WEEK</p>
-          <p className="mt-1 text-xs leading-relaxed text-grit-dim">
-            No grade changes yet. Beat a previous best on any lift and it moves here.
-          </p>
-        </div>
-      </section>
-    );
-  }
-
-  return (
-    <section className="px-5 mt-3">
-      <div
-        className="rounded-2xl border px-4 py-3"
-        style={{ borderColor: "rgba(91,208,122,0.35)", background: "rgba(91,208,122,0.06)" }}
-      >
-        <div className="flex items-baseline justify-between">
-          <p className="label-cap text-[9px] text-grit-dim">THIS WEEK</p>
-          {trend.overallChange > 0 && (
-            <p className="display text-sm font-extrabold" style={{ color: "#5bd07a" }}>
-              +{trend.overallChange} OVERALL
-            </p>
-          )}
-        </div>
-        <ul className="stagger mt-2 space-y-1">
-          {trend.movers.slice(0, 4).map((mover) => (
-            <li key={mover.muscle} className="flex items-baseline justify-between gap-3">
-              <span className="text-xs font-bold text-grit">{mover.muscle}</span>
-              <span className="display text-xs font-extrabold tabular-nums text-grit-dim">
-                {mover.then} <span style={{ color: "#5bd07a" }}>→ {mover.now}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </section>
   );
 }
 
@@ -602,20 +653,35 @@ function ExerciseRow({ grade, unit }: { grade: ExerciseGrade; unit: "kg" | "lb" 
   );
 }
 
-function MissingBodyweight() {
+function MissingStrengthProfile({
+  needsBodyweight,
+  needsStrengthReference,
+}: {
+  needsBodyweight: boolean;
+  needsStrengthReference: boolean;
+}) {
+  const both = needsBodyweight && needsStrengthReference;
   return (
-    <section className="px-5">
+    <section className="mt-5 px-5">
       <div className="rounded-2xl border border-grit bg-grit-card p-5">
         <Info size={22} className="text-accent-red" />
         <p className="display mt-3 text-lg font-extrabold uppercase text-grit">
-          Add your bodyweight
+          {both
+            ? "Finish strength setup"
+            : needsBodyweight
+              ? "Add your bodyweight"
+              : "Choose a strength reference"}
         </p>
         <p className="mt-1.5 text-xs leading-relaxed text-grit-dim">
-          Strength is graded relative to what you weigh — a 100 kg bench means something very
-          different at 60 kg than at 110. Without it we'd be guessing, so we won't grade you at all.
+          {needsBodyweight
+            ? "Strength is graded relative to what you weigh — a 100 kg bench means something very different at 60 kg than at 110."
+            : "Male and female strength tables use different reference points. Choose the table you want DEADSET to use; we will not silently guess."}{" "}
+          {both
+            ? "Add both details in Profile and the map will switch on."
+            : "Until then, the map stays grey."}
         </p>
         <Link to="/profile" className="btn-grit mt-4 w-full">
-          Set bodyweight
+          Open strength setup
         </Link>
       </div>
     </section>

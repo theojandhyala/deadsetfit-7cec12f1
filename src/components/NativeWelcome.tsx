@@ -56,7 +56,7 @@ export function NativeWelcome() {
 
       <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col px-5 pb-[max(22px,env(safe-area-inset-bottom))] pt-[max(18px,env(safe-area-inset-top))]">
         <header className="flex min-h-11 items-center justify-between">
-          <GritLogo className="text-[26px]" />
+          <GritLogo className="w-28" />
           <a
             href={nativeAuthHref("signin")}
             onClick={hapticSelection}
@@ -131,7 +131,7 @@ export function NativeWelcome() {
             onClick={hapticSelection}
             className="btn-grit flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl text-[13px] press"
           >
-            Create free account <ArrowRight size={17} aria-hidden="true" />
+            Create my account <ArrowRight size={17} aria-hidden="true" />
           </a>
           <a
             href={nativeAuthHref("signin")}
@@ -141,7 +141,7 @@ export function NativeWelcome() {
             I already have an account
           </a>
           <p className="label-cap mt-3 text-center text-[7px] text-white/34">
-            FREE TO JOIN · NO CARD REQUIRED
+            SET UP FIRST · 7-DAY TRIAL AFTER
           </p>
           <p className="mt-1.5 text-center text-[9px] font-semibold text-white/28">
             By continuing, you agree to our{" "}

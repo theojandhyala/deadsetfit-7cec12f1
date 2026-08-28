@@ -11,6 +11,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { trackWhopEvent } from "@/lib/whop";
+import { GritLogo } from "@/components/GritLogo";
 
 const appStoreUrl = import.meta.env.VITE_APP_STORE_URL?.trim() || "https://apps.apple.com/";
 
@@ -112,7 +113,15 @@ function Phone({ screen, alt }: { screen: string; alt: string }) {
 function SlideVisual({ type }: { type: (typeof slides)[number]["type"] }) {
   if (type === "hero")
     return (
-      <div className="absolute inset-0 bg-[url('/ads/deadset-tiktok-gym.png')] bg-cover bg-center" />
+      <div className="absolute inset-0 overflow-hidden bg-[#080809]">
+        <img
+          src="/screenshots/train.webp"
+          alt=""
+          aria-hidden="true"
+          className="h-full w-full scale-110 object-cover object-top opacity-45 blur-[1px]"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/35 to-black" />
+      </div>
     );
   if (type === "logger")
     return <Phone screen="/screenshots/logger.webp" alt="DEADSET workout logger" />;
@@ -222,10 +231,7 @@ function TikTokCreative() {
   return (
     <main className="min-h-[100dvh] bg-[#070708] text-[#f5f5f0]">
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-white/10 bg-[#070708]/95 px-5 py-3 backdrop-blur">
-        <span className="display text-2xl font-bold uppercase leading-none">
-          <span>DEAD</span>
-          <span className="text-[#e63222]">SET</span>
-        </span>
+        <GritLogo className="w-32" />
         <StoreButton className="min-h-10 rounded-xl px-4 text-[11px]" />
       </header>
 

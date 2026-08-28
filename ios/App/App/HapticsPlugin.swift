@@ -33,8 +33,12 @@ public class HapticsPlugin: CAPPlugin, CAPBridgedPlugin {
     override public func load() {
         NSLog("[DEADSET] Haptics plugin loaded")
         DispatchQueue.main.async {
+            self.light.prepare()
             self.medium.prepare()
+            self.heavy.prepare()
+            self.rigid.prepare()
             self.notifier.prepare()
+            self.selector.prepare()
         }
     }
 
@@ -53,6 +57,9 @@ public class HapticsPlugin: CAPPlugin, CAPBridgedPlugin {
             let generator = self.generator(for: style)
             generator.prepare()
             generator.impactOccurred()
+            // Keep the engine warm for the next nearby interaction (set logging,
+            // picker changes and countdown beats often arrive in short bursts).
+            generator.prepare()
         }
         call.resolve()
     }
@@ -66,6 +73,7 @@ public class HapticsPlugin: CAPPlugin, CAPBridgedPlugin {
             case "error": self.notifier.notificationOccurred(.error)
             default: self.notifier.notificationOccurred(.success)
             }
+            self.notifier.prepare()
         }
         call.resolve()
     }
@@ -74,6 +82,7 @@ public class HapticsPlugin: CAPPlugin, CAPBridgedPlugin {
         DispatchQueue.main.async {
             self.selector.prepare()
             self.selector.selectionChanged()
+            self.selector.prepare()
         }
         call.resolve()
     }
@@ -95,6 +104,7 @@ public class HapticsPlugin: CAPPlugin, CAPBridgedPlugin {
                 let generator = self.generator(for: style)
                 generator.prepare()
                 generator.impactOccurred()
+                generator.prepare()
             }
             delay += max(0, gap) / 1000
         }

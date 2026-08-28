@@ -1,9 +1,8 @@
 import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { BottomNav } from "@/components/BottomNav";
 import { GritEarnedLayer } from "@/components/GritEarnedLayer";
-import { FirstRunTour } from "@/components/FirstRunTour";
 import { TopBar } from "@/components/TopBar";
 import {
   getLocalStateOwner,
@@ -26,6 +25,11 @@ import { usePro } from "@/hooks/usePro";
 import { FeatureTour } from "@/components/FeatureTour";
 import { buildWidgetSnapshot, publishWidgets } from "@/lib/widgets";
 import { ProgrammeWeightSetup } from "@/components/ProgrammeWeightSetup";
+import { programmeWeightRows } from "@/lib/programme-weight-setup";
+import { requiresPaidAccess } from "@/lib/paid-access";
+import { WeeklyStrengthCheckIn } from "@/components/WeeklyStrengthCheckIn";
+import { finishAppBoot } from "@/lib/app-boot";
+import { NotificationPermissionBanner } from "@/components/NotificationPermissionBanner";
 
 export const Route = createFileRoute("/_tabs")({
   component: TabsLayout,
@@ -37,9 +41,40 @@ function TabsLayout() {
   const getProfile = getMyProfile;
   const [state, set] = useAppState();
   const { isPro, loading: proLoading } = usePro();
+  const weightSetupRows = useMemo(
+    () =>
+      state.profile
+        ? programmeWeightRows({
+            schedule: state.schedule,
+            programs: state.programs,
+            activeProgramId: state.activeProgramId,
+            savedExercises: state.savedExercises,
+            sessions: state.sessions,
+          })
+        : [],
+    [
+      state.profile,
+      state.schedule,
+      state.programs,
+      state.activeProgramId,
+      state.savedExercises,
+      state.sessions,
+    ],
+  );
+  const accountEscapeMode = pathname === "/profile" && !isPro;
+  const needsWeightSetup = !accountEscapeMode && weightSetupRows.some((row) => !row.autoApply);
+  const weightsSettled = weightSetupRows.length === 0;
   // Start ready=true if local state already has a profile — render INSTANTLY
   // on hot refresh / navigation; remote sync continues in the background.
   const [ready, setReady] = useState(false);
+  const [strengthCheckInOpen, setStrengthCheckInOpen] = useState(false);
+  const paidAccessRequired = requiresPaidAccess({
+    ready,
+    hasProfile: !!state.profile,
+    entitlementLoading: proLoading,
+    hasEntitlement: isPro,
+    pathname,
+  });
   const navRef = useRef(navigate);
   const getProfileRef = useRef(getProfile);
   const lastScoreRef = useRef<number | null>(null);
@@ -121,16 +156,23 @@ function TabsLayout() {
       }
     })();
 
-    const safety = setTimeout(finish, 3000);
-
     const { data } = supabase.auth.onAuthStateChange((event, s) => {
       if (event === "SIGNED_IN" && s) finish();
     });
     return () => {
-      clearTimeout(safety);
       data.subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!paidAccessRequired) return;
+    navigate({ to: "/upgrade", replace: true });
+  }, [navigate, paidAccessRequired]);
+
+  useEffect(() => {
+    if (!ready || !state.profile || proLoading || paidAccessRequired) return;
+    finishAppBoot();
+  }, [paidAccessRequired, proLoading, ready, state.profile]);
 
   useEffect(() => {
     if (!ready || !state.profile) return;
@@ -191,12 +233,8 @@ function TabsLayout() {
     void publishWidgets(state);
   }, [ready, state]);
 
-  if (!ready) {
-    return (
-      <div className="min-h-screen bg-grit flex items-center justify-center">
-        <span className="label-cap text-grit-dim text-xs animate-pulse">Loading…</span>
-      </div>
-    );
+  if (!ready || paidAccessRequired) {
+    return <div className="min-h-[100dvh] bg-[#080808]" aria-hidden="true" />;
   }
   return (
     <div
@@ -206,15 +244,28 @@ function TabsLayout() {
         paddingBottom: "calc(104px + env(safe-area-inset-bottom))",
       }}
     >
-      <TopBar />
-      <div key={pathname} className="deadset-route-shell">
-        <Outlet />
+      <div
+        inert={needsWeightSetup || strengthCheckInOpen ? true : undefined}
+        aria-hidden={needsWeightSetup || strengthCheckInOpen || undefined}
+      >
+        <TopBar />
+        <div key={pathname} className="deadset-route-shell">
+          <NotificationPermissionBanner
+            active={pathname === "/train" && !!state.profile && !needsWeightSetup && !strengthCheckInOpen}
+          />
+          <Outlet />
+        </div>
+        <BottomNav />
       </div>
-      <FeatureTour />
+      <FeatureTour
+        active={!accountEscapeMode && !!state.profile && weightsSettled && !strengthCheckInOpen}
+      />
       <GritEarnedLayer />
-      <FirstRunTour active={!!state.profile} />
-      <ProgrammeWeightSetup />
-      <BottomNav />
+      {!accountEscapeMode && <ProgrammeWeightSetup rows={weightSetupRows} />}
+      <WeeklyStrengthCheckIn
+        enabled={!accountEscapeMode && weightsSettled}
+        onVisibilityChange={setStrengthCheckInOpen}
+      />
     </div>
   );
 }
