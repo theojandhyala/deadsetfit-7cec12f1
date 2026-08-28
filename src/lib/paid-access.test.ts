@@ -42,6 +42,14 @@ describe("isSevenDayFreeTrial", () => {
     ).toBe(true);
     expect(
       isSevenDayFreeTrial({
+        paymentMode: "FreeTrial",
+        periodUnit: "Week",
+        periodValue: 1,
+        periodCount: 1,
+      }),
+    ).toBe(true);
+    expect(
+      isSevenDayFreeTrial({
         paymentMode: "payAsYouGo",
         periodUnit: "week",
         periodValue: 1,
@@ -54,6 +62,17 @@ describe("isSevenDayFreeTrial", () => {
         periodUnit: "month",
         periodValue: 1,
         periodCount: 1,
+      }),
+    ).toBe(false);
+  });
+
+  it("rejects longer trials even when StoreKit casing is used", () => {
+    expect(
+      isSevenDayFreeTrial({
+        paymentMode: "FreeTrial",
+        periodUnit: "Week",
+        periodValue: 1,
+        periodCount: 2,
       }),
     ).toBe(false);
   });

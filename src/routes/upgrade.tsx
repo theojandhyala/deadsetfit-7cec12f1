@@ -433,7 +433,9 @@ function UpgradePage() {
 
       <p className="mt-4 text-center text-[10px] leading-relaxed text-grit-dim">
         {iosNative
-          ? "Apple shows the exact trial, price and renewal terms before you confirm. The subscription renews automatically until cancelled."
+          ? appleTrialEligible
+            ? `No charge today. Full access starts as soon as Apple confirms. On Day 8, Apple bills ${monthlyLabel}/month unless you cancel before the trial ends.`
+            : "Apple shows the exact price and renewal terms before you confirm. The subscription renews automatically until cancelled."
           : "Seven days free for eligible new members, then the displayed monthly price. Cancel anytime."}
       </p>
 

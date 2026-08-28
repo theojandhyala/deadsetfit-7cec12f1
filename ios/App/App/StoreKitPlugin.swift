@@ -162,19 +162,43 @@ public class StoreKitPlugin: CAPPlugin, CAPBridgedPlugin {
         ]
         if let subscription = product.subscription {
             let period = subscription.subscriptionPeriod
-            payload["periodUnit"] = String(describing: period.unit)
+            payload["periodUnit"] = periodUnitWireValue(period.unit)
             payload["periodValue"] = period.value
             payload["eligibleForIntroOffer"] = await subscription.isEligibleForIntroOffer
             if let offer = subscription.introductoryOffer {
                 payload["introductoryOffer"] = [
-                    "paymentMode": offer.paymentMode.rawValue,
+                    "paymentMode": paymentModeWireValue(offer.paymentMode),
                     "displayPrice": offer.displayPrice,
-                    "periodUnit": String(describing: offer.period.unit),
+                    "periodUnit": periodUnitWireValue(offer.period.unit),
                     "periodValue": offer.period.value,
                     "periodCount": offer.periodCount
                 ]
             }
         }
         return payload
+    }
+
+    /// StoreKit's raw values are capitalised (for example `FreeTrial` and
+    /// `Week`). Keep the Capacitor bridge contract stable and JavaScript-like
+    /// so the paywall cannot silently misclassify an eligible Apple offer.
+    private static func paymentModeWireValue(
+        _ mode: Product.SubscriptionOffer.PaymentMode
+    ) -> String {
+        switch mode {
+        case .freeTrial: return "freeTrial"
+        case .payAsYouGo: return "payAsYouGo"
+        case .payUpFront: return "payUpFront"
+        default: return mode.rawValue.prefix(1).lowercased() + mode.rawValue.dropFirst()
+        }
+    }
+
+    private static func periodUnitWireValue(_ unit: Product.SubscriptionPeriod.Unit) -> String {
+        switch unit {
+        case .day: return "day"
+        case .week: return "week"
+        case .month: return "month"
+        case .year: return "year"
+        default: return String(describing: unit).lowercased()
+        }
     }
 }

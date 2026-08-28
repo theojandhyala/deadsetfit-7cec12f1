@@ -30,7 +30,12 @@ export function isSevenDayFreeTrial(
     | null
     | undefined,
 ): boolean {
-  if (offer?.paymentMode !== "freeTrial") return false;
-  const units = (offer.periodValue ?? 0) * (offer.periodCount ?? 1);
-  return offer.periodUnit === "week" && units === 1;
+  // StoreKit's Swift raw values are capitalised (`FreeTrial`, `Week`). The
+  // native bridge normalises them, and this defensive normalisation keeps the
+  // disclosure correct if an older bridge payload is restored from a webview.
+  const paymentMode = offer?.paymentMode?.replace(/[^a-z]/gi, "").toLowerCase();
+  const periodUnit = offer?.periodUnit?.trim().toLowerCase();
+  if (paymentMode !== "freetrial") return false;
+  const units = (offer?.periodValue ?? 0) * (offer?.periodCount ?? 1);
+  return periodUnit === "week" && units === 1;
 }

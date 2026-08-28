@@ -185,9 +185,9 @@ check(
 check(
   "first update version",
   (xcodeProject.match(/MARKETING_VERSION = 1\.2;/g)?.length ?? 0) >= 6 &&
-    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 143;/g)?.length ?? 0) >= 6 &&
+    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 144;/g)?.length ?? 0) >= 6 &&
     whatsNew.includes("WHATS_NEW_VERSION = 202608288"),
-  "The app, activity extension and watch targets are versioned as 1.2 (143), with a matching in-app update summary.",
+  "The app, activity extension and watch targets are versioned as 1.2 (144), with a matching in-app update summary.",
 );
 check(
   "full check script",
@@ -370,9 +370,14 @@ check(
   "StoreKit seven-day trial disclosure",
   storeKitPlugin.includes("introductoryOffer") &&
     storeKitPlugin.includes("isEligibleForIntroOffer") &&
+    storeKitPlugin.includes("paymentModeWireValue") &&
+    storeKitPlugin.includes('case .freeTrial: return "freeTrial"') &&
+    storeKitPlugin.includes('case .week: return "week"') &&
     upgradePage.includes("isSevenDayFreeTrial") &&
-    upgradePage.includes("Start my 7-day free trial"),
-  "The iPhone paywall reads Apple's configured offer and eligibility before advertising the seven-day trial.",
+    upgradePage.includes("Start my 7-day free trial") &&
+    upgradePage.includes("No charge today") &&
+    upgradePage.includes("On Day 8, Apple bills"),
+  "The iPhone paywall normalises StoreKit's offer payload, verifies eligibility, and discloses the free period and Day 8 renewal before purchase.",
 );
 check(
   "RevenueCat StoreKit 2 tracking",
