@@ -27,6 +27,7 @@ import {
 import { toast } from "sonner";
 
 import { usePro } from "@/hooks/usePro";
+import { WeeklySetGrid } from "@/components/WeeklySetGrid";
 import { askConfirm } from "@/lib/confirm";
 import { defaultSchedule, todayKey, updateScheduleDay } from "@/lib/calc";
 import { currentWeekStart, getWeeklyCompetitionStats } from "@/lib/competition";
@@ -777,6 +778,23 @@ function PlanPage() {
           </div>
         </section>
       )}
+
+      <section className="deadset-section">
+        <div className="deadset-section-title">
+          <div>
+            <p className="deadset-kicker">Volume at a glance</p>
+            <h2 className="display mt-2 text-2xl font-black uppercase text-grit">Set pattern</h2>
+          </div>
+          <Link
+            to="/strength"
+            onClick={hapticSelection}
+            className="flex min-h-11 items-center gap-1.5 text-[10px] font-bold uppercase text-accent-red"
+          >
+            Muscle map <ChevronRight size={13} />
+          </Link>
+        </div>
+        <WeeklySetGrid state={state} />
+      </section>
 
       <section id="week-map" className="deadset-section scroll-mt-4">
         <div className="deadset-section-title">

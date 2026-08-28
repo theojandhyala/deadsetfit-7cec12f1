@@ -78,6 +78,28 @@ export const getDuels = () => callRpc<Duel[]>("getDuels");
 export const toggleFollow = ({ data }: { data: { userId: string } }) =>
   callRpc<{ following: boolean }>("toggleFollow", data);
 
+export type FriendStatus = "FRIEND" | "INCOMING" | "OUTGOING" | "NONE";
+export type FriendAction = "send" | "accept" | "decline" | "cancel" | "remove";
+export interface FriendConnection {
+  id: string;
+  username: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+  grit_points: number;
+  level: string;
+  status: Exclude<FriendStatus, "NONE">;
+  since: string | null;
+}
+export interface FriendConnections {
+  friends: FriendConnection[];
+  incoming: FriendConnection[];
+  outgoing: FriendConnection[];
+}
+export const getFriendConnections = () =>
+  callRpc<FriendConnections>("getFriendConnections");
+export const updateFriendship = ({ data }: { data: { userId: string; action: FriendAction } }) =>
+  callRpc<{ ok: boolean; status: FriendStatus }>("updateFriendship", data);
+
 export const searchAthletes = ({ data }: { data: { q: string } }) =>
   callRpc<any[]>("searchAthletes", data);
 

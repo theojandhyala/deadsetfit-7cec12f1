@@ -1328,6 +1328,163 @@ const handlers: Record<string, Handler> = {
     return { following: true };
   },
 
+  async getFriendConnections(_data, req) {
+    const { supabase, userId } = await requireAuth(req);
+    const hidden = await blockedUserIds(supabase, userId);
+    const [{ data: outgoing, error: outgoingError }, { data: incoming, error: incomingError }] =
+      await Promise.all([
+        supabase
+          .from("follows")
+          .select("following_id, created_at")
+          .eq("follower_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(500),
+        supabase
+          .from("follows")
+          .select("follower_id, created_at")
+          .eq("following_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(500),
+      ]);
+    if (outgoingError) throw new Error(outgoingError.message);
+    if (incomingError) throw new Error(incomingError.message);
+
+    const outgoingAt = new Map(
+      (outgoing ?? []).map((row) => [row.following_id as string, row.created_at as string]),
+    );
+    const incomingAt = new Map(
+      (incoming ?? []).map((row) => [row.follower_id as string, row.created_at as string]),
+    );
+    const ids = [...new Set([...outgoingAt.keys(), ...incomingAt.keys()])].filter(
+      (id) => !hidden.has(id),
+    );
+    const { data: profiles, error: profilesError } = await supabase
+      .from("public_profiles")
+      .select("id, username, display_name, avatar_url, grit_points")
+      .in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
+    if (profilesError) throw new Error(profilesError.message);
+    const profileById = new Map((profiles ?? []).map((profile) => [profile.id as string, profile]));
+    const connection = (
+      id: string,
+      status: "FRIEND" | "INCOMING" | "OUTGOING",
+      since: string | null,
+    ) => {
+      const profile = profileById.get(id);
+      if (!profile) return null;
+      return {
+        id,
+        username: profile.username,
+        display_name: profile.display_name,
+        avatar_url: profile.avatar_url,
+        grit_points: profile.grit_points ?? 0,
+        level: gritLevel(profile.grit_points ?? 0),
+        status,
+        since,
+      };
+    };
+
+    const friends = ids
+      .filter((id) => outgoingAt.has(id) && incomingAt.has(id))
+      .map((id) =>
+        connection(
+          id,
+          "FRIEND",
+          [outgoingAt.get(id), incomingAt.get(id)].filter(Boolean).sort().at(-1) ?? null,
+        ),
+      )
+      .filter(Boolean);
+    const incomingRequests = ids
+      .filter((id) => incomingAt.has(id) && !outgoingAt.has(id))
+      .map((id) => connection(id, "INCOMING", incomingAt.get(id) ?? null))
+      .filter(Boolean);
+    const outgoingRequests = ids
+      .filter((id) => outgoingAt.has(id) && !incomingAt.has(id))
+      .map((id) => connection(id, "OUTGOING", outgoingAt.get(id) ?? null))
+      .filter(Boolean);
+    return { friends, incoming: incomingRequests, outgoing: outgoingRequests };
+  },
+
+  async updateFriendship(data, req) {
+    const { userId } = await requireAuth(req);
+    const d = z
+      .object({
+        userId: z.string().uuid(),
+        action: z.enum(["send", "accept", "decline", "cancel", "remove"]),
+      })
+      .parse(data);
+    if (d.userId === userId) throw new Error("You can't add yourself");
+    const hidden = await blockedUserIds(supabaseAdmin, userId);
+    if (hidden.has(d.userId)) throw new Error("You can't add this athlete");
+
+    const deleteOutgoing = () =>
+      supabaseAdmin
+        .from("follows")
+        .delete()
+        .eq("follower_id", userId)
+        .eq("following_id", d.userId);
+    const deleteIncoming = () =>
+      supabaseAdmin
+        .from("follows")
+        .delete()
+        .eq("follower_id", d.userId)
+        .eq("following_id", userId);
+
+    if (d.action === "send") {
+      const { error } = await supabaseAdmin
+        .from("follows")
+        .upsert(
+          { follower_id: userId, following_id: d.userId },
+          { onConflict: "follower_id,following_id", ignoreDuplicates: true },
+        );
+      if (error) throw new Error(error.message);
+    } else if (d.action === "accept") {
+      const { data: request } = await supabaseAdmin
+        .from("follows")
+        .select("follower_id")
+        .eq("follower_id", d.userId)
+        .eq("following_id", userId)
+        .maybeSingle();
+      if (!request) throw new Error("This friend request is no longer available");
+      const { error } = await supabaseAdmin
+        .from("follows")
+        .upsert(
+          { follower_id: userId, following_id: d.userId },
+          { onConflict: "follower_id,following_id", ignoreDuplicates: true },
+        );
+      if (error) throw new Error(error.message);
+    } else if (d.action === "decline") {
+      const { error } = await deleteIncoming();
+      if (error) throw new Error(error.message);
+    } else if (d.action === "cancel") {
+      const { error } = await deleteOutgoing();
+      if (error) throw new Error(error.message);
+    } else {
+      const [outgoingResult, incomingResult] = await Promise.all([
+        deleteOutgoing(),
+        deleteIncoming(),
+      ]);
+      if (outgoingResult.error) throw new Error(outgoingResult.error.message);
+      if (incomingResult.error) throw new Error(incomingResult.error.message);
+    }
+
+    const [{ data: mine }, { data: theirs }] = await Promise.all([
+      supabaseAdmin
+        .from("follows")
+        .select("follower_id")
+        .eq("follower_id", userId)
+        .eq("following_id", d.userId)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("follows")
+        .select("follower_id")
+        .eq("follower_id", d.userId)
+        .eq("following_id", userId)
+        .maybeSingle(),
+    ]);
+    const status = mine && theirs ? "FRIEND" : mine ? "OUTGOING" : theirs ? "INCOMING" : "NONE";
+    return { ok: true, status };
+  },
+
   async createDuel(data, req) {
     // NOTE: intentionally not requirePro. Duels are free on native iOS (where
     // Pro can't be sold — Guideline 3.1.1) and the server can't tell platforms

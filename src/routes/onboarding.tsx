@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { GritLogo } from "@/components/GritLogo";
 import { SetupLivePreview } from "@/components/SetupLivePreview";
+import { StrengthEngineTutorial } from "@/components/StrengthEngineTutorial";
 import { getState, setLocalStateOwner, setState, waitForRemoteState } from "@/lib/storage";
 import { defaultSchedule, focusExerciseRecommendation, isoDay, WEEK } from "@/lib/calc";
 import { EXERCISES, getExercise } from "@/lib/exercises";
@@ -1916,6 +1917,8 @@ function BlueprintStep({
       </p>
 
       <SetupLivePreview draft={draft} mode={mode} schedule={schedule} />
+
+      <StrengthEngineTutorial focus={draft.focusMuscles?.[0]} />
 
       <div className="mt-4 grid gap-2">
         <div className="deadset-plan-reveal rounded-2xl border border-white/10 bg-[#111214] p-3">

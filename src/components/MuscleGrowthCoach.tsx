@@ -1,6 +1,15 @@
 import { type ReactNode, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Activity, Check, ChevronRight, Dumbbell, Plus, ShieldCheck, Target } from "lucide-react";
+import {
+  Activity,
+  Check,
+  ChevronRight,
+  Dumbbell,
+  Plus,
+  ShieldCheck,
+  Target,
+  TrendingUp,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { MuscleDiagram } from "@/components/MuscleDiagram";
@@ -33,8 +42,10 @@ import {
 } from "@/lib/muscle-growth-plan";
 import { weeklyVolume, volumeZoneMeta } from "@/lib/pro-intelligence";
 import { muscleRecovery, recoveryLabel, toMuscleGroup } from "@/lib/recovery";
+import { progressionBoard, type ProgressionEntry } from "@/lib/progression";
 import { useAppState } from "@/lib/storage";
 import type { AppState, DayKey, Exercise } from "@/lib/types";
+import { formatWeight, unitOf } from "@/lib/units";
 
 const DAYS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const DAY_LABEL: Record<DayKey, string> = {
@@ -257,6 +268,17 @@ export function MuscleGrowthCoach({ selectedTarget, onTargetChange, open, onOpen
   const volumeMeta = volumeZoneMeta(volume.zone);
   const recoveryMeta = recoveryLabel(recovery.pct);
   const subTargets = growthTargetsFor(selectedMuscle);
+  const loadTargets = useMemo(
+    () =>
+      progressionBoard(state)
+        .filter((entry) => exerciseIndex.get(entry.exerciseId)?.muscleGroup === selectedMuscle)
+        .map((entry) => ({
+          ...entry,
+          name: exerciseIndex.get(entry.exerciseId)?.name ?? entry.name,
+        }))
+        .slice(0, 4),
+    [exerciseIndex, selectedMuscle, state],
+  );
 
   function chooseTarget(target: GrowthTarget) {
     if (target === selectedTarget) return;
@@ -492,6 +514,8 @@ export function MuscleGrowthCoach({ selectedTarget, onTargetChange, open, onOpen
               </div>
             </div>
 
+            <LoadProgressionPanel entries={loadTargets} state={state} muscle={selectedMuscle} />
+
             <div className="mt-5 flex items-end justify-between gap-3">
               <div>
                 <p className="label-cap text-[9px] text-grit-dim">3 · CHOOSE A MOVEMENT</p>
@@ -679,6 +703,85 @@ export function MuscleGrowthCoach({ selectedTarget, onTargetChange, open, onOpen
         </SheetContent>
       </Sheet>
     </section>
+  );
+}
+
+function LoadProgressionPanel({
+  entries,
+  state,
+  muscle,
+}: {
+  entries: ProgressionEntry[];
+  state: AppState;
+  muscle: BroadGrowthTarget;
+}) {
+  const unit = unitOf(state);
+  return (
+    <div className="mt-4 overflow-hidden rounded-2xl border border-accent-red/35 bg-[linear-gradient(145deg,rgba(230,50,34,.12),rgba(0,0,0,.28))]">
+      <div className="flex items-start gap-3 px-4 pb-3 pt-4">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent-red text-black">
+          <TrendingUp size={17} strokeWidth={2.7} />
+        </span>
+        <div>
+          <p className="label-cap text-[8px] text-accent-red">HOW TO MAKE {muscle} GROW</p>
+          <p className="display mt-0.5 text-lg font-black uppercase leading-tight text-grit">
+            Earn more load—not random load
+          </p>
+          <p className="mt-1 text-[10px] leading-relaxed text-grit-dim">
+            Stay in the target rep range, finish every planned working set, then add the smallest
+            loadable jump. If reps or form break down, repeat the weight and beat it first.
+          </p>
+        </div>
+      </div>
+
+      {entries.length > 0 ? (
+        <div className="border-t border-white/10">
+          {entries.map((entry) => (
+            <div
+              key={entry.exerciseId}
+              className="flex min-h-16 items-center gap-3 border-b border-white/[0.07] px-4 py-3 last:border-b-0"
+            >
+              <span
+                className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg text-[10px] font-black ${
+                  entry.suggestion.kind === "up"
+                    ? "bg-emerald-400 text-black"
+                    : "bg-white/10 text-grit"
+                }`}
+              >
+                {entry.suggestion.kind === "up" ? "+" : "="}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-bold text-grit">{entry.name}</p>
+                <p className="mt-0.5 text-[9px] leading-tight text-grit-dim">
+                  {entry.suggestion.reason}
+                </p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="display text-sm font-black text-grit">
+                  {formatWeight(entry.suggestion.weightKg, unit)}
+                </p>
+                <p className="label-cap text-[6px] text-grit-dim">
+                  {entry.suggestion.kind === "up" ? "NEXT LOAD" : "HOLD LOAD"}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 border-t border-white/10 text-center">
+          {[
+            ["1", "LOG 2 WORKOUTS"],
+            ["2", "HIT EVERY REP"],
+            ["3", "GET NEXT LOAD"],
+          ].map(([number, label]) => (
+            <div key={number} className="border-r border-white/10 px-2 py-3 last:border-r-0">
+              <p className="display text-lg font-black text-accent-red">{number}</p>
+              <p className="label-cap mt-0.5 text-[6px] leading-tight text-grit-dim">{label}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

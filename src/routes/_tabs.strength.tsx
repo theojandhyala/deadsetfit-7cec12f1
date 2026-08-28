@@ -13,6 +13,7 @@ import { hapticSelection } from "@/lib/haptics";
 import { MuscleDiagram } from "@/components/MuscleDiagram";
 import { MuscleGrowthCoach } from "@/components/MuscleGrowthCoach";
 import { StrengthMapShareCard } from "@/components/StrengthMapShareCard";
+import { WeeklySetGrid } from "@/components/WeeklySetGrid";
 import type { GrowthTarget } from "@/lib/muscle-growth-recommendations";
 import { toMuscleGroup } from "@/lib/recovery";
 import {
@@ -149,6 +150,10 @@ function StrengthPage() {
         onSelectMuscle={openGrowthPlan}
         onShare={openStrengthShare}
       />
+
+      <section className="px-5 mt-5">
+        <WeeklySetGrid state={state} onSelectMuscle={openGrowthPlan} />
+      </section>
 
       {needsStrengthProfile && (
         <MissingStrengthProfile

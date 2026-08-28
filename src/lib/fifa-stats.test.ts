@@ -111,3 +111,14 @@ describe("buildPublicStats badges", () => {
     }
   });
 });
+
+describe("buildPublicStats strength map", () => {
+  it("publishes an empty calibrated snapshot without inventing muscle scores", () => {
+    const publicStats = buildPublicStats(state({}));
+    expect(publicStats.strengthMap).toEqual({
+      score: 0,
+      tier: "BEGINNER",
+      muscles: [],
+    });
+  });
+});

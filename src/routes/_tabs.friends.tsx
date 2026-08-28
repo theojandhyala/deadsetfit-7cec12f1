@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import {
@@ -25,6 +25,7 @@ import {
   MoreVertical,
   Flag,
   Ban,
+  X,
 } from "lucide-react";
 import { restoreSupabaseSession, supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/account-restore";
@@ -46,13 +47,17 @@ import {
   updateMyProfile,
   searchAthletes,
   getSuggestedAthletes,
-  toggleFollow,
-  getMyFollowStats,
+  getFriendConnections,
+  updateFriendship,
   updateMyLocation,
   getMyLocation,
   getNearbyAthletes,
+  type FriendAction,
+  type FriendConnections,
+  type FriendStatus,
   type FeedScope,
 } from "@/lib/social.functions";
+import { hapticFailure, hapticPlanUpdated, hapticSelection } from "@/lib/haptics";
 import { RankShareCard } from "@/components/RankShareCard";
 import { toast } from "sonner";
 
@@ -1191,8 +1196,8 @@ function normalizeCountry(raw: string | null | undefined): string {
 function Friends() {
   const _search = searchAthletes;
   const _suggest = getSuggestedAthletes;
-  const _toggle = toggleFollow;
-  const _stats = getMyFollowStats;
+  const _connections = getFriendConnections;
+  const _updateFriendship = updateFriendship;
   const _nearby = getNearbyAthletes;
   const _getLoc = getMyLocation;
   const _setLoc = updateMyLocation;
@@ -1200,7 +1205,7 @@ function Friends() {
   const [q, setQ] = useState("");
   const [results, setResults] = useState<SearchHit[] | null>(null);
   const [suggested, setSuggested] = useState<Suggested[] | null>(null);
-  const [stats, setStats] = useState<{ following: number; followers: number } | null>(null);
+  const [connections, setConnections] = useState<FriendConnections | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [nearby, setNearby] = useState<Awaited<ReturnType<typeof getNearbyAthletes>> | null>(null);
   const [myLoc, setMyLoc] = useState<{ city: string | null; country: string | null } | null>(null);
@@ -1220,9 +1225,11 @@ function Friends() {
         // Failed suggestions render as an empty list, not an endless spinner.
         setSuggested((cur) => cur ?? []);
       });
-    _stats()
-      .then(setStats)
-      .catch(() => {});
+    _connections()
+      .then(setConnections)
+      .catch(() =>
+        setConnections((current) => current ?? { friends: [], incoming: [], outgoing: [] }),
+      );
     _getLoc()
       .then((l) => {
         const c = normalizeCountry(l.country);
@@ -1238,7 +1245,7 @@ function Friends() {
     _nearby()
       .then(setNearby)
       .catch(() => {});
-  }, [_getLoc, _nearby, _stats, _suggest]);
+  }, [_connections, _getLoc, _nearby, _suggest]);
 
   useEffect(() => {
     loadFriendsHome();
@@ -1263,43 +1270,57 @@ function Friends() {
     return () => clearTimeout(id);
   }, [q, runSearch]);
 
-  async function follow(id: string, currentlyFollowing: boolean) {
+  const statusById = useMemo(() => {
+    const statuses = new Map<string, FriendStatus>();
+    connections?.friends.forEach((person) => statuses.set(person.id, "FRIEND"));
+    connections?.incoming.forEach((person) => statuses.set(person.id, "INCOMING"));
+    connections?.outgoing.forEach((person) => statuses.set(person.id, "OUTGOING"));
+    return statuses;
+  }, [connections]);
+
+  async function changeConnection(id: string, status: FriendStatus, forcedAction?: FriendAction) {
+    const action =
+      forcedAction ??
+      (status === "NONE"
+        ? "send"
+        : status === "INCOMING"
+          ? "accept"
+          : status === "OUTGOING"
+            ? "cancel"
+            : "remove");
+    if (action === "remove") {
+      const confirmed = await askConfirm({
+        title: "Remove this friend?",
+        message: "Their PRs and Strength Map will no longer appear in your friends comparisons.",
+        confirmLabel: "Remove friend",
+        danger: true,
+      });
+      if (!confirmed) return;
+    }
     setBusy(id);
-    setResults(
-      (arr) =>
-        arr?.map((r) => (r.id === id ? { ...r, following: !currentlyFollowing } : r)) ?? null,
-    );
-    setSuggested((arr) => arr?.filter((r) => r.id !== id) ?? null);
-    setNearby((n) =>
-      n
-        ? {
-            ...n,
-            athletes: n.athletes.map((a) =>
-              a.id === id ? { ...a, following: !currentlyFollowing } : a,
-            ),
-          }
-        : n,
-    );
     try {
-      await _toggle({ data: { userId: id } });
-      setStats((s) => (s ? { ...s, following: s.following + (currentlyFollowing ? -1 : 1) } : s));
+      const result = await _updateFriendship({ data: { userId: id, action } });
+      hapticPlanUpdated();
+      toast.success(
+        result.status === "FRIEND"
+          ? "Friend added — open their profile to compare"
+          : result.status === "OUTGOING"
+            ? "Friend request sent"
+            : action === "decline"
+              ? "Request declined"
+              : action === "cancel"
+                ? "Request cancelled"
+                : "Friend removed",
+      );
+      setConnections(await _connections());
+      setSuggested((current) =>
+        result.status === "OUTGOING" || result.status === "FRIEND"
+          ? current?.filter((person) => person.id !== id) ?? null
+          : current,
+      );
     } catch (e) {
+      hapticFailure();
       toast.error(e instanceof Error ? e.message : "Failed");
-      // Revert the optimistic flip — the server recorded nothing.
-      setResults(
-        (arr) =>
-          arr?.map((r) => (r.id === id ? { ...r, following: currentlyFollowing } : r)) ?? null,
-      );
-      setNearby((n) =>
-        n
-          ? {
-              ...n,
-              athletes: n.athletes.map((a) =>
-                a.id === id ? { ...a, following: currentlyFollowing } : a,
-              ),
-            }
-          : n,
-      );
     } finally {
       setBusy(null);
     }
@@ -1405,21 +1426,59 @@ function Friends() {
         </div>
       </div>
 
-      {/* stats */}
+      {/* Friendship stats */}
       <div className="grid grid-cols-2 gap-2 mb-4">
         <div className="bg-grit-card border border-grit rounded-2xl p-3 text-center">
           <p className="display font-extrabold text-grit text-2xl leading-none">
-            {stats?.following ?? "—"}
+            {connections?.friends.length ?? "—"}
           </p>
-          <p className="label-cap text-[10px] text-[#8a8a8a] mt-1">Following</p>
+          <p className="label-cap text-[10px] text-[#8a8a8a] mt-1">Friends</p>
         </div>
         <div className="bg-grit-card border border-grit rounded-2xl p-3 text-center">
           <p className="display font-extrabold text-grit text-2xl leading-none">
-            {stats?.followers ?? "—"}
+            {connections?.incoming.length ?? "—"}
           </p>
-          <p className="label-cap text-[10px] text-[#8a8a8a] mt-1">Followers</p>
+          <p className="label-cap text-[10px] text-[#8a8a8a] mt-1">Requests</p>
         </div>
       </div>
+
+      {connections && connections.incoming.length > 0 && (
+        <div className="mb-4">
+          <p className="label-cap mb-2 flex items-center gap-1.5 text-accent-red">
+            <UserPlus size={11} /> Friend requests
+          </p>
+          {connections.incoming.map((person) => (
+            <AthleteRow
+              key={person.id}
+              a={person}
+              status="INCOMING"
+              busy={busy === person.id}
+              onToggle={() => changeConnection(person.id, "INCOMING")}
+              onDecline={() => changeConnection(person.id, "INCOMING", "decline")}
+            />
+          ))}
+        </div>
+      )}
+
+      {connections && connections.friends.length > 0 && (
+        <div className="mb-4">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <p className="label-cap flex items-center gap-1.5 text-grit">
+              <Users size={11} className="text-accent-red" /> Your friends
+            </p>
+            <span className="label-cap text-[7px] text-grit-dim">TAP TO COMPARE</span>
+          </div>
+          {connections.friends.map((person) => (
+            <AthleteRow
+              key={person.id}
+              a={person}
+              status="FRIEND"
+              busy={busy === person.id}
+              onToggle={() => changeConnection(person.id, "FRIEND")}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Location card */}
       <div className="bg-grit-card border border-grit rounded-2xl p-4 mb-4">
@@ -1484,8 +1543,14 @@ function Friends() {
                 <AthleteRow
                   key={a.id}
                   a={a}
+                  status={statusById.get(a.id) ?? (a.following ? "OUTGOING" : "NONE")}
                   busy={busy === a.id}
-                  onToggle={() => follow(a.id, a.following)}
+                  onToggle={() =>
+                    changeConnection(
+                      a.id,
+                      statusById.get(a.id) ?? (a.following ? "OUTGOING" : "NONE"),
+                    )
+                  }
                 />
               ))}
             </div>
@@ -1514,8 +1579,14 @@ function Friends() {
           <AthleteRow
             key={r.id}
             a={r}
+            status={statusById.get(r.id) ?? (r.following ? "OUTGOING" : "NONE")}
             busy={busy === r.id}
-            onToggle={() => follow(r.id, r.following)}
+            onToggle={() =>
+              changeConnection(
+                r.id,
+                statusById.get(r.id) ?? (r.following ? "OUTGOING" : "NONE"),
+              )
+            }
           />
         ))}
 
@@ -1537,8 +1608,9 @@ function Friends() {
               <AthleteRow
                 key={r.id}
                 a={{ ...r, following: false }}
+                status={statusById.get(r.id) ?? "NONE"}
                 busy={busy === r.id}
-                onToggle={() => follow(r.id, false)}
+                onToggle={() => changeConnection(r.id, statusById.get(r.id) ?? "NONE")}
               />
             ))}
         </>
@@ -1549,8 +1621,10 @@ function Friends() {
 
 function AthleteRow({
   a,
+  status,
   busy,
   onToggle,
+  onDecline,
 }: {
   a: {
     id: string;
@@ -1558,11 +1632,13 @@ function AthleteRow({
     display_name: string | null;
     avatar_url: string | null;
     level: string | null;
-    following: boolean;
+    following?: boolean;
     grit_points?: number | null;
   };
+  status: FriendStatus;
   busy: boolean;
   onToggle: () => void;
+  onDecline?: () => void;
 }) {
   return (
     <div className="bg-grit-card border border-grit p-3 mb-2 flex items-center gap-3">
@@ -1589,27 +1665,44 @@ function AthleteRow({
           </p>
         </div>
       </Link>
-      <button
-        onClick={onToggle}
-        disabled={busy}
-        className={
-          a.following
-            ? "btn-ghost px-3 py-2 text-xs flex items-center gap-1.5"
-            : "btn-grit px-3 py-2 text-xs flex items-center gap-1.5"
-        }
-      >
-        {busy ? (
-          <Loader2 size={12} className="animate-spin" />
-        ) : a.following ? (
-          <>
-            <UserCheck size={12} /> FOLLOWING
-          </>
-        ) : (
-          <>
-            <UserPlus size={12} /> FOLLOW
-          </>
+      <div className="flex shrink-0 items-center gap-1">
+        {status === "INCOMING" && onDecline && (
+          <button
+            type="button"
+            onClick={() => {
+              hapticSelection();
+              onDecline();
+            }}
+            disabled={busy}
+            className="grid h-10 w-10 place-items-center rounded-lg border border-grit text-grit-dim press"
+            aria-label="Decline friend request"
+          >
+            <X size={13} />
+          </button>
         )}
-      </button>
+        <button
+          onClick={() => {
+            hapticSelection();
+            onToggle();
+          }}
+          disabled={busy}
+          className={`px-3 py-2 text-xs flex min-h-10 items-center gap-1.5 ${
+            status === "NONE" || status === "INCOMING" ? "btn-grit" : "btn-ghost"
+          }`}
+        >
+          {busy ? (
+            <Loader2 size={12} className="animate-spin" />
+          ) : status === "FRIEND" ? (
+            <><UserCheck size={12} /> FRIENDS</>
+          ) : status === "INCOMING" ? (
+            <><UserPlus size={12} /> ACCEPT</>
+          ) : status === "OUTGOING" ? (
+            <><Check size={12} /> REQUESTED</>
+          ) : (
+            <><UserPlus size={12} /> ADD</>
+          )}
+        </button>
+      </div>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 // ship. The card hides once dismissed at the current version, so stale
 // announcements never linger.
 
-export const WHATS_NEW_VERSION = 20260828;
+export const WHATS_NEW_VERSION = 202608281;
 export const WHATS_NEW_SEEN_KEY = "deadset_whats_new_seen";
 
 export interface WhatsNewEntry {
@@ -13,6 +13,21 @@ export interface WhatsNewEntry {
 }
 
 export const WHATS_NEW: WhatsNewEntry[] = [
+  {
+    title: "See your weekly set pattern",
+    body: "The new square map connects every planned working set to its muscle and day, so gaps and overloaded areas are obvious.",
+    where: "Plan · Strength",
+  },
+  {
+    title: "Earn your next weight",
+    body: "Muscle Lab now reads completed sets and tells you when to add load or repeat the weight until every target rep is secured.",
+    where: "Strength",
+  },
+  {
+    title: "Add friends and compare maps",
+    body: "Send and accept friend requests, then compare bodyweight-adjusted muscle scores and PRs side by side.",
+    where: "Friends",
+  },
   {
     title: "Build the muscle you choose",
     body: "Pick a development target, see its volume and recovery, then add matched exercises straight into your week.",
