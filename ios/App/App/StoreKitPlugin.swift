@@ -41,9 +41,13 @@ public class StoreKitPlugin: CAPPlugin, CAPBridgedPlugin {
         Task {
             do {
                 let products = try await Product.products(for: Self.productIDs)
-                let payload = products
-                    .sorted { Self.productIDs.firstIndex(of: $0.id) ?? 0 < Self.productIDs.firstIndex(of: $1.id) ?? 0 }
-                    .map(Self.productPayload)
+                let sorted = products.sorted {
+                    Self.productIDs.firstIndex(of: $0.id) ?? 0 < Self.productIDs.firstIndex(of: $1.id) ?? 0
+                }
+                var payload: [[String: Any]] = []
+                for product in sorted {
+                    payload.append(await Self.productPayload(product))
+                }
                 call.resolve(["products": payload])
             } catch {
                 call.reject("Unable to load App Store products", error.localizedDescription, error)
@@ -149,16 +153,27 @@ public class StoreKitPlugin: CAPPlugin, CAPBridgedPlugin {
         return payload
     }
 
-    private static func productPayload(_ product: Product) -> [String: Any] {
+    private static func productPayload(_ product: Product) async -> [String: Any] {
         var payload: [String: Any] = [
             "id": product.id,
             "displayName": product.displayName,
             "description": product.description,
             "displayPrice": product.displayPrice
         ]
-        if let period = product.subscription?.subscriptionPeriod {
+        if let subscription = product.subscription {
+            let period = subscription.subscriptionPeriod
             payload["periodUnit"] = String(describing: period.unit)
             payload["periodValue"] = period.value
+            payload["eligibleForIntroOffer"] = await subscription.isEligibleForIntroOffer
+            if let offer = subscription.introductoryOffer {
+                payload["introductoryOffer"] = [
+                    "paymentMode": offer.paymentMode.rawValue,
+                    "displayPrice": offer.displayPrice,
+                    "periodUnit": String(describing: offer.period.unit),
+                    "periodValue": offer.period.value,
+                    "periodCount": offer.periodCount
+                ]
+            }
         }
         return payload
     }

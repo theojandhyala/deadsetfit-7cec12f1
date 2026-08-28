@@ -58,6 +58,8 @@ import { currentMilestone, nextMilestone, milestoneProgress } from "@/lib/streak
 import { emitGritEarned } from "@/lib/grit-events";
 import { saveProfile } from "@/lib/profile.functions";
 import { deleteMyAccount } from "@/lib/account.functions";
+import { finishLocalAccountExit } from "@/lib/account-exit";
+import { hapticFailure, hapticSaved, hapticSelection, hapticUndo } from "@/lib/haptics";
 import { usePro } from "@/hooks/usePro";
 import { isNativeIos } from "@/lib/platform";
 import { FifaCard } from "@/components/FifaCard";
@@ -104,7 +106,7 @@ function ProfilePage() {
   const [showStreakShare, setShowStreakShare] = useState(false);
   const {
     // Identity/badging reflects a real paid subscription, not the blanket
-    // iOS entitlement — a free iOS user shouldn't wear a PRO badge.
+    // iOS entitlement — identity/badging must still reflect a verified membership.
     isPaidPro: isPro,
     status: proStatus,
     currentPeriodEnd,
@@ -332,6 +334,7 @@ function ProfilePage() {
   }
 
   async function logout() {
+    hapticSelection();
     toast.loading("Saving your data…", { id: "logout" });
     try {
       // Push any unsaved local state to the server BEFORE auth is dropped —
@@ -348,14 +351,20 @@ function ProfilePage() {
     } finally {
       toast.dismiss("logout");
     }
-    window.dispatchEvent(new CustomEvent("deadset:explicit-logout"));
-    clearSessionBackup();
+    finishLocalAccountExit({
+      removeLocalTrainingState: false,
+      removeItem: (key) => localStorage.removeItem(key),
+      dispatchExplicitLogout: () =>
+        window.dispatchEvent(new CustomEvent("deadset:explicit-logout")),
+      clearSessionBackup,
+    });
     try {
       await withDeadline(supabase.auth.signOut(), 4000);
     } catch {
       // Local session is already cleared by the explicit-logout event.
     }
     toast.success("Signed out — your data is saved");
+    hapticSaved();
     navigate({ to: "/auth", replace: true });
   }
 
@@ -372,6 +381,7 @@ function ProfilePage() {
   }
 
   async function deleteAccount() {
+    hapticSelection();
     const ok = await askConfirm({
       title: "Delete your account?",
       message:
@@ -383,21 +393,23 @@ function ProfilePage() {
     if (!ok) return;
     try {
       await deleteAcct();
-      try {
-        localStorage.removeItem("grit_app_state_v1");
-      } catch {
-        /* ignore */
-      }
-      window.dispatchEvent(new CustomEvent("deadset:explicit-logout"));
-      clearSessionBackup();
+      finishLocalAccountExit({
+        removeLocalTrainingState: true,
+        removeItem: (key) => localStorage.removeItem(key),
+        dispatchExplicitLogout: () =>
+          window.dispatchEvent(new CustomEvent("deadset:explicit-logout")),
+        clearSessionBackup,
+      });
       try {
         await withDeadline(supabase.auth.signOut(), 4000);
       } catch {
         /* session already dropped */
       }
       toast.success("Account deleted");
+      hapticUndo();
       navigate({ to: "/auth", replace: true });
     } catch (e) {
+      hapticFailure();
       toast.error(e instanceof Error ? e.message : "Couldn't delete account");
     }
   }
@@ -426,6 +438,31 @@ function ProfilePage() {
           </button>
         </div>
       </header>
+
+      {!isPro && (
+        <section className="mx-5 mb-4 rounded-2xl border border-accent-red/40 bg-accent-red/[0.08] p-4">
+          <p className="label-cap text-[9px] text-accent-red">ACCOUNT & PRIVACY ACCESS</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-grit-dim">
+            You can always restore a purchase, sign out, or permanently delete your account even
+            without an active membership.
+          </p>
+          <Link to="/upgrade" className="btn-grit mt-3 block min-h-11 text-center text-[11px]">
+            Return to membership
+          </Link>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <button type="button" onClick={logout} className="btn-ghost min-h-11 text-[10px]">
+              <LogOut size={14} className="mr-1.5 inline" /> Sign out
+            </button>
+            <button
+              type="button"
+              onClick={deleteAccount}
+              className="btn-ghost min-h-11 text-[10px] text-accent-red"
+            >
+              <Trash2 size={14} className="mr-1.5 inline" /> Delete account
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* === FIFA card === */}
       <section className="px-5 mb-5 relative">

@@ -1,7 +1,54 @@
 import { getExercise } from "./exercises";
-import type { Profile, AppState, DayKey, DaySchedule, Schedule, SetLog } from "./types";
+import type {
+  Profile,
+  AppState,
+  DayKey,
+  DaySchedule,
+  Equipment,
+  FocusMuscle,
+  Schedule,
+  SetLog,
+} from "./types";
 
 export const WEEK: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+
+export const FOCUS_EXERCISE_CANDIDATES: Record<FocusMuscle, { ids: string[]; days: string[] }> = {
+  CHEST: {
+    ids: ["cable-fly", "incline-db-press", "push-ups"],
+    days: ["PUSH", "UPPER", "FULL BODY", "CHEST"],
+  },
+  BACK: {
+    ids: ["seated-row", "inverted-row", "superman"],
+    days: ["PULL", "UPPER", "FULL BODY"],
+  },
+  SHOULDERS: {
+    ids: ["lateral-raise", "pike-push-up"],
+    days: ["PUSH", "UPPER", "SHOULDERS", "FULL BODY"],
+  },
+  ARMS: {
+    ids: ["hammer-curl", "close-grip-push-up"],
+    days: ["PULL", "UPPER", "ARMS"],
+  },
+  LEGS: {
+    ids: ["leg-press", "goblet-squat", "split-squat"],
+    days: ["LEGS", "LOWER", "FULL BODY"],
+  },
+  CORE: {
+    ids: ["plank", "dead-bug"],
+    days: ["LEGS", "LOWER", "CORE", "FULL BODY"],
+  },
+};
+
+export function focusExerciseRecommendation(
+  focus: FocusMuscle,
+  equipment: Equipment,
+): { id: string; name: string } | null {
+  for (const id of FOCUS_EXERCISE_CANDIDATES[focus].ids) {
+    const exercise = getExercise(id);
+    if (exercise?.equipment.includes(equipment)) return { id, name: exercise.name };
+  }
+  return null;
+}
 
 /** The weekday spread used when a lifter hasn't picked their own training days. */
 const DEFAULT_TRAINING_DAYS: Record<number, DayKey[]> = {
@@ -166,25 +213,8 @@ export function defaultSchedule(p: Profile) {
   // Keep track of those choices so the session cap cannot silently remove the
   // very movements the lifter asked us to prioritise.
   const focusedIdsByDay = new Map<Day, string[]>();
-  const FOCUS_EXTRA: Record<string, { ids: string[]; days: string[] }> = {
-    CHEST: {
-      ids: ["cable-fly", "incline-db-press", "push-ups"],
-      days: ["PUSH", "UPPER", "FULL BODY", "CHEST"],
-    },
-    BACK: { ids: ["seated-row", "inverted-row", "superman"], days: ["PULL", "UPPER", "FULL BODY"] },
-    SHOULDERS: {
-      ids: ["lateral-raise", "pike-push-up"],
-      days: ["PUSH", "UPPER", "SHOULDERS", "FULL BODY"],
-    },
-    ARMS: { ids: ["hammer-curl", "close-grip-push-up"], days: ["PULL", "UPPER", "ARMS"] },
-    LEGS: {
-      ids: ["leg-press", "goblet-squat", "split-squat"],
-      days: ["LEGS", "LOWER", "FULL BODY"],
-    },
-    CORE: { ids: ["plank", "dead-bug"], days: ["LEGS", "LOWER", "CORE", "FULL BODY"] },
-  };
   for (const focus of p.focusMuscles ?? []) {
-    const extra = FOCUS_EXTRA[focus];
+    const extra = FOCUS_EXERCISE_CANDIDATES[focus];
     if (!extra) continue;
     const extraId = available(extra.ids)[0];
     if (!extraId) continue;

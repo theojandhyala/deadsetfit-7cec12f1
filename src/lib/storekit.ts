@@ -12,6 +12,14 @@ export type AppleProduct = {
   displayPrice: string;
   periodUnit?: string;
   periodValue?: number;
+  introductoryOffer?: {
+    paymentMode: string;
+    displayPrice: string;
+    periodUnit: string;
+    periodValue: number;
+    periodCount: number;
+  };
+  eligibleForIntroOffer?: boolean;
 };
 
 export type AppleEntitlement = {

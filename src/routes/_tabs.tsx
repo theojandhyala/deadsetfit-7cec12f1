@@ -26,6 +26,7 @@ import { FeatureTour } from "@/components/FeatureTour";
 import { buildWidgetSnapshot, publishWidgets } from "@/lib/widgets";
 import { ProgrammeWeightSetup } from "@/components/ProgrammeWeightSetup";
 import { programmeWeightRows } from "@/lib/programme-weight-setup";
+import { requiresPaidAccess } from "@/lib/paid-access";
 
 export const Route = createFileRoute("/_tabs")({
   component: TabsLayout,
@@ -57,11 +58,19 @@ function TabsLayout() {
       state.sessions,
     ],
   );
-  const needsWeightSetup = weightSetupRows.some((row) => !row.autoApply);
+  const accountEscapeMode = pathname === "/profile" && !isPro;
+  const needsWeightSetup = !accountEscapeMode && weightSetupRows.some((row) => !row.autoApply);
   const weightsSettled = weightSetupRows.length === 0;
   // Start ready=true if local state already has a profile — render INSTANTLY
   // on hot refresh / navigation; remote sync continues in the background.
   const [ready, setReady] = useState(false);
+  const paidAccessRequired = requiresPaidAccess({
+    ready,
+    hasProfile: !!state.profile,
+    entitlementLoading: proLoading,
+    hasEntitlement: isPro,
+    pathname,
+  });
   const navRef = useRef(navigate);
   const getProfileRef = useRef(getProfile);
   const lastScoreRef = useRef<number | null>(null);
@@ -155,6 +164,11 @@ function TabsLayout() {
   }, []);
 
   useEffect(() => {
+    if (!paidAccessRequired) return;
+    navigate({ to: "/upgrade", replace: true });
+  }, [navigate, paidAccessRequired]);
+
+  useEffect(() => {
     if (!ready || !state.profile) return;
     const score = calculateGritScore(state).total;
     const rank = getRank(score);
@@ -213,7 +227,7 @@ function TabsLayout() {
     void publishWidgets(state);
   }, [ready, state]);
 
-  if (!ready) {
+  if (!ready || paidAccessRequired) {
     return (
       <div className="min-h-screen bg-grit flex items-center justify-center">
         <span className="label-cap text-grit-dim text-xs animate-pulse">Loading…</span>
@@ -235,9 +249,9 @@ function TabsLayout() {
         </div>
         <BottomNav />
       </div>
-      <FeatureTour active={!!state.profile && weightsSettled} />
+      <FeatureTour active={!accountEscapeMode && !!state.profile && weightsSettled} />
       <GritEarnedLayer />
-      <ProgrammeWeightSetup rows={weightSetupRows} />
+      {!accountEscapeMode && <ProgrammeWeightSetup rows={weightSetupRows} />}
     </div>
   );
 }

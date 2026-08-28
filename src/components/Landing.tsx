@@ -186,7 +186,10 @@ function Hero({ campaign }: { campaign: LandingCampaign }) {
             {copy.body}
           </p>
 
-          <ul className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-xs font-bold text-white/72 lg:mt-6" aria-label="Why lifters choose DEADSET">
+          <ul
+            className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-xs font-bold text-white/72 lg:mt-6"
+            aria-label="Why lifters choose DEADSET"
+          >
             {["Plan every session", "Log sets fast", "See real progress"].map((benefit) => (
               <li key={benefit} className="flex items-center gap-2">
                 <Check size={14} className="text-[#f13a2c]" strokeWidth={3} aria-hidden="true" />
@@ -199,7 +202,9 @@ function Hero({ campaign }: { campaign: LandingCampaign }) {
             <AppStoreBadge className="shrink-0 shadow-[0_18px_45px_rgba(0,0,0,0.32)]" />
             <div>
               <p className="text-sm font-extrabold text-white">Free to download</p>
-              <p className="mt-1 text-xs leading-5 text-white/45">No card required · Made for iPhone</p>
+              <p className="mt-1 text-xs leading-5 text-white/45">
+                7-day trial after setup · Made for iPhone
+              </p>
             </div>
           </div>
         </div>
@@ -526,14 +531,12 @@ function Pro() {
             Turn your history into an advantage.
           </h2>
           <p className="mt-6 max-w-lg text-base leading-7 text-white/55">
-            Free handles the workout. Pro goes deeper across recovery, trends, competition, and the
-            long view of your training.
+            One membership unlocks the complete training system: Strength Map, recovery, trends,
+            competition, and the long view of your training.
           </p>
           <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-            <StoreButton label="Start free on iPhone" />
-            <span className="text-xs text-white/40">
-              Upgrade inside the app · Cancel through Apple
-            </span>
+            <StoreButton label="Start 7-day trial on iPhone" />
+            <span className="text-xs text-white/40">Then £5.99/month · Cancel through Apple</span>
           </div>
         </div>
 
@@ -557,9 +560,9 @@ const faqs = [
       "Yes. Choose each training day, add exercises from the catalogue, and set sets and rep targets before you train. You can edit any day later.",
   },
   {
-    question: "Is DEADSET free to use?",
+    question: "How much does DEADSET cost?",
     answer:
-      "Yes. The core planning, workout logging, PR tracking, nutrition, progress, and community experience is free. Pro adds deeper analysis and advanced tools.",
+      "Eligible new members get a seven-day free trial, then DEADSET is £5.99 per month in the UK. Apple shows the exact local price and renewal terms before you confirm, and you can cancel anytime.",
   },
   {
     question: "Does it connect to Apple Health and Apple Watch?",

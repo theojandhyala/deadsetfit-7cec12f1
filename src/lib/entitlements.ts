@@ -69,9 +69,9 @@ export function subscriptionPayload(
 }
 
 /**
- * A Pro entitlement must reflect a successful payment. `trialing` has
- * collected no money and `past_due` has a failed collection. A cancelled
- * subscription remains valid only through the period already paid for.
+ * A trial is a time-bounded subscription entitlement, while `past_due` and
+ * other failed collection states never unlock the product. A cancelled
+ * subscription remains valid through the period already paid for.
  */
 export function subscriptionStillUnlocksPro(
   status: string | null | undefined,
@@ -80,6 +80,7 @@ export function subscriptionStillUnlocksPro(
 ): boolean {
   return (
     status === "active" ||
+    (status === "trialing" && !!periodEnd && new Date(periodEnd) > now) ||
     (status === "canceled" && !!periodEnd && new Date(periodEnd) > now)
   );
 }

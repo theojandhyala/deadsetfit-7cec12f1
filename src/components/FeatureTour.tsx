@@ -159,10 +159,10 @@ const SLIDES: Slide[] = [
   {
     icon: Crown,
     color: "#f4c33a",
-    eyebrow: "Optional upgrade",
-    title: "DEADSET Pro",
+    eyebrow: "Your membership",
+    title: "DEADSET intelligence",
     pro: true,
-    body: "The complete training and logging loop stays free. Pro adds automation, advanced programming and deeper analysis.",
+    body: "Your membership includes the complete training loop, automation, advanced programming and deeper analysis.",
     tips: [
       "Training Autopilot applies progression decisions",
       "Plan Intelligence audits volume and recovery spacing",

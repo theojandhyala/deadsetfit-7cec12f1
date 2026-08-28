@@ -19,7 +19,7 @@ export const Route = createFileRoute("/terms")({
 
 function TermsPage() {
   return (
-    <LegalShell title="Terms of Service" updated="August 14, 2026">
+    <LegalShell title="Terms of Service" updated="August 28, 2026">
       <p>
         By creating an account or using DEADSET, you agree to these Terms. If you do not agree, do
         not use the app.
@@ -69,18 +69,23 @@ function TermsPage() {
 
       <H>6. Subscriptions & payments</H>
       <p>
-        DEADSET Pro may be sold as a monthly or annual auto-renewing subscription. New subscriptions
-        are purchased in the iPhone app, processed by Apple, and charged to your Apple Account when
-        confirmed. They renew automatically unless cancelled at least 24 hours before the end of the
-        current period and can be managed in your App Store account. Any legacy website subscription
-        remains subject to the terms shown when it was purchased. Prices and billing periods are
-        shown before purchase. Pro access remains available through the paid period.
+        New subscriptions are sold as a monthly auto-renewing membership in the iPhone app and are
+        processed by Apple. Eligible new subscribers receive the seven-day introductory trial shown
+        on Apple&apos;s purchase confirmation; after that, the membership renews at £5.99 per month
+        in the UK or the exact local price Apple displays. If your Apple Account is not eligible for
+        an introductory offer, billing starts when you confirm. Subscriptions renew automatically
+        unless cancelled at least 24 hours before the end of the current period and can be managed
+        in your App Store account. Any legacy annual or website subscription remains subject to the
+        terms shown when it was purchased. Membership access remains available through any active
+        trial or paid period.
       </p>
 
       <H>7. Termination</H>
       <p>
-        You may delete your account at any time from Profile → "Delete My Account". We may suspend
-        or terminate accounts that violate these Terms.
+        You may delete your account at any time from Profile → "Delete My Account". Deleting your
+        DEADSET account does not cancel an App Store subscription; cancel it through Apple&apos;s
+        subscription management first if you no longer want it to renew. We may suspend or terminate
+        accounts that violate these Terms.
       </p>
 
       <H>8. Disclaimer of warranties</H>

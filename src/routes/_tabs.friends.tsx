@@ -1037,7 +1037,7 @@ function Invite() {
             </p>
           </>
         ) : (
-          <p className="text-sm text-[#8a8a8a]">Free tier. Earn Pro by inviting mates.</p>
+          <p className="text-sm text-[#8a8a8a]">Invite mates to earn bonus membership time.</p>
         )}
       </div>
 

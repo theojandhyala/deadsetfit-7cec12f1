@@ -45,7 +45,7 @@ export const Route = createFileRoute("/")({
           description:
             "Plan workouts, log every set, track nutrition and recovery, and see strength progress clearly.",
           downloadUrl: "https://apps.apple.com/app/deadset/id6783511541",
-          offers: { "@type": "Offer", price: "0", priceCurrency: "GBP" },
+          offers: { "@type": "Offer", price: "5.99", priceCurrency: "GBP" },
         }),
       },
     ],

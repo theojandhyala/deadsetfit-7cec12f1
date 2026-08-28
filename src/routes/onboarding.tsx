@@ -16,7 +16,7 @@ import {
 import { GritLogo } from "@/components/GritLogo";
 import { SetupLivePreview } from "@/components/SetupLivePreview";
 import { getState, setLocalStateOwner, setState, waitForRemoteState } from "@/lib/storage";
-import { defaultSchedule, isoDay, WEEK } from "@/lib/calc";
+import { defaultSchedule, focusExerciseRecommendation, isoDay, WEEK } from "@/lib/calc";
 import { EXERCISES, getExercise } from "@/lib/exercises";
 import { getMyProfile, saveProfile } from "@/lib/profile.functions";
 import { saveUserState } from "@/lib/user-state.functions";
@@ -35,13 +35,6 @@ import type {
 import { WeekdayPicker } from "@/components/WeekdayPicker";
 import { daysPerWeekFor, describeDays, MIN_TRAINING_DAYS } from "@/lib/training-days";
 import { buildPublicStats } from "@/lib/fifa-stats";
-import { PRO_HIGHLIGHTS } from "@/lib/pro-features";
-import {
-  CURRENCY_META,
-  currencyForCountry,
-  detectCountry,
-  type SupportedCurrency,
-} from "@/lib/currency";
 import {
   onboardingOrder,
   onboardingStageLabel,
@@ -80,8 +73,7 @@ type Step =
   | "photo"
   | "analyzing"
   | "blueprint"
-  | "commit"
-  | "pro";
+  | "commit";
 
 type Mode = OnboardingMode;
 
@@ -133,9 +125,6 @@ function Onboarding() {
   const [draft, setDraft] = useState<Partial<Profile>>({});
   const [draftSchedule, setDraftSchedule] = useState<Schedule | null>(null);
   const savingRef = useRef(false);
-  // Where to land after the final save: the web pro step can point this at
-  // /upgrade; everything else finishes into the app.
-  const destinationRef = useRef<"/train" | "/plan" | "/upgrade">("/train");
   const save = saveProfile;
   const saveFullState = saveUserState;
   const getProfile = getMyProfile;
@@ -177,7 +166,7 @@ function Onboarding() {
             profile: accountProfile,
             schedule: current.schedule ?? defaultSchedule(accountProfile),
           }));
-          navigate({ to: "/train", replace: true });
+          navigate({ to: "/upgrade", replace: true });
         }
       } catch {
         // Auth hiccup: stay on onboarding — the final save re-checks the session.
@@ -279,7 +268,7 @@ function Onboarding() {
             toast.warning("Setup saved locally. We'll keep trying to sync it.");
           });
           hapticSaved();
-          navigate({ to: mode === "BUILD" ? "/plan" : destinationRef.current, replace: true });
+          navigate({ to: "/upgrade", replace: true });
         })
         .catch((e: Error) => {
           savingRef.current = false;
@@ -580,14 +569,6 @@ function Onboarding() {
             onCommit={(commitmentDate) => next({ committed: true, commitmentDate })}
           />
         )}
-        {step === "pro" && (
-          <ProChoiceStep
-            onChoose={(goPro) => {
-              destinationRef.current = goPro ? "/upgrade" : "/train";
-              next({});
-            }}
-          />
-        )}
       </div>
     </div>
   );
@@ -775,6 +756,29 @@ function TrainingPreferencesStep({
             );
           })}
         </div>
+        {focus.length > 0 && (
+          <div className="mt-3 rounded-2xl border border-accent-red/30 bg-accent-red/[0.07] p-3">
+            <p className="label-cap text-[8px] text-accent-red">PINNED INTO YOUR WEEK</p>
+            <div className="mt-2 grid gap-1.5">
+              {focus.map((muscle) => {
+                const recommendation = focusExerciseRecommendation(
+                  muscle,
+                  initial?.equipment ?? "FULL_GYM",
+                );
+                return (
+                  <p key={muscle} className="text-[11px] font-semibold text-grit">
+                    <Check size={12} className="mr-1.5 inline text-accent-red" />
+                    {muscle.charAt(0) + muscle.slice(1).toLowerCase()}:{" "}
+                    {recommendation?.name ?? "targeted movement"}
+                  </p>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-[9px] leading-relaxed text-grit-dim">
+              DEADSET keeps these movements when it trims the workout to your chosen length.
+            </p>
+          </div>
+        )}
       </section>
 
       <button
@@ -1940,124 +1944,12 @@ function BlueprintStep({
       <div className="mt-auto pt-5">
         <button onClick={onEnter} className="btn-grit w-full min-h-14 animate-subtle-pulse">
           <Zap size={16} className="mr-2" />
-          {mode === "BUILD" ? "Save and open my plan" : "Save and calibrate my loads"}
+          Continue to 7-day free trial
         </button>
         <p className="mt-2 text-center text-[9px] leading-relaxed text-grit-dim">
-          {mode === "BUILD"
-            ? "Your week starts blank so you can build every day yourself."
-            : "Repeated exercises share one starting load. You only enter each movement once."}
+          Your setup is saved before Apple opens. Eligible new subscribers get seven days free, then
+          the monthly subscription begins.
         </p>
-      </div>
-    </div>
-  );
-}
-
-// Web-only conversion moment at the end of onboarding: Free vs Pro with
-// ticks, a monthly/yearly toggle, and a clear "start free" escape hatch.
-// (Never rendered on native iOS — App Store 3.1.1.)
-function ProChoiceStep({ onChoose }: { onChoose: (goPro: boolean) => void }) {
-  const [plan, setPlan] = useState<"monthly" | "yearly">("yearly");
-  const [currency, setCurrency] = useState<SupportedCurrency>("gbp");
-  useEffect(() => {
-    detectCountry().then((c) => setCurrency(currencyForCountry(c)));
-  }, []);
-  const meta = CURRENCY_META[currency];
-  return (
-    <div className="flex-1 flex flex-col">
-      <p className="label-cap text-accent-red text-[10px] mb-1">One decision left</p>
-      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-1">Choose your edge</h1>
-      <p className="text-xs text-grit-dim mb-5">
-        Everything core is free forever. Pro is for the ones chasing rank.
-      </p>
-
-      {/* Free vs Pro ticks */}
-      <div className="bg-grit-card border border-grit rounded-2xl overflow-hidden mb-4">
-        <div className="grid grid-cols-[1fr_56px_56px] items-center px-4 py-2.5 border-b border-grit">
-          <span className="label-cap text-[9px] text-grit-dim">Feature</span>
-          <span className="label-cap text-[9px] text-grit-dim text-center">Free</span>
-          <span className="label-cap text-[9px] text-accent-red text-center">Pro</span>
-        </div>
-        <div className="grid grid-cols-[1fr_56px_56px] items-center px-4 py-2.5 border-b border-grit/60">
-          <span className="text-xs text-grit font-medium">All core training & social</span>
-          <span className="text-center">
-            <Check size={14} className="inline text-grit" />
-          </span>
-          <span className="text-center">
-            <Check size={14} className="inline text-accent-red" />
-          </span>
-        </div>
-        {PRO_HIGHLIGHTS.map((r) => (
-          <div
-            key={r.label}
-            className="grid grid-cols-[1fr_56px_56px] items-center px-4 py-2.5 border-b border-grit/60 last:border-b-0"
-          >
-            <span className="text-xs text-grit font-medium">{r.label}</span>
-            <span className="text-center text-grit-dim text-xs">
-              {typeof r.free === "string" ? r.free : "—"}
-            </span>
-            <span className="text-center">
-              {typeof r.pro === "string" ? (
-                <span className="text-xs text-accent-red font-bold">{r.pro}</span>
-              ) : (
-                <Check size={14} className="inline text-accent-red" />
-              )}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* Month vs year */}
-      <div className="grid grid-cols-2 gap-2 mb-5">
-        <button
-          onClick={() => setPlan("yearly")}
-          className="rounded-2xl border p-3 text-left press relative"
-          style={{
-            background: plan === "yearly" ? "rgba(230,50,34,0.12)" : "#141414",
-            borderColor: plan === "yearly" ? "#e63222" : "#262626",
-          }}
-        >
-          <span
-            className="absolute -top-2 left-3 text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-full text-white"
-            style={{ background: "#e63222" }}
-          >
-            Save 33%
-          </span>
-          <p className="label-cap text-[9px] text-grit-dim">Yearly</p>
-          <p className="display text-xl font-extrabold text-white leading-none mt-0.5">
-            {meta.yearly}
-          </p>
-          <p className="text-[10px] text-grit-dim">per year</p>
-        </button>
-        <button
-          onClick={() => setPlan("monthly")}
-          className="rounded-2xl border p-3 text-left press"
-          style={{
-            background: plan === "monthly" ? "rgba(230,50,34,0.12)" : "#141414",
-            borderColor: plan === "monthly" ? "#e63222" : "#262626",
-          }}
-        >
-          <p className="label-cap text-[9px] text-grit-dim">Monthly</p>
-          <p className="display text-xl font-extrabold text-white leading-none mt-0.5">
-            {meta.monthly}
-          </p>
-          <p className="text-[10px] text-grit-dim">per month · cancel anytime</p>
-        </button>
-      </div>
-
-      <div className="mt-auto">
-        <button
-          onClick={() => onChoose(true)}
-          className="btn-grit w-full py-4 text-base animate-subtle-pulse"
-        >
-          <Zap size={16} className="mr-2" />
-          Unlock DEADSET Pro
-        </button>
-        <button
-          onClick={() => onChoose(false)}
-          className="mt-3 w-full text-center label-cap text-[10px] text-grit-dim press py-2"
-        >
-          Start free — upgrade any time
-        </button>
       </div>
     </div>
   );

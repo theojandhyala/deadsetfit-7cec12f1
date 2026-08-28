@@ -65,8 +65,9 @@ TRAIN WITH PEOPLE
 - Compete in ranked leagues and head-to-head challenges
 - Report or block users directly in the app
 
-Core workout planning and logging remain free. DEADSET Pro adds deeper progression, programming,
-competition, recovery, and history tools. Subscription availability varies by platform.
+Eligible new members receive a seven-day free trial, then DEADSET is £5.99 per month in the UK or
+Apple's displayed local price. One membership unlocks workout planning, logging, Strength Map,
+muscle development, progression, competition, recovery, and history tools.
 
 DEADSET provides fitness information and tracking, not medical advice. Consult a qualified
 professional before beginning a new training program.

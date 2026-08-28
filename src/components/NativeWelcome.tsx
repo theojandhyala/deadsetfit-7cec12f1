@@ -131,7 +131,7 @@ export function NativeWelcome() {
             onClick={hapticSelection}
             className="btn-grit flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl text-[13px] press"
           >
-            Create free account <ArrowRight size={17} aria-hidden="true" />
+            Create my account <ArrowRight size={17} aria-hidden="true" />
           </a>
           <a
             href={nativeAuthHref("signin")}
@@ -141,7 +141,7 @@ export function NativeWelcome() {
             I already have an account
           </a>
           <p className="label-cap mt-3 text-center text-[7px] text-white/34">
-            FREE TO JOIN · NO CARD REQUIRED
+            SET UP FIRST · 7-DAY TRIAL AFTER
           </p>
           <p className="mt-1.5 text-center text-[9px] font-semibold text-white/28">
             By continuing, you agree to our{" "}

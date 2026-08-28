@@ -4,6 +4,7 @@ import {
   calculateMacros,
   defaultSchedule,
   estimate1RM,
+  focusExerciseRecommendation,
   plateBreakdown,
   updateScheduleDay,
   warmupRamp,
@@ -27,6 +28,16 @@ function profile(overrides: Partial<Profile> = {}): Profile {
 }
 
 describe("defaultSchedule", () => {
+  it("names an equipment-valid recommendation for every onboarding focus", () => {
+    for (const equipment of ["FULL_GYM", "HOME_GYM", "BODYWEIGHT"] as const) {
+      for (const focus of ["CHEST", "BACK", "SHOULDERS", "ARMS", "LEGS", "CORE"] as const) {
+        const recommendation = focusExerciseRecommendation(focus, equipment);
+        expect(recommendation, `${focus}/${equipment}`).not.toBeNull();
+        expect(getExercise(recommendation!.id)?.equipment).toContain(equipment);
+      }
+    }
+  });
+
   it.each<Equipment>(["FULL_GYM", "HOME_GYM", "BODYWEIGHT"])(
     "only schedules exercises available for %s",
     (equipment) => {

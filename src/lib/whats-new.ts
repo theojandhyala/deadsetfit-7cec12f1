@@ -2,7 +2,7 @@
 // ship. The card hides once dismissed at the current version, so stale
 // announcements never linger.
 
-export const WHATS_NEW_VERSION = 20260820;
+export const WHATS_NEW_VERSION = 20260828;
 export const WHATS_NEW_SEEN_KEY = "deadset_whats_new_seen";
 
 export interface WhatsNewEntry {
@@ -13,6 +13,16 @@ export interface WhatsNewEntry {
 }
 
 export const WHATS_NEW: WhatsNewEntry[] = [
+  {
+    title: "Build the muscle you choose",
+    body: "Pick a development target, see its volume and recovery, then add matched exercises straight into your week.",
+    where: "Strength",
+  },
+  {
+    title: "A smarter Strength Map",
+    body: "See every trained area, find grey coverage gaps and understand which real logged lifts move each muscle grade.",
+    where: "Strength",
+  },
   {
     title: "A clearer training day",
     body: "See the next workout, food, recovery and first steps without mixing them into analytics.",

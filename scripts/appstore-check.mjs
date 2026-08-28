@@ -161,9 +161,9 @@ check(
 check(
   "first update version",
   (xcodeProject.match(/MARKETING_VERSION = 1\.1;/g)?.length ?? 0) >= 4 &&
-    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 131;/g)?.length ?? 0) >= 4 &&
-    whatsNew.includes("WHATS_NEW_VERSION = 20260820"),
-  "The app and activity extension are versioned as 1.1 (131), with a matching in-app update summary.",
+    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 132;/g)?.length ?? 0) >= 4 &&
+    whatsNew.includes("WHATS_NEW_VERSION = 20260828"),
+  "The app and activity extension are versioned as 1.1 (132), with a matching in-app update summary.",
 );
 check(
   "full check script",
@@ -302,9 +302,17 @@ check(
   "Apple purchase recovery",
   storeKitPlugin.includes("AppStore.sync()") &&
     storeKitPlugin.includes("showManageSubscriptions") &&
-    upgradePage.includes("Restore Purchases") &&
-    upgradePage.includes("Subscribe with Apple"),
+    upgradePage.includes("Restore purchases") &&
+    upgradePage.includes("purchaseApplePro"),
   "The iPhone paywall can purchase, restore, and manage Apple subscriptions.",
+);
+check(
+  "StoreKit seven-day trial disclosure",
+  storeKitPlugin.includes("introductoryOffer") &&
+    storeKitPlugin.includes("isEligibleForIntroOffer") &&
+    upgradePage.includes("isSevenDayFreeTrial") &&
+    upgradePage.includes("Start my 7-day free trial"),
+  "The iPhone paywall reads Apple's configured offer and eligibility before advertising the seven-day trial.",
 );
 check(
   "RevenueCat StoreKit 2 tracking",

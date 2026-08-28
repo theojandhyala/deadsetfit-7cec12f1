@@ -1,44 +1,40 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { useEffect, useState, type ReactNode } from "react";
 import {
-  ChevronLeft,
-  Crown,
-  Loader2,
-  Shield,
-  BarChart3,
-  Swords,
-  Zap,
-  Star,
-  Users,
-  Trophy,
-  Flame,
-  Check,
   Activity,
   CalendarDays,
-  Settings2,
+  Check,
+  Crown,
+  Dumbbell,
+  Loader2,
   RefreshCw,
-  Gauge,
-  ClipboardCheck,
-  Flag,
+  ShieldCheck,
+  Target,
+  UserRoundCog,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
+import { toast } from "sonner";
+
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
+import { supabase } from "@/integrations/supabase/client";
 import { usePro } from "@/hooks/usePro";
 import { withTimeout } from "@/lib/account-restore";
-import { createCheckoutSession, createPortalSession } from "@/lib/payments.functions";
-import { getStripeEnvironment } from "@/lib/stripe";
 import {
-  detectCountry,
-  currencyForCountry,
   CURRENCY_META,
+  currencyForCountry,
+  detectCountry,
   priceIdFor,
   type SupportedCurrency,
 } from "@/lib/currency";
+import { hapticFailure, hapticPlanUpdated, hapticSelection } from "@/lib/haptics";
+import { createCheckoutSession, createPortalSession } from "@/lib/payments.functions";
+import { DEADSET_MONTHLY_PRICE_GBP, isSevenDayFreeTrial } from "@/lib/paid-access";
 import { isNativeIos } from "@/lib/platform";
-import { COMPARE_ROWS } from "@/lib/pro-features";
-import { ProBadge } from "@/components/ProBadge";
+import {
+  notifyRevenueCatUpdated,
+  recordRevenueCatPurchase,
+  syncRevenueCatPurchases,
+} from "@/lib/revenuecat";
 import {
   APPLE_PRO_PRODUCTS,
   getAppleProducts,
@@ -47,114 +43,56 @@ import {
   restoreApplePro,
   type AppleProduct,
 } from "@/lib/storekit";
-import {
-  notifyRevenueCatUpdated,
-  recordRevenueCatPurchase,
-  syncRevenueCatPurchases,
-} from "@/lib/revenuecat";
+import { getStripeEnvironment } from "@/lib/stripe";
 
 export const Route = createFileRoute("/upgrade")({
-  head: () => ({ meta: [{ title: "DEADSET — Go Pro" }] }),
+  head: () => ({ meta: [{ title: "DEADSET — Start your trial" }] }),
   component: UpgradePage,
 });
 
-const PRO_FEATURES = [
+const MEMBERSHIP_FEATURES = [
   {
-    icon: ClipboardCheck,
-    color: "#f4c33a",
-    title: "Pro Weekly Review",
-    desc: "One weekly decision screen combines progression, plateaus, volume, balance and PR targets into the next three moves.",
+    icon: Activity,
+    title: "Strength Map",
+    detail:
+      "Every muscle is ranked from your real logged lifts; uncovered areas stay grey and explain why.",
   },
   {
-    icon: Flag,
-    color: "#f4c33a",
-    title: "PR Roadmap",
-    desc: "Set target estimated maxes for your lifts, track the exact gap and project a milestone date from your real training trend.",
-  },
-  {
-    icon: Gauge,
-    color: "#f4c33a",
-    title: "Training Autopilot",
-    desc: "Chooses every next-session load from your completed reps and effort, detects stalls, calls recovery deloads, and applies all changes directly to your plan in one tap.",
-  },
-  {
-    icon: Settings2,
-    color: "#f4c33a",
-    title: "Advanced Exercise Programming",
-    desc: "Choose double or linear progression, per-exercise rest, target RIR, lifting tempo and private cues. Your live workout follows every setting.",
-  },
-  {
-    icon: RefreshCw,
-    color: "#f4c33a",
-    title: "Smart Exercise Swaps",
-    desc: "Replace a busy or unsuitable movement in your plan or mid-workout with a same-muscle alternative while preserving every target and coaching setting.",
+    icon: Target,
+    title: "Muscle development coach",
+    detail:
+      "Pick the muscle you want to grow, see recovery and volume, then add matched exercises to your week.",
   },
   {
     icon: CalendarDays,
-    color: "#f4c33a",
-    title: "Plan Intelligence",
-    desc: "Audit muscle coverage, weekly set volume and recovery spacing, then rebalance the whole week around your goal in one tap.",
+    title: "Intelligent programme",
+    detail: "Your days, equipment, experience and focus muscles build one editable training week.",
   },
   {
-    icon: Activity,
-    color: "#f4c33a",
-    title: "DEADSET Intelligence",
-    desc: "Volume Optimizer, Plateau Breaker, strength-trajectory projections and a training-balance score, all computed from your own logs.",
+    icon: Dumbbell,
+    title: "Automatic progression",
+    detail:
+      "Working weights, repeated exercises and next-session targets stay linked across the whole plan.",
   },
-  {
-    icon: Shield,
-    color: "#FAFAFA",
-    title: "Streak Armor",
-    desc: "Three shields a month auto-protect your streak when life happens. Miss a day, keep the fire.",
-  },
-  {
-    icon: Swords,
-    color: "#FAFAFA",
-    title: "Head-to-Head Challenges",
-    desc: "Challenge friends directly. Most reps, most volume, most sessions — set the stakes and settle it.",
-  },
-  {
-    icon: BarChart3,
-    color: "#2196F3",
-    title: "Progression Intelligence",
-    desc: "Ghost Mode races your last session set-by-set, weight evolution per lift, and next-weight suggestions the moment you beat your plan.",
-  },
-  {
-    icon: BarChart3,
-    color: "#00BCD4",
-    title: "Advanced Analytics",
-    desc: "Strength standards, rep-max tables, tonnage, body-part volume and consistency heatmaps. Your numbers, not vibes.",
-  },
-  {
-    icon: Star,
-    color: "#FF6B35",
-    title: "Featured Programs",
-    desc: "5/3/1 BBB, StrongLifts 5×5, PHUL, Arnold Split and nSuns. Expert-built splits unlocked instantly.",
-  },
-  {
-    icon: Zap,
-    color: "#00BCD4",
-    title: "Custom Program Builder",
-    desc: "Build unlimited custom splits day by day from the full exercise library. Sets, reps and order — all yours.",
-  },
-];
+] as const;
+
+type UserSummary = { id: string; email?: string };
 
 function UpgradePage() {
   const navigate = useNavigate();
-  const { isPro, loading, refresh } = usePro();
-  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
-  const [plan, setPlan] = useState<"monthly" | "yearly">("yearly");
-  const [currency, setCurrency] = useState<SupportedCurrency>("usd");
-  const [showCheckout, setShowCheckout] = useState(false);
-  const [showCompare, setShowCompare] = useState(false);
+  const { isPro, loading: entitlementLoading, refresh } = usePro();
+  const [user, setUser] = useState<UserSummary | null>(null);
   const [sessionChecked, setSessionChecked] = useState(false);
-  const [billingLoading, setBillingLoading] = useState(false);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [checkoutError, setCheckoutError] = useState<string | null>(null);
-  const [iosNative, setIosNative] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
+  const [currency, setCurrency] = useState<SupportedCurrency>("gbp");
+  const [iosNative, setIosNative] = useState(false);
   const [appleProducts, setAppleProducts] = useState<AppleProduct[]>([]);
-  const [appleLoading, setAppleLoading] = useState(false);
+  const [appleProductsChecked, setAppleProductsChecked] = useState(false);
+  const [purchaseLoading, setPurchaseLoading] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [billingLoading, setBillingLoading] = useState(false);
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -162,765 +100,456 @@ function UpgradePage() {
     setIosNative(nativeIos);
     if (nativeIos) {
       getAppleProducts()
-        .then(setAppleProducts)
-        .catch(() => setCheckoutError("Subscriptions are temporarily unavailable from Apple."));
+        .then((products) => {
+          if (!cancelled) setAppleProducts(products);
+        })
+        .catch(() => {
+          if (!cancelled) setError("Apple subscriptions are temporarily unavailable.");
+        })
+        .finally(() => {
+          if (!cancelled) setAppleProductsChecked(true);
+        });
+    } else {
+      setAppleProductsChecked(true);
     }
-    withTimeout(supabase.auth.getSession(), { data: { session: null }, error: null }, 3500)
-      .then(({ data: { session }, error }) => {
+    void detectCountry().then((country) => {
+      if (!cancelled) setCurrency(currencyForCountry(country));
+    });
+    void withTimeout(supabase.auth.getSession(), { data: { session: null }, error: null }, 3500)
+      .then(({ data, error: authError }) => {
         if (cancelled) return;
-        if (error) setSessionError("Could not check your login. Refresh or sign in again.");
-        if (session) setUser({ id: session.user.id, email: session.user.email ?? undefined });
+        if (authError) setSessionError("Could not verify your login. Please try again.");
+        if (data.session) {
+          setUser({ id: data.session.user.id, email: data.session.user.email ?? undefined });
+        }
         setSessionChecked(true);
       })
       .catch(() => {
         if (cancelled) return;
-        setSessionError("Could not check your login. Refresh or sign in again.");
+        setSessionError("Could not verify your login. Please try again.");
         setSessionChecked(true);
       });
-    detectCountry().then((c) => setCurrency(currencyForCountry(c)));
     return () => {
       cancelled = true;
     };
-  }, [navigate]);
+  }, []);
 
-  const priceLabels = CURRENCY_META[currency];
   const appleMonthly = appleProducts.find((product) => product.id === APPLE_PRO_PRODUCTS.monthly);
-  const appleYearly = appleProducts.find((product) => product.id === APPLE_PRO_PRODUCTS.yearly);
-  const monthlyLabel = iosNative ? (appleMonthly?.displayPrice ?? "—") : priceLabels.monthly;
-  const yearlyLabel = iosNative ? (appleYearly?.displayPrice ?? "—") : priceLabels.yearly;
-  const priceId = priceIdFor(plan, currency);
-
+  const exactAppleTrial = isSevenDayFreeTrial(appleMonthly?.introductoryOffer);
+  const appleTrialEligible = exactAppleTrial && appleMonthly?.eligibleForIntroOffer === true;
+  const monthlyLabel = iosNative
+    ? (appleMonthly?.displayPrice ?? "—")
+    : CURRENCY_META[currency].monthly;
+  const webPriceId = priceIdFor("monthly", currency);
   const checkoutReturnUrl = `${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`;
 
-  const startHostedCheckout = async () => {
-    setCheckoutLoading(true);
-    setCheckoutError(null);
-    try {
-      const result = await withTimeout(
-        createCheckoutSession({
-          data: {
-            priceId,
-            returnUrl: checkoutReturnUrl,
-            environment: getStripeEnvironment(),
-            uiMode: "hosted_page",
-          },
-        }),
-        { error: "Stripe checkout took too long. Please try again." },
-        15000,
-      );
-      if ("error" in result) throw new Error(result.error);
-      if (!result.url) throw new Error("Stripe checkout did not return a payment link");
-      window.location.href = result.url;
-    } catch (error) {
-      setCheckoutError(error instanceof Error ? error.message : "Could not open checkout");
-      setCheckoutLoading(false);
-    }
-  };
-
-  const openBillingPortal = async () => {
-    setBillingLoading(true);
-    try {
-      const result = await withTimeout(
-        createPortalSession({
-          data: {
-            environment: getStripeEnvironment(),
-            returnUrl: window.location.origin + "/profile",
-          },
-        }),
-        { error: "Billing portal took too long. Try again." },
-        12000,
-      );
-      if ("error" in result) throw new Error(result.error);
-      window.location.href = result.url;
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not open billing portal");
-      setBillingLoading(false);
-    }
-  };
-
-  const startApplePurchase = async () => {
+  async function startApplePurchase() {
     if (!user) {
       navigate({ to: "/auth" });
       return;
     }
-    setAppleLoading(true);
-    setCheckoutError(null);
+    hapticSelection();
+    setPurchaseLoading(true);
+    setError(null);
     try {
-      const productId = plan === "yearly" ? APPLE_PRO_PRODUCTS.yearly : APPLE_PRO_PRODUCTS.monthly;
-      const result = await purchaseApplePro(productId, user.id);
-      if (result.pending)
+      const result = await purchaseApplePro(APPLE_PRO_PRODUCTS.monthly, user.id);
+      if (result.pending) {
         toast.message("Purchase pending approval", {
-          description: "Pro unlocks as soon as Apple approves it.",
+          description: "DEADSET unlocks as soon as Apple approves it.",
         });
-      else if (!result.cancelled && result.active) {
-        await recordRevenueCatPurchase(productId, user.id)
+      } else if (!result.cancelled && result.active) {
+        await recordRevenueCatPurchase(APPLE_PRO_PRODUCTS.monthly, user.id)
           .then((synced) => {
             if (synced) notifyRevenueCatUpdated();
           })
-          .catch((error) => console.warn("RevenueCat purchase recording failed", error));
+          .catch((syncError) => console.warn("RevenueCat purchase recording failed", syncError));
         await refresh();
-        toast.success("DEADSET Pro unlocked");
+        hapticPlanUpdated();
+        toast.success(appleTrialEligible ? "Your 7-day trial has started" : "DEADSET unlocked");
+        navigate({ to: "/train", replace: true });
       }
-    } catch (error) {
-      setCheckoutError(
-        error instanceof Error ? error.message : "Apple purchase could not be completed",
+    } catch (purchaseError) {
+      hapticFailure();
+      setError(
+        purchaseError instanceof Error
+          ? purchaseError.message
+          : "Apple could not complete this purchase.",
       );
     } finally {
-      setAppleLoading(false);
+      setPurchaseLoading(false);
     }
-  };
+  }
 
-  const restoreApplePurchase = async () => {
-    setAppleLoading(true);
-    setCheckoutError(null);
+  async function restorePurchase() {
+    hapticSelection();
+    setPurchaseLoading(true);
+    setError(null);
     try {
       const result = await restoreApplePro();
       await syncRevenueCatPurchases(user?.id)
         .then((synced) => {
           if (synced) notifyRevenueCatUpdated();
         })
-        .catch((error) => console.warn("RevenueCat restore sync failed", error));
+        .catch((syncError) => console.warn("RevenueCat restore sync failed", syncError));
       await refresh();
-      if (result.active) toast.success("Purchases restored");
-      else toast.message("No active DEADSET Pro purchase was found");
-    } catch (error) {
-      setCheckoutError(error instanceof Error ? error.message : "Purchases could not be restored");
+      if (result.active) {
+        hapticPlanUpdated();
+        toast.success("Purchases restored");
+        navigate({ to: "/train", replace: true });
+      } else {
+        toast.message("No active DEADSET subscription was found");
+      }
+    } catch (restoreError) {
+      hapticFailure();
+      setError(
+        restoreError instanceof Error ? restoreError.message : "Purchases could not be restored.",
+      );
     } finally {
-      setAppleLoading(false);
+      setPurchaseLoading(false);
     }
-  };
-
-  if (!sessionChecked) {
-    return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ background: "#0A0A0A" }}
-      >
-        <div className="text-center px-6">
-          <Loader2 className="animate-spin mx-auto" size={24} style={{ color: "#e63222" }} />
-          <p className="label-cap mt-4 text-xs text-grit-dim">Opening Pro</p>
-        </div>
-      </div>
-    );
   }
+
+  async function startHostedCheckout() {
+    setCheckoutLoading(true);
+    setError(null);
+    try {
+      const result = await withTimeout(
+        createCheckoutSession({
+          data: {
+            priceId: webPriceId,
+            returnUrl: checkoutReturnUrl,
+            environment: getStripeEnvironment(),
+            uiMode: "hosted_page",
+          },
+        }),
+        { error: "Checkout took too long. Please try again." },
+        15000,
+      );
+      if ("error" in result) throw new Error(result.error);
+      if (!result.url) throw new Error("Checkout did not return a secure payment link.");
+      window.location.href = result.url;
+    } catch (checkoutError) {
+      hapticFailure();
+      setError(checkoutError instanceof Error ? checkoutError.message : "Could not open checkout.");
+      setCheckoutLoading(false);
+    }
+  }
+
+  async function openBilling() {
+    setBillingLoading(true);
+    try {
+      if (iosNative) {
+        await manageApplePro();
+        return;
+      }
+      const result = await createPortalSession({
+        data: {
+          environment: getStripeEnvironment(),
+          returnUrl: `${window.location.origin}/profile`,
+        },
+      });
+      if ("error" in result) throw new Error(result.error);
+      window.location.href = result.url;
+    } catch (billingError) {
+      hapticFailure();
+      toast.error(
+        billingError instanceof Error
+          ? billingError.message
+          : "Could not open subscription management.",
+      );
+    } finally {
+      setBillingLoading(false);
+    }
+  }
+
+  if (!sessionChecked || (iosNative && !appleProductsChecked)) {
+    return <LoadingScreen label="Opening membership" />;
+  }
+
+  if (user && entitlementLoading) return <LoadingScreen label="Checking membership" />;
 
   if (!user) {
-    // Logged-out visitors get the FULL pitch — hero, tick table, pricing —
-    // with sign-in as the final CTA, not a bare gate.
     return (
-      <div className="min-h-screen pb-12" style={{ background: "#0A0A0A" }}>
-        {/* Hero with the app's red glow */}
-        <div
-          className="relative px-6 pt-14 pb-10 text-center overflow-hidden"
-          style={{
-            background:
-              "radial-gradient(ellipse 90% 70% at 50% -10%, rgba(230,50,34,0.28), transparent 65%)",
-          }}
-        >
-          <div
-            className="mx-auto w-16 h-16 rounded-2xl flex items-center justify-center"
-            style={{
-              background: "linear-gradient(135deg, #e63222, #7a0300)",
-              boxShadow: "0 10px 40px rgba(230,50,34,0.45)",
-            }}
-          >
-            <Crown size={30} color="#fff" />
-          </div>
-          <h1 className="display text-4xl font-extrabold uppercase tracking-wide mt-5 leading-none">
-            <span className="text-white">DEADSET</span>{" "}
-            <span style={{ color: "#e63222" }}>PRO</span>
-          </h1>
-          <p className="mt-3 text-sm max-w-xs mx-auto leading-relaxed" style={{ color: "#8A8A8A" }}>
-            Everything needed to log and train stays free. Pro turns your history into clear weekly
-            decisions, automatic progression and measurable targets.
-          </p>
-        </div>
-
-        {/* Pricing cards */}
-        <div className="px-5 grid grid-cols-2 gap-3 -mt-2">
-          <div
-            className="deadset-3d-panel rounded-2xl p-4 text-left"
-            style={{ background: "rgba(230,50,34,0.10)", border: "2px solid #e63222" }}
-          >
-            <span
-              className="inline-block text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full text-white"
-              style={{ background: "#e63222" }}
-            >
-              Best value · Save 33%
-            </span>
-            <p className="label-cap text-[9px] text-grit-dim mt-2">Yearly</p>
-            <p className="display text-3xl font-extrabold text-white leading-none mt-1">
-              {yearlyLabel}
-            </p>
-            <p className="text-[10px] mt-1" style={{ color: "#8A8A8A" }}>
-              per year
-            </p>
-          </div>
-          <div
-            className="deadset-3d-panel rounded-2xl p-4 text-left"
-            style={{ background: "#141414", border: "1.5px solid #262626" }}
-          >
-            <p className="label-cap text-[9px] text-grit-dim mt-1">Monthly</p>
-            <p className="display text-3xl font-extrabold text-white leading-none mt-1">
-              {monthlyLabel}
-            </p>
-            <p className="text-[10px] mt-1" style={{ color: "#8A8A8A" }}>
-              per month · cancel anytime
-            </p>
-          </div>
-        </div>
-
-        {/* CTA stays above the detailed comparison so the next step is immediate. */}
-        <div className="px-5 mt-5">
-          {sessionError && (
-            <p className="mb-3 text-center text-xs" style={{ color: "#e63222" }}>
-              {sessionError}
-            </p>
-          )}
-          <button
-            onClick={() => navigate({ to: "/auth" })}
-            className="btn-grit w-full py-4 text-base rounded-2xl animate-subtle-pulse"
-          >
-            <Crown size={16} className="inline mr-2" />
-            Sign in / Create account
-          </button>
-          <p className="mt-2.5 text-center text-[10px]" style={{ color: "#8a8a8a" }}>
-            {iosNative
-              ? "Takes under a minute — then Apple's subscription options load here."
-              : "Takes under a minute — then checkout loads right here."}
-          </p>
-          <p
-            className="mt-3 text-center label-cap text-[9px] leading-relaxed"
-            style={{ color: "#8a8a8a" }}
-          >
-            {iosNative
-              ? "Subscriptions handled securely by Apple · Restore purchases anytime"
-              : "Secure payment by Stripe · Promo codes enabled · Cancel anytime"}
-          </p>
-        </div>
-
-        <div className="px-5 mt-5">
-          <button
-            type="button"
-            onClick={() => setShowCompare((current) => !current)}
-            className="btn-ghost w-full py-3 text-xs rounded-2xl"
-          >
-            {showCompare ? "Hide detailed comparison" : "Compare Free and Pro"}
-          </button>
-          {showCompare && (
-            <div className="deadset-3d-panel bg-grit-card border border-grit rounded-2xl overflow-hidden mt-3">
-              <div className="grid grid-cols-[1fr_52px_52px] items-center px-4 py-3 border-b border-grit bg-[#101010]">
-                <span className="label-cap text-[9px] text-grit-dim">What you get</span>
-                <span className="label-cap text-[9px] text-grit-dim text-center">Free</span>
-                <span className="label-cap text-[9px] text-center" style={{ color: "#e63222" }}>
-                  Pro
-                </span>
-              </div>
-              {COMPARE_ROWS.map((r) => (
-                <div
-                  key={r.label}
-                  className="grid grid-cols-[1fr_52px_52px] items-center px-4 py-2.5 border-b border-grit/50 last:border-b-0"
-                >
-                  <span className="text-xs text-grit font-medium">{r.label}</span>
-                  <span className="text-center text-[10px] leading-tight text-grit-dim px-0.5">
-                    {typeof r.free === "string" ? (
-                      r.free
-                    ) : r.free ? (
-                      <Check size={14} className="inline text-grit" />
-                    ) : (
-                      "—"
-                    )}
-                  </span>
-                  <span className="text-center px-0.5">
-                    {typeof r.pro === "string" ? (
-                      <span
-                        className="text-[10px] leading-tight font-bold"
-                        style={{ color: "#e63222" }}
-                      >
-                        {r.pro}
-                      </span>
-                    ) : (
-                      <Check size={14} className="inline" style={{ color: "#e63222" }} />
-                    )}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="px-5">
-          <Link
-            to="/"
-            className="mt-4 block text-center label-cap text-[10px] text-grit-dim press py-2"
-          >
-            ← Back to DEADSET
-          </Link>
-        </div>
-      </div>
+      <MembershipShell>
+        <TrialHero
+          price={iosNative && appleMonthly ? appleMonthly.displayPrice : DEADSET_MONTHLY_PRICE_GBP}
+          trialAvailable={!iosNative || appleTrialEligible}
+        />
+        <FeatureGrid />
+        {sessionError && <ErrorCard message={sessionError} />}
+        <button onClick={() => navigate({ to: "/auth" })} className="btn-grit w-full min-h-14">
+          Sign up to start
+        </button>
+        <Link to="/" className="mt-4 block py-2 text-center label-cap text-[9px] text-grit-dim">
+          Back to DEADSET
+        </Link>
+      </MembershipShell>
     );
   }
 
-  if (isPro) {
+  if (isPro && !entitlementLoading) {
     return (
-      <div
-        className="min-h-screen flex flex-col items-center justify-center px-6 text-center"
-        style={{ background: "#0A0A0A" }}
-      >
-        <div
-          className="w-20 h-20 rounded-full flex items-center justify-center mb-6"
-          style={{
-            background: "linear-gradient(135deg, #e63222 0%, #e63222 100%)",
-            boxShadow: "0 8px 32px rgba(230,50,34,0.5)",
-          }}
-        >
-          <Crown size={36} color="#fff" />
+      <div className="min-h-screen bg-[#090909] px-6 flex flex-col items-center justify-center text-center">
+        <div className="h-20 w-20 rounded-full bg-accent-red flex items-center justify-center deadset-pulse-glow">
+          <Check size={36} className="text-white" strokeWidth={3} />
         </div>
-        <h1 className="display text-3xl font-extrabold text-white uppercase tracking-wider">
-          DEADSET Pro is active
+        <p className="label-cap mt-6 text-accent-red">MEMBERSHIP ACTIVE</p>
+        <h1 className="display mt-2 text-4xl font-extrabold uppercase text-white">
+          You&apos;re in.
         </h1>
-        <p className="mt-2 max-w-sm text-sm leading-relaxed" style={{ color: "#8A8A8A" }}>
-          Your Weekly Review, PR Roadmap, Training Autopilot and every advanced training tool are
-          ready.
+        <p className="mt-3 max-w-sm text-sm leading-relaxed text-grit-dim">
+          Your Strength Map, programme, muscle coach and complete training history are unlocked.
         </p>
-        <Link
-          to="/progress"
-          className="btn-grit mt-6 flex min-h-12 items-center justify-center gap-2 px-8"
+        <Link to="/strength" className="btn-grit mt-7 w-full max-w-sm min-h-14">
+          Open my Strength Map
+        </Link>
+        <Link to="/train" className="btn-ghost mt-3 w-full max-w-sm min-h-12">
+          Start training
+        </Link>
+        <button
+          type="button"
+          onClick={openBilling}
+          disabled={billingLoading}
+          className="mt-5 label-cap text-[9px] text-grit-dim disabled:opacity-50"
         >
-          <ClipboardCheck size={16} /> Open Weekly Review
-        </Link>
-        <Link to="/train" className="btn-ghost mt-3 px-8">
-          Go to training
-        </Link>
-        {iosNative ? (
-          <button
-            onClick={() => void manageApplePro()}
-            className="mt-3 text-xs uppercase tracking-widest"
-            style={{ color: "#8a8a8a" }}
-          >
-            Manage subscription
-          </button>
-        ) : (
-          <button
-            onClick={openBillingPortal}
-            disabled={billingLoading}
-            className="mt-3 text-xs uppercase tracking-widest disabled:opacity-60"
-            style={{ color: "#8a8a8a" }}
-          >
-            {billingLoading ? "Opening billing…" : "Manage subscription"}
-          </button>
-        )}
+          {billingLoading ? "Opening…" : "Manage subscription"}
+        </button>
       </div>
     );
   }
 
   return (
-    <div
-      className="min-h-screen"
-      style={{
-        background: "#0A0A0A",
-        paddingTop: "env(safe-area-inset-top)",
-        paddingBottom: "env(safe-area-inset-bottom)",
-      }}
-    >
+    <MembershipShell>
       {!iosNative && <PaymentTestModeBanner />}
+      <TrialHero
+        price={monthlyLabel}
+        trialAvailable={!iosNative || appleTrialEligible}
+        trialConfigured={iosNative ? exactAppleTrial : true}
+      />
+      <FeatureGrid />
 
-      <div className="px-4 py-4">
-        <button
-          onClick={() => navigate({ to: "/train" })}
-          className="flex items-center gap-1 press"
-          style={{ color: "#8A8A8A" }}
-        >
-          <ChevronLeft size={18} />
-          <span className="text-xs uppercase tracking-widest">Back</span>
-        </button>
+      <div className="mb-5 rounded-2xl border-2 border-accent-red bg-accent-red/[0.08] p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="label-cap text-[9px] text-accent-red">ONE MONTHLY MEMBERSHIP</p>
+            <p className="display mt-1 text-3xl font-extrabold text-white">{monthlyLabel}</p>
+            <p className="mt-1 text-[10px] text-grit-dim">per month · cancel anytime</p>
+          </div>
+          <ShieldCheck size={25} className="mt-1 shrink-0 text-accent-red" />
+        </div>
       </div>
 
-      {!showCheckout ? (
-        <div className="px-5 pb-16 deadset-3d-scene">
-          {loading && (
-            <div className="mb-4 border border-white/10 bg-white/[0.03] px-4 py-3 text-center">
-              <Loader2
-                className="mr-2 inline animate-spin"
-                size={13}
-                style={{ color: "#e63222" }}
-              />
-              <span className="label-cap text-[10px] text-grit-dim">
-                Checking your Pro status in the background
-              </span>
-            </div>
-          )}
-          {/* Hero */}
-          <div className="text-center mb-8 animate-slide-up">
-            <div
-              className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 deadset-float deadset-pulse-glow"
-              style={{
-                background: "linear-gradient(135deg, #e63222 0%, #e63222 100%)",
-                boxShadow: "0 8px 32px rgba(230,50,34,0.4)",
-              }}
-            >
-              <Crown size={28} color="#fff" />
-            </div>
-            <p
-              className="text-xs font-bold uppercase tracking-widest mb-1"
-              style={{ color: "#e63222" }}
-            >
-              DEADSET Pro
-            </p>
-            <h1 className="display text-4xl font-extrabold text-white uppercase leading-tight">
-              Your training.
-              <br />
-              Fully dialled in.
-            </h1>
-            <p className="mt-3 text-sm" style={{ color: "#8A8A8A" }}>
-              Keep logging free, forever. Pro reviews the week, updates the plan, projects your next
-              PR and shows exactly what to change.
-            </p>
-            <div className="flex items-center justify-center gap-4 mt-4">
-              <div className="flex items-center gap-1.5 animate-pop-in delay-50">
-                <Users size={13} style={{ color: "#e63222" }} />
-                <span className="text-xs font-bold text-white">Weekly decisions</span>
-              </div>
-              <div className="flex items-center gap-1.5 animate-pop-in delay-150">
-                <Gauge size={13} style={{ color: "#FAFAFA" }} />
-                <span className="text-xs font-bold text-white">1-tap progression</span>
-              </div>
-              <div className="flex items-center gap-1.5 animate-pop-in delay-250">
-                <Flame size={13} style={{ color: "#e63222" }} />
-                <span className="text-xs font-bold text-white">PR roadmaps</span>
-              </div>
-            </div>
-          </div>
+      {error && <ErrorCard message={error} />}
 
-          {/* The visible payoff — your identity goes gold the moment you upgrade */}
-          <div
-            className="rounded-2xl border border-pro pro-glow p-4 mb-6 flex items-center gap-4"
-            style={{ background: "linear-gradient(135deg, #201a0c 0%, #2b2108 55%, #0d0a04 100%)" }}
-          >
-            <div
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full"
-              style={{ background: "radial-gradient(circle at 50% 35%, #f8d566, #eab212 70%)" }}
-            >
-              <Crown size={22} strokeWidth={2.5} className="text-[#14110a]" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-extrabold text-white">Your card goes gold</p>
-                <ProBadge size="sm" />
-              </div>
-              <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "#b7ac8e" }}>
-                A gold athlete card, the Pro badge on your profile, and every feature below,
-                unlocked as soon as you upgrade.
-              </p>
-            </div>
-          </div>
-
-          {/* Feature cards */}
-          <div className="flex flex-col gap-3 mb-8">
-            {PRO_FEATURES.map((f) => (
-              <div
-                key={f.title}
-                className="deadset-3d-panel deadset-lift animate-slide-up flex items-start gap-4 p-4"
-                style={{ background: "#141414", border: "1.5px solid #262626" }}
-              >
-                <div
-                  className="flex items-center justify-center rounded-xl flex-shrink-0"
-                  style={{
-                    width: 44,
-                    height: 44,
-                    background: `${f.color}18`,
-                    border: `1px solid ${f.color}30`,
-                  }}
-                >
-                  <f.icon size={20} style={{ color: f.color }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-white">{f.title}</p>
-                  <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "#8A8A8A" }}>
-                    {f.desc}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Comparison table toggle */}
+      {iosNative ? (
+        <>
           <button
-            onClick={() => setShowCompare((v) => !v)}
-            className="w-full text-center text-xs font-bold uppercase tracking-widest mb-4 py-2 press"
-            style={{ color: "#e63222" }}
+            type="button"
+            onClick={startApplePurchase}
+            disabled={purchaseLoading || !appleMonthly}
+            className="btn-grit w-full min-h-14 disabled:opacity-50"
           >
-            {showCompare ? "Hide" : "See"} Free vs Pro comparison
+            {purchaseLoading ? (
+              <Loader2 size={17} className="mr-2 inline animate-spin" />
+            ) : (
+              <Crown size={17} className="mr-2 inline" />
+            )}
+            {appleTrialEligible
+              ? "Start my 7-day free trial"
+              : `Subscribe for ${monthlyLabel}/month`}
           </button>
-          {showCompare && (
-            <div
-              className="deadset-3d-panel mb-8 overflow-hidden"
-              style={{ border: "1.5px solid #262626" }}
-            >
-              <div
-                className="grid grid-cols-3 px-4 py-3"
-                style={{ background: "#141414", borderBottom: "1px solid #262626" }}
-              >
-                <span
-                  className="text-[10px] font-bold uppercase tracking-wider"
-                  style={{ color: "#8A8A8A" }}
-                >
-                  Feature
-                </span>
-                <span
-                  className="text-[10px] font-bold uppercase tracking-wider text-center"
-                  style={{ color: "#8A8A8A" }}
-                >
-                  Free
-                </span>
-                <span
-                  className="text-[10px] font-bold uppercase tracking-wider text-center"
-                  style={{ color: "#e63222" }}
-                >
-                  Pro
-                </span>
-              </div>
-              {COMPARE_ROWS.map((row, i) => (
-                <div
-                  key={row.label}
-                  className="grid grid-cols-3 px-4 py-2.5 items-center"
-                  style={{
-                    background: i % 2 === 0 ? "#141414" : "#17181C",
-                    borderBottom: i < COMPARE_ROWS.length - 1 ? "1px solid #262626" : "none",
-                  }}
-                >
-                  <span className="text-xs text-white col-span-1">{row.label}</span>
-                  <span
-                    className={`text-center font-bold ${typeof row.free === "string" ? "text-[10px] uppercase tracking-wider" : "text-sm"}`}
-                    style={{ color: row.free ? "#FAFAFA" : "#3a3a3a" }}
-                  >
-                    {typeof row.free === "string" ? row.free : row.free ? "✓" : "✗"}
-                  </span>
-                  <span
-                    className={`text-center font-bold ${typeof row.pro === "string" ? "text-[10px] uppercase tracking-wider" : "text-sm"}`}
-                    style={{ color: "#e63222" }}
-                  >
-                    {typeof row.pro === "string" ? row.pro : "✓"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {iosNative ? (
-            <>
-              <div className="flex flex-col gap-3 mb-5">
-                {[
-                  {
-                    key: "yearly" as const,
-                    product: appleYearly,
-                    label: "Yearly",
-                    note: "Best value · billed annually",
-                  },
-                  {
-                    key: "monthly" as const,
-                    product: appleMonthly,
-                    label: "Monthly",
-                    note: "Flexible · cancel anytime",
-                  },
-                ].map((option) => (
-                  <button
-                    key={option.key}
-                    type="button"
-                    onClick={() => setPlan(option.key)}
-                    disabled={!option.product || appleLoading}
-                    className="deadset-3d-panel deadset-lift w-full text-left p-4 press disabled:opacity-60"
-                    style={{
-                      background: plan === option.key ? "rgba(230,50,34,0.1)" : "#141414",
-                      border: `2px solid ${plan === option.key ? "#e63222" : "#262626"}`,
-                    }}
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <p className="font-bold text-white text-sm uppercase tracking-wider">
-                          {option.label}
-                        </p>
-                        <p className="text-[10px] mt-1" style={{ color: "#8A8A8A" }}>
-                          {option.note}
-                        </p>
-                      </div>
-                      <p className="display text-2xl font-extrabold text-white">
-                        {option.product?.displayPrice ?? (
-                          <Loader2 size={18} className="animate-spin" />
-                        )}
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              {checkoutError && (
-                <div className="mb-3 rounded-lg border border-accent-red/50 bg-accent-red/10 p-3 text-center">
-                  <p className="text-xs text-accent-red">{checkoutError}</p>
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={startApplePurchase}
-                disabled={appleLoading || appleProducts.length === 0}
-                className="btn-grit w-full py-4 text-base rounded-2xl disabled:opacity-60"
-              >
-                {appleLoading ? (
-                  <Loader2 size={16} className="inline mr-2 animate-spin" />
-                ) : (
-                  <Crown size={16} className="inline mr-2" />
-                )}
-                Subscribe with Apple
-              </button>
-              <button
-                type="button"
-                onClick={restoreApplePurchase}
-                disabled={appleLoading}
-                className="btn-ghost mt-3 w-full py-3 text-xs rounded-2xl disabled:opacity-60"
-              >
-                Restore Purchases
-              </button>
-              <p
-                className="mt-4 text-center text-[10px] leading-relaxed"
-                style={{ color: "#8a8a8a" }}
-              >
-                Payment is charged to your Apple Account. Subscription renews automatically unless
-                cancelled at least 24 hours before the end of the current period. Manage or cancel
-                in your App Store account.
-              </p>
-              <div
-                className="mt-3 flex justify-center gap-4 text-[10px] uppercase tracking-wider"
-                style={{ color: "#8a8a8a" }}
-              >
-                <Link to="/terms">Terms</Link>
-                <Link to="/privacy">Privacy</Link>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Plan selector */}
-              <div className="flex flex-col gap-3 mb-6">
-                <button
-                  onClick={() => setPlan("yearly")}
-                  className="deadset-3d-panel deadset-lift animate-subtle-pulse w-full text-left p-4 relative press"
-                  style={{
-                    background: plan === "yearly" ? "rgba(230,50,34,0.1)" : "#141414",
-                    border: `2px solid ${plan === "yearly" ? "#e63222" : "#262626"}`,
-                  }}
-                >
-                  <span
-                    className="absolute -top-2.5 left-4 text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full text-white"
-                    style={{ background: "#e63222" }}
-                  >
-                    Most Popular · Save 33%
-                  </span>
-                  <div className="flex items-baseline justify-between">
-                    <div>
-                      <p className="font-bold text-white text-sm uppercase tracking-wider">
-                        Yearly
-                      </p>
-                      <p className="text-[10px] mt-0.5" style={{ color: "#8A8A8A" }}>
-                        Best value — billed annually
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="display text-2xl font-extrabold text-white">
-                        {priceLabels.yearly}
-                      </p>
-                      <p
-                        className="text-[10px] uppercase tracking-wider"
-                        style={{ color: "#8A8A8A" }}
-                      >
-                        / year
-                      </p>
-                    </div>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => setPlan("monthly")}
-                  className="deadset-3d-panel deadset-lift w-full text-left p-4 press"
-                  style={{
-                    background: plan === "monthly" ? "rgba(230,50,34,0.1)" : "#141414",
-                    border: `2px solid ${plan === "monthly" ? "#e63222" : "#262626"}`,
-                  }}
-                >
-                  <div className="flex items-baseline justify-between">
-                    <div>
-                      <p className="font-bold text-white text-sm uppercase tracking-wider">
-                        Monthly
-                      </p>
-                      <p className="text-[10px] mt-0.5" style={{ color: "#8A8A8A" }}>
-                        Flexible — cancel anytime
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="display text-2xl font-extrabold text-white">
-                        {priceLabels.monthly}
-                      </p>
-                      <p
-                        className="text-[10px] uppercase tracking-wider"
-                        style={{ color: "#8A8A8A" }}
-                      >
-                        / month
-                      </p>
-                    </div>
-                  </div>
-                </button>
-              </div>
-
-              {checkoutError && (
-                <div className="mb-3 rounded-2xl border border-accent-red/50 bg-accent-red/10 p-3 text-center">
-                  <p className="text-xs text-accent-red">{checkoutError}</p>
-                </div>
-              )}
-              {/* Embedded checkout is the default so payment stays inside
-                  DEADSET, on-brand, never bouncing to a Stripe-branded page.
-                  The hosted redirect remains a one-tap fallback below (and the
-                  embedded component itself falls back to hosted on error). */}
-              <button
-                onClick={() => setShowCheckout(true)}
-                disabled={checkoutLoading}
-                className="btn-grit w-full py-4 text-base rounded-2xl animate-subtle-pulse"
-              >
-                <Crown size={16} className="inline mr-2" />
-                Unlock DEADSET Pro
-              </button>
-              <button
-                onClick={startHostedCheckout}
-                disabled={checkoutLoading}
-                className="btn-ghost mt-3 w-full py-3 text-xs rounded-2xl"
-              >
-                {checkoutLoading ? (
-                  <>
-                    <Loader2 size={14} className="inline mr-2 animate-spin" />
-                    Opening Stripe…
-                  </>
-                ) : (
-                  "Prefer a separate page? Open secure Stripe checkout"
-                )}
-              </button>
-              <p
-                className="mt-3 text-center text-[10px] uppercase tracking-widest"
-                style={{ color: "#8a8a8a" }}
-              >
-                Secure payment by Stripe · Promo codes enabled · Cancel anytime
-              </p>
-            </>
-          )}
-        </div>
-      ) : (
-        <div className="px-2 pb-12">
-          <StripeEmbeddedCheckout priceId={priceId} returnUrl={checkoutReturnUrl} />
           <button
+            type="button"
+            onClick={restorePurchase}
+            disabled={purchaseLoading}
+            className="btn-ghost mt-3 w-full min-h-12 disabled:opacity-50"
+          >
+            <RefreshCw size={14} className="mr-2 inline" /> Restore purchases
+          </button>
+          {appleMonthly && !exactAppleTrial && (
+            <p className="mt-3 text-center text-[10px] leading-relaxed text-amber-300">
+              Apple is not currently returning a seven-day introductory offer for this product, so
+              DEADSET will not falsely promise one at checkout.
+            </p>
+          )}
+          {exactAppleTrial && !appleTrialEligible && (
+            <p className="mt-3 text-center text-[10px] leading-relaxed text-grit-dim">
+              This Apple Account is not eligible for another introductory trial. Apple will charge
+              the displayed monthly price when you confirm.
+            </p>
+          )}
+        </>
+      ) : showCheckout ? (
+        <>
+          <StripeEmbeddedCheckout priceId={webPriceId} returnUrl={checkoutReturnUrl} />
+          <button
+            type="button"
             onClick={() => setShowCheckout(false)}
-            className="mt-4 w-full text-center text-[11px] uppercase tracking-widest press"
-            style={{ color: "#8A8A8A" }}
+            className="mt-4 w-full py-2 label-cap text-[9px] text-grit-dim"
           >
-            ← Back to plans
+            Back
           </button>
-        </div>
+        </>
+      ) : (
+        <>
+          <button
+            type="button"
+            onClick={() => setShowCheckout(true)}
+            className="btn-grit w-full min-h-14"
+          >
+            Start my 7-day free trial
+          </button>
+          <button
+            type="button"
+            onClick={startHostedCheckout}
+            disabled={checkoutLoading}
+            className="btn-ghost mt-3 w-full min-h-12 disabled:opacity-50"
+          >
+            {checkoutLoading ? "Opening secure checkout…" : "Open checkout in a separate page"}
+          </button>
+        </>
       )}
+
+      <p className="mt-4 text-center text-[10px] leading-relaxed text-grit-dim">
+        {iosNative
+          ? "Apple shows the exact trial, price and renewal terms before you confirm. The subscription renews automatically until cancelled."
+          : "Seven days free for eligible new members, then the displayed monthly price. Cancel anytime."}
+      </p>
+
+      <div className="mt-5 grid grid-cols-2 gap-2">
+        <Link to="/profile" className="btn-ghost min-h-11 text-center text-[10px]">
+          <UserRoundCog size={14} className="mr-1.5 inline" /> Account & privacy
+        </Link>
+        <button
+          type="button"
+          onClick={openBilling}
+          disabled={billingLoading}
+          className="btn-ghost min-h-11 text-[10px] disabled:opacity-50"
+        >
+          Manage subscription
+        </button>
+      </div>
+      <div className="mt-4 flex justify-center gap-5 label-cap text-[8px] text-grit-dim">
+        <Link to="/terms">Terms</Link>
+        <Link to="/privacy">Privacy</Link>
+      </div>
+    </MembershipShell>
+  );
+}
+
+function LoadingScreen({ label }: { label: string }) {
+  return (
+    <div className="min-h-screen bg-[#090909] flex items-center justify-center">
+      <div className="text-center">
+        <Loader2 size={24} className="mx-auto animate-spin text-accent-red" />
+        <p className="label-cap mt-4 text-[10px] text-grit-dim">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+function MembershipShell({ children }: { children: ReactNode }) {
+  return (
+    <main
+      className="min-h-screen bg-[#090909] px-5 pb-10"
+      style={{
+        paddingTop: "calc(28px + env(safe-area-inset-top))",
+        paddingBottom: "calc(32px + env(safe-area-inset-bottom))",
+      }}
+    >
+      <div className="mx-auto max-w-lg">{children}</div>
+    </main>
+  );
+}
+
+function TrialHero({
+  price,
+  trialAvailable,
+  trialConfigured = true,
+}: {
+  price: string;
+  trialAvailable: boolean;
+  trialConfigured?: boolean;
+}) {
+  return (
+    <header className="relative mb-7 overflow-hidden rounded-[28px] border border-white/10 bg-[#111214] px-5 py-7 text-center">
+      <div className="absolute inset-x-0 -top-24 mx-auto h-44 w-64 rounded-full bg-accent-red/20 blur-3xl" />
+      <div className="relative">
+        <div className="mx-auto h-16 w-16 rounded-2xl bg-accent-red flex items-center justify-center deadset-pulse-glow">
+          <Crown size={30} className="text-white" />
+        </div>
+        <p className="label-cap mt-5 text-[10px] text-accent-red">YOUR SETUP IS SAVED</p>
+        <h1 className="display mt-2 text-4xl font-extrabold uppercase leading-none text-white">
+          Now build the body.
+        </h1>
+        <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-grit-dim">
+          {trialAvailable
+            ? `Train free for seven days. Then ${price} per month unless you cancel.`
+            : trialConfigured
+              ? `Your introductory trial has already been used. Continue for ${price} per month.`
+              : `Continue with one monthly DEADSET membership at ${price}.`}
+        </p>
+        {trialAvailable && (
+          <div className="mx-auto mt-5 grid max-w-xs grid-cols-[1fr_auto_1fr] items-center gap-2">
+            <TrialMoment label="Today" detail="Full access" active />
+            <div className="h-px w-8 bg-accent-red/60" />
+            <TrialMoment label="Day 8" detail={`${price}/month`} />
+          </div>
+        )}
+      </div>
+    </header>
+  );
+}
+
+function TrialMoment({
+  label,
+  detail,
+  active = false,
+}: {
+  label: string;
+  detail: string;
+  active?: boolean;
+}) {
+  return (
+    <div>
+      <div
+        className="mx-auto h-3 w-3 rounded-full border-2"
+        style={{
+          background: active ? "#e63222" : "#111214",
+          borderColor: active ? "#e63222" : "#5a5a5a",
+        }}
+      />
+      <p className="mt-2 text-[10px] font-bold text-white">{label}</p>
+      <p className="text-[8px] uppercase tracking-wider text-grit-dim">{detail}</p>
+    </div>
+  );
+}
+
+function FeatureGrid() {
+  return (
+    <section className="mb-6 grid gap-2">
+      {MEMBERSHIP_FEATURES.map((feature) => (
+        <div
+          key={feature.title}
+          className="rounded-2xl border border-white/10 bg-[#121315] p-4 flex gap-3"
+        >
+          <div className="h-10 w-10 shrink-0 rounded-xl bg-accent-red/10 flex items-center justify-center">
+            <feature.icon size={18} className="text-accent-red" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-white">{feature.title}</p>
+            <p className="mt-0.5 text-[11px] leading-relaxed text-grit-dim">{feature.detail}</p>
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function ErrorCard({ message }: { message: string }) {
+  return (
+    <div className="mb-4 rounded-2xl border border-accent-red/50 bg-accent-red/10 p-3 text-center">
+      <p className="text-xs leading-relaxed text-accent-red">{message}</p>
     </div>
   );
 }

@@ -150,7 +150,7 @@ type ProPriceConfig = {
 const PRO_PRICE_CONFIG: Record<string, ProPriceConfig> = {
   pro_monthly: {
     currency: "usd",
-    unitAmount: 499,
+    unitAmount: 599,
     interval: "month",
     nickname: "DEADSET Pro Monthly",
   },
@@ -162,7 +162,7 @@ const PRO_PRICE_CONFIG: Record<string, ProPriceConfig> = {
   },
   pro_monthly_gbp: {
     currency: "gbp",
-    unitAmount: 499,
+    unitAmount: 599,
     interval: "month",
     nickname: "DEADSET Pro Monthly GBP",
   },
@@ -220,11 +220,18 @@ async function resolveDeadsetProProduct(stripe: any): Promise<string> {
 }
 
 async function resolveOrCreateStripePrice(stripe: any, lookupKey: string): Promise<any> {
-  const prices = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 });
-  if (prices.data.length) return prices.data[0];
-
   const config = PRO_PRICE_CONFIG[lookupKey];
   if (!config) throw new Error("Price not found");
+
+  const prices = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 });
+  const lookedUp = prices.data[0];
+  if (
+    lookedUp?.currency === config.currency &&
+    lookedUp?.unit_amount === config.unitAmount &&
+    lookedUp?.recurring?.interval === config.interval
+  ) {
+    return lookedUp;
+  }
 
   const existingPrices = await stripe.prices.list({
     active: true,
@@ -244,7 +251,10 @@ async function resolveOrCreateStripePrice(stripe: any, lookupKey: string): Promi
   );
 
   if (exactExisting) {
-    return exactExisting;
+    return stripe.prices.update(exactExisting.id, {
+      lookup_key: lookupKey,
+      transfer_lookup_key: true,
+    });
   }
 
   const product = await resolveDeadsetProProduct(stripe);
@@ -254,6 +264,7 @@ async function resolveOrCreateStripePrice(stripe: any, lookupKey: string): Promi
     unit_amount: config.unitAmount,
     nickname: config.nickname,
     lookup_key: lookupKey,
+    transfer_lookup_key: true,
     recurring: { interval: config.interval },
     metadata: { app: "deadset", lookup_key: lookupKey },
   });
@@ -280,9 +291,11 @@ function isProSubscriptionStatus(
   currentPeriodEnd: string | null,
 ): boolean {
   const activeByStatus = status === "active";
+  const activeTrial =
+    status === "trialing" && !!currentPeriodEnd && new Date(currentPeriodEnd) > new Date();
   const activeCanceled =
     status === "canceled" && !!currentPeriodEnd && new Date(currentPeriodEnd) > new Date();
-  return activeByStatus || activeCanceled;
+  return activeByStatus || activeTrial || activeCanceled;
 }
 
 /** A current Stripe record in one of these states must not fall through to an
@@ -290,7 +303,7 @@ function isProSubscriptionStatus(
  * so it is only a fallback when Stripe is not reporting an unpaid/current
  * subscription for this customer. */
 function blocksProfileProFallback(status: string | null): boolean {
-  return ["trialing", "past_due", "incomplete", "unpaid"].includes(status ?? "");
+  return ["past_due", "incomplete", "unpaid"].includes(status ?? "");
 }
 
 function subscriptionStatusFromStripeSubscription(subscription: any): SubscriptionStatus {
@@ -346,6 +359,7 @@ async function stripeSubscriptionStatus(
     const end = item?.current_period_end ?? sub.current_period_end ?? 0;
     return (
       sub.status === "active" ||
+      (sub.status === "trialing" && end > now) ||
       (sub.status === "canceled" && end > now)
     );
   });
@@ -362,7 +376,7 @@ async function requirePro(req: any): Promise<AuthCtx> {
     await syncProfileProUntil(ctx.userId, status);
     return ctx;
   }
-  // A trial or failed Stripe collection must never inherit stale paid access.
+  // Failed Stripe collection must never inherit stale paid access.
   if (blocksProfileProFallback(status.status)) {
     throw Object.assign(new Error("A successful payment is required for DEADSET Pro"), {
       status: 403,
@@ -438,9 +452,7 @@ async function duelScores(duel: {
 
 // ─── Crews ───────────────────────────────────────────────────────────────────
 
-async function crewMembershipOf(
-  userId: string,
-): Promise<{ crew_id: string; role: string } | null> {
+async function crewMembershipOf(userId: string): Promise<{ crew_id: string; role: string } | null> {
   const { data } = await (supabaseAdmin as any)
     .from("crew_members")
     .select("crew_id, role")
@@ -570,6 +582,10 @@ const handlers: Record<string, Handler> = {
       const stripePrice = await resolveOrCreateStripePrice(stripe, d.priceId);
       const isRecurring = stripePrice.type === "recurring";
       const customerId = await resolveOrCreateCustomer(stripe, { email, userId });
+      const priorSubscriptions = isRecurring
+        ? await stripe.subscriptions.list({ customer: customerId, status: "all", limit: 1 })
+        : { data: [] };
+      const eligibleForTrial = isRecurring && priorSubscriptions.data.length === 0;
       const uiMode = d.uiMode ?? "embedded_page";
       const returnUrl = safeReturnUrl(d.returnUrl);
       const cancelUrl = new URL(returnUrl);
@@ -582,7 +598,12 @@ const handlers: Record<string, Handler> = {
         customer: customerId,
         allow_promotion_codes: true,
         metadata: { userId },
-        ...(isRecurring && { subscription_data: { metadata: { userId } } }),
+        ...(isRecurring && {
+          subscription_data: {
+            metadata: { userId },
+            ...(eligibleForTrial && { trial_period_days: 7 }),
+          },
+        }),
       };
       const session = await stripe.checkout.sessions.create({
         ...checkoutBase,
@@ -993,7 +1014,10 @@ const handlers: Record<string, Handler> = {
             .eq("crew_id", membership.crew_id)
         : { data: [] };
       const allowed = ((mates ?? []) as { user_id: string }[]).map((m) => m.user_id);
-      query = query.in("user_id", allowed.length ? allowed : ["00000000-0000-0000-0000-000000000000"]);
+      query = query.in(
+        "user_id",
+        allowed.length ? allowed : ["00000000-0000-0000-0000-000000000000"],
+      );
     }
     if (hidden.size > 0) query = query.not("user_id", "in", `(${Array.from(hidden).join(",")})`);
     const { data: posts, error } = await query;
