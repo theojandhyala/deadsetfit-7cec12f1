@@ -12,6 +12,7 @@
  *   node scripts/render-cards.mjs --body     # just the body diagram, large
  *   node scripts/render-cards.mjs --diagram  # the <MuscleDiagram> that ships
  *   node scripts/render-cards.mjs --pr       # the PR card people post
+ *   node scripts/render-cards.mjs --photo    # the before/after card
  *
  * Not part of `npm run check`, and playwright/esbuild are deliberately NOT
  * dependencies: Xcode Cloud runs `npm ci` before every iOS archive, and making
@@ -31,6 +32,7 @@ const outDir = join(root, ".render-out");
 const bodyOnly = process.argv.includes("--body");
 const diagramOnly = process.argv.includes("--diagram");
 const prOnly = process.argv.includes("--pr");
+const photoOnly = process.argv.includes("--photo");
 
 let chromium;
 try {
@@ -96,7 +98,50 @@ const browser = await chromium.launch(launchOptions);
 const page = await browser.newPage();
 await page.setContent("<canvas id=c></canvas>");
 
-if (prOnly) {
+if (photoOnly) {
+  const card = await bundleModule("src/lib/photo-card-draw.ts", "PhotoCard");
+  await page.addScriptTag({ content: card });
+  const dataUrl = await page.evaluate(async () => {
+    // Two stand-in bodies, so the crop and the frames can be judged without a
+    // real check-in photo in the repo.
+    const body = (hue, scale) =>
+      "data:image/svg+xml;base64," +
+      btoa(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1600" viewBox="0 0 900 1600">` +
+          `<rect width="900" height="1600" fill="hsl(${hue} 18% 16%)"/>` +
+          `<g transform="translate(450 820) scale(${scale}) translate(-450 -820)">` +
+          `<ellipse cx="450" cy="330" rx="95" ry="115" fill="hsl(${hue} 22% 34%)"/>` +
+          `<rect x="300" y="450" width="300" height="470" rx="90" fill="hsl(${hue} 22% 34%)"/>` +
+          `<rect x="330" y="900" width="110" height="480" rx="55" fill="hsl(${hue} 22% 30%)"/>` +
+          `<rect x="460" y="900" width="110" height="480" rx="55" fill="hsl(${hue} 22% 30%)"/>` +
+          `</g></svg>`,
+      );
+    const load = (src) =>
+      new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.src = src;
+      });
+    const [before, now] = await Promise.all([load(body(220, 0.86)), load(body(8, 1))]);
+    const c = document.getElementById("c");
+    c.width = PhotoCard.PHOTO_CARD_W;
+    c.height = PhotoCard.PHOTO_CARD_H;
+    PhotoCard.drawPhotoCard(c.getContext("2d"), {
+      before,
+      now,
+      beforeDate: "2026-01-04T00:00:00Z",
+      nowDate: "2026-08-28T00:00:00Z",
+      daysApart: 236,
+      weightDeltaKg: 6.4,
+      unit: "kg",
+      displayName: "Theo",
+    });
+    return c.toDataURL("image/png");
+  });
+  const out = join(outDir, "photo-card.png");
+  writeFileSync(out, Buffer.from(dataUrl.split(",")[1], "base64"));
+  console.log("wrote", out);
+} else if (prOnly) {
   const card = await bundleModule("src/lib/pr-card-draw.ts", "PRCard");
   await page.addScriptTag({ content: card });
   const dataUrl = await page.evaluate(() => {

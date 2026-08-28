@@ -1,5 +1,4 @@
 export const DEADSET_TRIAL_DAYS = 7;
-export const DEADSET_MONTHLY_PRICE_GBP = "£5.99";
 
 const ACCOUNT_ESCAPE_ROUTES = new Set(["/profile"]);
 

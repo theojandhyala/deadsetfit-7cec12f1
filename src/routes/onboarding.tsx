@@ -38,7 +38,6 @@ import { WeekdayPicker } from "@/components/WeekdayPicker";
 import { daysPerWeekFor, describeDays, MIN_TRAINING_DAYS } from "@/lib/training-days";
 import { buildPublicStats } from "@/lib/fifa-stats";
 import {
-  CURRENCY_META,
   currencyForCountry,
   detectCountry,
   type SupportedCurrency,

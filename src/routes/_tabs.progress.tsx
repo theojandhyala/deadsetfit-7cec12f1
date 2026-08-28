@@ -44,6 +44,9 @@ import { TrainingAutopilot } from "@/components/TrainingAutopilot";
 import { ProWeeklyReview } from "@/components/ProWeeklyReview";
 import { PRRoadmap } from "@/components/PRRoadmap";
 import { useUnit } from "@/hooks/useUnit";
+import { ProgressPhotoHero } from "@/components/ProgressPhotoHero";
+import { ProgressPhotoShareCard } from "@/components/ProgressPhotoShareCard";
+import { photoJourney } from "@/lib/progress-photos";
 import { formatVolume, formatWeight, toDisplay, toKg } from "@/lib/units";
 import { hapticFailure, hapticSaved, hapticSelection, hapticUndo } from "@/lib/haptics";
 
@@ -59,6 +62,8 @@ function ProgressPage() {
   const analyticsLocked = loading || !isPro;
   const photoRef = useRef<HTMLInputElement>(null);
   const [compare, setCompare] = useState<string[]>([]);
+  const [sharingPhotos, setSharingPhotos] = useState(false);
+  const journey = photoJourney(state);
   // Log inputs are DOM-owned (defaultValue + ref, read on submit) — controlled
   // value/onChange freezes typing in the iOS WKWebView.
   const weightRef = useRef<HTMLInputElement>(null);
@@ -418,6 +423,34 @@ function ProgressPage() {
         />
         <Stat label="PRS" value={`${totalPRs}`} sub="HIT" accent={totalPRs > 0} />
       </section>
+
+      {/* Progress photos, above the fold. This is the app's most persuasive
+          artefact and it used to sit in a small grid at the bottom of a very
+          long screen, behind a ghost button you had to already know about. */}
+      <ProgressPhotoHero
+        checkIns={state.checkIns}
+        weights={state.weights}
+        unit={unit}
+        onCapture={() => photoRef.current?.click()}
+        onShare={() => setSharingPhotos(true)}
+        onOpenAll={() => {
+          document.getElementById("progress-photos")?.scrollIntoView({ behavior: "smooth" });
+        }}
+      />
+
+      {sharingPhotos && journey.first && journey.latest && (
+        <ProgressPhotoShareCard
+          beforeSrc={journey.first.photoDataUrl}
+          nowSrc={journey.latest.photoDataUrl}
+          beforeDate={journey.first.date}
+          nowDate={journey.latest.date}
+          daysApart={journey.daysApart}
+          weightDeltaKg={journey.weightDeltaKg}
+          unit={unit}
+          displayName={state.profile?.displayName || state.profile?.username || "DEADSET"}
+          onClose={() => setSharingPhotos(false)}
+        />
+      )}
 
       <nav className="px-5 mb-6" aria-label="Progress shortcuts">
         <div className="grid grid-cols-4 gap-2">
@@ -914,7 +947,9 @@ function ProgressPage() {
           ref={photoRef}
           type="file"
           accept="image/*"
-          capture="environment"
+          // No `capture` attribute: it forces the rear camera and skips the
+          // library entirely. A progress photo is usually a mirror shot taken
+          // on the front camera, or one already in Photos.
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];
