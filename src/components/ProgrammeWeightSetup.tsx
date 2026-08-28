@@ -13,7 +13,10 @@ import { useAppState } from "@/lib/storage";
 import { hapticFailure, hapticSelection, hapticSetupComplete } from "@/lib/haptics";
 import { lockBodyScroll } from "@/lib/body-scroll-lock";
 import type { DayKey } from "@/lib/types";
-import { applyWeeklyStrengthCheckIn, type StrengthCheckInAnswer } from "@/lib/weekly-strength-check-in";
+import {
+  applyWeeklyStrengthCheckIn,
+  type StrengthCheckInAnswer,
+} from "@/lib/weekly-strength-check-in";
 
 const DAY_LABEL: Record<DayKey, string> = {
   MON: "Monday",
@@ -66,7 +69,8 @@ export function ProgrammeWeightSetup({ rows: derivedRows }: { rows: WeightRow[] 
 
   return (
     <div
-      className="fixed inset-0 z-[140] overflow-y-auto bg-black/95 px-5 py-8 backdrop-blur-sm"
+      className="fixed inset-0 z-[140] w-screen min-w-0 max-w-[100dvw] overflow-x-clip overflow-y-auto bg-black/95 px-3 py-8 backdrop-blur-sm"
+      data-no-horizontal-overflow="true"
       role="dialog"
       aria-modal="true"
       aria-labelledby="programme-weight-title"
@@ -76,7 +80,7 @@ export function ProgrammeWeightSetup({ rows: derivedRows }: { rows: WeightRow[] 
         paddingBottom: "max(2rem, env(safe-area-inset-bottom))",
       }}
     >
-      <div className="mx-auto max-w-md rounded-3xl border border-accent-red/50 bg-[#101010] p-5 shadow-[0_0_60px_rgba(230,50,34,0.18)]">
+      <div className="mx-auto box-border w-full min-w-0 max-w-md overflow-x-clip rounded-3xl border border-accent-red/50 bg-[#101010] p-4 shadow-[0_0_60px_rgba(230,50,34,0.18)] sm:p-5">
         <div className="flex items-center justify-between gap-3">
           <p className="label-cap text-[10px] text-accent-red">FINAL SETUP · STARTING LOADS</p>
           <p className="label-cap text-[9px] text-grit-dim">
@@ -141,8 +145,8 @@ export function ProgrammeWeightSetup({ rows: derivedRows }: { rows: WeightRow[] 
             hapticSetupComplete();
           }}
         >
-          <label className="block rounded-2xl border border-grit bg-[#080808] p-5">
-            <span className="grid grid-cols-[1fr_92px] items-center gap-3">
+          <label className="block min-w-0 max-w-full overflow-x-clip rounded-2xl border border-grit bg-[#080808] p-4 sm:p-5">
+            <span className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(72px,88px)] items-center gap-2 sm:gap-3">
               <span className="min-w-0">
                 <span className="display block text-xl font-extrabold uppercase text-white">
                   {row.name}
@@ -152,40 +156,41 @@ export function ProgrammeWeightSetup({ rows: derivedRows }: { rows: WeightRow[] 
                   {row.days.length > 1 ? " · one answer fills every repeat" : ""}
                 </span>
               </span>
-              <span className="block" aria-hidden="true">
-                <MuscleDiagram primary={highlightedMuscles} size={86} view="both" />
+              <span className="block min-w-0 overflow-hidden" aria-hidden="true">
+                <MuscleDiagram primary={highlightedMuscles} size={84} view="both" />
               </span>
             </span>
-            <span className="mt-5 grid grid-cols-[1fr_90px] gap-2">
-              <span>
+            <span className="mt-5 grid min-w-0 max-w-full grid-cols-[minmax(0,1fr)_minmax(72px,90px)] gap-2 overflow-x-clip">
+              <span className="min-w-0">
                 <span className="label-cap mb-1 block text-[8px] text-grit-dim">WORKING LOAD</span>
-                <span className="flex min-h-14 items-center rounded-xl border border-grit bg-black px-3 focus-within:border-accent-red">
+                <span className="flex min-h-14 w-full min-w-0 max-w-full items-center overflow-hidden rounded-xl border border-grit bg-black px-3 focus-within:border-accent-red">
                   <input
                     key={`${row.key}-weight`}
                     name="weight"
-                    autoFocus
                     type="text"
+                    size={1}
                     inputMode="decimal"
                     autoComplete="off"
                     defaultValue={
                       initialWeightKg > 0 ? trimNumber(toDisplay(initialWeightKg, unit)) : ""
                     }
                     placeholder={unit === "kg" ? "62.5" : "135"}
-                    className="min-w-0 flex-1 bg-transparent text-2xl font-black tabular-nums text-white outline-none"
+                    className="box-border w-full min-w-0 max-w-full flex-1 bg-transparent text-2xl font-black tabular-nums text-white outline-none"
                   />
                   <span className="label-cap text-[8px] text-grit-dim">{unit}</span>
                 </span>
               </span>
-              <span>
+              <span className="min-w-0">
                 <span className="label-cap mb-1 block text-[8px] text-grit-dim">REPS</span>
                 <input
                   key={`${row.key}-reps`}
                   name="reps"
                   type="text"
+                  size={1}
                   inputMode="numeric"
                   autoComplete="off"
                   defaultValue={String(savedAnswer?.reps ?? row.reps)}
-                  className="min-h-14 w-full rounded-xl border border-grit bg-black px-3 text-center text-2xl font-black tabular-nums text-white outline-none focus:border-accent-red"
+                  className="box-border min-h-14 w-full min-w-0 max-w-full rounded-xl border border-grit bg-black px-2 text-center text-2xl font-black tabular-nums text-white outline-none focus:border-accent-red"
                 />
               </span>
             </span>

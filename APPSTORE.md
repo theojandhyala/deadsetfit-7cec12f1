@@ -7,7 +7,7 @@ This repository ships DEADSET as a bundled Capacitor iPhone app. The public webs
 - App Store ID: `6783511541`
 - Bundle identifier: `org.deadsetfit.app`
 - Version: `1.2`
-- Build: `144`
+- Build: `145`
 - Device family: iPhone
 - Minimum iOS version: iOS 15
 - Category: Health & Fitness
@@ -65,7 +65,7 @@ Test a fresh install and an update from the previous public build on a real iPho
 5. Force-quit during a workout and confirm the active session resumes without losing logged sets.
 6. Log food and water, inspect progress, rankings and every bottom-tab destination. Send, accept, decline and cancel friend requests; confirm mutual friends can compare public PRs and Strength Maps side by side.
 7. Connect Apple Health, verify steps and activity data, then finish a workout and confirm it appears in Apple Fitness.
-8. Buy the monthly Pro product in the sandbox. Verify the seven-day introductory offer for an eligible sandbox account, immediate monthly pricing for an ineligible account, entitlement, restore, Manage Subscription and cancellation behavior.
+8. Buy both the monthly and annual Pro products with separate eligible sandbox accounts. Verify the seven-day introductory offer on each, immediate selected-plan pricing for an ineligible account, entitlement, restore, Manage Subscription and cancellation behavior.
 9. Sign out and back in on another device. Confirm cloud training data and Pro access return.
 10. Test account deletion, notification permission denial and approval, the five-second Lock Screen notification test, camera/photo denial, offline launch and recovery from network errors.
 11. Open Privacy, Terms, Support and Rate DEADSET from Settings.
@@ -78,7 +78,7 @@ The app recognizes these immutable product identifiers:
 - `org.deadsetfit.pro.monthly`
 - `org.deadsetfit.pro.annual`
 
-Only `org.deadsetfit.pro.monthly` is offered for a new purchase in version 1.2. Before submission, confirm it is approved in App Store Connect, priced at £5.99 in the UK, and configured with a one-week introductory free trial. `org.deadsetfit.pro.annual` remains recognized only for existing legacy entitlements and must not be presented as a newly offered plan. RevenueCat observes StoreKit transactions; it does not replace Apple's purchase sheet.
+Both products are offered for a new purchase in version 1.2. Before submission, confirm they are approved in App Store Connect, priced at £5.99/month and £39.99/year in the UK, and each configured with a one-week introductory free trial. Introductory eligibility is controlled by Apple at the subscription-group level. RevenueCat observes StoreKit transactions; it does not replace Apple's purchase sheet.
 
 The iPhone app must not expose Stripe, a web checkout, external purchase instructions or buttons that route users around Apple's in-app purchase system. Legacy web subscriptions may still be recognized after sign-in, but new iPhone purchases use StoreKit.
 
@@ -90,7 +90,7 @@ Provide App Review with a working non-Pro reviewer account and concise navigatio
 - Apple Health is optional. The app remains usable when Health permission is denied.
 - Camera and photo access are optional and used for progress check-ins and avatars.
 - Sign in with Apple and Google return through `deadsetfit.org` to the bundled app.
-- Pro is sold through Apple's monthly subscription. The annual identifier is recognized only for existing legacy entitlements.
+- Pro is sold through Apple as a selectable monthly or annual subscription. Both choices use Apple's purchase sheet and show the exact local price.
 - Restore Purchases and Manage Subscription are on the Pro screen.
 - Account deletion is available inside Profile.
 
@@ -117,7 +117,7 @@ Suggested release notes:
 4. Choose Product > Archive.
 5. In Organizer, run Validate App before Distribute App.
 6. Upload to App Store Connect and wait for processing.
-7. Attach build 144 to version 1.2 and complete export compliance and content-rights questions. The approved monthly subscription remains available to the app; do not present the annual legacy product as a new plan.
+7. Attach build 145 to version 1.2 and complete export compliance and content-rights questions. Confirm both approved subscriptions are attached and available to the app.
 8. Test the processed build in TestFlight before submitting it for review.
 
 Every bundled product update requires a new App Store build and review. Website deployment alone does not update the installed app.

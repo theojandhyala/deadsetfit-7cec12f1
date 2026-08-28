@@ -30,7 +30,7 @@ import {
 } from "@/lib/currency";
 import { hapticFailure, hapticPlanUpdated, hapticSelection } from "@/lib/haptics";
 import { createCheckoutSession, createPortalSession } from "@/lib/payments.functions";
-import { DEADSET_MONTHLY_PRICE_GBP, isSevenDayFreeTrial } from "@/lib/paid-access";
+import { isSevenDayFreeTrial } from "@/lib/paid-access";
 import { isNativeIos } from "@/lib/platform";
 import {
   notifyRevenueCatUpdated,
@@ -93,6 +93,7 @@ const PRO_WEEK_DAYS = ["M", "T", "W", "T", "F", "S", "S"] as const;
 const PRO_PROGRESS_WIDTHS = [86, 68, 48] as const;
 
 type UserSummary = { id: string; email?: string };
+type BillingPlan = "monthly" | "yearly";
 
 function UpgradePage() {
   const navigate = useNavigate();
@@ -101,6 +102,7 @@ function UpgradePage() {
   const [sessionChecked, setSessionChecked] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
   const [currency, setCurrency] = useState<SupportedCurrency>("gbp");
+  const [plan, setPlan] = useState<BillingPlan>("yearly");
   const [iosNative, setIosNative] = useState(false);
   const [appleProducts, setAppleProducts] = useState<AppleProduct[]>([]);
   const [appleProductsChecked, setAppleProductsChecked] = useState(false);
@@ -156,12 +158,20 @@ function UpgradePage() {
   }, [appleProductsChecked, entitlementLoading, sessionChecked]);
 
   const appleMonthly = appleProducts.find((product) => product.id === APPLE_PRO_PRODUCTS.monthly);
-  const exactAppleTrial = isSevenDayFreeTrial(appleMonthly?.introductoryOffer);
-  const appleTrialEligible = exactAppleTrial && appleMonthly?.eligibleForIntroOffer === true;
+  const appleYearly = appleProducts.find((product) => product.id === APPLE_PRO_PRODUCTS.yearly);
   const monthlyLabel = iosNative
     ? (appleMonthly?.displayPrice ?? "—")
     : CURRENCY_META[currency].monthly;
-  const webPriceId = priceIdFor("monthly", currency);
+  const yearlyLabel = iosNative
+    ? (appleYearly?.displayPrice ?? "—")
+    : CURRENCY_META[currency].yearly;
+  const selectedAppleProduct = plan === "yearly" ? appleYearly : appleMonthly;
+  const selectedPrice = plan === "yearly" ? yearlyLabel : monthlyLabel;
+  const selectedPeriod = plan === "yearly" ? "year" : "month";
+  const exactAppleTrial = isSevenDayFreeTrial(selectedAppleProduct?.introductoryOffer);
+  const appleTrialEligible =
+    exactAppleTrial && selectedAppleProduct?.eligibleForIntroOffer === true;
+  const webPriceId = priceIdFor(plan, currency);
   const checkoutReturnUrl = `${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`;
 
   async function startApplePurchase() {
@@ -173,13 +183,14 @@ function UpgradePage() {
     setPurchaseLoading(true);
     setError(null);
     try {
-      const result = await purchaseApplePro(APPLE_PRO_PRODUCTS.monthly, user.id);
+      if (!selectedAppleProduct) throw new Error("That Apple subscription is not available yet.");
+      const result = await purchaseApplePro(selectedAppleProduct.id, user.id);
       if (result.pending) {
         toast.message("Purchase pending approval", {
           description: "DEADSET unlocks as soon as Apple approves it.",
         });
       } else if (!result.cancelled && result.active) {
-        await recordRevenueCatPurchase(APPLE_PRO_PRODUCTS.monthly, user.id)
+        await recordRevenueCatPurchase(selectedAppleProduct.id, user.id)
           .then((synced) => {
             if (synced) notifyRevenueCatUpdated();
           })
@@ -293,7 +304,10 @@ function UpgradePage() {
     return (
       <MembershipShell>
         <TrialHero
-          price={iosNative && appleMonthly ? appleMonthly.displayPrice : DEADSET_MONTHLY_PRICE_GBP}
+          price={
+            iosNative && appleYearly ? appleYearly.displayPrice : CURRENCY_META[currency].yearly
+          }
+          billingPeriod="year"
           trialAvailable={!iosNative || appleTrialEligible}
         />
         <FeatureGrid />
@@ -343,22 +357,26 @@ function UpgradePage() {
     <MembershipShell>
       {!iosNative && <PaymentTestModeBanner />}
       <TrialHero
-        price={monthlyLabel}
+        price={selectedPrice}
+        billingPeriod={selectedPeriod}
         trialAvailable={!iosNative || appleTrialEligible}
         trialConfigured={iosNative ? exactAppleTrial : true}
       />
       <FeatureGrid />
 
-      <div className="mb-5 rounded-2xl border-2 border-accent-red bg-accent-red/[0.08] p-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="label-cap text-[9px] text-accent-red">ONE MONTHLY MEMBERSHIP</p>
-            <p className="display mt-1 text-3xl font-extrabold text-white">{monthlyLabel}</p>
-            <p className="mt-1 text-[10px] text-grit-dim">per month · cancel anytime</p>
-          </div>
-          <ShieldCheck size={25} className="mt-1 shrink-0 text-accent-red" />
-        </div>
-      </div>
+      <PlanSelector
+        plan={plan}
+        monthlyLabel={monthlyLabel}
+        yearlyLabel={yearlyLabel}
+        monthlyAvailable={!iosNative || !!appleMonthly}
+        yearlyAvailable={!iosNative || !!appleYearly}
+        disabled={purchaseLoading || checkoutLoading}
+        onChange={(nextPlan) => {
+          hapticSelection();
+          setPlan(nextPlan);
+          setError(null);
+        }}
+      />
 
       {error && <ErrorCard message={error} />}
 
@@ -367,7 +385,7 @@ function UpgradePage() {
           <button
             type="button"
             onClick={startApplePurchase}
-            disabled={purchaseLoading || !appleMonthly}
+            disabled={purchaseLoading || !selectedAppleProduct}
             className="btn-grit w-full min-h-14 disabled:opacity-50"
           >
             {purchaseLoading ? (
@@ -377,7 +395,7 @@ function UpgradePage() {
             )}
             {appleTrialEligible
               ? "Start my 7-day free trial"
-              : `Subscribe for ${monthlyLabel}/month`}
+              : `Subscribe for ${selectedPrice}/${selectedPeriod}`}
           </button>
           <button
             type="button"
@@ -387,7 +405,7 @@ function UpgradePage() {
           >
             <RefreshCw size={14} className="mr-2 inline" /> Restore purchases
           </button>
-          {appleMonthly && !exactAppleTrial && (
+          {selectedAppleProduct && !exactAppleTrial && (
             <p className="mt-3 text-center text-[10px] leading-relaxed text-amber-300">
               Apple is not currently returning a seven-day introductory offer for this product, so
               DEADSET will not falsely promise one at checkout.
@@ -434,9 +452,9 @@ function UpgradePage() {
       <p className="mt-4 text-center text-[10px] leading-relaxed text-grit-dim">
         {iosNative
           ? appleTrialEligible
-            ? `No charge today. Full access starts as soon as Apple confirms. On Day 8, Apple bills ${monthlyLabel}/month unless you cancel before the trial ends.`
-            : "Apple shows the exact price and renewal terms before you confirm. The subscription renews automatically until cancelled."
-          : "Seven days free for eligible new members, then the displayed monthly price. Cancel anytime."}
+            ? `No charge today. Full access starts as soon as Apple confirms. On Day 8, Apple bills ${selectedPrice}/${selectedPeriod} unless you cancel before the trial ends.`
+            : `Apple shows the exact ${selectedPrice}/${selectedPeriod} price and renewal terms before you confirm. The subscription renews automatically until cancelled.`
+          : `Seven days free for eligible new members, then ${selectedPrice}/${selectedPeriod}. Cancel anytime.`}
       </p>
 
       <div className="mt-5 grid grid-cols-2 gap-2">
@@ -485,12 +503,99 @@ function MembershipShell({ children }: { children: ReactNode }) {
   );
 }
 
+function PlanSelector({
+  plan,
+  monthlyLabel,
+  yearlyLabel,
+  monthlyAvailable,
+  yearlyAvailable,
+  disabled,
+  onChange,
+}: {
+  plan: BillingPlan;
+  monthlyLabel: string;
+  yearlyLabel: string;
+  monthlyAvailable: boolean;
+  yearlyAvailable: boolean;
+  disabled: boolean;
+  onChange: (plan: BillingPlan) => void;
+}) {
+  const plans = [
+    {
+      id: "yearly" as const,
+      name: "Annual",
+      price: yearlyLabel,
+      period: "per year",
+      note: "Best value",
+      available: yearlyAvailable,
+    },
+    {
+      id: "monthly" as const,
+      name: "Monthly",
+      price: monthlyLabel,
+      period: "per month",
+      note: "Flexible",
+      available: monthlyAvailable,
+    },
+  ];
+
+  return (
+    <div className="mb-5" role="radiogroup" aria-label="Choose your DEADSET membership">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <p className="label-cap text-[9px] text-accent-red">CHOOSE YOUR MEMBERSHIP</p>
+        <ShieldCheck size={18} className="shrink-0 text-accent-red" aria-hidden="true" />
+      </div>
+      <div className="grid min-w-0 grid-cols-2 gap-2">
+        {plans.map((option) => {
+          const selected = plan === option.id;
+          return (
+            <button
+              key={option.id}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              disabled={disabled || !option.available}
+              onClick={() => onChange(option.id)}
+              className={`relative min-w-0 overflow-hidden rounded-2xl border-2 p-3 text-left transition disabled:opacity-40 ${
+                selected
+                  ? "border-accent-red bg-accent-red/[0.1] shadow-[0_10px_30px_rgba(230,50,34,.14)]"
+                  : "border-white/10 bg-white/[0.025]"
+              }`}
+            >
+              <span className="flex items-center justify-between gap-1">
+                <span className="label-cap truncate text-[9px] text-white">{option.name}</span>
+                <span
+                  className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border ${
+                    selected ? "border-accent-red bg-accent-red" : "border-white/20"
+                  }`}
+                  aria-hidden="true"
+                >
+                  {selected && <Check size={12} strokeWidth={3} />}
+                </span>
+              </span>
+              <span className="display mt-3 block truncate text-2xl font-extrabold text-white">
+                {option.available ? option.price : "—"}
+              </span>
+              <span className="mt-0.5 block text-[9px] text-grit-dim">
+                {option.available ? option.period : "Not available"}
+              </span>
+              <span className="label-cap mt-2 block text-[8px] text-accent-red">{option.note}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function TrialHero({
   price,
+  billingPeriod,
   trialAvailable,
   trialConfigured = true,
 }: {
   price: string;
+  billingPeriod: "month" | "year";
   trialAvailable: boolean;
   trialConfigured?: boolean;
 }) {
@@ -508,16 +613,16 @@ function TrialHero({
         <ProExperienceStage />
         <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-grit-dim">
           {trialAvailable
-            ? `Train free for seven days. Then ${price} per month unless you cancel.`
+            ? `Train free for seven days. Then ${price} per ${billingPeriod} unless you cancel.`
             : trialConfigured
-              ? `Your introductory trial has already been used. Continue for ${price} per month.`
-              : `Continue with one monthly DEADSET membership at ${price}.`}
+              ? `Your introductory trial has already been used. Continue for ${price} per ${billingPeriod}.`
+              : `Continue with DEADSET at ${price} per ${billingPeriod}.`}
         </p>
         {trialAvailable && (
           <div className="mx-auto mt-5 grid max-w-xs grid-cols-[1fr_auto_1fr] items-center gap-2">
             <TrialMoment label="Today" detail="Full access" active />
             <div className="h-px w-8 bg-accent-red/60" />
-            <TrialMoment label="Day 8" detail={`${price}/month`} />
+            <TrialMoment label="Day 8" detail={`${price}/${billingPeriod}`} />
           </div>
         )}
       </div>

@@ -62,6 +62,12 @@ const activeCapacitorConfig = capacitorConfig
   .filter((line) => !line.trimStart().startsWith("//"))
   .join("\n");
 const upgradePage = existsSync("src/routes/upgrade.tsx") ? read("src/routes/upgrade.tsx") : "";
+const weeklyStrengthCheckIn = existsSync("src/components/WeeklyStrengthCheckIn.tsx")
+  ? read("src/components/WeeklyStrengthCheckIn.tsx")
+  : "";
+const programmeWeightSetup = existsSync("src/components/ProgrammeWeightSetup.tsx")
+  ? read("src/components/ProgrammeWeightSetup.tsx")
+  : "";
 const infoPlist = existsSync("ios/App/App/Info.plist") ? read("ios/App/App/Info.plist") : "";
 const launchStoryboard = existsSync("ios/App/App/Base.lproj/LaunchScreen.storyboard")
   ? read("ios/App/App/Base.lproj/LaunchScreen.storyboard")
@@ -185,9 +191,9 @@ check(
 check(
   "first update version",
   (xcodeProject.match(/MARKETING_VERSION = 1\.2;/g)?.length ?? 0) >= 6 &&
-    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 144;/g)?.length ?? 0) >= 6 &&
+    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 145;/g)?.length ?? 0) >= 6 &&
     whatsNew.includes("WHATS_NEW_VERSION = 202608288"),
-  "The app, activity extension and watch targets are versioned as 1.2 (144), with a matching in-app update summary.",
+  "The app, activity extension and watch targets are versioned as 1.2 (145), with a matching in-app update summary.",
 );
 check(
   "full check script",
@@ -378,6 +384,26 @@ check(
     upgradePage.includes("No charge today") &&
     upgradePage.includes("On Day 8, Apple bills"),
   "The iPhone paywall normalises StoreKit's offer payload, verifies eligibility, and discloses the free period and Day 8 renewal before purchase.",
+);
+check(
+  "selectable monthly and annual Apple plans",
+  upgradePage.includes('type BillingPlan = "monthly" | "yearly"') &&
+    upgradePage.includes("APPLE_PRO_PRODUCTS.yearly") &&
+    upgradePage.includes("selectedAppleProduct") &&
+    upgradePage.includes('name: "Annual"') &&
+    upgradePage.includes('name: "Monthly"') &&
+    termsPage.includes("£39.99 per year"),
+  "The paywall presents both approved StoreKit products, purchases the selected identifier, and discloses both renewal prices.",
+);
+check(
+  "strength setup horizontal containment",
+  weeklyStrengthCheckIn.includes('data-no-horizontal-overflow="true"') &&
+    weeklyStrengthCheckIn.includes("max-w-[100dvw]") &&
+    weeklyStrengthCheckIn.includes("size={1}") &&
+    programmeWeightSetup.includes('data-no-horizontal-overflow="true"') &&
+    programmeWeightSetup.includes("max-w-[100dvw]") &&
+    programmeWeightSetup.includes("size={1}"),
+  "Both lift-entry wizards constrain their cards and native inputs to the visual viewport so the keyboard cannot expose sideways overflow.",
 );
 check(
   "RevenueCat StoreKit 2 tracking",

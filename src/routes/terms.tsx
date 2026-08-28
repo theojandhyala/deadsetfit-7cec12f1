@@ -69,15 +69,15 @@ function TermsPage() {
 
       <H>6. Subscriptions & payments</H>
       <p>
-        New subscriptions are sold as a monthly auto-renewing membership in the iPhone app and are
-        processed by Apple. Eligible new subscribers receive the seven-day introductory trial shown
-        on Apple&apos;s purchase confirmation; after that, the membership renews at £5.99 per month
-        in the UK or the exact local price Apple displays. If your Apple Account is not eligible for
-        an introductory offer, billing starts when you confirm. Subscriptions renew automatically
-        unless cancelled at least 24 hours before the end of the current period and can be managed
-        in your App Store account. Any legacy annual or website subscription remains subject to the
-        terms shown when it was purchased. Membership access remains available through any active
-        trial or paid period.
+        New subscriptions are sold as monthly or annual auto-renewing memberships in the iPhone app
+        and are processed by Apple. Eligible new subscribers receive the seven-day introductory
+        trial shown on Apple&apos;s purchase confirmation; after that, the selected membership
+        renews at £5.99 per month or £39.99 per year in the UK, or the exact local price Apple
+        displays. If your Apple Account is not eligible for an introductory offer, billing starts
+        when you confirm. Subscriptions renew automatically unless cancelled at least 24 hours
+        before the end of the current period and can be managed in your App Store account. Any
+        legacy website subscription remains subject to the terms shown when it was purchased.
+        Membership access remains available through any active trial or paid period.
       </p>
 
       <H>7. Termination</H>

@@ -191,7 +191,8 @@ export function WeeklyStrengthCheckIn({
 
   return (
     <div
-      className="fixed inset-0 z-[145] overflow-x-hidden overflow-y-auto bg-black/95 px-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[145] w-screen min-w-0 max-w-[100dvw] overflow-x-clip overflow-y-auto bg-black/95 px-3 backdrop-blur-sm"
+      data-no-horizontal-overflow="true"
       role="dialog"
       aria-modal="true"
       aria-labelledby="weekly-strength-title"
@@ -201,7 +202,7 @@ export function WeeklyStrengthCheckIn({
         paddingBottom: "max(2rem, env(safe-area-inset-bottom))",
       }}
     >
-      <div className="mx-auto w-full min-w-0 max-w-md overflow-hidden rounded-3xl border border-accent-red/50 bg-[#101010] p-5 shadow-[0_0_70px_rgba(230,50,34,.2)]">
+      <div className="mx-auto box-border w-full min-w-0 max-w-md overflow-x-clip rounded-3xl border border-accent-red/50 bg-[#101010] p-4 shadow-[0_0_70px_rgba(230,50,34,.2)] sm:p-5">
         <div className="flex items-center justify-between gap-3">
           <p className="label-cap flex items-center gap-1.5 text-[10px] text-accent-red">
             <RefreshCw size={12} /> WEEKLY STRENGTH SYNC
@@ -277,7 +278,7 @@ export function WeeklyStrengthCheckIn({
           }}
         >
           <div className="rounded-2xl border border-grit bg-[#080808] p-4">
-            <div className="grid grid-cols-[1fr_104px] items-center gap-3">
+            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(76px,98px)] items-center gap-2 sm:gap-3">
               <div className="min-w-0">
                 <p className="label-cap text-[9px] text-accent-red">{metricLabel}</p>
                 <p className="display mt-0.5 text-2xl font-black uppercase leading-none text-white">
@@ -288,19 +289,18 @@ export function WeeklyStrengthCheckIn({
                   {row.days.length > 1 ? " · one answer updates every repeat" : ""}
                 </p>
               </div>
-              <div aria-hidden="true">
-                <MuscleDiagram primary={[row.muscleGroup]} view="both" size={98} />
+              <div className="min-w-0 overflow-hidden" aria-hidden="true">
+                <MuscleDiagram primary={[row.muscleGroup]} view="both" size={92} />
               </div>
             </div>
 
             {row.kind === "RATIO" ? (
-              <div className="mt-4 grid w-full min-w-0 grid-cols-[minmax(0,1.45fr)_minmax(78px,0.72fr)] gap-2">
+              <div className="mt-4 grid w-full min-w-0 max-w-full grid-cols-[minmax(0,1fr)_minmax(72px,92px)] gap-2 overflow-x-clip">
                 <label className="min-w-0">
                   <span className="label-cap mb-1.5 block text-[9px] text-grit-dim">WEIGHT</span>
                   <span className="flex min-h-14 w-full min-w-0 items-center overflow-hidden rounded-xl border border-grit bg-black px-3 focus-within:border-accent-red">
                     <input
                       name="value"
-                      autoFocus
                       type="text"
                       size={1}
                       inputMode="decimal"
@@ -310,7 +310,7 @@ export function WeeklyStrengthCheckIn({
                         defaultValue > 0 ? trimNumber(toDisplay(defaultValue, unit)) : ""
                       }
                       placeholder={unit === "kg" ? "62.5" : "135"}
-                      className="w-full min-w-0 flex-1 bg-transparent text-2xl font-black tabular-nums text-white outline-none"
+                      className="box-border w-full min-w-0 max-w-full flex-1 bg-transparent text-2xl font-black tabular-nums text-white outline-none"
                     />
                     <span className="label-cap ml-1 shrink-0 text-[9px] text-grit-dim">{unit}</span>
                   </span>
@@ -326,7 +326,7 @@ export function WeeklyStrengthCheckIn({
                     autoComplete="off"
                     defaultValue={defaultValue > 0 ? String(defaultReps) : ""}
                     placeholder="8"
-                    className="min-h-14 w-full rounded-xl border border-grit bg-black px-3 text-center text-2xl font-black tabular-nums text-white outline-none focus:border-accent-red"
+                    className="box-border min-h-14 w-full min-w-0 max-w-full rounded-xl border border-grit bg-black px-2 text-center text-2xl font-black tabular-nums text-white outline-none focus:border-accent-red"
                   />
                 </label>
               </div>
@@ -337,13 +337,12 @@ export function WeeklyStrengthCheckIn({
                 </span>
                 <input
                   name="value"
-                  autoFocus
                   type="text"
                   inputMode="numeric"
                   autoComplete="off"
                   defaultValue={defaultValue > 0 ? String(Math.round(defaultValue)) : ""}
                   placeholder={row.kind === "SECONDS" ? "60" : "12"}
-                  className="min-h-14 w-full rounded-xl border border-grit bg-black px-4 text-2xl font-black tabular-nums text-white outline-none focus:border-accent-red"
+                  className="box-border min-h-14 w-full min-w-0 max-w-full rounded-xl border border-grit bg-black px-4 text-2xl font-black tabular-nums text-white outline-none focus:border-accent-red"
                 />
               </label>
             )}
