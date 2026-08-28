@@ -112,7 +112,15 @@ function Phone({ screen, alt }: { screen: string; alt: string }) {
 function SlideVisual({ type }: { type: (typeof slides)[number]["type"] }) {
   if (type === "hero")
     return (
-      <div className="absolute inset-0 bg-[url('/ads/deadset-tiktok-gym.png')] bg-cover bg-center" />
+      <div className="absolute inset-0 overflow-hidden bg-[#080809]">
+        <img
+          src="/screenshots/train.webp"
+          alt=""
+          aria-hidden="true"
+          className="h-full w-full scale-110 object-cover object-top opacity-45 blur-[1px]"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/35 to-black" />
+      </div>
     );
   if (type === "logger")
     return <Phone screen="/screenshots/logger.webp" alt="DEADSET workout logger" />;
