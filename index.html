@@ -125,51 +125,79 @@
         z-index: 1;
         width: min(100%, 360px);
       }
-      /* This is the exact published App Store artwork from AppIcon.appiconset.
-         Do not recreate the official wordmark with approximate live type. */
-      .boot-logo {
-        display: block;
-        width: min(72vw, 264px);
-        height: auto;
+      /* Keep the launch identity independent from the square app icon. The
+         split live wordmark stays sharp at every device size and avoids the
+         boxed-logo effect during the webview hand-off. */
+      .boot-mark {
+        display: inline-flex;
+        align-items: baseline;
+        justify-content: center;
         margin: 0 auto;
-        object-fit: contain;
-        opacity: 0;
-        filter: drop-shadow(0 18px 38px rgba(225, 6, 0, 0.18));
-        animation:
-          boot-rise 0.62s cubic-bezier(0.16, 0.84, 0.44, 1) 0.08s forwards,
-          boot-breathe 2.8s ease-in-out 0.9s infinite;
+        font-family:
+          Oswald,
+          Impact,
+          "Arial Black",
+          Inter,
+          system-ui,
+          -apple-system,
+          sans-serif;
+        font-size: clamp(48px, 16vw, 74px);
+        font-style: italic;
+        font-weight: 700;
+        letter-spacing: -0.052em;
+        line-height: 0.9;
+        white-space: nowrap;
+        filter: drop-shadow(0 12px 34px rgba(225, 6, 0, 0.22));
+        animation: boot-breathe 2.8s ease-in-out 1s infinite;
       }
-      .boot-logo-frame {
+
+      .boot-mark span {
+        display: inline-block;
+        opacity: 0;
+        animation: boot-mark-arrive 0.62s cubic-bezier(0.16, 0.84, 0.44, 1) forwards;
+      }
+
+      .boot-dead {
+        color: #f5f5f0;
+        transform: translateX(-24px);
+      }
+
+      .boot-set {
+        color: #f00606;
+        transform: translateX(24px);
+        text-shadow:
+          0 0 12px rgba(240, 6, 6, 0.5),
+          0 0 34px rgba(240, 6, 6, 0.3);
+        animation-delay: 0.1s !important;
+      }
+
+      .boot-mark-frame {
         position: relative;
         display: grid;
-        min-height: 182px;
+        min-height: 110px;
         place-items: center;
         overflow: hidden;
       }
-      .boot-logo-frame::after {
+      .boot-mark-frame::after {
         content: "";
         position: absolute;
-        width: 196px;
+        width: 220px;
         height: 1px;
         background: linear-gradient(90deg, transparent, rgba(225, 6, 0, 0.82), transparent);
-        transform: translateY(54px) scaleX(0.2);
+        transform: translateY(45px) scaleX(0.2);
         opacity: 0;
         animation: boot-logo-line 0.65s ease-out 0.48s forwards;
       }
       @keyframes boot-logo-line {
         to {
           opacity: 1;
-          transform: translateY(54px) scaleX(1);
+          transform: translateY(45px) scaleX(1);
         }
       }
-      @keyframes boot-rise {
-        from {
-          opacity: 0;
-          transform: translateY(7px) scale(0.985);
-        }
+      @keyframes boot-mark-arrive {
         to {
           opacity: 1;
-          transform: translateY(0) scale(1);
+          transform: translateX(0);
         }
       }
       .boot-track {
@@ -263,16 +291,17 @@
       /* Respect a stated preference for stillness: motion sickness and
          vestibular disorders are not edge cases. */
       @media (prefers-reduced-motion: reduce) {
-        .boot-logo,
-        .boot-logo-frame::after,
+        .boot-mark,
+        .boot-mark span,
+        .boot-mark-frame::after,
         .boot-bar,
         .boot-status-dot {
           animation: none;
         }
         /* Without the entrance animation these would stay at opacity 0 and the
            logo would never appear at all. */
-        .boot-logo,
-        .boot-logo-frame::after {
+        .boot-mark span,
+        .boot-mark-frame::after {
           opacity: 1;
           transform: none;
         }
@@ -297,15 +326,10 @@
     <div id="root"></div>
     <main id="deadset-boot-screen" class="boot" role="status" aria-live="polite">
       <div class="boot-shell">
-        <div class="boot-logo-frame">
-          <img
-            class="boot-logo"
-            src="/icon-512.png"
-            alt="DEADSET — Forge your body"
-            width="512"
-            height="512"
-            fetchpriority="high"
-          />
+        <div class="boot-mark-frame">
+          <div class="boot-mark" role="img" aria-label="DEADSET">
+            <span class="boot-dead">DEAD</span><span class="boot-set">SET</span>
+          </div>
         </div>
         <div class="boot-track"><div class="boot-bar"></div></div>
         <div class="boot-status">
@@ -357,7 +381,7 @@
           root.innerHTML =
             '<main style="min-height:100vh;display:grid;place-items:center;background:#0a0a0a;color:#f5f5f0;font-family:Inter,system-ui,sans-serif;padding:24px;text-align:center">' +
             '<div style="max-width:360px">' +
-            '<img src="/brand/deadset-lockup.png" alt="DEADSET — Forge Your Body" style="display:block;width:260px;max-width:100%;height:auto;margin:0 auto" />' +
+            '<h1 style="margin:0;font-family:Oswald,Impact,Arial Black,Inter,system-ui,sans-serif;font-size:48px;font-weight:700;font-style:italic;letter-spacing:-.045em;line-height:1;text-shadow:0 0 36px rgba(230,50,34,.4)">DEAD<span style="color:#E10600;text-shadow:0 0 20px rgba(240,6,6,.45)">SET</span></h1>' +
             '<p style="margin:18px 0 0;font-size:14px;font-weight:800;letter-spacing:.14em;text-transform:uppercase">Loading hit a snag</p>' +
             '<p style="margin:10px 0 22px;color:#8a8a8a;font-size:13px;line-height:1.5">Your account data is safe. Reload the app to pull the latest version.</p>' +
             '<button onclick="window.location.reload()" style="appearance:none;border:0;background:#E10600;color:white;padding:14px 22px;font-weight:900;letter-spacing:.12em;text-transform:uppercase">Reload DEADSET</button>' +

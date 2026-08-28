@@ -67,6 +67,7 @@ const launchStoryboard = existsSync("ios/App/App/Base.lproj/LaunchScreen.storybo
   ? read("ios/App/App/Base.lproj/LaunchScreen.storyboard")
   : "";
 const indexHtml = existsSync("index.html") ? read("index.html") : "";
+const staticAuthPage = existsSync("auth/index.html") ? read("auth/index.html") : "";
 const indexRoute = existsSync("src/routes/index.tsx") ? read("src/routes/index.tsx") : "";
 const nativeWelcome = existsSync("src/components/NativeWelcome.tsx")
   ? read("src/components/NativeWelcome.tsx")
@@ -184,9 +185,9 @@ check(
 check(
   "first update version",
   (xcodeProject.match(/MARKETING_VERSION = 1\.2;/g)?.length ?? 0) >= 6 &&
-    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 142;/g)?.length ?? 0) >= 6 &&
+    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 143;/g)?.length ?? 0) >= 6 &&
     whatsNew.includes("WHATS_NEW_VERSION = 202608288"),
-  "The app, activity extension and watch targets are versioned as 1.2 (142), with a matching in-app update summary.",
+  "The app, activity extension and watch targets are versioned as 1.2 (143), with a matching in-app update summary.",
 );
 check(
   "full check script",
@@ -268,11 +269,24 @@ check(
   infoPlist.includes("<string>LaunchScreen</string>") &&
     launchStoryboard.includes('image="Splash"') &&
     indexHtml.includes('id="deadset-boot-screen"') &&
+    indexHtml.includes('class="boot-mark"') &&
+    !indexHtml.includes('class="boot-logo"') &&
+    !indexHtml.includes('src="/icon-512.png"') &&
     indexHtml.includes("Preparing your training") &&
     indexRoute.includes("NativeSessionLoading") &&
     indexRoute.includes("finishAppBoot") &&
     indexRoute.includes("NativeWelcome"),
   "The native launch image hands off to a persistent readiness loader and only reveals a fully painted destination.",
+);
+check(
+  "auth and loader wordmarks",
+  staticAuthPage.includes('<h1 class="brand">DEAD<span>SET</span></h1>') &&
+    staticAuthPage.includes(".page::-webkit-scrollbar") &&
+    staticAuthPage.includes("scrollbar-width: none") &&
+    !staticAuthPage.includes('class="brand-image"') &&
+    indexHtml.includes('<span class="boot-dead">DEAD</span>') &&
+    indexHtml.includes('<span class="boot-set">SET</span>'),
+  "Authentication restores the compact neon wordmark, while launch uses standalone animated lettering with no boxed app icon or visible side scrollbar.",
 );
 check(
   "signup-first native welcome",
