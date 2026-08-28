@@ -7,7 +7,7 @@ This repository ships DEADSET as a bundled Capacitor iPhone app. The public webs
 - App Store ID: `6783511541`
 - Bundle identifier: `org.deadsetfit.app`
 - Version: `1.1`
-- Build: `131`
+- Build: `133`
 - Device family: iPhone
 - Minimum iOS version: iOS 15
 - Category: Health & Fitness
@@ -60,12 +60,12 @@ Test a fresh install and an update from the previous public build on a real iPho
 
 1. Confirm the native launch screen, session loader and signup-first welcome appear without a blank or web-browser flash.
 2. Create an account with email, Google and Apple. Confirm provider consent screens name DEADSET or `deadsetfit.org`, never Lovable.
-3. Complete onboarding, create a weekly schedule, set exercises, sets and rep targets, then edit each value.
+3. Complete onboarding, create a weekly schedule, set exercises, sets and rep targets, then confirm the weekly set grid and Strength Map reflect that plan.
 4. Start a scheduled workout, swap an exercise before its first set, log sets, use the rest timer and finish the workout.
 5. Force-quit during a workout and confirm the active session resumes without losing logged sets.
-6. Log food and water, inspect progress, rankings, friends and every bottom-tab destination.
+6. Log food and water, inspect progress, rankings and every bottom-tab destination. Send, accept, decline and cancel friend requests; confirm mutual friends can compare public PRs and Strength Maps side by side.
 7. Connect Apple Health, verify steps and activity data, then finish a workout and confirm it appears in Apple Fitness.
-8. Buy monthly and annual Pro products in the sandbox. Verify entitlement, restore, manage subscription and cancellation behavior.
+8. Buy the monthly Pro product in the sandbox. Verify the seven-day introductory offer for an eligible sandbox account, immediate monthly pricing for an ineligible account, entitlement, restore, Manage Subscription and cancellation behavior.
 9. Sign out and back in on another device. Confirm cloud training data and Pro access return.
 10. Test account deletion, notification permission denial, camera/photo denial, offline launch and recovery from network errors.
 11. Open Privacy, Terms, Support and Rate DEADSET from Settings.
@@ -73,12 +73,12 @@ Test a fresh install and an update from the previous public build on a real iPho
 
 ## Subscription review
 
-The app's immutable product identifiers are:
+The app recognizes these immutable product identifiers:
 
 - `org.deadsetfit.pro.monthly`
 - `org.deadsetfit.pro.annual`
 
-Before submission, confirm both products are Ready to Submit or approved in App Store Connect and included with version 1.1. Monthly and annual pricing, duration, introductory offers and localization must match the in-app paywall. RevenueCat observes StoreKit transactions; it does not replace Apple's purchase sheet.
+Only `org.deadsetfit.pro.monthly` is offered for a new purchase in version 1.1. Before submission, confirm it is Ready to Submit or approved in App Store Connect, attached to version 1.1, priced at £5.99 in the UK, and configured with a one-week introductory free trial. `org.deadsetfit.pro.annual` remains recognized only for existing legacy entitlements and must not be attached as a newly offered plan. RevenueCat observes StoreKit transactions; it does not replace Apple's purchase sheet.
 
 The iPhone app must not expose Stripe, a web checkout, external purchase instructions or buttons that route users around Apple's in-app purchase system. Legacy web subscriptions may still be recognized after sign-in, but new iPhone purchases use StoreKit.
 
@@ -90,7 +90,7 @@ Provide App Review with a working non-Pro reviewer account and concise navigatio
 - Apple Health is optional. The app remains usable when Health permission is denied.
 - Camera and photo access are optional and used for progress check-ins and avatars.
 - Sign in with Apple and Google return through `deadsetfit.org` to the bundled app.
-- Pro is sold through Apple's monthly and annual subscriptions.
+- Pro is sold through Apple's monthly subscription. The annual identifier is recognized only for existing legacy entitlements.
 - Restore Purchases and Manage Subscription are on the Pro screen.
 - Account deletion is available inside Profile.
 
@@ -100,14 +100,14 @@ Never give App Review an expired account, a production paywall that cannot load,
 
 - 1024 x 1024 icon with no alpha channel
 - Current iPhone screenshots for the display sizes requested by App Store Connect
-- Screenshots showing Train, schedule editing, live workout, progress and Apple Fitness integration
+- Screenshots showing Train, the weekly set grid, Strength Map, live workout, friend comparison and Apple Fitness integration
 - Accurate app description, keywords, privacy answers and age rating
 - Current support and privacy URLs
 - Version 1.1 release notes matching the in-app New in 1.1 summary
 
 Suggested release notes:
 
-> DEADSET 1.1 makes every training day easier to follow. Build and edit your full week with exercises, sets and rep targets, swap movements during live workouts, connect Apple Fitness, restore Pro across devices, and reach support directly from Settings. This update also improves first-run guidance, account reliability and App Store review prompts.
+> DEADSET 1.1 turns your plan into visible progress. See every week's planned sets in one grid, understand which muscles your training develops, earn clear next-load recommendations from completed workouts, and compare PRs and Strength Maps with accepted friends. This update also improves onboarding, live workout reliability, Apple Fitness integration and account controls.
 
 ## Archive and upload
 
@@ -117,7 +117,7 @@ Suggested release notes:
 4. Choose Product > Archive.
 5. In Organizer, run Validate App before Distribute App.
 6. Upload to App Store Connect and wait for processing.
-7. Attach build 131 to version 1.1, attach both subscription products and complete export compliance and content-rights questions.
+7. Attach build 133 to version 1.1, attach only the monthly subscription product offered by this build, and complete export compliance and content-rights questions.
 8. Test the processed build in TestFlight before submitting it for review.
 
 Every bundled product update requires a new App Store build and review. Website deployment alone does not update the installed app.

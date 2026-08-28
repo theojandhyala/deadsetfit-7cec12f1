@@ -1,6 +1,6 @@
 # DEADSET App Store Release Brief
 
-Updated: August 13, 2026
+Updated: August 28, 2026
 
 ## Positioning
 
@@ -55,12 +55,15 @@ SEE REAL PROGRESS
 
 - Automatic personal-record detection
 - Lift history, estimated one-rep max, volume, measurements, and progress photos
-- Progression recommendations and Ghost Mode
+- A bodyweight-adjusted Strength Map showing trained, untrained, and developing muscle groups
+- A weekly square set map built from the exercises and set targets in your plan
+- Earned next-load recommendations based on completed sets, plus Ghost Mode
 - Strength standards, streaks, achievements, and seasonal ranks
 
 TRAIN WITH PEOPLE
 
-- Add and follow friends
+- Send, accept, decline, cancel, and remove friend requests
+- Compare public PRs and Strength Maps side by side with accepted friends
 - Share training updates
 - Compete in ranked leagues and head-to-head challenges
 - Report or block users directly in the app
@@ -82,9 +85,9 @@ Use the generated 6.9-inch assets in `artifacts/app-store/ios-6.9`:
 
 Before submission, capture at least two more real screens from the release archive:
 
-4. Schedule editor showing exercise, sets, and reps customization.
-5. Progress view showing lift history and progress photos without personal data.
-6. Friends or league screen using seeded review-safe accounts.
+4. Weekly set grid showing how scheduled exercises distribute sets across the week.
+5. Strength Map and Muscle Lab showing trained muscles and an earned next-load recommendation.
+6. Accepted-friend comparison showing side-by-side public Strength Maps using seeded review-safe accounts.
 
 Do not use device frames supplied by other brands. Do not show unfinished, empty, or placeholder
 states. Keep all screenshot claims visible and achievable in the submitted build.
@@ -116,7 +119,8 @@ Privacy Policy URL: `https://deadsetfit.org/privacy`
 Provide App Review with:
 
 - A durable review account with completed onboarding and representative sample workouts.
-- Exact steps to open Plan, edit a day, start a workout, log a set, finish it, and view progress.
+- Exact steps to open Plan, inspect the weekly set grid, edit a day, start a workout, log a set, finish it, and view the Strength Map.
+- Exact steps to send and accept a friend request, then open the mutual PR and Strength Map comparison.
 - A note that Apple Health is optional and only appears on a physical supported device.
 - A note that workout notifications are optional local reminders, requested in context from Settings.
 - A note that DEADSET is not a regulated medical device and makes no diagnosis or treatment claim.
@@ -150,7 +154,7 @@ Also verify in a release-signed build on a physical iPhone:
 - Apple Health permission denial, partial permission, connect, import, export, and disconnect
 - Workout notification denial, approval, time change, plan change, delivery, tap-through, and disable
 - Camera/photo denial and successful progress-photo selection
-- Friends, follows, reports, blocks, challenges, and leaderboards
+- Friend request send, accept, decline and cancel; removal; mutual Strength Map comparison; reports, blocks, challenges, and leaderboards
 - Dynamic Type, VoiceOver, Reduce Motion, dark appearance, and all supported iPhone sizes
 - No clipped text, keyboard obstruction, horizontal overflow, blank loading state, or console error
 
@@ -165,8 +169,10 @@ These cannot be completed only in the repository:
   the HTTPS callback bridge and `org.deadsetfit.app://auth/callback`.
 - Confirm the first-party Apple code exchange, service-only refresh-token storage, and Sign in with
   Apple revocation during account deletion on a physical iPhone.
-- Confirm both StoreKit products load, purchase, restore and open Apple's subscription-management
-  screen in the submitted build. Stripe must remain unavailable inside the iOS app.
+- Confirm the monthly StoreKit product loads at Apple's localized price, shows the one-week trial only
+  to eligible accounts, purchases, restores and opens Apple's subscription-management screen in the
+  submitted build. The annual identifier is legacy-entitlement-only and Stripe must remain unavailable
+  inside the iOS app.
 - Complete App Store Connect privacy answers, age rating, category, support URL, screenshots, review
   account, and export-compliance questions.
 - Confirm Cloudflare production secrets for Supabase, Stripe, and webhooks.

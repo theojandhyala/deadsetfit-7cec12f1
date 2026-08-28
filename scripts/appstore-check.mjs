@@ -151,6 +151,31 @@ const xcodeProject = existsSync("ios/App/DeadSet.xcodeproj/project.pbxproj")
   ? read("ios/App/DeadSet.xcodeproj/project.pbxproj")
   : "";
 const whatsNew = existsSync("src/lib/whats-new.ts") ? read("src/lib/whats-new.ts") : "";
+const weeklySetGrid = existsSync("src/components/WeeklySetGrid.tsx")
+  ? read("src/components/WeeklySetGrid.tsx")
+  : "";
+const plannedSetGrid = existsSync("src/lib/planned-set-grid.ts")
+  ? read("src/lib/planned-set-grid.ts")
+  : "";
+const muscleGrowthCoach = existsSync("src/components/MuscleGrowthCoach.tsx")
+  ? read("src/components/MuscleGrowthCoach.tsx")
+  : "";
+const strengthTutorial = existsSync("src/components/StrengthEngineTutorial.tsx")
+  ? read("src/components/StrengthEngineTutorial.tsx")
+  : "";
+const onboardingPage = existsSync("src/routes/onboarding.tsx")
+  ? read("src/routes/onboarding.tsx")
+  : "";
+const planPage = existsSync("src/routes/_tabs.plan.tsx")
+  ? read("src/routes/_tabs.plan.tsx")
+  : "";
+const strengthPage = existsSync("src/routes/_tabs.strength.tsx")
+  ? read("src/routes/_tabs.strength.tsx")
+  : "";
+const athletePage = existsSync("src/routes/_tabs.athlete.$id.tsx")
+  ? read("src/routes/_tabs.athlete.$id.tsx")
+  : "";
+const fifaStats = existsSync("src/lib/fifa-stats.ts") ? read("src/lib/fifa-stats.ts") : "";
 
 check("package.json exists", !!packageJson.name, "Project metadata is readable.");
 check(
@@ -180,6 +205,27 @@ check(
     existsSync("src/lib/rank.test.ts") &&
     existsSync("src/lib/device-reminders.test.ts"),
   "Schedule, progression, competition, rank, and reminder logic have automated coverage.",
+);
+check(
+  "weekly planned-set map",
+  existsSync("src/lib/planned-set-grid.test.ts") &&
+    weeklySetGrid.includes("buildPlannedSetGrid") &&
+    plannedSetGrid.includes("exerciseConfig") &&
+    plannedSetGrid.includes("state.programs") &&
+    planPage.includes("<WeeklySetGrid") &&
+    strengthPage.includes("<WeeklySetGrid"),
+  "Plan and Strength share a tested weekly square grid derived from scheduled exercises and active program sets.",
+);
+check(
+  "earned muscle progression",
+  muscleGrowthCoach.includes("progressionBoard") &&
+    muscleGrowthCoach.includes("HOLD LOAD") &&
+    muscleGrowthCoach.includes("NEXT LOAD") &&
+    muscleGrowthCoach.includes("Earn more load") &&
+    strengthTutorial.includes("Plan → lift → progress") &&
+    strengthTutorial.includes("prefers-reduced-motion") &&
+    onboardingPage.includes("<StrengthEngineTutorial"),
+  "Muscle Lab ties next-load guidance to logged performance and onboarding explains the Plan-to-progress loop with Reduce Motion support.",
 );
 check(
   "Capacitor config",
@@ -434,6 +480,17 @@ check(
     rpcServer.includes("async reportContent") &&
     rpcServer.includes("async blockUser"),
   "User-generated social content has report and block controls on both client and server.",
+);
+check(
+  "friend requests and strength comparisons",
+  friendsPage.includes("getFriendConnections") &&
+    friendsPage.includes("updateFriendship") &&
+    friendsPage.includes("Friend requests") &&
+    rpcServer.includes("async getFriendConnections") &&
+    rpcServer.includes("async updateFriendship") &&
+    athletePage.includes("MuscleHeadToHead") &&
+    fifaStats.includes("strengthMap"),
+  "Friendship is request-based, handled on both client and server, and mutual friends can compare public Strength Maps.",
 );
 // Crew names and tags are athlete-authored and shown on the public ladder, so
 // they are a user-generated surface in their own right. Guideline 1.2 wants a
