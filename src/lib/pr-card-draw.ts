@@ -1,5 +1,6 @@
 import type { PRShareDetails } from "./grit-events";
 import { prHeadline } from "./pr-share";
+import type { WeightUnit } from "./units";
 
 export const PR_CARD_W = 1080;
 export const PR_CARD_H = 1920;
@@ -39,6 +40,60 @@ function roundRect(
 }
 
 /**
+ * The DEADSET lockup, exactly as the app's top bar draws it: a red rule, then
+ * DEAD in bone and SET in red, italic, with no gap between the two words.
+ *
+ * The gap matters. The previous version placed each half at a fixed offset
+ * from the centre with `textAlign = "center"`, so the words drifted apart by
+ * however wide they happened to measure and the card read "DEAD  SET" — a
+ * different brand from the one in the app. Measuring and butting them together
+ * is the only way the lockup survives a font substitution.
+ */
+export function drawWordmark(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  baseline: number,
+  size: number,
+) {
+  const font = `italic 900 ${size}px 'Arial Black', Arial, sans-serif`;
+  const prevAlign = ctx.textAlign;
+  ctx.font = font;
+  const deadW = ctx.measureText("DEAD").width;
+  const setW = ctx.measureText("SET").width;
+  const barW = Math.round(size * 0.07);
+  const barGap = Math.round(size * 0.18);
+  const total = barW + barGap + deadW + setW;
+  let x = cx - total / 2;
+
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#e63222";
+  ctx.fillRect(x, baseline - size * 0.78, barW, size * 0.82);
+  x += barW + barGap;
+  ctx.fillStyle = "#f5f5f0";
+  ctx.fillText("DEAD", x, baseline);
+  ctx.fillStyle = "#e63222";
+  ctx.fillText("SET", x + deadW, baseline);
+  ctx.textAlign = prevAlign;
+}
+
+/** A label above a value, for the stat strip along the bottom of the card. */
+function statColumn(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  label: string,
+  value: string,
+) {
+  ctx.textAlign = "center";
+  ctx.font = "800 30px Arial, sans-serif";
+  ctx.fillStyle = "#7c6b66";
+  ctx.fillText(label, x, y);
+  ctx.font = "900 52px 'Arial Black', Arial, sans-serif";
+  ctx.fillStyle = "#f5f5f0";
+  ctx.fillText(value, x, y + 62);
+}
+
+/**
  * Paints the 9:16 PR card. Kept out of the component so the exact pixels that
  * ship can be rendered and eyeballed by a screenshot harness — a card that gets
  * posted publicly should never be shipped unseen.
@@ -53,11 +108,19 @@ export function drawPRCard(
     pr,
     displayName,
     username,
-  }: { pr: PRShareDetails; displayName: string; username?: string | null },
+    unit = "kg",
+    date = new Date(),
+  }: {
+    pr: PRShareDetails;
+    displayName: string;
+    username?: string | null;
+    unit?: WeightUnit;
+    date?: Date;
+  },
 ) {
   const W = PR_CARD_W;
   const H = PR_CARD_H;
-  const headline = prHeadline(pr);
+  const headline = prHeadline(pr, unit);
 
   // ── Background ────────────────────────────────────────────────
   const bg = ctx.createLinearGradient(0, 0, 0, H);
@@ -85,49 +148,70 @@ export function drawPRCard(
 
   ctx.textAlign = "center";
 
+  // ── Frame ─────────────────────────────────────────────────────
+  // A hairline inset border and corner ticks. Cheap to draw, and the
+  // difference between "a screenshot" and "a card somebody designed".
+  ctx.strokeStyle = "rgba(230,50,34,0.22)";
+  ctx.lineWidth = 3;
+  roundRect(ctx, 48, 176, W - 96, 1514, 44);
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(230,50,34,0.85)";
+  ctx.lineWidth = 8;
+  for (const [cx, cy, dx, dy] of [
+    [48, 220, 0, -1],
+    [W - 48, 220, 0, -1],
+    [48, 1646, 0, 1],
+    [W - 48, 1646, 0, 1],
+  ] as const) {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx, cy + dy * 44);
+    ctx.stroke();
+  }
+
   // ── Wordmark ──────────────────────────────────────────────────
-  ctx.font = "italic 900 84px 'Arial Black', Arial, sans-serif";
-  ctx.fillStyle = "#f5f5f0";
-  ctx.fillText("DEAD", W / 2 - 96, 260);
-  ctx.fillStyle = "#e63222";
-  ctx.fillText("SET", W / 2 + 138, 260);
+  drawWordmark(ctx, W / 2, 300, 86);
+
+  ctx.textAlign = "center";
 
   // ── Record label ──────────────────────────────────────────────
-  ctx.font = "800 44px Arial, sans-serif";
+  ctx.font = "800 40px Arial, sans-serif";
   ctx.fillStyle = "#e63222";
-  ctx.fillText("NEW PERSONAL RECORD", W / 2, 430);
+  ctx.letterSpacing = "6px";
+  ctx.fillText("NEW PERSONAL RECORD", W / 2, 396);
+  ctx.letterSpacing = "0px";
 
   // ── Exercise ──────────────────────────────────────────────────
   const exercise = pr.exercise.toUpperCase();
-  fitText(ctx, exercise, (s) => `900 ${s}px 'Arial Black', Arial, sans-serif`, 92, W - 140, 44);
+  fitText(ctx, exercise, (s) => `900 ${s}px 'Arial Black', Arial, sans-serif`, 88, W - 180, 42);
   ctx.fillStyle = "#f5f5f0";
-  ctx.fillText(exercise, W / 2, 540);
+  ctx.fillText(exercise, W / 2, 490);
 
   // ── The number ────────────────────────────────────────────────
   fitText(
     ctx,
     headline.value,
     (s) => `900 ${s}px 'Arial Black', Arial, sans-serif`,
-    380,
+    400,
     W - 200,
     160,
   );
   ctx.fillStyle = "#ffffff";
   ctx.shadowColor = "rgba(230,50,34,0.7)";
   ctx.shadowBlur = 70;
-  ctx.fillText(headline.value, W / 2, 960);
+  ctx.fillText(headline.value, W / 2, 880);
   ctx.shadowBlur = 0;
 
   // Unit
-  ctx.font = "800 76px Arial, sans-serif";
+  ctx.font = "900 78px 'Arial Black', Arial, sans-serif";
   ctx.fillStyle = "#e63222";
-  ctx.fillText(headline.unit, W / 2, 1050);
+  ctx.fillText(headline.unit, W / 2, 966);
 
   // Rep context for loaded lifts (bodyweight already reads as reps)
   if (headline.repLine) {
     ctx.font = "700 46px Arial, sans-serif";
     ctx.fillStyle = "#9a8a84";
-    ctx.fillText(headline.repLine, W / 2, 1128);
+    ctx.fillText(headline.repLine, W / 2, 1030);
   }
 
   // ── Delta chip: the actual brag ───────────────────────────────
@@ -136,7 +220,7 @@ export function drawPRCard(
     const chipW = ctx.measureText(headline.delta).width + 76;
     const chipH = 92;
     const chipX = (W - chipW) / 2;
-    const chipY = headline.repLine ? 1180 : 1120;
+    const chipY = headline.repLine ? 1070 : 1016;
     ctx.fillStyle = "rgba(230,50,34,0.16)";
     roundRect(ctx, chipX, chipY, chipW, chipH, 46);
     ctx.fill();
@@ -148,23 +232,52 @@ export function drawPRCard(
     ctx.fillText(headline.delta, W / 2, chipY + 60);
   }
 
+  // ── Stat strip ────────────────────────────────────────────────
+  // The old card left ~350px of empty gradient here, which is most of why it
+  // read as a template with a number dropped into it.
+  const stripY = 1268;
+  ctx.strokeStyle = "rgba(255,255,255,0.08)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(120, stripY - 58);
+  ctx.lineTo(W - 120, stripY - 58);
+  ctx.stroke();
+
+  const columns: [string, string][] = [
+    ["BEATEN", headline.previousBest ?? "FIRST"],
+    ["REPS", pr.reps > 0 ? String(pr.reps) : "—"],
+    [
+      "SET ON",
+      date.toLocaleDateString(undefined, { day: "numeric", month: "short" }).toUpperCase(),
+    ],
+  ];
+  columns.forEach(([label, value], i) => {
+    statColumn(ctx, W / 2 + (i - 1) * 300, stripY, label, value);
+  });
+
+  ctx.beginPath();
+  ctx.moveTo(120, stripY + 104);
+  ctx.lineTo(W - 120, stripY + 104);
+  ctx.stroke();
+
   // ── Athlete ───────────────────────────────────────────────────
-  ctx.font = "800 52px Arial, sans-serif";
+  ctx.textAlign = "center";
+  ctx.font = "900 56px 'Arial Black', Arial, sans-serif";
   ctx.fillStyle = "#f5f5f0";
-  ctx.fillText(displayName.toUpperCase().slice(0, 22), W / 2, 1370);
+  ctx.fillText(displayName.toUpperCase().slice(0, 22), W / 2, 1452);
   if (username) {
     ctx.font = "600 38px Arial, sans-serif";
     ctx.fillStyle = "#8a8a8a";
-    ctx.fillText(`@${username}`, W / 2, 1428);
+    ctx.fillText(`@${username}`, W / 2, 1504);
   }
 
   // ── CTA ───────────────────────────────────────────────────────
-  ctx.fillStyle = "rgba(230,50,34,0.55)";
-  ctx.fillRect(W / 2 - 120, 1500, 240, 3);
-  ctx.font = "900 72px 'Arial Black', Arial, sans-serif";
+  ctx.font = "900 76px 'Arial Black', Arial, sans-serif";
   ctx.fillStyle = "#f5f5f0";
-  ctx.fillText("BEAT IT.", W / 2, 1590);
-  ctx.font = "700 40px Arial, sans-serif";
+  ctx.fillText("BEAT IT.", W / 2, 1596);
+  ctx.font = "700 36px Arial, sans-serif";
   ctx.fillStyle = "#8a8a8a";
-  ctx.fillText("DEADSETFIT.ORG", W / 2, 1655);
+  ctx.letterSpacing = "4px";
+  ctx.fillText("DEADSETFIT.ORG", W / 2, 1650);
+  ctx.letterSpacing = "0px";
 }

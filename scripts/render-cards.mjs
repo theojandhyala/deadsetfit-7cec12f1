@@ -11,6 +11,7 @@
  *   node scripts/render-cards.mjs            # writes into .render-out/
  *   node scripts/render-cards.mjs --body     # just the body diagram, large
  *   node scripts/render-cards.mjs --diagram  # the <MuscleDiagram> that ships
+ *   node scripts/render-cards.mjs --pr       # the PR card people post
  *
  * Not part of `npm run check`, and playwright/esbuild are deliberately NOT
  * dependencies: Xcode Cloud runs `npm ci` before every iOS archive, and making
@@ -29,6 +30,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = join(root, ".render-out");
 const bodyOnly = process.argv.includes("--body");
 const diagramOnly = process.argv.includes("--diagram");
+const prOnly = process.argv.includes("--pr");
 
 let chromium;
 try {
@@ -94,7 +96,26 @@ const browser = await chromium.launch(launchOptions);
 const page = await browser.newPage();
 await page.setContent("<canvas id=c></canvas>");
 
-if (diagramOnly) {
+if (prOnly) {
+  const card = await bundleModule("src/lib/pr-card-draw.ts", "PRCard");
+  await page.addScriptTag({ content: card });
+  const dataUrl = await page.evaluate(() => {
+    const c = document.getElementById("c");
+    c.width = PRCard.PR_CARD_W;
+    c.height = PRCard.PR_CARD_H;
+    PRCard.drawPRCard(c.getContext("2d"), {
+      pr: { exercise: "Incline Dumbbell Press", weight: 18, reps: 8, previousBest: 16 },
+      displayName: "Theo",
+      username: "theo",
+      unit: "kg",
+      date: new Date("2026-08-27T00:00:00Z"),
+    });
+    return c.toDataURL("image/png");
+  });
+  const out = join(outDir, "pr-card.png");
+  writeFileSync(out, Buffer.from(dataUrl.split(",")[1], "base64"));
+  console.log("wrote", out);
+} else if (diagramOnly) {
   // The component the app actually renders, at the size the strength screen
   // asks for and at the size a phone shows it. If it looks cheap here, it
   // looks cheap on the phone.

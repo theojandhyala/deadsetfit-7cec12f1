@@ -62,12 +62,16 @@ struct RestLiveActivity: Widget {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("REST")
                             .font(.system(size: 10, weight: .black))
-                            .tracking(2)
+                            .tracking(1)
                             .foregroundStyle(brandRed)
                         Text(context.attributes.exerciseName)
                             .font(.system(size: 13, weight: .semibold))
                             .lineLimit(1)
+                            .truncationMode(.tail)
+                            .minimumScaleFactor(0.85)
                     }
+                    .padding(.leading, 4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     Text(timerInterval: Date.now...context.state.endsAt, countsDown: true)

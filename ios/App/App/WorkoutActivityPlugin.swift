@@ -58,6 +58,9 @@ public class WorkoutActivityPlugin: CAPPlugin, CAPBridgedPlugin {
             setsDone: call.getInt("setsDone") ?? 0,
             setsPlanned: call.getInt("setsPlanned") ?? 0,
             volumeKg: call.getInt("volumeKg") ?? 0,
+            // Falls back to labelling kilograms only if the web layer sent no
+            // formatted string at all — never to a silently wrong unit.
+            volumeText: call.getString("volumeText") ?? "\(call.getInt("volumeKg") ?? 0) kg",
             prCount: call.getInt("prCount") ?? 0,
             startedAt: Date(timeIntervalSince1970: startedMs / 1000)
         )

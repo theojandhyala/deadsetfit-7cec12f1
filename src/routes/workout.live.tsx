@@ -696,8 +696,8 @@ function LiveWorkoutPage() {
   // this effect never has to guess whether a session is over.
   useEffect(() => {
     if (!session || session.endedAt) return;
-    void syncWorkoutActivity(session, activeIdx);
-  }, [session, activeIdx]);
+    void syncWorkoutActivity(session, activeIdx, unit);
+  }, [session, activeIdx, unit]);
 
   useEffect(() => {
     let disposed = false;

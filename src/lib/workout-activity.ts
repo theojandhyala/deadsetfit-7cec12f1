@@ -2,6 +2,7 @@ import { registerPlugin } from "@capacitor/core";
 
 import { isNativeIos } from "./platform";
 import { setVolume } from "./set-tracking";
+import { formatVolume, type WeightUnit } from "./units";
 import { completedWorkingSets } from "./workout-flow";
 import type { WorkoutSession } from "./types";
 
@@ -23,6 +24,15 @@ export interface WorkoutActivityState {
   setsDone: number;
   setsPlanned: number;
   volumeKg: number;
+  /**
+   * Volume already formatted in the athlete's unit.
+   *
+   * The Lock Screen used to print "\(volumeKg) kg" itself, so a pound gym saw
+   * a kilo number labelled kg on a card it never opened the app to correct.
+   * Swift has no idea which unit the athlete chose, so the string is built
+   * here, where it is known.
+   */
+  volumeText: string;
   prCount: number;
   startedAtMs: number;
 }
@@ -45,6 +55,7 @@ const Native = registerPlugin<WorkoutActivityPlugin>("WorkoutActivity");
 export function projectActivity(
   session: WorkoutSession,
   activeIndex: number,
+  unit: WeightUnit = "kg",
 ): WorkoutActivityState {
   let setsDone = 0;
   let setsPlanned = 0;
@@ -70,6 +81,7 @@ export function projectActivity(
     setsDone,
     setsPlanned,
     volumeKg: Math.round(volumeKg),
+    volumeText: formatVolume(volumeKg, unit),
     prCount,
     startedAtMs: new Date(session.startedAt).getTime() || Date.now(),
   };
@@ -93,10 +105,11 @@ export async function isWorkoutActivitySupported(): Promise<boolean> {
 export async function syncWorkoutActivity(
   session: WorkoutSession,
   activeIndex: number,
+  unit: WeightUnit = "kg",
 ): Promise<void> {
   if (!isNativeIos()) return;
   try {
-    await Native.start(projectActivity(session, activeIndex));
+    await Native.start(projectActivity(session, activeIndex, unit));
   } catch {
     // Live Activities can be switched off per app. Failing to show one is
     // never a reason to interrupt a workout.

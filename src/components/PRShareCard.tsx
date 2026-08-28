@@ -6,6 +6,8 @@ import type { PRShareDetails } from "@/lib/grit-events";
 import { drawPRCard, PR_CARD_H, PR_CARD_W } from "@/lib/pr-card-draw";
 import { prHeadline } from "@/lib/pr-share";
 import { getInviteUrl } from "@/lib/referral";
+import { useAppState } from "@/lib/storage";
+import { unitOf } from "@/lib/units";
 
 // 9:16 TikTok / Reels / Shorts ready (1080 × 1920)
 export function PRShareCard({
@@ -19,11 +21,13 @@ export function PRShareCard({
   username?: string | null;
   onClose: () => void;
 }) {
+  const [state] = useAppState();
+  const unit = unitOf(state);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dataUrl, setDataUrl] = useState<string | null>(null);
   // Memoised: the canvas effect depends on it, and the grain is random — a
   // fresh object each render would redraw and re-set state forever.
-  const headline = useMemo(() => prHeadline(pr), [pr]);
+  const headline = useMemo(() => prHeadline(pr, unit), [pr, unit]);
 
   useEffect(() => {
     const c = canvasRef.current;
@@ -31,9 +35,9 @@ export function PRShareCard({
     c.width = PR_CARD_W;
     c.height = PR_CARD_H;
     const ctx = c.getContext("2d")!;
-    drawPRCard(ctx, { pr, displayName, username });
+    drawPRCard(ctx, { pr, displayName, username, unit });
     setDataUrl(c.toDataURL("image/png"));
-  }, [pr, displayName, username]);
+  }, [pr, displayName, username, unit]);
 
   async function shareNow() {
     if (!dataUrl) return;

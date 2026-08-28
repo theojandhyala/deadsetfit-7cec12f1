@@ -20,6 +20,10 @@ public struct WorkoutActivityAttributes: ActivityAttributes {
         public var setsPlanned: Int
         /// Tonnage so far, in kilograms.
         public var volumeKg: Int
+        /// The same tonnage, already formatted in the athlete's own unit.
+        /// The extension has no access to that setting, so the app sends the
+        /// finished string rather than a number this side would mislabel.
+        public var volumeText: String
         /// Records set this session — worth surfacing the moment one lands.
         public var prCount: Int
         /// When the session began. The system renders elapsed time from this.
@@ -30,6 +34,7 @@ public struct WorkoutActivityAttributes: ActivityAttributes {
             setsDone: Int,
             setsPlanned: Int,
             volumeKg: Int,
+            volumeText: String,
             prCount: Int,
             startedAt: Date
         ) {
@@ -37,6 +42,7 @@ public struct WorkoutActivityAttributes: ActivityAttributes {
             self.setsDone = setsDone
             self.setsPlanned = setsPlanned
             self.volumeKg = volumeKg
+            self.volumeText = volumeText
             self.prCount = prCount
             self.startedAt = startedAt
         }

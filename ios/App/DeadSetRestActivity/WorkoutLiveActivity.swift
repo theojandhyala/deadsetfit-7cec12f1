@@ -22,44 +22,62 @@ struct WorkoutLiveActivity: Widget {
                 .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
             DynamicIsland {
+                // The leading region is narrow and hugs the island's left
+                // curve. A long session name ("UPPER — CHEST / BACK / ARMS")
+                // wrapped to three lines and had its first glyph clipped by
+                // the tracking, which pushed everything below it out of shape.
+                // One line, tight tracking, and a little left padding.
                 DynamicIslandExpandedRegion(.leading) {
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 3) {
                         Text(context.attributes.label.uppercased())
-                            .font(.system(size: 10, weight: .black))
-                            .tracking(2)
+                            .font(.system(size: 9, weight: .black))
+                            .tracking(0.6)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                             .foregroundStyle(workoutRed)
                         Text(context.state.exerciseName)
                             .font(.system(size: 13, weight: .semibold))
                             .lineLimit(1)
+                            .truncationMode(.tail)
+                            .minimumScaleFactor(0.85)
                     }
+                    .padding(.leading, 4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    VStack(alignment: .trailing, spacing: 2) {
+                    VStack(alignment: .trailing, spacing: 3) {
+                        // Past an hour the timer reads "1:02:35"; without a
+                        // scale floor it clips rather than shrinks.
                         Text(context.state.startedAt, style: .timer)
-                            .font(.system(size: 20, weight: .heavy, design: .rounded))
+                            .font(.system(size: 19, weight: .heavy, design: .rounded))
                             .monospacedDigit()
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
                             .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 78)
+                            .frame(maxWidth: 86)
                         Text("\(context.state.setsDone)/\(context.state.setsPlanned) sets")
                             .font(.system(size: 11, weight: .semibold))
+                            .lineLimit(1)
                             .foregroundStyle(.secondary)
                     }
+                    .padding(.trailing, 4)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    HStack(spacing: 14) {
-                        stat("VOLUME", "\(context.state.volumeKg) kg")
+                    HStack(spacing: 16) {
+                        stat("VOLUME", context.state.volumeText)
                         if context.state.prCount > 0 {
                             stat("PRS", "\(context.state.prCount)", accent: true)
                         }
-                        Spacer(minLength: 0)
+                        Spacer(minLength: 8)
                         ProgressView(
                             value: Double(context.state.setsDone),
                             total: Double(max(context.state.setsPlanned, context.state.setsDone, 1))
                         )
                         .progressViewStyle(.linear)
                         .tint(workoutRed)
-                        .frame(width: 92)
+                        .frame(maxWidth: 110)
                     }
+                    .padding(.top, 2)
                 }
             } compactLeading: {
                 if context.state.prCount > 0 {
@@ -91,20 +109,25 @@ private func lockScreen(
             VStack(alignment: .leading, spacing: 2) {
                 Text(context.attributes.label.uppercased())
                     .font(.system(size: 10, weight: .black))
-                    .tracking(2)
+                    .tracking(1.4)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                     .foregroundStyle(workoutRed)
                 Text(context.state.exerciseName)
                     .font(.system(size: 16, weight: .heavy))
                     .foregroundStyle(.white)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
             Spacer(minLength: 0)
             Text(context.state.startedAt, style: .timer)
                 .font(.system(size: 26, weight: .heavy, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
                 .multilineTextAlignment(.trailing)
-                .frame(maxWidth: 104)
+                .frame(maxWidth: 118)
         }
 
         ProgressView(
@@ -116,7 +139,7 @@ private func lockScreen(
 
         HStack(spacing: 16) {
             stat("SETS", "\(context.state.setsDone)/\(context.state.setsPlanned)")
-            stat("VOLUME", "\(context.state.volumeKg) kg")
+            stat("VOLUME", context.state.volumeText)
             if context.state.prCount > 0 {
                 stat("PRS", "\(context.state.prCount)", accent: true)
             }
