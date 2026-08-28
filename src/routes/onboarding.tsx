@@ -321,7 +321,7 @@ function Onboarding() {
               <ChevronLeft size={18} />
             </button>
           )}
-          <GritLogo className="text-3xl" />
+          <GritLogo className="w-32" />
         </div>
         <span className="label-cap">
           {idx === 0

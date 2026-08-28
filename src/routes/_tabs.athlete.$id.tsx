@@ -1,7 +1,20 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 
-import { ArrowLeft, Loader2, UserPlus, UserCheck, Trophy, Flag, Ban, Swords } from "lucide-react";
+import {
+  ArrowLeft,
+  Loader2,
+  UserPlus,
+  UserCheck,
+  Trophy,
+  Flag,
+  Ban,
+  Swords,
+  MapPin,
+  Dumbbell,
+  Flame,
+  Layers3,
+} from "lucide-react";
 import { toast } from "sonner";
 import { askConfirm, askText } from "@/lib/confirm";
 import { getAthleteCard, updateFriendship, type FriendAction } from "@/lib/social.functions";
@@ -171,6 +184,11 @@ function AthletePage() {
   const myStrengthMap = publicStrengthMap(
     (card.my_public_stats as Record<string, unknown> | null)?.strengthMap,
   );
+  const totalWorkouts = Number(stats.totalWorkouts) || 0;
+  const totalWorkingSets = Number(stats.totalWorkingSets) || 0;
+  const totalPRs = Number(stats.totalPRs) || 0;
+  const publicStreak = Number(stats.streak) || 0;
+  const location = [card.city, card.country].filter(Boolean).join(", ");
 
   return (
     <div className="pb-10">
@@ -202,6 +220,49 @@ function AthletePage() {
         />
       </section>
 
+      <section className="px-5 mb-5">
+        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_90%_0%,rgba(230,50,34,0.17),transparent_38%),linear-gradient(145deg,#17181c,#0b0b0d)] p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="display text-xl font-black uppercase text-grit">
+              {card.display_name || card.username || "Athlete"}
+            </p>
+            <span className="rounded-full border border-white/10 bg-black/25 px-2 py-1 text-[8px] font-black uppercase text-grit-dim">
+              {card.level}
+            </span>
+          </div>
+          {card.username && (
+            <p className="mt-0.5 text-xs font-bold text-accent-red">@{card.username}</p>
+          )}
+          {location && (
+            <p className="mt-2 flex items-center gap-1.5 text-[10px] font-bold text-grit-dim">
+              <MapPin size={11} className="text-accent-red" /> {location}
+            </p>
+          )}
+          <p className="mt-3 text-sm leading-relaxed text-grit">
+            {card.bio || "This athlete has not added a bio yet."}
+          </p>
+          <div className="mt-4 grid grid-cols-4 gap-1.5">
+            {[
+              { Icon: Dumbbell, value: totalWorkouts, label: "Workouts" },
+              { Icon: Layers3, value: totalWorkingSets, label: "Sets" },
+              { Icon: Flame, value: publicStreak, label: "Streak" },
+              { Icon: Trophy, value: totalPRs, label: "PRs" },
+            ].map(({ Icon, value, label }) => (
+              <div
+                key={label}
+                className="rounded-xl border border-white/10 bg-black/25 p-2 text-center"
+              >
+                <Icon size={12} className="mx-auto text-accent-red" />
+                <p className="display mt-1 text-lg font-black leading-none text-grit">{value}</p>
+                <p className="mt-1 text-[6px] font-black uppercase tracking-wide text-grit-dim">
+                  {label}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {badgeWall?.top?.length ? (
         <section className="px-5 mb-5">
           <div className="deadset-section-title mb-2">
@@ -230,7 +291,7 @@ function AthletePage() {
 
       {/* Follow + counts */}
       {!card.isMe && (
-      <section className="px-5 mb-5">
+        <section className="px-5 mb-5">
           {(card as { followsMe?: boolean }).followsMe && (
             <div className="mb-2 inline-flex items-center gap-1 label-cap text-[10px] text-grit-dim border border-grit rounded px-2 py-0.5">
               Follows you
@@ -260,15 +321,27 @@ function AthletePage() {
                 <UserCheck size={14} /> FRIENDS · TAP TO REMOVE
               </>
             ) : card.followsMe ? (
-              <><UserPlus size={14} /> ACCEPT FRIEND</>
+              <>
+                <UserPlus size={14} /> ACCEPT FRIEND
+              </>
             ) : card.following ? (
-              <><UserCheck size={14} /> REQUEST SENT</>
+              <>
+                <UserCheck size={14} /> REQUEST SENT
+              </>
             ) : (
               <>
                 <UserPlus size={14} /> ADD FRIEND
               </>
             )}
           </button>
+          {friends && (
+            <Link
+              to="/challenges"
+              className="btn-grit mt-2 flex min-h-11 w-full items-center justify-center gap-2 text-[10px]"
+            >
+              <Swords size={14} /> Challenge this friend
+            </Link>
+          )}
           <div className="flex gap-2 mt-2">
             <button
               onClick={report}
@@ -360,12 +433,6 @@ function AthletePage() {
           />
         )}
       </section>
-
-      {card.bio && (
-        <section className="px-5">
-          <div className="bg-grit-card border border-grit p-4 text-sm text-grit">{card.bio}</div>
-        </section>
-      )}
 
       <div className="px-5 mt-6">
         <Link to="/friends" className="block text-center label-cap text-grit-dim">
@@ -467,12 +534,19 @@ function MuscleHeadToHead({
             const myScore = mineByMuscle.get(muscle)?.score ?? 0;
             const theirScore = theirsByMuscle.get(muscle)?.score ?? 0;
             return (
-              <div key={muscle} className="grid grid-cols-[42px_1fr_42px] items-center gap-2 py-1.5">
-                <span className={myScore > theirScore ? "font-black text-emerald-400" : "text-grit-dim"}>
+              <div
+                key={muscle}
+                className="grid grid-cols-[42px_1fr_42px] items-center gap-2 py-1.5"
+              >
+                <span
+                  className={myScore > theirScore ? "font-black text-emerald-400" : "text-grit-dim"}
+                >
                   {myScore || "—"}
                 </span>
                 <span className="label-cap text-center text-[8px] text-grit-dim">{muscle}</span>
-                <span className={`text-right ${theirScore > myScore ? "font-black text-accent-red" : "text-grit-dim"}`}>
+                <span
+                  className={`text-right ${theirScore > myScore ? "font-black text-accent-red" : "text-grit-dim"}`}
+                >
                   {theirScore || "—"}
                 </span>
               </div>

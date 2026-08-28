@@ -137,35 +137,12 @@
         text-align: center;
       }
 
-      .brand-row {
-        display: inline-flex;
-        align-items: center;
-        gap: 12px;
-      }
-
-      .brand {
-        margin: 0;
-        color: #fff;
-        font-family: Oswald, Impact, "Arial Black", sans-serif;
-        font-size: clamp(48px, 13vw, 64px);
-        font-style: italic;
-        font-weight: 700;
-        letter-spacing: -0.045em;
-        line-height: 0.92;
-        text-shadow: 0 0 36px rgba(230, 50, 34, 0.34);
-      }
-
-      .brand span {
-        color: var(--red);
-      }
-
-      .tagline {
-        margin: 12px 0 0;
-        color: #a7a6b0;
-        font-size: 14px;
-        font-weight: 800;
-        letter-spacing: 0.42em;
-        text-transform: uppercase;
+      .brand-image {
+        display: block;
+        width: min(86vw, 340px);
+        height: auto;
+        margin: 0 auto;
+        filter: drop-shadow(0 0 28px rgba(230, 50, 34, 0.2));
       }
 
       .auth-hype {
@@ -685,10 +662,13 @@
       <button class="close" id="close" type="button" aria-label="Close"></button>
       <main>
         <div class="brand-wrap">
-          <div class="brand-row">
-            <h1 class="brand">DEAD<span>SET</span></h1>
-          </div>
-          <p class="tagline">Forge Your Body</p>
+          <img
+            class="brand-image"
+            src="/brand/deadset-lockup.png"
+            width="810"
+            height="360"
+            alt="DEADSET — Forge Your Body"
+          />
         </div>
 
         <section class="auth-hype" aria-label="DEADSET intro">

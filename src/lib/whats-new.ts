@@ -2,7 +2,7 @@
 // ship. The card hides once dismissed at the current version, so stale
 // announcements never linger.
 
-export const WHATS_NEW_VERSION = 202608285;
+export const WHATS_NEW_VERSION = 202608286;
 export const WHATS_NEW_SEEN_KEY = "deadset_whats_new_seen";
 
 export interface WhatsNewEntry {
@@ -13,6 +13,11 @@ export interface WhatsNewEntry {
 }
 
 export const WHATS_NEW: WhatsNewEntry[] = [
+  {
+    title: "A real friends hub and fuller profiles",
+    body: "Crew, requests and athlete discovery now have dedicated views, with richer public cards for bios, city, training history, streaks, PRs and Strength Map comparisons.",
+    where: "Friends · Profile",
+  },
   {
     title: "Your setup now always ends with a plan",
     body: "Both guided and build-your-own setup now review a complete editable week before membership, while the Pro reveal brings your Strength Map and programme to life.",

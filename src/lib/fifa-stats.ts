@@ -278,6 +278,11 @@ export interface PublicStats {
   weekly: WeeklyCompetitionStats;
   /** Big Three total divided by body weight. */
   strengthToWeight: number;
+  /** Public training history summary used by athlete profiles and friend rows. */
+  totalWorkouts: number;
+  totalWorkingSets: number;
+  lifetimeVolumeKg: number;
+  totalPRs: number;
   /** Public, bodyweight-adjusted broad-muscle scores for friend comparisons. */
   strengthMap?: {
     score: number;
@@ -328,6 +333,19 @@ export function buildPublicStats(state: AppState): PublicStats {
   const topPRs = buildHeadlinePRs(state);
   const total = topPRs.reduce((sum, lift) => sum + lift.value, 0);
   const bodyWeight = state.profile?.weightKg ?? 0;
+  const totalWorkingSets = (state.sessions ?? []).reduce(
+    (total, session) =>
+      total +
+      session.exercises.reduce(
+        (exerciseTotal, exercise) =>
+          exerciseTotal + exercise.sets.filter((set) => set.kind !== "warmup").length,
+        0,
+      ),
+    0,
+  );
+  const lifetimeVolumeKg = Math.round(
+    (state.sessions ?? []).reduce((total, session) => total + (session.totalVolume || 0), 0),
+  );
   const strength = strengthReport(state, allExercises(state.savedExercises));
   return {
     overall: stats.overall,
@@ -341,6 +359,10 @@ export function buildPublicStats(state: AppState): PublicStats {
     topPRs,
     weekly: getWeeklyCompetitionStats(state),
     strengthToWeight: bodyWeight > 0 ? Math.round((total / bodyWeight) * 100) / 100 : 0,
+    totalWorkouts: state.sessions?.length ?? 0,
+    totalWorkingSets,
+    lifetimeVolumeKg,
+    totalPRs: (state.sessions ?? []).reduce((sum, session) => sum + (session.prCount || 0), 0),
     strengthMap: {
       score: strength.score,
       tier: strength.tier,

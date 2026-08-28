@@ -1360,7 +1360,9 @@ const handlers: Record<string, Handler> = {
     );
     const { data: profiles, error: profilesError } = await supabase
       .from("public_profiles")
-      .select("id, username, display_name, avatar_url, grit_points")
+      .select(
+        "id, username, display_name, avatar_url, bio, city, country, grit_points, public_stats",
+      )
       .in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
     if (profilesError) throw new Error(profilesError.message);
     const profileById = new Map((profiles ?? []).map((profile) => [profile.id as string, profile]));
@@ -1380,6 +1382,10 @@ const handlers: Record<string, Handler> = {
         level: gritLevel(profile.grit_points ?? 0),
         status,
         since,
+        bio: profile.bio,
+        city: profile.city,
+        country: profile.country,
+        public_stats: profile.public_stats,
       };
     };
 
@@ -1417,17 +1423,9 @@ const handlers: Record<string, Handler> = {
     if (hidden.has(d.userId)) throw new Error("You can't add this athlete");
 
     const deleteOutgoing = () =>
-      supabaseAdmin
-        .from("follows")
-        .delete()
-        .eq("follower_id", userId)
-        .eq("following_id", d.userId);
+      supabaseAdmin.from("follows").delete().eq("follower_id", userId).eq("following_id", d.userId);
     const deleteIncoming = () =>
-      supabaseAdmin
-        .from("follows")
-        .delete()
-        .eq("follower_id", d.userId)
-        .eq("following_id", userId);
+      supabaseAdmin.from("follows").delete().eq("follower_id", d.userId).eq("following_id", userId);
 
     if (d.action === "send") {
       const { error } = await supabaseAdmin
@@ -1709,7 +1707,9 @@ const handlers: Record<string, Handler> = {
     );
     const { data: rows, error } = await supabase
       .from("public_profiles")
-      .select("id, username, display_name, avatar_url, level")
+      .select(
+        "id, username, display_name, avatar_url, bio, city, country, level, grit_points, public_stats",
+      )
       .or(`username.ilike.%${q}%,display_name.ilike.%${q}%`)
       .neq("id", userId)
       .limit(20);
@@ -1739,7 +1739,9 @@ const handlers: Record<string, Handler> = {
     const followingSet = new Set((follows ?? []).map((f) => f.following_id));
     const { data: rows } = await supabase
       .from("public_profiles")
-      .select("id, username, display_name, avatar_url, grit_points")
+      .select(
+        "id, username, display_name, avatar_url, bio, city, country, grit_points, public_stats",
+      )
       .neq("id", userId)
       .order("grit_points", { ascending: false })
       .limit(30);
@@ -1756,6 +1758,10 @@ const handlers: Record<string, Handler> = {
         avatar_url: r.avatar_url,
         level: gritLevel(r.grit_points ?? 0),
         grit_points: r.grit_points ?? 0,
+        bio: r.bio,
+        city: r.city,
+        country: r.country,
+        public_stats: r.public_stats,
         following: false,
       }));
   },
@@ -1780,7 +1786,9 @@ const handlers: Record<string, Handler> = {
     const d = z.object({ userId: z.string().uuid() }).parse(data);
     const { data: row, error } = await supabase
       .from("public_profiles")
-      .select("id, username, display_name, avatar_url, bio, grit_points, public_stats")
+      .select(
+        "id, username, display_name, avatar_url, bio, city, country, grit_points, public_stats",
+      )
       .eq("id", d.userId)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -1919,17 +1927,20 @@ const handlers: Record<string, Handler> = {
     const { supabase, userId } = await requireAuth(req);
     const d = z
       .object({
-        city: z.string().trim().min(1).max(80),
+        city: z.string().trim().max(80),
         region: z.string().trim().max(80).optional().nullable(),
-        country: z.string().trim().min(1).max(80),
+        country: z.string().trim().max(80),
+      })
+      .refine((location) => Boolean(location.city) === Boolean(location.country), {
+        message: "City and country must be set together",
       })
       .parse(data);
     const { error } = await supabase
       .from("profiles")
       .update({
-        city: d.city,
-        region: d.region ?? null,
-        country: d.country,
+        city: d.city || null,
+        region: d.city ? (d.region ?? null) : null,
+        country: d.country || null,
         location_updated_at: new Date().toISOString(),
       })
       .eq("id", userId);
@@ -1969,7 +1980,9 @@ const handlers: Record<string, Handler> = {
     );
     const { data: same } = await supabase
       .from("public_profiles")
-      .select("id, username, display_name, avatar_url, level, grit_points, city, country")
+      .select(
+        "id, username, display_name, avatar_url, bio, level, grit_points, public_stats, city, country",
+      )
       .ilike("city", me.city)
       .ilike("country", me.country)
       .neq("id", userId)

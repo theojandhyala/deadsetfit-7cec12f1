@@ -37,6 +37,7 @@ import { FeedbackPulse } from "../components/FeedbackPulse";
 import { isNativeIos } from "../lib/platform";
 import { WhopConsentBanner } from "../components/WhopConsent";
 import { finishAppBoot } from "../lib/app-boot";
+import { GritLogo } from "../components/GritLogo";
 
 function NotFoundComponent() {
   return (
@@ -138,7 +139,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "@type": "Organization",
           name: "DEADSET",
           url: "https://deadsetfit.org",
-          logo: "https://deadsetfit.org/favicon.ico",
+          logo: "https://deadsetfit.org/icon-512.png",
           description:
             "DEADSET is a gym app for planning workouts, logging sets, tracking nutrition, and understanding progress.",
         }),
@@ -146,8 +147,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", href: "/favicon.ico", sizes: "any" },
-      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+      { rel: "icon", type: "image/png", sizes: "48x48", href: "/favicon-48.png" },
+      { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32.png" },
+      { rel: "icon", type: "image/png", sizes: "16x16", href: "/favicon-16.png" },
       { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32.png" },
       { rel: "icon", type: "image/png", sizes: "16x16", href: "/favicon-16.png" },
       { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
@@ -260,9 +262,7 @@ function WebMarketingRedirect() {
   return (
     <main className="grid min-h-[100dvh] place-items-center bg-[#080808] px-6 text-center text-white">
       <div>
-        <p className="display text-4xl font-bold uppercase">
-          DEAD<span className="text-accent-red">SET</span>
-        </p>
+        <GritLogo className="mx-auto w-56" />
         <p className="mt-3 text-sm text-white/50">Opening the DEADSET website…</p>
         <a href="/" className="mt-6 inline-flex min-h-11 items-center font-bold text-white">
           Continue

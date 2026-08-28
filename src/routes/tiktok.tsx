@@ -11,6 +11,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { trackWhopEvent } from "@/lib/whop";
+import { GritLogo } from "@/components/GritLogo";
 
 const appStoreUrl = import.meta.env.VITE_APP_STORE_URL?.trim() || "https://apps.apple.com/";
 
@@ -230,10 +231,7 @@ function TikTokCreative() {
   return (
     <main className="min-h-[100dvh] bg-[#070708] text-[#f5f5f0]">
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-white/10 bg-[#070708]/95 px-5 py-3 backdrop-blur">
-        <span className="display text-2xl font-bold uppercase leading-none">
-          <span>DEAD</span>
-          <span className="text-[#e63222]">SET</span>
-        </span>
+        <GritLogo className="w-32" />
         <StoreButton className="min-h-10 rounded-xl px-4 text-[11px]" />
       </header>
 

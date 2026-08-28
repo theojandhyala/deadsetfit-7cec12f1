@@ -1162,6 +1162,7 @@ function Invite() {
 // ============ FRIENDS ============
 type SearchHit = Awaited<ReturnType<typeof searchAthletes>>[number];
 type Suggested = Awaited<ReturnType<typeof getSuggestedAthletes>>[number];
+type FriendView = "CREW" | "REQUESTS" | "DISCOVER";
 
 const COUNTRY_ALIASES: Record<string, string> = {
   "united kingdom of great britain and northern ireland": "United Kingdom",
@@ -1212,6 +1213,7 @@ function Friends() {
   const [locBusy, setLocBusy] = useState(false);
   const [cityInput, setCityInput] = useState("");
   const [countryInput, setCountryInput] = useState("");
+  const [view, setView] = useState<FriendView>("CREW");
   // These DOM-owned fields are also set programmatically (initial load, GPS,
   // normalize-on-save), so their .value must be synced imperatively — a
   // defaultValue alone only applies at mount.
@@ -1315,7 +1317,7 @@ function Friends() {
       setConnections(await _connections());
       setSuggested((current) =>
         result.status === "OUTGOING" || result.status === "FRIEND"
-          ? current?.filter((person) => person.id !== id) ?? null
+          ? (current?.filter((person) => person.id !== id) ?? null)
           : current,
       );
     } catch (e) {
@@ -1442,7 +1444,49 @@ function Friends() {
         </div>
       </div>
 
-      {connections && connections.incoming.length > 0 && (
+      <div
+        className="mb-4 grid grid-cols-3 gap-1 rounded-2xl border border-white/10 bg-black/30 p-1"
+        role="tablist"
+        aria-label="Friend sections"
+      >
+        {(
+          [
+            ["CREW", "Crew", connections?.friends.length ?? 0, Users],
+            ["REQUESTS", "Requests", connections?.incoming.length ?? 0, UserPlus],
+            ["DISCOVER", "Discover", null, Search],
+          ] as const
+        ).map(([id, label, count, Icon]) => {
+          const active = view === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => {
+                hapticSelection();
+                setView(id);
+              }}
+              className={`relative flex min-h-12 items-center justify-center gap-1.5 rounded-xl px-2 text-[9px] font-black uppercase tracking-[0.09em] transition-colors ${
+                active ? "bg-accent-red text-white shadow-lg" : "text-grit-dim"
+              }`}
+            >
+              <Icon size={13} /> {label}
+              {count ? (
+                <span
+                  className={`grid h-5 min-w-5 place-items-center rounded-full px-1 text-[8px] ${
+                    active ? "bg-white text-accent-red" : "bg-accent-red text-white"
+                  }`}
+                >
+                  {count}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+
+      {view === "REQUESTS" && connections && connections.incoming.length > 0 && (
         <div className="mb-4">
           <p className="label-cap mb-2 flex items-center gap-1.5 text-accent-red">
             <UserPlus size={11} /> Friend requests
@@ -1460,7 +1504,44 @@ function Friends() {
         </div>
       )}
 
-      {connections && connections.friends.length > 0 && (
+      {view === "REQUESTS" && connections && connections.outgoing.length > 0 && (
+        <div className="mb-4">
+          <p className="label-cap mb-2 flex items-center gap-1.5 text-grit-dim">
+            <Send size={11} /> Sent requests
+          </p>
+          {connections.outgoing.map((person) => (
+            <AthleteRow
+              key={person.id}
+              a={person}
+              status="OUTGOING"
+              busy={busy === person.id}
+              onToggle={() => changeConnection(person.id, "OUTGOING")}
+            />
+          ))}
+        </div>
+      )}
+
+      {view === "REQUESTS" &&
+        connections &&
+        connections.incoming.length === 0 &&
+        connections.outgoing.length === 0 && (
+          <div className="mb-4 rounded-2xl border border-white/10 bg-grit-card p-6 text-center">
+            <UserCheck size={24} className="mx-auto text-accent-red" />
+            <p className="display mt-3 text-xl font-black uppercase text-grit">All caught up</p>
+            <p className="mt-1 text-xs leading-relaxed text-grit-dim">
+              Incoming requests and requests you have sent will live here.
+            </p>
+            <button
+              type="button"
+              onClick={() => setView("DISCOVER")}
+              className="btn-ghost mt-4 min-h-11 w-full text-[10px]"
+            >
+              Find athletes
+            </button>
+          </div>
+        )}
+
+      {view === "CREW" && connections && connections.friends.length > 0 && (
         <div className="mb-4">
           <div className="mb-2 flex items-center justify-between gap-3">
             <p className="label-cap flex items-center gap-1.5 text-grit">
@@ -1480,139 +1561,166 @@ function Friends() {
         </div>
       )}
 
-      {/* Location card */}
-      <div className="bg-grit-card border border-grit rounded-2xl p-4 mb-4">
-        <p className="label-cap mb-2 flex items-center gap-2">
-          <MapPin size={12} className="text-accent-red" /> Your city
-        </p>
-        {myLoc?.city ? (
-          <p className="text-sm text-grit mb-3 break-words">
-            <span className="font-bold">{myLoc.city}</span>
-            {myLoc.country ? `, ${myLoc.country}` : ""}
+      {view === "CREW" && connections?.friends.length === 0 && (
+        <div className="mb-4 rounded-2xl border border-white/10 bg-grit-card p-6 text-center">
+          <Users size={25} className="mx-auto text-accent-red" />
+          <p className="display mt-3 text-xl font-black uppercase text-grit">
+            Build your first crew
           </p>
-        ) : (
-          <p className="text-xs text-[#8a8a8a] mb-3">
-            Add your city to find lifters near you. City only — never exact location.
+          <p className="mt-1 text-xs leading-relaxed text-grit-dim">
+            Add a gym mate to unlock side-by-side Strength Maps, PR comparisons and challenges.
           </p>
-        )}
-        <div className="grid grid-cols-1 sm:grid-cols-[1fr_9rem] gap-2 mb-2">
-          <input
-            ref={cityRef}
-            defaultValue={cityInput}
-            onChange={(e) => setCityInput(e.target.value)}
-            placeholder="City"
-            className="input-grit min-w-0"
-            maxLength={80}
-          />
-          <input
-            ref={countryRef}
-            defaultValue={countryInput}
-            onChange={(e) => setCountryInput(e.target.value)}
-            placeholder="Country"
-            className="input-grit min-w-0"
-            maxLength={80}
-          />
-        </div>
-        <div className="grid grid-cols-[1fr_auto] gap-2">
-          <button onClick={saveCity} disabled={locBusy} className="btn-grit flex-1 py-2 text-xs">
-            {locBusy ? <Loader2 size={12} className="animate-spin" /> : "Save"}
-          </button>
           <button
-            onClick={useGPS}
-            disabled={locBusy}
-            className="btn-ghost px-3 py-2 text-xs flex items-center gap-1.5"
+            type="button"
+            onClick={() => setView("DISCOVER")}
+            className="btn-grit mt-4 min-h-11 w-full text-[10px]"
           >
-            <MapPin size={12} /> Use GPS
+            Discover athletes
           </button>
         </div>
-      </div>
-
-      {/* Nearby */}
-      {nearby?.myCity && (
-        <>
-          <p className="label-cap text-[#8a8a8a] mb-2 flex items-center gap-1">
-            <MapPin size={10} /> In {nearby.myCity}
-          </p>
-          {nearby.athletes.length === 0 ? (
-            <p className="bg-grit-card border border-grit p-4 text-xs text-[#8a8a8a] text-center mb-4">
-              No one else here yet — invite a gym mate.
-            </p>
-          ) : (
-            <div className="mb-4">
-              {nearby.athletes.map((a) => (
-                <AthleteRow
-                  key={a.id}
-                  a={a}
-                  status={statusById.get(a.id) ?? (a.following ? "OUTGOING" : "NONE")}
-                  busy={busy === a.id}
-                  onToggle={() =>
-                    changeConnection(
-                      a.id,
-                      statusById.get(a.id) ?? (a.following ? "OUTGOING" : "NONE"),
-                    )
-                  }
-                />
-              ))}
-            </div>
-          )}
-        </>
       )}
 
-      {/* search */}
-      <div className="bg-grit-card border border-grit p-3 mb-4 flex items-center gap-2">
-        <Search size={16} className="text-[#8a8a8a]" />
-        <input
-          defaultValue={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search by name or @username"
-          className="input-grit flex-1 border-0 bg-transparent"
-          maxLength={40}
-        />
-      </div>
-
-      {results && results.length === 0 && (
-        <p className="text-center text-sm text-[#8a8a8a] py-6">No athletes match "{q}".</p>
-      )}
-
-      {results &&
-        results.map((r) => (
-          <AthleteRow
-            key={r.id}
-            a={r}
-            status={statusById.get(r.id) ?? (r.following ? "OUTGOING" : "NONE")}
-            busy={busy === r.id}
-            onToggle={() =>
-              changeConnection(
-                r.id,
-                statusById.get(r.id) ?? (r.following ? "OUTGOING" : "NONE"),
-              )
-            }
-          />
-        ))}
-
-      {!results && (
+      {view === "DISCOVER" && (
         <>
-          <p className="label-cap text-[#8a8a8a] mb-2 mt-2">Suggested rivals</p>
-          {!suggested && (
-            <div className="flex justify-center py-6">
-              <Loader2 className="animate-spin text-accent-red" />
-            </div>
-          )}
-          {suggested && suggested.length === 0 && (
-            <p className="text-sm text-[#8a8a8a] text-center py-4">
-              No suggestions yet — invite mates to get started.
+          {/* Location card */}
+          <div className="bg-grit-card border border-grit rounded-2xl p-4 mb-4">
+            <p className="label-cap mb-2 flex items-center gap-2">
+              <MapPin size={12} className="text-accent-red" /> Your city
             </p>
+            {myLoc?.city ? (
+              <p className="text-sm text-grit mb-3 break-words">
+                <span className="font-bold">{myLoc.city}</span>
+                {myLoc.country ? `, ${myLoc.country}` : ""}
+              </p>
+            ) : (
+              <p className="text-xs text-[#8a8a8a] mb-3">
+                Add your city to find lifters near you. City only — never exact location.
+              </p>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_9rem] gap-2 mb-2">
+              <input
+                ref={cityRef}
+                defaultValue={cityInput}
+                onChange={(e) => setCityInput(e.target.value)}
+                placeholder="City"
+                className="input-grit min-w-0"
+                maxLength={80}
+              />
+              <input
+                ref={countryRef}
+                defaultValue={countryInput}
+                onChange={(e) => setCountryInput(e.target.value)}
+                placeholder="Country"
+                className="input-grit min-w-0"
+                maxLength={80}
+              />
+            </div>
+            <div className="grid grid-cols-[1fr_auto] gap-2">
+              <button
+                onClick={saveCity}
+                disabled={locBusy}
+                className="btn-grit flex-1 py-2 text-xs"
+              >
+                {locBusy ? <Loader2 size={12} className="animate-spin" /> : "Save"}
+              </button>
+              <button
+                onClick={useGPS}
+                disabled={locBusy}
+                className="btn-ghost px-3 py-2 text-xs flex items-center gap-1.5"
+              >
+                <MapPin size={12} /> Use GPS
+              </button>
+            </div>
+          </div>
+
+          {/* Nearby */}
+          {nearby?.myCity && (
+            <>
+              <p className="label-cap text-[#8a8a8a] mb-2 flex items-center gap-1">
+                <MapPin size={10} /> In {nearby.myCity}
+              </p>
+              {nearby.athletes.length === 0 ? (
+                <p className="bg-grit-card border border-grit p-4 text-xs text-[#8a8a8a] text-center mb-4">
+                  No one else here yet — invite a gym mate.
+                </p>
+              ) : (
+                <div className="mb-4">
+                  {nearby.athletes.map((a) => (
+                    <AthleteRow
+                      key={a.id}
+                      a={a}
+                      status={statusById.get(a.id) ?? (a.following ? "OUTGOING" : "NONE")}
+                      busy={busy === a.id}
+                      onToggle={() =>
+                        changeConnection(
+                          a.id,
+                          statusById.get(a.id) ?? (a.following ? "OUTGOING" : "NONE"),
+                        )
+                      }
+                    />
+                  ))}
+                </div>
+              )}
+            </>
           )}
-          {suggested &&
-            suggested.map((r) => (
+
+          {/* search */}
+          <div className="bg-grit-card border border-grit p-3 mb-4 flex items-center gap-2">
+            <Search size={16} className="text-[#8a8a8a]" />
+            <input
+              defaultValue={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search by name or @username"
+              className="input-grit flex-1 border-0 bg-transparent"
+              maxLength={40}
+            />
+          </div>
+
+          {results && results.length === 0 && (
+            <p className="text-center text-sm text-[#8a8a8a] py-6">No athletes match "{q}".</p>
+          )}
+
+          {results &&
+            results.map((r) => (
               <AthleteRow
                 key={r.id}
-                a={{ ...r, following: false }}
-                status={statusById.get(r.id) ?? "NONE"}
+                a={r}
+                status={statusById.get(r.id) ?? (r.following ? "OUTGOING" : "NONE")}
                 busy={busy === r.id}
-                onToggle={() => changeConnection(r.id, statusById.get(r.id) ?? "NONE")}
+                onToggle={() =>
+                  changeConnection(
+                    r.id,
+                    statusById.get(r.id) ?? (r.following ? "OUTGOING" : "NONE"),
+                  )
+                }
               />
             ))}
+
+          {!results && (
+            <>
+              <p className="label-cap text-[#8a8a8a] mb-2 mt-2">Suggested rivals</p>
+              {!suggested && (
+                <div className="flex justify-center py-6">
+                  <Loader2 className="animate-spin text-accent-red" />
+                </div>
+              )}
+              {suggested && suggested.length === 0 && (
+                <p className="text-sm text-[#8a8a8a] text-center py-4">
+                  No suggestions yet — invite mates to get started.
+                </p>
+              )}
+              {suggested &&
+                suggested.map((r) => (
+                  <AthleteRow
+                    key={r.id}
+                    a={{ ...r, following: false }}
+                    status={statusById.get(r.id) ?? "NONE"}
+                    busy={busy === r.id}
+                    onToggle={() => changeConnection(r.id, statusById.get(r.id) ?? "NONE")}
+                  />
+                ))}
+            </>
+          )}
         </>
       )}
     </div>
@@ -1634,20 +1742,27 @@ function AthleteRow({
     level: string | null;
     following?: boolean;
     grit_points?: number | null;
+    bio?: string | null;
+    city?: string | null;
+    country?: string | null;
+    public_stats?: Record<string, unknown> | null;
   };
   status: FriendStatus;
   busy: boolean;
   onToggle: () => void;
   onDecline?: () => void;
 }) {
+  const overall = Number(a.public_stats?.overall) || 0;
+  const streak = Number(a.public_stats?.streak) || 0;
+  const location = [a.city, a.country].filter(Boolean).join(", ");
   return (
-    <div className="bg-grit-card border border-grit p-3 mb-2 flex items-center gap-3">
+    <div className="mb-2 flex items-center gap-3 rounded-2xl border border-grit bg-grit-card p-3 shadow-[0_14px_32px_rgba(0,0,0,0.18)]">
       <Link
         to="/athlete/$id"
         params={{ id: a.id }}
         className="flex items-center gap-3 flex-1 min-w-0"
       >
-        <div className="w-10 h-10 bg-[#1a1a1a] border border-grit flex items-center justify-center display font-extrabold text-grit overflow-hidden">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-grit bg-[#1a1a1a] display font-extrabold text-grit">
           {a.avatar_url ? (
             <img src={a.avatar_url} alt="" className="w-full h-full object-cover" />
           ) : (
@@ -1661,8 +1776,20 @@ function AthleteRow({
           <p className="text-[10px] text-[#8a8a8a] label-cap truncate">
             {a.username ? `@${a.username} · ` : ""}
             {a.level}
-            {a.grit_points ? ` · ${a.grit_points} DS` : ""}
           </p>
+          <div className="mt-1 flex items-center gap-2 overflow-hidden text-[9px] font-bold text-grit-dim">
+            {overall > 0 && <span className="text-accent-red">{overall} OVR</span>}
+            {streak > 0 && (
+              <span className="flex items-center gap-0.5">
+                <Flame size={9} className="text-accent-red" /> {streak}d
+              </span>
+            )}
+            {location && (
+              <span className="flex min-w-0 items-center gap-0.5 truncate">
+                <MapPin size={9} /> {location}
+              </span>
+            )}
+          </div>
         </div>
       </Link>
       <div className="flex shrink-0 items-center gap-1">
@@ -1693,13 +1820,21 @@ function AthleteRow({
           {busy ? (
             <Loader2 size={12} className="animate-spin" />
           ) : status === "FRIEND" ? (
-            <><UserCheck size={12} /> FRIENDS</>
+            <>
+              <UserCheck size={12} /> FRIENDS
+            </>
           ) : status === "INCOMING" ? (
-            <><UserPlus size={12} /> ACCEPT</>
+            <>
+              <UserPlus size={12} /> ACCEPT
+            </>
           ) : status === "OUTGOING" ? (
-            <><Check size={12} /> REQUESTED</>
+            <>
+              <Check size={12} /> REQUESTED
+            </>
           ) : (
-            <><UserPlus size={12} /> ADD</>
+            <>
+              <UserPlus size={12} /> ADD
+            </>
           )}
         </button>
       </div>

@@ -34,13 +34,13 @@ const navigation = [
 
 function Logo({ large = false }: { large?: boolean }) {
   return (
-    <span
-      className={`display whitespace-nowrap font-bold tracking-[0] ${large ? "text-4xl sm:text-5xl" : "text-xl"}`}
-      aria-label="DEADSET"
-    >
-      <span className="text-[#f4f3ef]">DEAD</span>
-      <span className="text-[#f13a2c]">SET</span>
-    </span>
+    <img
+      src="/brand/deadset-lockup.png"
+      alt="DEADSET — Forge Your Body"
+      width={810}
+      height={360}
+      className={`block h-auto object-contain ${large ? "w-56 sm:w-72" : "w-32"}`}
+    />
   );
 }
 

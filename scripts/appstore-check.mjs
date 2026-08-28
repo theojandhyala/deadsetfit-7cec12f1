@@ -184,9 +184,9 @@ check(
 check(
   "first update version",
   (xcodeProject.match(/MARKETING_VERSION = 1\.2;/g)?.length ?? 0) >= 6 &&
-    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 137;/g)?.length ?? 0) >= 6 &&
-    whatsNew.includes("WHATS_NEW_VERSION = 202608285"),
-  "The app, activity extension and watch targets are versioned as 1.2 (137), with a matching in-app update summary.",
+    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 138;/g)?.length ?? 0) >= 6 &&
+    whatsNew.includes("WHATS_NEW_VERSION = 202608286"),
+  "The app, activity extension and watch targets are versioned as 1.2 (138), with a matching in-app update summary.",
 );
 check(
   "full check script",

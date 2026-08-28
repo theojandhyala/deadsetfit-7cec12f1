@@ -89,14 +89,17 @@ export interface FriendConnection {
   level: string;
   status: Exclude<FriendStatus, "NONE">;
   since: string | null;
+  bio?: string | null;
+  city?: string | null;
+  country?: string | null;
+  public_stats?: Record<string, unknown> | null;
 }
 export interface FriendConnections {
   friends: FriendConnection[];
   incoming: FriendConnection[];
   outgoing: FriendConnection[];
 }
-export const getFriendConnections = () =>
-  callRpc<FriendConnections>("getFriendConnections");
+export const getFriendConnections = () => callRpc<FriendConnections>("getFriendConnections");
 export const updateFriendship = ({ data }: { data: { userId: string; action: FriendAction } }) =>
   callRpc<{ ok: boolean; status: FriendStatus }>("updateFriendship", data);
 

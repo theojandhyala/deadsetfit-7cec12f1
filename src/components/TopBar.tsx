@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAppState } from "@/lib/storage";
 import { calculateGritScore, gritBadge, badgeColor } from "@/lib/calc";
 import { CircleHelp } from "lucide-react";
+import { GritLogo } from "@/components/GritLogo";
 
 const TIERS: { name: string; min: number }[] = [
   { name: "RAW", min: 0 },
@@ -81,18 +82,7 @@ export function TopBar() {
       }}
     >
       {/* Logo */}
-      <div className="flex shrink-0 items-center gap-2">
-        <span className="h-7 w-[3px] bg-accent-red" />
-        <span
-          className="display block text-xl font-black leading-none"
-          // Italic overhang needs the trailing space, or the glyph visually
-          // touches whatever sits next to it.
-          style={{ fontStyle: "italic", letterSpacing: "0.04em", paddingRight: "2px" }}
-        >
-          <span style={{ color: "#ffffff" }}>DEAD</span>
-          <span style={{ color: "#e63222" }}>SET</span>
-        </span>
-      </div>
+      <GritLogo className="w-[104px] shrink-0" />
 
       {/* Right: score + avatar */}
       <div className="flex shrink-0 items-center gap-1.5">

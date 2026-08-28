@@ -24,9 +24,13 @@ function AuthRedirect() {
   return (
     <div className="min-h-screen bg-[#080507] text-grit grid place-items-center px-6 text-center">
       <div>
-        <h1 className="display text-5xl font-extrabold italic tracking-[-0.045em] text-white">
-          DEAD<span className="text-accent-red">SET</span>
-        </h1>
+        <img
+          src="/brand/deadset-lockup.png"
+          alt="DEADSET — Forge Your Body"
+          width={810}
+          height={360}
+          className="mx-auto h-auto w-64"
+        />
         <p className="label-cap text-grit-dim mt-4">Opening account setup…</p>
         <a href={target} className="btn-grit inline-block mt-6 px-6 py-3">
           Continue

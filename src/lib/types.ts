@@ -25,6 +25,11 @@ export interface Profile {
   username?: string;
   /** Real/display name shown on the athlete card (distinct from @username) */
   displayName?: string;
+  /** Public profile introduction, deliberately separate from private training notes. */
+  bio?: string;
+  /** City-level social discovery only; exact coordinates are never stored. */
+  city?: string;
+  country?: string;
   avatarDataUrl?: string;
   startingWeightKg?: number;
   /** Up to two muscle groups the lifter wants to prioritise */

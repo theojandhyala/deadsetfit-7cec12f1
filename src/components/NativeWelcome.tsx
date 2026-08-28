@@ -56,7 +56,7 @@ export function NativeWelcome() {
 
       <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col px-5 pb-[max(22px,env(safe-area-inset-bottom))] pt-[max(18px,env(safe-area-inset-top))]">
         <header className="flex min-h-11 items-center justify-between">
-          <GritLogo className="text-[26px]" />
+          <GritLogo className="w-28" />
           <a
             href={nativeAuthHref("signin")}
             onClick={hapticSelection}
