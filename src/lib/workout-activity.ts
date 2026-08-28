@@ -55,7 +55,7 @@ const Native = registerPlugin<WorkoutActivityPlugin>("WorkoutActivity");
 export function projectActivity(
   session: WorkoutSession,
   activeIndex: number,
-  unit: WeightUnit = "kg",
+  unit: WeightUnit,
 ): WorkoutActivityState {
   let setsDone = 0;
   let setsPlanned = 0;
@@ -105,7 +105,7 @@ export async function isWorkoutActivitySupported(): Promise<boolean> {
 export async function syncWorkoutActivity(
   session: WorkoutSession,
   activeIndex: number,
-  unit: WeightUnit = "kg",
+  unit: WeightUnit,
 ): Promise<void> {
   if (!isNativeIos()) return;
   try {

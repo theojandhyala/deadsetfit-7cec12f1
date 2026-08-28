@@ -40,6 +40,7 @@ describe("projectActivity", () => {
         { ...bench, exerciseId: "ohp", name: "Overhead Press", targetSets: 3 },
       ]),
       0,
+      "kg",
     );
     expect(state.setsDone).toBe(2);
     expect(state.setsPlanned).toBe(6);
@@ -58,6 +59,7 @@ describe("projectActivity", () => {
         },
       ]),
       0,
+      "kg",
     );
     expect(state.setsDone).toBe(1);
   });
@@ -66,6 +68,7 @@ describe("projectActivity", () => {
     const state = projectActivity(
       session([{ ...bench, sets: [{ weight: 60, reps: 8, kind: "failure" }] }]),
       0,
+      "kg",
     );
     expect(state.setsDone).toBe(1);
   });
@@ -84,6 +87,7 @@ describe("projectActivity", () => {
         },
       ]),
       0,
+      "kg",
     );
     expect(state.setsDone).toBe(3);
     expect(state.setsPlanned).toBe(3);
@@ -101,6 +105,7 @@ describe("projectActivity", () => {
         },
       ]),
       0,
+      "kg",
     );
     expect(state.volumeKg).toBe(600);
   });
@@ -109,30 +114,32 @@ describe("projectActivity", () => {
     const state = projectActivity(
       session([bench, { ...bench, exerciseId: "ohp", name: "Overhead Press" }]),
       1,
+      "kg",
     );
     expect(state.exerciseName).toBe("Overhead Press");
   });
 
   it("falls back to the first movement if the index is out of range", () => {
-    expect(projectActivity(session([bench]), 9).exerciseName).toBe("Bench Press");
+    expect(projectActivity(session([bench]), 9, "kg").exerciseName).toBe("Bench Press");
   });
 
   it("surfaces records", () => {
     const state = projectActivity(
       session([{ ...bench, sets: [{ weight: 100, reps: 5, isPR: true }] }]),
       0,
+      "kg",
     );
     expect(state.prCount).toBe(1);
   });
 
   it("sends the start time as epoch milliseconds", () => {
-    expect(projectActivity(session([bench]), 0).startedAtMs).toBe(
+    expect(projectActivity(session([bench]), 0, "kg").startedAtMs).toBe(
       Date.parse("2026-08-27T10:00:00.000Z"),
     );
   });
 
   it("does not send NaN when the start time is unparseable", () => {
     const broken = { ...session([bench]), startedAt: "nonsense" };
-    expect(Number.isFinite(projectActivity(broken, 0).startedAtMs)).toBe(true);
+    expect(Number.isFinite(projectActivity(broken, 0, "kg").startedAtMs)).toBe(true);
   });
 });

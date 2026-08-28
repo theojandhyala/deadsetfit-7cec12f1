@@ -1,4 +1,5 @@
 import { achievementById, type Achievement, type AchievementRarity } from "./achievements";
+import type { WeightUnit } from "./units";
 
 /** Rarest first — when several badges land at once, that is the one to show. */
 const RARITY_WEIGHT: Record<AchievementRarity, number> = {
@@ -24,11 +25,11 @@ export function newlyUnlocked(currentUnlocked: string[], seen: string[]): string
  * once (a PR that is also a plate milestone), and stacking modals for each one
  * would turn a reward into a chore.
  */
-export function headlineUnlock(ids: string[]): Achievement | null {
+export function headlineUnlock(ids: string[], unit: WeightUnit): Achievement | null {
   let best: Achievement | null = null;
   let bestWeight = -1;
   for (const id of ids) {
-    const a = achievementById(id);
+    const a = achievementById(id, unit);
     if (!a) continue;
     const weight = RARITY_WEIGHT[a.rarity];
     if (weight > bestWeight) {

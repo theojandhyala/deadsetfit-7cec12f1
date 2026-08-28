@@ -85,3 +85,41 @@ describe("weight units", () => {
     },
   );
 });
+
+/**
+ * No function may default its unit.
+ *
+ * The literal check above cannot see this class of bug: `formatSet(set, true)`
+ * contains no "kg" for it to find, yet it rendered kilograms to a pound
+ * athlete on the most-used screen in the app, directly beside completed sets
+ * showing pounds. Two live call sites had quietly taken the default.
+ *
+ * A unit is never a sensible default. Requiring the argument turns a silent
+ * wrong answer into a compile error, and this test keeps it that way.
+ */
+describe("weight units are never defaulted", () => {
+  const DEFAULTED_UNIT = /\b(?:unit|weightUnit)\s*(?::\s*WeightUnit)?\s*=\s*["'](?:kg|lb)["']/;
+
+  function libFiles(): string[] {
+    const dir = join(process.cwd(), "src/lib");
+    return (
+      readdirSync(dir, { withFileTypes: true })
+        .filter((entry) => entry.isFile() && entry.name.endsWith(".ts"))
+        .filter((entry) => !entry.name.endsWith(".test.ts"))
+        // units.ts owns the concept and may name a fallback in one place: the
+        // athlete's stored preference, when they have not chosen yet.
+        .filter((entry) => entry.name !== "units.ts")
+        .map((entry) => join(dir, entry.name))
+    );
+  }
+
+  it("no library function takes a unit with a default value", () => {
+    const offenders: { file: string; line: string }[] = [];
+    for (const file of libFiles()) {
+      for (const line of readFileSync(file, "utf8").split("\n")) {
+        if (DEFAULTED_UNIT.test(line)) offenders.push({ file, line: line.trim() });
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});

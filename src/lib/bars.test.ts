@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { BAR_TYPES, barLabel, barTypeForKg, usesBarbell } from "./bars";
+import { BAR_TYPES, barLabel, barTypeForKg, barTypes, usesBarbell } from "./bars";
+import { toKg } from "./units";
 import { plateBreakdown } from "./calc";
 
 describe("bar types", () => {
@@ -11,18 +12,42 @@ describe("bar types", () => {
   });
 
   it("labels an unambiguous bar by name", () => {
-    expect(barLabel(10)).toBe("EZ curl bar");
-    expect(barLabel(0)).toBe("No bar");
+    expect(barLabel(10, "kg")).toBe("EZ curl bar");
+    expect(barLabel(0, "kg")).toBe("No bar");
   });
 
   it("falls back to the weight when two bars share it", () => {
     // Trap and safety squat are both 25 kg — claiming either would be a guess.
     expect(BAR_TYPES.filter((bar) => bar.kg === 25)).toHaveLength(2);
-    expect(barLabel(25)).toBe("25 kg bar");
+    expect(barLabel(25, "kg")).toBe("25 kg bar");
+    expect(barLabel(25, "lb")).toBe("55 lb bar");
   });
 
   it("defaults to the Olympic bar when nothing is set", () => {
-    expect(barLabel(undefined)).toBe("Olympic bar");
+    expect(barLabel(undefined, "kg")).toBe("Olympic bar");
+  });
+
+  it("gives a pound gym the bar it actually has", () => {
+    // 45 lb is 20.41 kg, not 20. Converting the metric bar instead would be
+    // wrong by a pound on every set logged against it, which is why
+    // `defaultBarKg` already treats them as different bars.
+    const olympic = barTypes("lb").find((bar) => bar.id === "olympic")!;
+    expect(olympic.kg).toBeCloseTo(toKg(45, "lb"), 5);
+    expect(olympic.note).toBe("Standard 7ft, 45 lb");
+    expect(barTypes("kg").find((bar) => bar.id === "olympic")!.kg).toBe(20);
+  });
+
+  it("writes every note in the athlete's own unit", () => {
+    // The whole set used to be phrased in kilograms, so a pound gym was told
+    // its bench bar weighs "20 kg".
+    for (const bar of barTypes("lb")) {
+      expect(bar.note).not.toMatch(/\bkg\b/);
+    }
+  });
+
+  it("keeps specialty bars at their real mass rather than inventing one", () => {
+    // A guessed trap-bar weight makes every set logged on it wrong.
+    expect(barTypes("lb").find((bar) => bar.id === "trap")!.kg).toBe(25);
   });
 });
 

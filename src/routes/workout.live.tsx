@@ -47,7 +47,7 @@ import {
   supersetPosition,
 } from "@/lib/workout-flow";
 import { indexAfterMove, indexAfterRemoval, moveItem } from "@/lib/session-edit";
-import { BAR_TYPES, DEFAULT_BAR_KG, barLabel, usesBarbell } from "@/lib/bars";
+import { DEFAULT_BAR_KG, barLabel, barTypes, usesBarbell } from "@/lib/bars";
 import {
   formatVolume,
   formatWeight,
@@ -1502,7 +1502,7 @@ function LiveWorkoutPage() {
                   aria-label="Change the bar for this exercise"
                 >
                   <Dumbbell size={11} />
-                  {barLabel(current.barKg)}
+                  {barLabel(current.barKg, unit)}
                 </button>
               )}
               <button
@@ -2422,7 +2422,7 @@ function BarPickerSheet({
           </button>
         </div>
         <ul className="mt-3 space-y-1.5">
-          {BAR_TYPES.map((bar) => {
+          {barTypes(unit).map((bar) => {
             const active = bar.kg === barKg;
             return (
               <li key={bar.id}>

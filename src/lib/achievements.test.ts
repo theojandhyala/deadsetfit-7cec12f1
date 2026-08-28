@@ -217,12 +217,12 @@ describe("variety facts", () => {
 
 describe("achievementById", () => {
   it("resolves a known badge as unlocked, for share cards", () => {
-    const a = achievementById("first-rep");
+    const a = achievementById("first-rep", "kg");
     expect(a?.label).toBe("FIRST REP");
     expect(a?.unlocked).toBe(true);
   });
 
   it("returns null for an unknown id", () => {
-    expect(achievementById("nope")).toBeNull();
+    expect(achievementById("nope", "kg")).toBeNull();
   });
 });

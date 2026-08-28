@@ -23,19 +23,19 @@ describe("newlyUnlocked", () => {
 describe("headlineUnlock", () => {
   it("picks the rarest badge when several land together", () => {
     // first-rep is COMMON, streak-100 is LEGENDARY.
-    expect(headlineUnlock(["first-rep", "streak-100"])?.id).toBe("streak-100");
+    expect(headlineUnlock(["first-rep", "streak-100"], "kg")?.id).toBe("streak-100");
   });
 
   it("keeps the only badge when there is one", () => {
-    expect(headlineUnlock(["first-rep"])?.id).toBe("first-rep");
+    expect(headlineUnlock(["first-rep"], "kg")?.id).toBe("first-rep");
   });
 
   it("returns null for an empty list", () => {
-    expect(headlineUnlock([])).toBeNull();
+    expect(headlineUnlock([], "kg")).toBeNull();
   });
 
   it("ignores ids that are not in the catalog", () => {
-    expect(headlineUnlock(["not-a-badge"])).toBeNull();
-    expect(headlineUnlock(["not-a-badge", "first-rep"])?.id).toBe("first-rep");
+    expect(headlineUnlock(["not-a-badge"], "kg")).toBeNull();
+    expect(headlineUnlock(["not-a-badge", "first-rep"], "kg")?.id).toBe("first-rep");
   });
 });

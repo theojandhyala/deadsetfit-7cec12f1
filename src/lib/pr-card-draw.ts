@@ -108,13 +108,13 @@ export function drawPRCard(
     pr,
     displayName,
     username,
-    unit = "kg",
+    unit,
     date = new Date(),
   }: {
     pr: PRShareDetails;
     displayName: string;
     username?: string | null;
-    unit?: WeightUnit;
+    unit: WeightUnit;
     date?: Date;
   },
 ) {

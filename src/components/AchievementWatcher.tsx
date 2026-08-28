@@ -4,6 +4,7 @@ import { useAppState, getHydrationCount } from "@/lib/storage";
 import { achievements, RARITY_COLOR, unlockedIds, type Achievement } from "@/lib/achievements";
 import { headlineUnlock, newlyUnlocked } from "@/lib/achievement-unlocks";
 import { BadgeShareCard } from "@/components/BadgeShareCard";
+import { useUnit } from "@/hooks/useUnit";
 
 const SEEN_KEY = "deadset_badges_seen";
 
@@ -39,6 +40,7 @@ export function AchievementWatcher() {
   const initialised = useRef(false);
   const lastHydration = useRef(getHydrationCount());
 
+  const unit = useUnit();
   const all = useMemo(() => achievements(state), [state]);
   const unlocked = useMemo(() => unlockedIds(all), [all]);
   const unlockedKey = unlocked.join(",");
@@ -57,9 +59,9 @@ export function AchievementWatcher() {
     if (!fresh.length) return;
     writeSeen(unlocked);
     if (first) return;
-    const headline = headlineUnlock(fresh);
+    const headline = headlineUnlock(fresh, unit);
     if (headline) setHit(headline);
-  }, [unlockedKey, unlocked]);
+  }, [unlockedKey, unlocked, unit]);
 
   if (sharing) {
     return (

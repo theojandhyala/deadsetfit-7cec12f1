@@ -34,7 +34,12 @@ function plural(n: number, word: string) {
  * `isPersonalRecord`, which awards on load when there is load and on reps
  * otherwise.
  */
-export function prHeadline(pr: PRShareDetails, weightUnit: WeightUnit = "kg"): PRHeadline {
+/**
+ * `weightUnit` is required. A default here is a silent wrong answer on the
+ * most public thing this app produces — the same trap `formatSet` fell into,
+ * where two callers quietly took kilograms.
+ */
+export function prHeadline(pr: PRShareDetails, weightUnit: WeightUnit): PRHeadline {
   const isBodyweight = !!pr.bodyweight || pr.weight <= 0;
   // Loads are stored in kilograms; the card is the most public thing this app
   // produces, so it shows the athlete's own unit rather than the storage one.

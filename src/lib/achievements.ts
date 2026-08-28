@@ -2,6 +2,7 @@ import { calculateStreak } from "./calc";
 import { longestStreak } from "./lifetime-stats";
 import type { AppState, WorkoutSession } from "./types";
 import { countsForRecords } from "./set-tracking";
+import { formatVolume, formatWeight, unitOf, type WeightUnit } from "./units";
 
 export type AchievementCategory =
   | "CONSISTENCY"
@@ -211,7 +212,15 @@ export function achievementFacts(state: AppState): AchievementFacts {
 interface Definition {
   id: string;
   label: string;
-  desc: string;
+  /**
+   * What earns it. A function when the requirement is a weight.
+   *
+   * Twelve of these hardcoded kilograms — "Move 1,000 kg in total" — and the
+   * text reaches a public share card, so a pound athlete was sharing a badge
+   * describing a target in a unit they never chose. The threshold itself is
+   * always kilograms; only the wording converts.
+   */
+  desc: string | ((unit: WeightUnit) => string);
   icon: string;
   category: AchievementCategory;
   rarity: AchievementRarity;
@@ -380,7 +389,7 @@ const CATALOG: Definition[] = [
   {
     id: "tonnage-1k",
     label: "FIRST TONNE",
-    desc: "Move 1,000 kg in total",
+    desc: (unit) => `Move ${formatVolume(1_000, unit)} in total`,
     icon: "🪨",
     category: "TONNAGE",
     rarity: "COMMON",
@@ -390,7 +399,7 @@ const CATALOG: Definition[] = [
   {
     id: "tonnage-10k",
     label: "TEN TONNES",
-    desc: "Move 10,000 kg in total",
+    desc: (unit) => `Move ${formatVolume(10_000, unit)} in total`,
     icon: "🚙",
     category: "TONNAGE",
     rarity: "COMMON",
@@ -400,7 +409,7 @@ const CATALOG: Definition[] = [
   {
     id: "tonnage-50k",
     label: "HEAVY HAULER",
-    desc: "Move 50,000 kg in total",
+    desc: (unit) => `Move ${formatVolume(50_000, unit)} in total`,
     icon: "🚛",
     category: "TONNAGE",
     rarity: "RARE",
@@ -410,7 +419,7 @@ const CATALOG: Definition[] = [
   {
     id: "tonnage-100k",
     label: "SIX FIGURES",
-    desc: "Move 100,000 kg in total",
+    desc: (unit) => `Move ${formatVolume(100_000, unit)} in total`,
     icon: "🏗️",
     category: "TONNAGE",
     rarity: "EPIC",
@@ -420,7 +429,7 @@ const CATALOG: Definition[] = [
   {
     id: "tonnage-500k",
     label: "MOUNTAIN MOVER",
-    desc: "Move 500,000 kg in total",
+    desc: (unit) => `Move ${formatVolume(500_000, unit)} in total`,
     icon: "⛰️",
     category: "TONNAGE",
     rarity: "LEGENDARY",
@@ -430,7 +439,7 @@ const CATALOG: Definition[] = [
   {
     id: "tonnage-1m",
     label: "MILLION CLUB",
-    desc: "Move 1,000,000 kg in total",
+    desc: (unit) => `Move ${formatVolume(1_000_000, unit)} in total`,
     icon: "🌍",
     category: "TONNAGE",
     rarity: "LEGENDARY",
@@ -440,7 +449,7 @@ const CATALOG: Definition[] = [
   {
     id: "session-5k",
     label: "BIG DAY",
-    desc: "5,000 kg in a single session",
+    desc: (unit) => `${formatVolume(5_000, unit)} in a single session`,
     icon: "💪",
     category: "TONNAGE",
     rarity: "RARE",
@@ -450,7 +459,7 @@ const CATALOG: Definition[] = [
   {
     id: "session-10k",
     label: "MONSTER SESSION",
-    desc: "10,000 kg in a single session",
+    desc: (unit) => `${formatVolume(10_000, unit)} in a single session`,
     icon: "🦍",
     category: "TONNAGE",
     rarity: "EPIC",
@@ -552,7 +561,7 @@ const CATALOG: Definition[] = [
   {
     id: "plate-60",
     label: "ONE PLATE",
-    desc: "Lift 60 kg in a working set",
+    desc: (unit) => `Lift ${formatWeight(60, unit)} in a working set`,
     icon: "🔘",
     category: "STRENGTH",
     rarity: "COMMON",
@@ -562,7 +571,7 @@ const CATALOG: Definition[] = [
   {
     id: "plate-100",
     label: "TWO PLATES",
-    desc: "Lift 100 kg in a working set",
+    desc: (unit) => `Lift ${formatWeight(100, unit)} in a working set`,
     icon: "⚫",
     category: "STRENGTH",
     rarity: "RARE",
@@ -572,7 +581,7 @@ const CATALOG: Definition[] = [
   {
     id: "plate-140",
     label: "THREE PLATES",
-    desc: "Lift 140 kg in a working set",
+    desc: (unit) => `Lift ${formatWeight(140, unit)} in a working set`,
     icon: "🎱",
     category: "STRENGTH",
     rarity: "EPIC",
@@ -582,7 +591,7 @@ const CATALOG: Definition[] = [
   {
     id: "plate-180",
     label: "FOUR PLATES",
-    desc: "Lift 180 kg in a working set",
+    desc: (unit) => `Lift ${formatWeight(180, unit)} in a working set`,
     icon: "🌑",
     category: "STRENGTH",
     rarity: "LEGENDARY",
@@ -877,16 +886,22 @@ const CATALOG: Definition[] = [
   },
 ];
 
+/** Resolve a definition's wording for the athlete's own unit. */
+function describe(desc: Definition["desc"], unit: WeightUnit): string {
+  return typeof desc === "function" ? desc(unit) : desc;
+}
+
 /** Every achievement with the athlete's progress resolved. */
 export function achievements(state: AppState): Achievement[] {
   const facts = achievementFacts(state);
+  const unit = unitOf(state);
   return CATALOG.map((d) => {
     const raw = d.measure(facts);
     const progress = Math.max(0, Math.min(d.target, Math.round(raw)));
     return {
       id: d.id,
       label: d.label,
-      desc: d.desc,
+      desc: describe(d.desc, unit),
       icon: d.icon,
       category: d.category,
       rarity: d.rarity,
@@ -901,13 +916,13 @@ export function unlockedIds(list: Achievement[]): string[] {
   return list.filter((a) => a.unlocked).map((a) => a.id);
 }
 
-export function achievementById(id: string): Achievement | null {
+export function achievementById(id: string, unit: WeightUnit): Achievement | null {
   const d = CATALOG.find((x) => x.id === id);
   if (!d) return null;
   return {
     id: d.id,
     label: d.label,
-    desc: d.desc,
+    desc: describe(d.desc, unit),
     icon: d.icon,
     category: d.category,
     rarity: d.rarity,
