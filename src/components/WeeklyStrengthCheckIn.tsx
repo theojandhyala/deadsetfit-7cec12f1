@@ -4,11 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { MuscleDiagram } from "@/components/MuscleDiagram";
 import { lockBodyScroll } from "@/lib/body-scroll-lock";
-import {
-  hapticFailure,
-  hapticSelection,
-  hapticStrengthMapUpdated,
-} from "@/lib/haptics";
+import { hapticFailure, hapticSelection, hapticStrengthMapUpdated } from "@/lib/haptics";
 import { parseDisplayWeight } from "@/lib/programme-weight-setup";
 import { strengthReport } from "@/lib/strength-grades";
 import { OPEN_STRENGTH_CHECK_IN_EVENT } from "@/lib/strength-check-in-events";
@@ -169,7 +165,11 @@ export function WeeklyStrengthCheckIn({
           >
             See updated Strength Map <ChevronRight size={17} className="ml-1" />
           </button>
-          <button type="button" onClick={close} className="btn-ghost mt-2 min-h-12 w-full rounded-2xl">
+          <button
+            type="button"
+            onClick={close}
+            className="btn-ghost mt-2 min-h-12 w-full rounded-2xl"
+          >
             Done
           </button>
         </div>
@@ -183,11 +183,15 @@ export function WeeklyStrengthCheckIn({
   const defaultValue = saved?.value ?? row.value;
   const defaultReps = saved?.reps ?? row.reps;
   const metricLabel =
-    row.kind === "RATIO" ? "BEST WORKING SET" : row.kind === "SECONDS" ? "LONGEST HOLD" : "BEST SET";
+    row.kind === "RATIO"
+      ? "BEST WORKING SET"
+      : row.kind === "SECONDS"
+        ? "LONGEST HOLD"
+        : "BEST SET";
 
   return (
     <div
-      className="fixed inset-0 z-[145] overflow-y-auto bg-black/95 px-5 backdrop-blur-sm"
+      className="fixed inset-0 z-[145] overflow-x-hidden overflow-y-auto bg-black/95 px-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="weekly-strength-title"
@@ -197,7 +201,7 @@ export function WeeklyStrengthCheckIn({
         paddingBottom: "max(2rem, env(safe-area-inset-bottom))",
       }}
     >
-      <div className="mx-auto max-w-md rounded-3xl border border-accent-red/50 bg-[#101010] p-5 shadow-[0_0_70px_rgba(230,50,34,.2)]">
+      <div className="mx-auto w-full min-w-0 max-w-md overflow-hidden rounded-3xl border border-accent-red/50 bg-[#101010] p-5 shadow-[0_0_70px_rgba(230,50,34,.2)]">
         <div className="flex items-center justify-between gap-3">
           <p className="label-cap flex items-center gap-1.5 text-[10px] text-accent-red">
             <RefreshCw size={12} /> WEEKLY STRENGTH SYNC
@@ -206,15 +210,28 @@ export function WeeklyStrengthCheckIn({
             {activeStep + 1} OF {rows.length}
           </p>
         </div>
-        <h2 id="weekly-strength-title" className="display mt-1 text-3xl font-black uppercase leading-none text-white">
+        <h2
+          id="weekly-strength-title"
+          className="display mt-1 text-3xl font-black uppercase leading-none text-white"
+        >
           Keep the map alive
         </h2>
         <p id="weekly-strength-description" className="mt-3 text-xs leading-relaxed text-grit-dim">
-          Confirm the best set you actually completed. DEADSET updates your record, your next planned load and every matching exercise across the week.
+          Confirm the best set you actually completed. DEADSET updates your record, your next
+          planned load and every matching exercise across the week.
         </p>
 
-        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[#242424]" role="progressbar" aria-valuemin={1} aria-valuemax={rows.length} aria-valuenow={activeStep + 1}>
-          <div className="h-full rounded-full bg-accent-red transition-all" style={{ width: `${((activeStep + 1) / rows.length) * 100}%` }} />
+        <div
+          className="mt-4 h-1.5 overflow-hidden rounded-full bg-[#242424]"
+          role="progressbar"
+          aria-valuemin={1}
+          aria-valuemax={rows.length}
+          aria-valuenow={activeStep + 1}
+        >
+          <div
+            className="h-full rounded-full bg-accent-red transition-all"
+            style={{ width: `${((activeStep + 1) / rows.length) * 100}%` }}
+          />
         </div>
 
         <form
@@ -243,7 +260,11 @@ export function WeeklyStrengthCheckIn({
               const max = row.kind === "SECONDS" ? 86_400 : 1_000;
               if (!Number.isFinite(value) || value < 1 || value > max) {
                 hapticFailure();
-                setError(row.kind === "SECONDS" ? "Enter a hold between 1 second and 24 hours." : "Enter a rep count between 1 and 1,000.");
+                setError(
+                  row.kind === "SECONDS"
+                    ? "Enter a hold between 1 second and 24 hours."
+                    : "Enter a rep count between 1 and 1,000.",
+                );
                 return;
               }
               answers.current.set(row.exerciseId, {
@@ -259,7 +280,9 @@ export function WeeklyStrengthCheckIn({
             <div className="grid grid-cols-[1fr_104px] items-center gap-3">
               <div className="min-w-0">
                 <p className="label-cap text-[9px] text-accent-red">{metricLabel}</p>
-                <p className="display mt-0.5 text-2xl font-black uppercase leading-none text-white">{row.name}</p>
+                <p className="display mt-0.5 text-2xl font-black uppercase leading-none text-white">
+                  {row.name}
+                </p>
                 <p className="mt-1 text-[10px] text-grit-dim">
                   {row.days.map((day) => DAY_SHORT[day]).join(" · ")}
                   {row.days.length > 1 ? " · one answer updates every repeat" : ""}
@@ -271,29 +294,35 @@ export function WeeklyStrengthCheckIn({
             </div>
 
             {row.kind === "RATIO" ? (
-              <div className="mt-5 grid grid-cols-[1fr_92px] gap-2">
-                <label>
+              <div className="mt-4 grid w-full min-w-0 grid-cols-[minmax(0,1.45fr)_minmax(78px,0.72fr)] gap-2">
+                <label className="min-w-0">
                   <span className="label-cap mb-1.5 block text-[9px] text-grit-dim">WEIGHT</span>
-                  <span className="flex min-h-14 items-center rounded-xl border border-grit bg-black px-3 focus-within:border-accent-red">
+                  <span className="flex min-h-14 w-full min-w-0 items-center overflow-hidden rounded-xl border border-grit bg-black px-3 focus-within:border-accent-red">
                     <input
                       name="value"
                       autoFocus
                       type="text"
+                      size={1}
                       inputMode="decimal"
+                      enterKeyHint="next"
                       autoComplete="off"
-                      defaultValue={defaultValue > 0 ? trimNumber(toDisplay(defaultValue, unit)) : ""}
+                      defaultValue={
+                        defaultValue > 0 ? trimNumber(toDisplay(defaultValue, unit)) : ""
+                      }
                       placeholder={unit === "kg" ? "62.5" : "135"}
-                      className="min-w-0 flex-1 bg-transparent text-2xl font-black tabular-nums text-white outline-none"
+                      className="w-full min-w-0 flex-1 bg-transparent text-2xl font-black tabular-nums text-white outline-none"
                     />
-                    <span className="label-cap text-[9px] text-grit-dim">{unit}</span>
+                    <span className="label-cap ml-1 shrink-0 text-[9px] text-grit-dim">{unit}</span>
                   </span>
                 </label>
-                <label>
+                <label className="min-w-0">
                   <span className="label-cap mb-1.5 block text-[9px] text-grit-dim">REPS</span>
                   <input
                     name="reps"
                     type="text"
+                    size={1}
                     inputMode="numeric"
+                    enterKeyHint="done"
                     autoComplete="off"
                     defaultValue={defaultValue > 0 ? String(defaultReps) : ""}
                     placeholder="8"
@@ -321,12 +350,20 @@ export function WeeklyStrengthCheckIn({
 
             {row.kind === "RATIO" && row.plannedWeightKg > 0 && (
               <p className="mt-2 text-[9px] text-grit-dim">
-                Current plan: {trimNumber(toDisplay(row.plannedWeightKg, unit))} {unit}. Saving replaces it everywhere this movement repeats.
+                Current plan: {trimNumber(toDisplay(row.plannedWeightKg, unit))} {unit}. Saving
+                replaces it everywhere this movement repeats.
               </p>
             )}
           </div>
 
-          {error && <p role="alert" className="mt-3 rounded-xl border border-accent-red/50 bg-accent-red/10 px-3 py-2 text-xs font-bold text-accent-red">{error}</p>}
+          {error && (
+            <p
+              role="alert"
+              className="mt-3 rounded-xl border border-accent-red/50 bg-accent-red/10 px-3 py-2 text-xs font-bold text-accent-red"
+            >
+              {error}
+            </p>
+          )}
 
           <div className="mt-3 grid grid-cols-2 gap-2">
             <button
@@ -343,10 +380,27 @@ export function WeeklyStrengthCheckIn({
               }}
               className="btn-ghost min-h-14 rounded-2xl"
             >
-              {activeStep === 0 ? <><Clock3 size={15} className="mr-1.5" /> Tomorrow</> : "Back"}
+              {activeStep === 0 ? (
+                <>
+                  <Clock3 size={15} className="mr-1.5" /> Tomorrow
+                </>
+              ) : (
+                "Back"
+              )}
             </button>
-            <button type="submit" className="btn-grit flex min-h-14 items-center justify-center rounded-2xl">
-              {activeStep === rows.length - 1 ? <><Trophy size={16} className="mr-1.5" /> Sync map</> : <><Dumbbell size={16} className="mr-1.5" /> Save & next</>}
+            <button
+              type="submit"
+              className="btn-grit flex min-h-14 items-center justify-center rounded-2xl"
+            >
+              {activeStep === rows.length - 1 ? (
+                <>
+                  <Trophy size={16} className="mr-1.5" /> Sync map
+                </>
+              ) : (
+                <>
+                  <Dumbbell size={16} className="mr-1.5" /> Save & next
+                </>
+              )}
             </button>
           </div>
           <button
