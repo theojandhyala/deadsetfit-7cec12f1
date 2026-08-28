@@ -126,77 +126,51 @@
         z-index: 1;
         width: min(100%, 360px);
       }
-      .boot-kicker {
-        margin: 0 0 18px;
-        color: #e10600;
-        font-size: 9px;
-        font-weight: 900;
-        letter-spacing: 0.34em;
-        text-indent: 0.34em;
-        text-transform: uppercase;
-        opacity: 0;
-        animation: boot-rise 0.55s ease-out 0.28s forwards;
-      }
-      /* The wordmark is drawn as live text rather than a bitmap: it stays sharp
-         on every display, animates per-half, and costs no image bytes on the
-         critical path. */
-      .boot-mark {
+      /* This is the exact published App Store artwork from AppIcon.appiconset.
+         Do not recreate the official wordmark with approximate live type. */
+      .boot-logo {
         display: block;
+        width: min(72vw, 264px);
+        height: auto;
         margin: 0 auto;
-        font-family:
-          Inter,
-          system-ui,
-          -apple-system,
-          sans-serif;
-        font-size: clamp(38px, 13vw, 62px);
-        font-weight: 900;
-        font-style: italic;
-        letter-spacing: -0.03em;
-        line-height: 1;
-        white-space: nowrap;
-        animation: boot-breathe 2.8s ease-in-out 0.9s infinite;
-      }
-      .boot-mark span {
-        display: inline-block;
+        object-fit: contain;
         opacity: 0;
-        animation: boot-slide 0.62s cubic-bezier(0.16, 0.84, 0.44, 1) forwards;
+        filter: drop-shadow(0 18px 38px rgba(225, 6, 0, 0.18));
+        animation:
+          boot-rise 0.62s cubic-bezier(0.16, 0.84, 0.44, 1) 0.08s forwards,
+          boot-breathe 2.8s ease-in-out 0.9s infinite;
       }
-      .boot-dead {
-        color: #f5f5f0;
-        transform: translateX(-26px);
+      .boot-logo-frame {
+        position: relative;
+        display: grid;
+        min-height: 182px;
+        place-items: center;
+        overflow: hidden;
       }
-      .boot-set {
-        color: #e10600;
-        transform: translateX(26px);
-        animation-delay: 0.1s;
-      }
-      .boot-tagline {
-        margin: 14px 0 0;
-        /* #6a6a6a sat at 3.66:1 on this background — under the 4.5:1 WCAG asks
-           for at this size. #8a8a8a reads as the same quiet grey at 5.73:1. */
-        color: #8a8a8a;
-        font-size: 10px;
-        font-weight: 800;
-        letter-spacing: 0.42em;
-        text-transform: uppercase;
-        text-indent: 0.42em;
+      .boot-logo-frame::after {
+        content: "";
+        position: absolute;
+        width: 196px;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(225, 6, 0, 0.82), transparent);
+        transform: translateY(54px) scaleX(0.2);
         opacity: 0;
-        animation: boot-rise 0.6s ease-out 0.44s forwards;
+        animation: boot-logo-line 0.65s ease-out 0.48s forwards;
       }
-      @keyframes boot-slide {
+      @keyframes boot-logo-line {
         to {
           opacity: 1;
-          transform: translateX(0);
+          transform: translateY(54px) scaleX(1);
         }
       }
       @keyframes boot-rise {
         from {
           opacity: 0;
-          transform: translateY(7px);
+          transform: translateY(7px) scale(0.985);
         }
         to {
           opacity: 1;
-          transform: translateY(0);
+          transform: translateY(0) scale(1);
         }
       }
       .boot-track {
@@ -290,19 +264,16 @@
       /* Respect a stated preference for stillness: motion sickness and
          vestibular disorders are not edge cases. */
       @media (prefers-reduced-motion: reduce) {
-        .boot-mark,
-        .boot-mark span,
-        .boot-kicker,
-        .boot-tagline,
+        .boot-logo,
+        .boot-logo-frame::after,
         .boot-bar,
         .boot-status-dot {
           animation: none;
         }
         /* Without the entrance animation these would stay at opacity 0 and the
            logo would never appear at all. */
-        .boot-mark span,
-        .boot-kicker,
-        .boot-tagline {
+        .boot-logo,
+        .boot-logo-frame::after {
           opacity: 1;
           transform: none;
         }
@@ -327,11 +298,16 @@
     <div id="root"></div>
     <main id="deadset-boot-screen" class="boot" role="status" aria-live="polite">
       <div class="boot-shell">
-        <p class="boot-kicker">Your training system</p>
-        <div class="boot-mark" role="img" aria-label="DEADSET">
-          <span class="boot-dead">DEAD</span><span class="boot-set">SET</span>
+        <div class="boot-logo-frame">
+          <img
+            class="boot-logo"
+            src="/icon-512.png"
+            alt="DEADSET — Forge your body"
+            width="512"
+            height="512"
+            fetchpriority="high"
+          />
         </div>
-        <p class="boot-tagline">Forge your body</p>
         <div class="boot-track"><div class="boot-bar"></div></div>
         <div class="boot-status">
           <span class="boot-status-dot" aria-hidden="true"></span>

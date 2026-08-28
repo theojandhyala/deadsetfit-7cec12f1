@@ -9,12 +9,14 @@ import {
   Loader2,
   RefreshCw,
   ShieldCheck,
+  Sparkles,
   Target,
   UserRoundCog,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+import { MuscleDiagram } from "@/components/MuscleDiagram";
 import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
 import { supabase } from "@/integrations/supabase/client";
 import { usePro } from "@/hooks/usePro";
@@ -76,6 +78,19 @@ const MEMBERSHIP_FEATURES = [
       "Working weights, repeated exercises and next-session targets stay linked across the whole plan.",
   },
 ] as const;
+
+const PRO_MAP_COLOURS = {
+  CHEST: "#f04432",
+  BACK: "#8d3df0",
+  LEGS: "#ff9d2e",
+  SHOULDERS: "#e63222",
+  ARMS: "#d758ff",
+  CORE: "#4ac6ff",
+} as const;
+
+const PRO_ACTIVE_DAYS = new Set([0, 2, 4, 5]);
+const PRO_WEEK_DAYS = ["M", "T", "W", "T", "F", "S", "S"] as const;
+const PRO_PROGRESS_WIDTHS = [86, 68, 48] as const;
 
 type UserSummary = { id: string; email?: string };
 
@@ -478,16 +493,17 @@ function TrialHero({
   trialConfigured?: boolean;
 }) {
   return (
-    <header className="relative mb-7 overflow-hidden rounded-[28px] border border-white/10 bg-[#111214] px-5 py-7 text-center">
+    <header className="deadset-pro-hero deadset-3d-panel relative mb-7 overflow-hidden rounded-[30px] border border-white/10 px-5 py-7 text-center">
       <div className="absolute inset-x-0 -top-24 mx-auto h-44 w-64 rounded-full bg-accent-red/20 blur-3xl" />
       <div className="relative">
-        <div className="mx-auto h-16 w-16 rounded-2xl bg-accent-red flex items-center justify-center deadset-pulse-glow">
-          <Crown size={30} className="text-white" />
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-white/15 bg-accent-red deadset-pulse-glow">
+          <Crown size={23} className="text-white" />
         </div>
         <p className="label-cap mt-5 text-[10px] text-accent-red">YOUR SETUP IS SAVED</p>
         <h1 className="display mt-2 text-4xl font-extrabold uppercase leading-none text-white">
-          Now build the body.
+          Your body. Your system.
         </h1>
+        <ProExperienceStage />
         <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-grit-dim">
           {trialAvailable
             ? `Train free for seven days. Then ${price} per month unless you cancel.`
@@ -504,6 +520,68 @@ function TrialHero({
         )}
       </div>
     </header>
+  );
+}
+
+function ProExperienceStage() {
+  return (
+    <div className="deadset-pro-stage" aria-label="DEADSET Pro strength map and live programme">
+      <div className="deadset-pro-aura" aria-hidden="true" />
+      <div className="deadset-pro-map-card">
+        <div className="flex items-center justify-between px-3 pt-3">
+          <span className="text-[8px] font-black uppercase tracking-[0.18em] text-white">
+            Strength Map
+          </span>
+          <span className="flex items-center gap-1 text-[7px] font-black uppercase text-emerald-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Live
+          </span>
+        </div>
+        <div className="-mt-1 overflow-hidden">
+          <MuscleDiagram size={132} view="both" gradeColors={PRO_MAP_COLOURS} />
+        </div>
+      </div>
+      <div className="deadset-pro-plan-card">
+        <div className="flex items-center justify-between">
+          <span className="text-[8px] font-black uppercase tracking-[0.16em] text-white">
+            Your week
+          </span>
+          <Sparkles size={11} className="text-accent-red" />
+        </div>
+        <div className="mt-3 grid grid-cols-7 gap-1" aria-hidden="true">
+          {PRO_WEEK_DAYS.map((day, index) => (
+            <div key={`${day}-${index}`} className="text-center">
+              <span className="block text-[6px] font-black text-grit-dim">{day}</span>
+              <span
+                className={`mt-1 block aspect-square rounded-[3px] border ${
+                  PRO_ACTIVE_DAYS.has(index)
+                    ? "border-accent-red bg-accent-red shadow-[0_0_10px_rgba(230,50,34,.42)]"
+                    : "border-white/10 bg-white/[0.04]"
+                }`}
+              />
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 space-y-1.5" aria-hidden="true">
+          {PRO_PROGRESS_WIDTHS.map((width, index) => (
+            <div key={width} className="flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-accent-red" />
+              <span className="h-1 rounded-full bg-white/10 flex-1 overflow-hidden">
+                <span
+                  className="block h-full rounded-full bg-gradient-to-r from-accent-red to-orange-400"
+                  style={{ width: `${width}%`, animationDelay: `${index * 120}ms` }}
+                />
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.07] px-2 py-1.5 text-left">
+          <p className="text-[7px] font-black uppercase tracking-wide text-emerald-400">
+            Next target ready
+          </p>
+          <p className="mt-0.5 text-[9px] font-black text-white">Bench press · +2.5 kg</p>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -533,13 +611,14 @@ function TrialMoment({
 
 function FeatureGrid() {
   return (
-    <section className="mb-6 grid gap-2">
-      {MEMBERSHIP_FEATURES.map((feature) => (
+    <section className="stagger mb-6 grid gap-2">
+      {MEMBERSHIP_FEATURES.map((feature, index) => (
         <div
           key={feature.title}
-          className="rounded-2xl border border-white/10 bg-[#121315] p-4 flex gap-3"
+          className="deadset-pro-feature deadset-lift tier-sheen flex gap-3 rounded-2xl border border-white/10 p-4"
+          style={{ animationDelay: `${140 + index * 65}ms` }}
         >
-          <div className="h-10 w-10 shrink-0 rounded-xl bg-accent-red/10 flex items-center justify-center">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-accent-red/20 bg-accent-red/10 shadow-[inset_0_1px_0_rgba(255,255,255,.08)]">
             <feature.icon size={18} className="text-accent-red" />
           </div>
           <div>

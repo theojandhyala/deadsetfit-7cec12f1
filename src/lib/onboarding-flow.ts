@@ -22,9 +22,7 @@ export function onboardingOrder(mode: OnboardingMode | null): OnboardingActiveSt
     "equipment",
     "preferences",
   ];
-  return mode === "GENERATE"
-    ? [...shared, "schedule", "username", "blueprint"]
-    : [...shared, "username", "blueprint"];
+  return [...shared, "schedule", "username", "blueprint"];
 }
 
 export function onboardingStageLabel(step: OnboardingActiveStep): string {

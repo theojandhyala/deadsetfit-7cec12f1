@@ -246,8 +246,9 @@ function Onboarding() {
         commitmentDate: merged.commitmentDate,
         committed: merged.committed,
       };
-      const sched =
-        mode === "BUILD" ? emptySchedule(p.trainingDays) : (draftSchedule ?? defaultSchedule(p));
+      // BUILD starts in edit mode, but it must still finish with a usable first
+      // week. Saving an empty schedule strands the athlete on Train.
+      const sched = draftSchedule ?? defaultSchedule(p);
       const publicStats = buildPublicStats({ ...getState(), profile: p, schedule: sched });
       save({
         data: {
@@ -466,6 +467,7 @@ function Onboarding() {
           <SchedulePreview
             draft={draft}
             initial={draftSchedule}
+            startEditing={mode === "BUILD"}
             onContinue={(schedule) => {
               setDraftSchedule(schedule);
               next({});
@@ -561,11 +563,7 @@ function Onboarding() {
           <BlueprintStep
             draft={draft}
             mode={mode ?? "GENERATE"}
-            schedule={
-              mode === "BUILD"
-                ? emptySchedule(draft.trainingDays)
-                : (draftSchedule ?? defaultSchedule(draft as Profile))
-            }
+            schedule={draftSchedule ?? defaultSchedule(draft as Profile)}
             onEnter={() => next({})}
           />
         )}
@@ -1108,10 +1106,12 @@ function PhotoStep({ onSubmit, onSkip }: { onSubmit: (url: string) => void; onSk
 function SchedulePreview({
   draft,
   initial,
+  startEditing = false,
   onContinue,
 }: {
   draft: Partial<Profile>;
   initial: Schedule | null;
+  startEditing?: boolean;
   onContinue: (schedule: Schedule) => void;
 }) {
   // Preview must match what actually gets saved.
@@ -1138,7 +1138,7 @@ function SchedulePreview({
   const [selectedDay, setSelectedDay] = useState<DayKey>(
     () => WEEK.find((day) => schedule[day].exerciseIds.length > 0) ?? "MON",
   );
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(startEditing);
 
   const DAYS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
   const available = EXERCISES.filter(
@@ -1578,15 +1578,6 @@ function SchedulePreview({
   );
 }
 
-function emptySchedule(trainingDays: DayKey[] = []): import("@/lib/types").Schedule {
-  const days = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] as const;
-  const out = {} as Record<string, { label: string; exerciseIds: string[] }>;
-  days.forEach((d) => {
-    out[d] = { label: trainingDays.includes(d) ? "ADD WORKOUT" : "REST", exerciseIds: [] };
-  });
-  return out as import("@/lib/types").Schedule;
-}
-
 function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
   return (
     <>
@@ -1618,7 +1609,7 @@ function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
             Build Your Own
           </span>
           <p className="text-xs text-[#8a8a8a] mt-1">
-            Start blank. Map every day yourself — exercises, sets, reps and weight.
+            Start with a safe week, then replace anything — exercises, sets and reps.
           </p>
         </button>
       </div>

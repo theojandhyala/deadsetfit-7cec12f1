@@ -17,7 +17,7 @@ describe("onboardingOrder", () => {
     ]);
   });
 
-  it("lands custom setup in Plan without pretending an empty week is generated", () => {
+  it("requires custom setup to review an editable, usable week", () => {
     expect(onboardingOrder("BUILD")).toEqual([
       "mode",
       "goal",
@@ -25,6 +25,7 @@ describe("onboardingOrder", () => {
       "days",
       "equipment",
       "preferences",
+      "schedule",
       "username",
       "blueprint",
     ]);

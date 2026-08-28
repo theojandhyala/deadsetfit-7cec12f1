@@ -147,7 +147,7 @@ Also verify in a release-signed build on a physical iPhone:
 - Fresh email signup, email confirmation, login, logout, and password reset
 - Google and Apple signup and returning login
 - Account deletion, including Sign in with Apple token revocation
-- Onboarding and starter-plan generation for every equipment choice
+- Onboarding and non-empty starter-plan generation for both setup modes and every equipment choice
 - Schedule create, edit, reorder, and persistence after relaunch
 - Start, interrupt, resume, and finish workout
 - Offline launch and local logging followed by successful reconnect

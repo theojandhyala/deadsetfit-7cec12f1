@@ -142,12 +142,6 @@ function profileForPreview(draft: Partial<Profile>, selectedDays: DayKey[]): Pro
   };
 }
 
-function emptySchedule(): Schedule {
-  return Object.fromEntries(
-    WEEK.map((day) => [day, { label: "REST", exerciseIds: [] }]),
-  ) as unknown as Schedule;
-}
-
 function shortWorkoutLabel(label: string): string {
   const clean = label.trim();
   if (!clean || clean === "REST") return "REST";
@@ -315,8 +309,9 @@ export function deriveLiveSetupBlueprint(
   const mode = options.mode ?? "GENERATE";
   const selectedDays = uniqueTrainingDays(draft.trainingDays);
   const profile = profileForPreview(draft, selectedDays);
-  const schedule =
-    options.schedule ?? (mode === "BUILD" ? emptySchedule() : defaultSchedule(profile));
+  // BUILD is editable, not empty. A safe scaffold guarantees that completing
+  // onboarding always produces a first workout.
+  const schedule = options.schedule ?? defaultSchedule(profile);
   const week: SetupBlueprintDay[] = WEEK.map((dayKey) => {
     const plan = schedule[dayKey];
     const exerciseCount = plan.exerciseIds.length;

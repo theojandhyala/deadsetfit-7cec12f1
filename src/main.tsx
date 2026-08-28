@@ -7,7 +7,7 @@ import "./styles.css";
 
 // Exposes the bundled release in diagnostics and scopes asset recovery to this
 // deployment so one old CDN race cannot strand later versions.
-const RELEASE_ID = "2026-08-28-release4";
+const RELEASE_ID = "2026-08-28-release5";
 const PRELOAD_RETRY_KEY = `deadset_preload_retry_${RELEASE_ID}`;
 document.documentElement.dataset.deadsetRelease = RELEASE_ID;
 

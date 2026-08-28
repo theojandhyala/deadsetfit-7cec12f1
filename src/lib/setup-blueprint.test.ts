@@ -160,7 +160,7 @@ describe("deriveLiveSetupBlueprint", () => {
     expect(result.recovery.detail).toContain("Low sleep noted");
   });
 
-  it("reserves chosen build-your-own days without inventing exercises", () => {
+  it("gives build-your-own a safe editable scaffold instead of an empty plan", () => {
     const result = deriveLiveSetupBlueprint(complete, { mode: "BUILD" });
 
     expect(result.splitName).toBe("YOUR CUSTOM SPLIT");
@@ -170,15 +170,10 @@ describe("deriveLiveSetupBlueprint", () => {
       "THU",
       "SAT",
     ]);
-    expect(
-      result.week.filter((day) => day.isTraining).every((day) => day.exerciseCount === 0),
-    ).toBe(true);
-    expect(result.firstWorkout).toMatchObject({
-      ready: false,
-      status: "ADD_WORKOUT",
-      dayKey: "MON",
-    });
-    expect(result.firstWorkout.message).toContain("Monday is reserved");
+    expect(result.week.filter((day) => day.isTraining).every((day) => day.exerciseCount > 0)).toBe(
+      true,
+    );
+    expect(result.firstWorkout).toMatchObject({ status: "SET_WEIGHTS", dayKey: "MON" });
     expect(result.recovery).toMatchObject({ status: "BALANCED", restDays: 3 });
   });
 });
