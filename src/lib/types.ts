@@ -346,6 +346,8 @@ export interface AppState {
   streakAlertHour?: number;
   /** Nudges when a duel rival is ahead or a duel is running out. Default on. */
   rivalAlertsEnabled?: boolean;
+  /** True after the athlete has made an explicit Lock Screen notification choice. */
+  notificationPreferenceConfigured?: boolean;
   /** Auto-post finished workouts to the social feed. Explicit opt-in only. */
   autoShareWorkouts?: boolean;
   streakArmor?: StreakArmor;

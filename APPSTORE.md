@@ -7,7 +7,7 @@ This repository ships DEADSET as a bundled Capacitor iPhone app. The public webs
 - App Store ID: `6783511541`
 - Bundle identifier: `org.deadsetfit.app`
 - Version: `1.2`
-- Build: `139`
+- Build: `140`
 - Device family: iPhone
 - Minimum iOS version: iOS 15
 - Category: Health & Fitness
@@ -67,7 +67,7 @@ Test a fresh install and an update from the previous public build on a real iPho
 7. Connect Apple Health, verify steps and activity data, then finish a workout and confirm it appears in Apple Fitness.
 8. Buy the monthly Pro product in the sandbox. Verify the seven-day introductory offer for an eligible sandbox account, immediate monthly pricing for an ineligible account, entitlement, restore, Manage Subscription and cancellation behavior.
 9. Sign out and back in on another device. Confirm cloud training data and Pro access return.
-10. Test account deletion, notification permission denial, camera/photo denial, offline launch and recovery from network errors.
+10. Test account deletion, notification permission denial and approval, the five-second Lock Screen notification test, camera/photo denial, offline launch and recovery from network errors.
 11. Open Privacy, Terms, Support and Rate DEADSET from Settings.
 12. Run VoiceOver, Dynamic Type and keyboard focus checks on onboarding, schedule editing, live workout and paywall screens.
 
@@ -107,7 +107,7 @@ Never give App Review an expired account, a production paywall that cannot load,
 
 Suggested release notes:
 
-> DEADSET 1.2 turns your plan into visible progress. See every week's planned sets in one grid, understand which muscles your training develops, earn clear next-load recommendations from completed workouts, and compare PRs and Strength Maps with accepted friends. This update also improves onboarding, live workout reliability, Apple Fitness integration and account controls.
+> DEADSET 1.2 turns your plan into visible progress. Find athletes reliably by name or @username, discover lifters in your city, manage every friend-request state and compare accepted friends side by side. This update also adds contextual Lock Screen notification setup and testing, clearer social error recovery, stronger onboarding, weekly set maps and Strength Map progression.
 
 ## Archive and upload
 
@@ -117,7 +117,7 @@ Suggested release notes:
 4. Choose Product > Archive.
 5. In Organizer, run Validate App before Distribute App.
 6. Upload to App Store Connect and wait for processing.
-7. Attach build 139 to version 1.2 and complete export compliance and content-rights questions. The approved monthly subscription remains available to the app; do not present the annual legacy product as a new plan.
+7. Attach build 140 to version 1.2 and complete export compliance and content-rights questions. The approved monthly subscription remains available to the app; do not present the annual legacy product as a new plan.
 8. Test the processed build in TestFlight before submitting it for review.
 
 Every bundled product update requires a new App Store build and review. Website deployment alone does not update the installed app.

@@ -26,7 +26,7 @@ export const DEFAULT_STREAK_ALERT_HOUR = 19;
 
 export type StreakAlertDraft = Pick<
   LocalNotificationSchema,
-  "id" | "title" | "body" | "schedule" | "extra" | "threadIdentifier"
+  "id" | "title" | "body" | "schedule" | "sound" | "extra" | "threadIdentifier"
 >;
 
 function streakIds() {
@@ -91,6 +91,7 @@ export function buildStreakAlertDrafts(
       title,
       body,
       schedule: { at },
+      sound: "default.wav",
       extra: { path: "/train" },
       threadIdentifier: "deadset-streak",
     });

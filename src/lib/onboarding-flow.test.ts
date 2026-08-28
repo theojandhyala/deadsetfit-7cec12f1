@@ -12,6 +12,7 @@ describe("onboardingOrder", () => {
       "equipment",
       "preferences",
       "schedule",
+      "notifications",
       "username",
       "blueprint",
     ]);
@@ -26,9 +27,11 @@ describe("onboardingOrder", () => {
       "equipment",
       "preferences",
       "schedule",
+      "notifications",
       "username",
       "blueprint",
     ]);
     expect(onboardingStageLabel("blueprint")).toBe("READY");
+    expect(onboardingStageLabel("notifications")).toBe("STAY ON TRACK");
   });
 });

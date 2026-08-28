@@ -3,6 +3,7 @@ import { Capacitor, registerPlugin } from "@capacitor/core";
 type ReviewPlugin = {
   request(): Promise<void>;
   open(): Promise<void>;
+  openSettings(): Promise<void>;
 };
 
 const NativeReview = registerPlugin<ReviewPlugin>("DeadSetReview");
@@ -61,4 +62,10 @@ export async function openAppStoreReviewPage() {
     return;
   }
   window.open(APP_STORE_REVIEW_URL, "_blank", "noopener,noreferrer");
+}
+
+export async function openIosAppSettings() {
+  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "ios") return false;
+  await NativeReview.openSettings();
+  return true;
 }

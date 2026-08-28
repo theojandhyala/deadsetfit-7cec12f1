@@ -1210,6 +1210,10 @@ function Friends() {
   const [busy, setBusy] = useState<string | null>(null);
   const [nearby, setNearby] = useState<Awaited<ReturnType<typeof getNearbyAthletes>> | null>(null);
   const [myLoc, setMyLoc] = useState<{ city: string | null; country: string | null } | null>(null);
+  const [friendsError, setFriendsError] = useState<string | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchBusy, setSearchBusy] = useState(false);
   const [locBusy, setLocBusy] = useState(false);
   const [cityInput, setCityInput] = useState("");
   const [countryInput, setCountryInput] = useState("");
@@ -1221,17 +1225,20 @@ function Friends() {
   const countryRef = useRef<HTMLInputElement>(null);
 
   const loadFriendsHome = useCallback(() => {
+    setFriendsError(null);
+    setLocationError(null);
     _suggest()
       .then(setSuggested)
-      .catch(() => {
+      .catch((error) => {
         // Failed suggestions render as an empty list, not an endless spinner.
         setSuggested((cur) => cur ?? []);
+        setFriendsError(error instanceof Error ? error.message : "Couldn't load athletes");
       });
     _connections()
       .then(setConnections)
-      .catch(() =>
-        setConnections((current) => current ?? { friends: [], incoming: [], outgoing: [] }),
-      );
+      .catch((error) => {
+        setFriendsError(error instanceof Error ? error.message : "Couldn't load your friends");
+      });
     _getLoc()
       .then((l) => {
         const c = normalizeCountry(l.country);
@@ -1243,10 +1250,14 @@ function Friends() {
         if (cityRef.current) cityRef.current.value = city;
         if (countryRef.current) countryRef.current.value = country;
       })
-      .catch(() => {});
+      .catch((error) => {
+        setLocationError(error instanceof Error ? error.message : "Couldn't load your city");
+      });
     _nearby()
       .then(setNearby)
-      .catch(() => {});
+      .catch((error) => {
+        setLocationError(error instanceof Error ? error.message : "Couldn't load nearby athletes");
+      });
   }, [_connections, _getLoc, _nearby, _suggest]);
 
   useEffect(() => {
@@ -1257,19 +1268,45 @@ function Friends() {
     return _search({ data: { q: q.trim() } });
   }, [_search, q]);
 
+  const retrySearch = useCallback(async () => {
+    setSearchBusy(true);
+    setSearchError(null);
+    try {
+      setResults(await runSearch());
+    } catch (error) {
+      setSearchError(error instanceof Error ? error.message : "Search failed");
+    } finally {
+      setSearchBusy(false);
+    }
+  }, [runSearch]);
+
   useEffect(() => {
     if (q.trim().length < 2) {
       setResults(null);
+      setSearchError(null);
+      setSearchBusy(false);
       return;
     }
+    let cancelled = false;
+    setSearchBusy(true);
+    setSearchError(null);
     const id = setTimeout(async () => {
       try {
-        setResults(await runSearch());
+        const nextResults = await runSearch();
+        if (!cancelled) setResults(nextResults);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Search failed");
+        if (!cancelled) {
+          setResults(null);
+          setSearchError(e instanceof Error ? e.message : "Search failed");
+        }
+      } finally {
+        if (!cancelled) setSearchBusy(false);
       }
     }, 250);
-    return () => clearTimeout(id);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
   }, [q, runSearch]);
 
   const statusById = useMemo(() => {
@@ -1334,6 +1371,7 @@ function Friends() {
       return;
     }
     setLocBusy(true);
+    setLocationError(null);
     try {
       const pos = await new Promise<GeolocationPosition>((res, rej) =>
         navigator.geolocation.getCurrentPosition(res, rej, {
@@ -1349,7 +1387,13 @@ function Friends() {
       const r = await fetch(
         `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`,
       );
-      const j = await r.json();
+      if (!r.ok) throw new Error("City lookup is temporarily unavailable. Type your city below.");
+      const j = (await r.json()) as {
+        city?: string;
+        locality?: string;
+        principalSubdivision?: string;
+        countryName?: string;
+      };
       const city = j.city || j.locality || j.principalSubdivision || "";
       const country = normalizeCountry(j.countryName) || j.countryName || "";
       if (!city || !country) throw new Error("Couldn't resolve city");
@@ -1358,11 +1402,24 @@ function Friends() {
       if (cityRef.current) cityRef.current.value = city;
       if (countryRef.current) countryRef.current.value = country;
       await _setLoc({ data: { city, country, region: j.principalSubdivision || null } });
+      hapticPlanUpdated();
       toast.success(`Set to ${city}, ${country}`);
       setMyLoc({ city, country });
       setNearby(await _nearby());
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Location denied");
+      hapticFailure();
+      const geolocationCode =
+        typeof e === "object" && e !== null && "code" in e ? Number(e.code) : null;
+      const message =
+        geolocationCode !== null
+          ? geolocationCode === 1
+            ? "Location access is off. Allow it in iPhone Settings, or type your city instead."
+            : "Your location couldn't be read. Type your city instead."
+          : e instanceof Error
+            ? e.message
+            : "Location couldn't be read. Type your city instead.";
+      setLocationError(message);
+      toast.error(message);
     } finally {
       setLocBusy(false);
     }
@@ -1374,6 +1431,7 @@ function Friends() {
       return;
     }
     setLocBusy(true);
+    setLocationError(null);
     try {
       const city = cityInput.trim();
       const country = normalizeCountry(countryInput) || countryInput.trim();
@@ -1383,10 +1441,14 @@ function Friends() {
         data: { city, country, region: null },
       });
       setMyLoc({ city, country });
+      hapticPlanUpdated();
       toast.success("Saved");
       setNearby(await _nearby());
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed");
+      hapticFailure();
+      const message = e instanceof Error ? e.message : "Couldn't save your city";
+      setLocationError(message);
+      toast.error(message);
     } finally {
       setLocBusy(false);
     }
@@ -1485,6 +1547,19 @@ function Friends() {
           );
         })}
       </div>
+
+      {friendsError && (
+        <div
+          role="alert"
+          className="mb-4 rounded-2xl border border-accent-red/40 bg-accent-red/10 p-3"
+        >
+          <p className="text-xs font-bold text-grit">Friends couldn't refresh</p>
+          <p className="mt-1 text-[10px] leading-relaxed text-grit-dim">{friendsError}</p>
+          <button type="button" onClick={loadFriendsHome} className="btn-ghost mt-3 min-h-10 px-4 text-[10px]">
+            Try again
+          </button>
+        </div>
+      )}
 
       {view === "REQUESTS" && connections && connections.incoming.length > 0 && (
         <div className="mb-4">
@@ -1631,6 +1706,11 @@ function Friends() {
                 <MapPin size={12} /> Use GPS
               </button>
             </div>
+            {locationError && (
+              <p role="alert" className="mt-2 text-[10px] leading-relaxed text-accent-red">
+                {locationError}
+              </p>
+            )}
           </div>
 
           {/* Nearby */}
@@ -1665,16 +1745,26 @@ function Friends() {
           )}
 
           {/* search */}
-          <div className="bg-grit-card border border-grit p-3 mb-4 flex items-center gap-2">
+          <div className="bg-grit-card border border-grit p-3 mb-2 flex items-center gap-2">
             <Search size={16} className="text-[#8a8a8a]" />
             <input
               defaultValue={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search by name or @username"
               className="input-grit flex-1 border-0 bg-transparent"
-              maxLength={40}
+              maxLength={80}
             />
+            {searchBusy && <Loader2 size={15} className="shrink-0 animate-spin text-accent-red" />}
           </div>
+
+          {searchError && (
+            <div role="alert" className="mb-4 rounded-xl border border-accent-red/40 bg-accent-red/10 p-3">
+              <p className="text-xs text-grit">Search couldn't load. Check your connection and try again.</p>
+              <button type="button" onClick={() => void retrySearch()} className="mt-2 text-[10px] font-black uppercase tracking-wider text-accent-red">
+                Retry search
+              </button>
+            </div>
+          )}
 
           {results && results.length === 0 && (
             <p className="text-center text-sm text-[#8a8a8a] py-6">No athletes match "{q}".</p>

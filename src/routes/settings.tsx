@@ -34,11 +34,14 @@ import { Watch } from "lucide-react";
 import { isNativeIos } from "@/lib/platform";
 import {
   disableWorkoutNotifications,
+  getWorkoutNotificationPermission,
   requestWorkoutNotificationPermission,
+  scheduleNotificationTest,
+  type NotificationPermissionState,
 } from "@/lib/device-reminders";
 import { supabase } from "@/integrations/supabase/client";
 import { resetFeatureTour } from "@/lib/feature-tour";
-import { openAppStoreReviewPage } from "@/lib/app-review";
+import { openAppStoreReviewPage, openIosAppSettings } from "@/lib/app-review";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "DEADSET — Settings" }] }),
@@ -51,13 +54,16 @@ function SettingsPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [sessionLogs, setSessionLogs] = useState(() => readSessionLogs());
   const [appInfo, setAppInfo] = useState<{ version: string; build: string } | null>(null);
+  const [notificationPermission, setNotificationPermission] =
+    useState<NotificationPermissionState | null>(null);
   const [account, setAccount] = useState<{
     email: string | null;
     status: "loading" | "signed-out" | "syncing" | "ready" | "offline";
   }>({ email: null, status: "loading" });
 
   const reminders = state.remindersEnabled ?? true;
-  const deviceReminders = state.deviceRemindersEnabled ?? false;
+  const deviceReminders =
+    (state.deviceRemindersEnabled ?? false) && notificationPermission !== "denied";
   const reminderHour = state.workoutReminderHour ?? 18;
   const reminderMinute = state.workoutReminderMinute ?? 0;
   const health = state.healthSync ?? { enabled: false, importWorkouts: true, exportWorkouts: true };
@@ -103,6 +109,21 @@ function SettingsPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!notificationsSupported) return;
+    const refresh = () => {
+      void getWorkoutNotificationPermission()
+        .then(setNotificationPermission)
+        .catch(() => setNotificationPermission("unavailable"));
+    };
+    refresh();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [notificationsSupported]);
+
   async function pairHealth() {
     const granted = await connectHealth();
     if (granted) {
@@ -124,7 +145,11 @@ function SettingsPage() {
     if (!enabled) {
       try {
         await disableWorkoutNotifications();
-        set((s) => ({ ...s, deviceRemindersEnabled: false }));
+        set((s) => ({
+          ...s,
+          deviceRemindersEnabled: false,
+          notificationPreferenceConfigured: true,
+        }));
         hapticSaved();
         toast.success("Device workout reminders turned off");
       } catch {
@@ -137,16 +162,72 @@ function SettingsPage() {
     try {
       const granted = await requestWorkoutNotificationPermission();
       if (!granted) {
+        setNotificationPermission("denied");
         hapticFailure();
         toast.error("Notifications are blocked. Allow them in iPhone Settings to turn this on.");
         return;
       }
-      set((s) => ({ ...s, deviceRemindersEnabled: true }));
+      setNotificationPermission("granted");
+      set((s) => ({
+        ...s,
+        deviceRemindersEnabled: true,
+        notificationPreferenceConfigured: true,
+      }));
       hapticSaved();
       toast.success("Workout reminders scheduled for your training days");
     } catch {
       hapticFailure();
       toast.error("Workout reminders could not be enabled");
+    }
+  }
+
+  async function toggleLockScreenAlert(kind: "streak" | "rival", enabled: boolean) {
+    if (!enabled) {
+      set((s) => ({
+        ...s,
+        ...(kind === "streak" ? { streakAlertsEnabled: false } : { rivalAlertsEnabled: false }),
+        notificationPreferenceConfigured: true,
+      }));
+      hapticSaved();
+      return;
+    }
+    try {
+      const granted = await requestWorkoutNotificationPermission();
+      setNotificationPermission(granted ? "granted" : "denied");
+      if (!granted) {
+        hapticFailure();
+        toast.error("Notifications are blocked. Open iPhone Settings to allow them.");
+        return;
+      }
+      set((s) => ({
+        ...s,
+        ...(kind === "streak" ? { streakAlertsEnabled: true } : { rivalAlertsEnabled: true }),
+        notificationPreferenceConfigured: true,
+      }));
+      hapticSaved();
+    } catch {
+      hapticFailure();
+      toast.error("Notification settings couldn't be updated");
+    }
+  }
+
+  async function sendNotificationTest() {
+    try {
+      let granted = notificationPermission === "granted";
+      if (!granted) granted = await requestWorkoutNotificationPermission();
+      setNotificationPermission(granted ? "granted" : "denied");
+      if (!granted) {
+        hapticFailure();
+        toast.error("Notifications are blocked. Open iPhone Settings to allow them.");
+        return;
+      }
+      const scheduled = await scheduleNotificationTest();
+      if (!scheduled) throw new Error("Notification permission changed");
+      hapticSaved();
+      toast.success("Test scheduled — it will arrive in five seconds");
+    } catch {
+      hapticFailure();
+      toast.error("The test notification couldn't be scheduled");
     }
   }
 
@@ -585,26 +666,53 @@ function SettingsPage() {
       {/* Notifications that arrive on the lock screen */}
       {notificationsSupported && (
         <section className="px-5 mb-6">
-          <p className="label-cap mb-2 flex items-center gap-1.5">
-            <Bell size={12} className="text-accent-red" /> Notifications
-          </p>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <p className="label-cap flex items-center gap-1.5">
+              <Bell size={12} className="text-accent-red" /> Notifications
+            </p>
+            <span
+              className={`rounded-full border px-2 py-1 text-[8px] font-black uppercase tracking-wider ${
+                notificationPermission === "granted"
+                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                  : "border-accent-red/40 bg-accent-red/10 text-accent-red"
+              }`}
+            >
+              {notificationPermission === "granted"
+                ? "Allowed"
+                : notificationPermission === "denied"
+                  ? "Blocked"
+                  : "Not enabled"}
+            </span>
+          </div>
           <div className="bg-grit-card border border-grit divide-y divide-[#262626]">
             <Toggle
               label="Streak at risk"
-              on={state.streakAlertsEnabled !== false}
-              onChange={(v) => {
-                set((s) => ({ ...s, streakAlertsEnabled: v }));
-                if (v) void requestWorkoutNotificationPermission();
-              }}
+              on={notificationPermission === "granted" && state.streakAlertsEnabled !== false}
+              onChange={(v) => void toggleLockScreenAlert("streak", v)}
             />
             <Toggle
               label="Rival activity"
-              on={state.rivalAlertsEnabled !== false}
-              onChange={(v) => {
-                set((s) => ({ ...s, rivalAlertsEnabled: v }));
-                if (v) void requestWorkoutNotificationPermission();
-              }}
+              on={notificationPermission === "granted" && state.rivalAlertsEnabled !== false}
+              onChange={(v) => void toggleLockScreenAlert("rival", v)}
             />
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => void sendNotificationTest()} className="btn-ghost min-h-11 text-[9px]">
+              <BellRing size={12} className="mr-1.5" /> Send 5s test
+            </button>
+            {notificationPermission === "denied" ? (
+              <button type="button" onClick={() => void openIosAppSettings()} className="btn-grit min-h-11 text-[9px]">
+                Open iPhone Settings
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void toggleLockScreenAlert("streak", true)}
+                className="btn-grit min-h-11 text-[9px]"
+              >
+                Enable alerts
+              </button>
+            )}
           </div>
           <p className="text-[10px] text-grit-dim mt-2 leading-relaxed">
             Streak warnings arrive at{" "}

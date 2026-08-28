@@ -2,7 +2,7 @@
 // ship. The card hides once dismissed at the current version, so stale
 // announcements never linger.
 
-export const WHATS_NEW_VERSION = 202608287;
+export const WHATS_NEW_VERSION = 202608288;
 export const WHATS_NEW_SEEN_KEY = "deadset_whats_new_seen";
 
 export interface WhatsNewEntry {
@@ -13,6 +13,16 @@ export interface WhatsNewEntry {
 }
 
 export const WHATS_NEW: WhatsNewEntry[] = [
+  {
+    title: "Friend search and nearby now work end to end",
+    body: "Find athletes by name or @username, discover lifters in your city and manage sent, incoming, accepted, declined and removed requests with clear recovery when the network drops.",
+    where: "Friends",
+  },
+  {
+    title: "Lock Screen alerts you can prove",
+    body: "Notification setup now happens in context, shows the real iPhone permission state and includes a five-second test for workout, streak and rival alerts.",
+    where: "Setup · Settings",
+  },
   {
     title: "Weight and reps stay together",
     body: "The weekly Strength Sync now keeps both fields fully visible side by side without horizontal scrolling, even while the number keyboard is open.",

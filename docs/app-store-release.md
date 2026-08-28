@@ -122,7 +122,7 @@ Provide App Review with:
 - Exact steps to open Plan, inspect the weekly set grid, edit a day, start a workout, log a set, finish it, and view the Strength Map.
 - Exact steps to send and accept a friend request, then open the mutual PR and Strength Map comparison.
 - A note that Apple Health is optional and only appears on a physical supported device.
-- A note that workout notifications are optional local reminders, requested in context from Settings.
+- A note that workout notifications are optional local reminders, requested in context during setup or from Settings, with a five-second delivery test in Settings.
 - A note that DEADSET is not a regulated medical device and makes no diagnosis or treatment claim.
 - A note explaining the iOS Pro experience and every platform-specific limitation.
 - Working contact details monitored during review.

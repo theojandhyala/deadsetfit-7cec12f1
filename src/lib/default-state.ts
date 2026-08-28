@@ -25,6 +25,7 @@ export const DEFAULT_STATE: AppState = {
   deviceRemindersEnabled: false,
   workoutReminderHour: 18,
   workoutReminderMinute: 0,
+  notificationPreferenceConfigured: false,
   streakArmor: { shields: 0, lastRefillMonth: "", usedDates: [] },
   healthSync: { enabled: false, importWorkouts: true, exportWorkouts: true },
   strengthGoals: [],

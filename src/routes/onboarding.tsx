@@ -6,6 +6,7 @@ import {
   ArrowDown,
   ArrowUp,
   Check,
+  BellRing,
   ChevronLeft,
   Dumbbell,
   Minus,
@@ -46,6 +47,8 @@ import { hapticFailure, hapticSaved, hapticSelection } from "@/lib/haptics";
 import { deriveLiveSetupBlueprint } from "@/lib/setup-blueprint";
 import { normaliseDecimalInput } from "@/lib/programme-weight-setup";
 import { finishAppBoot } from "@/lib/app-boot";
+import { requestWorkoutNotificationPermission } from "@/lib/device-reminders";
+import { isNativeIos } from "@/lib/platform";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "DEADSET — Onboarding" }] }),
@@ -62,6 +65,7 @@ type Step =
   | "session"
   | "preferences"
   | "schedule"
+  | "notifications"
   | "experience"
   | "about"
   | "sleep"
@@ -347,7 +351,7 @@ function Onboarding() {
           />
         </div>
       </div>
-      {mode && !["mode", "schedule", "blueprint", "analyzing"].includes(step) && (
+      {mode && !["mode", "schedule", "notifications", "blueprint", "analyzing"].includes(step) && (
         <div className="px-6 pt-4">
           <SetupLivePreview draft={draft} mode={mode} schedule={draftSchedule} compact />
         </div>
@@ -474,6 +478,7 @@ function Onboarding() {
             }}
           />
         )}
+        {step === "notifications" && <NotificationStep onContinue={() => next({})} />}
         {step === "injuries" && (
           <Injuries
             initial={draft.injuries}
@@ -1949,6 +1954,87 @@ function BlueprintStep({
           Your setup is saved before Apple opens. Eligible new subscribers get seven days free, then
           the monthly subscription begins.
         </p>
+      </div>
+    </div>
+  );
+}
+
+function NotificationStep({ onContinue }: { onContinue: () => void }) {
+  const [busy, setBusy] = useState(false);
+
+  async function choose(enabled: boolean) {
+    setBusy(true);
+    try {
+      const granted = enabled && isNativeIos() ? await requestWorkoutNotificationPermission() : false;
+      setState((current) => ({
+        ...current,
+        deviceRemindersEnabled: granted,
+        streakAlertsEnabled: granted,
+        rivalAlertsEnabled: granted,
+        notificationPreferenceConfigured: true,
+      }));
+      if (enabled && !granted && isNativeIos()) {
+        hapticFailure();
+        toast.error("Notifications weren't allowed. You can enable them later in Settings.");
+      } else if (granted) {
+        hapticSaved();
+      } else {
+        hapticSelection();
+      }
+      onContinue();
+    } catch {
+      hapticFailure();
+      toast.error("Notifications couldn't be configured. You can retry in Settings.");
+      setState((current) => ({
+        ...current,
+        deviceRemindersEnabled: false,
+        streakAlertsEnabled: false,
+        rivalAlertsEnabled: false,
+        notificationPreferenceConfigured: true,
+      }));
+      onContinue();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-1 flex-col">
+      <div className="relative mb-6 overflow-hidden rounded-[2rem] border border-accent-red/50 bg-[#111214] p-6 text-center shadow-[0_24px_70px_rgba(230,50,34,0.14)]">
+        <div className="absolute inset-x-10 top-0 h-24 rounded-full bg-accent-red/20 blur-3xl" />
+        <span className="relative mx-auto grid h-20 w-20 place-items-center rounded-[1.6rem] border border-accent-red/50 bg-accent-red/15 text-accent-red">
+          <BellRing size={36} />
+        </span>
+        <p className="label-cap relative mt-5 text-[9px] text-accent-red">YOUR PLAN, ON TIME</p>
+        <h1 className="display relative mt-2 text-3xl font-black uppercase leading-[0.95] text-grit">
+          Put DEADSET on your Lock Screen
+        </h1>
+        <p className="relative mx-auto mt-4 max-w-sm text-xs leading-relaxed text-grit-dim">
+          Get one alert on scheduled training days, a warning before a real streak ends, and pressure
+          when a rival duel needs you. No spam and no exact location tracking.
+        </p>
+      </div>
+
+      <div className="grid gap-2">
+        {["Scheduled workout reminders", "Streak-at-risk warnings", "Rival duel pressure"].map(
+          (label) => (
+            <div key={label} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-grit-card px-4 py-3">
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-accent-red text-white">
+                <Check size={13} />
+              </span>
+              <span className="text-xs font-bold text-grit">{label}</span>
+            </div>
+          ),
+        )}
+      </div>
+
+      <div className="mt-auto pt-6">
+        <button type="button" disabled={busy} onClick={() => void choose(true)} className="btn-grit min-h-14 w-full text-[11px]">
+          <BellRing size={15} className="mr-2" /> Enable notifications
+        </button>
+        <button type="button" disabled={busy} onClick={() => void choose(false)} className="mt-2 min-h-11 w-full text-[10px] font-black uppercase tracking-wider text-grit-dim">
+          Not now
+        </button>
       </div>
     </div>
   );

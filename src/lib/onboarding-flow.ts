@@ -8,6 +8,7 @@ export type OnboardingActiveStep =
   | "equipment"
   | "preferences"
   | "schedule"
+  | "notifications"
   | "username"
   | "blueprint";
 
@@ -22,7 +23,7 @@ export function onboardingOrder(mode: OnboardingMode | null): OnboardingActiveSt
     "equipment",
     "preferences",
   ];
-  return [...shared, "schedule", "username", "blueprint"];
+  return [...shared, "schedule", "notifications", "username", "blueprint"];
 }
 
 export function onboardingStageLabel(step: OnboardingActiveStep): string {
@@ -30,6 +31,7 @@ export function onboardingStageLabel(step: OnboardingActiveStep): string {
   if (["goal", "about"].includes(step)) return "YOU";
   if (["days", "equipment", "preferences"].includes(step)) return "TRAINING";
   if (step === "schedule") return "YOUR WEEK";
+  if (step === "notifications") return "STAY ON TRACK";
   if (step === "username") return "IDENTITY";
   return "READY";
 }

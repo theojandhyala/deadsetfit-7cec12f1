@@ -15,6 +15,7 @@ import { getRank } from "../src/lib/rank";
 import type { AppState } from "../src/lib/types";
 import type { Database } from "../src/integrations/supabase/types";
 import { revokeAppleRefreshToken } from "../src/lib/apple-oauth.server";
+import { athleteSearchRank, normalizeAthleteSearchQuery } from "../src/lib/athlete-search";
 
 interface AuthCtx {
   supabase: SupabaseClient<Database>;
@@ -394,10 +395,11 @@ async function requirePro(req: any): Promise<AuthCtx> {
 // Bidirectional block set: users this user blocked OR who blocked this user.
 // Their content must be hidden everywhere (App Store Guideline 1.2).
 async function blockedUserIds(supabase: any, userId: string): Promise<Set<string>> {
-  const { data: blocks } = await supabase
+  const { data: blocks, error } = await supabase
     .from("user_blocks")
     .select("blocker_id, blocked_id")
     .or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`);
+  if (error) throw new Error(error.message);
   const hidden = new Set<string>();
   (blocks ?? []).forEach((b: any) =>
     hidden.add(b.blocker_id === userId ? b.blocked_id : b.blocker_id),
@@ -730,7 +732,7 @@ const handlers: Record<string, Handler> = {
       })
       .parse(data);
     const hidden = await blockedUserIds(supabase, userId);
-    const { data: allRows, error } = await supabase
+    const { data: allRows, error } = await supabaseAdmin
       .from("public_profiles")
       .select("id, username, display_name, avatar_url, level, grit_points, public_stats")
       .limit(500);
@@ -906,7 +908,7 @@ const handlers: Record<string, Handler> = {
     });
     const d = ProfileSchema.parse(data);
     if (d.username) {
-      const { data: existing } = await supabase
+      const { data: existing } = await supabaseAdmin
         .from("public_profiles")
         .select("id")
         .ilike("username", d.username)
@@ -1026,7 +1028,7 @@ const handlers: Record<string, Handler> = {
     const postIds = (posts ?? []).map((p) => p.id);
     const [{ data: authors }, { data: likes }, { data: myLikes }, { data: commentCounts }] =
       await Promise.all([
-        supabase
+        supabaseAdmin
           .from("public_profiles")
           .select("id, display_name, username, avatar_url, grit_points")
           .in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]),
@@ -1158,7 +1160,7 @@ const handlers: Record<string, Handler> = {
     if (error) throw new Error(error.message);
     const rows = (allRows ?? []).filter((r: any) => !hidden.has(r.user_id));
     const ids = Array.from(new Set(rows.map((r: any) => r.user_id)));
-    const { data: authors } = await supabase
+    const { data: authors } = await supabaseAdmin
       .from("public_profiles")
       .select("id, display_name, username")
       .in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
@@ -1172,7 +1174,7 @@ const handlers: Record<string, Handler> = {
     const scope =
       (data as { scope?: string } | undefined)?.scope === "following" ? "following" : "global";
     const hidden = await blockedUserIds(supabase, userId);
-    let lbQuery = supabase
+    let lbQuery = supabaseAdmin
       .from("public_profiles")
       .select("id, display_name, username, avatar_url, grit_points")
       .order("grit_points", { ascending: false })
@@ -1258,7 +1260,7 @@ const handlers: Record<string, Handler> = {
     (followsRes.data ?? []).forEach((f) => actorIds.add(f.follower_id as string));
     (likesRes.data ?? []).forEach((l) => actorIds.add(l.user_id as string));
     (commentsRes.data ?? []).forEach((c) => actorIds.add(c.user_id as string));
-    const { data: profs } = await supabase
+    const { data: profs } = await supabaseAdmin
       .from("public_profiles")
       .select("id, username, display_name, avatar_url")
       .in("id", actorIds.size ? Array.from(actorIds) : ["00000000-0000-0000-0000-000000000000"]);
@@ -1358,7 +1360,7 @@ const handlers: Record<string, Handler> = {
     const ids = [...new Set([...outgoingAt.keys(), ...incomingAt.keys()])].filter(
       (id) => !hidden.has(id),
     );
-    const { data: profiles, error: profilesError } = await supabase
+    const { data: profiles, error: profilesError } = await supabaseAdmin
       .from("public_profiles")
       .select(
         "id, username, display_name, avatar_url, bio, city, country, grit_points, public_stats",
@@ -1692,35 +1694,43 @@ const handlers: Record<string, Handler> = {
 
   async searchAthletes(data, req) {
     const { supabase, userId } = await requireAuth(req);
-    const d = z.object({ q: z.string().trim().min(1).max(40) }).parse(data);
-    // Strip PostgREST filter metacharacters (,().) as well as ilike wildcards
-    // (%_) so a crafted query can't inject extra clauses into the .or() below.
-    const q = d.q.replace(/[%_,().]/g, "").trim();
+    const d = z.object({ q: z.string().trim().min(1).max(80) }).parse(data);
+    const q = normalizeAthleteSearchQuery(d.q);
     if (!q) return [];
-    const { data: blocks } = await supabase
-      .from("user_blocks")
-      .select("blocker_id, blocked_id")
-      .or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`);
-    const hidden = new Set<string>();
-    (blocks ?? []).forEach((b) =>
-      hidden.add(b.blocker_id === userId ? b.blocked_id : b.blocker_id),
-    );
-    const { data: rows, error } = await supabase
-      .from("public_profiles")
-      .select(
-        "id, username, display_name, avatar_url, bio, city, country, level, grit_points, public_stats",
-      )
-      .or(`username.ilike.%${q}%,display_name.ilike.%${q}%`)
-      .neq("id", userId)
-      .limit(20);
-    if (error) throw new Error(error.message);
-    const filtered = (rows ?? []).filter((r) => r.id && !hidden.has(r.id as string));
+    const hidden = await blockedUserIds(supabase, userId);
+    const columns =
+      "id, username, display_name, avatar_url, bio, city, country, level, grit_points, public_stats";
+    const pattern = `%${q}%`;
+    const [usernameResult, displayNameResult] = await Promise.all([
+      supabaseAdmin
+        .from("public_profiles")
+        .select(columns)
+        .ilike("username", pattern)
+        .neq("id", userId)
+        .limit(20),
+      supabaseAdmin
+        .from("public_profiles")
+        .select(columns)
+        .ilike("display_name", pattern)
+        .neq("id", userId)
+        .limit(20),
+    ]);
+    if (usernameResult.error) throw new Error(usernameResult.error.message);
+    if (displayNameResult.error) throw new Error(displayNameResult.error.message);
+    const unique = new Map<string, (typeof usernameResult.data)[number]>();
+    [...(usernameResult.data ?? []), ...(displayNameResult.data ?? [])].forEach((row) => {
+      if (row.id && !hidden.has(row.id as string)) unique.set(row.id as string, row);
+    });
+    const filtered = [...unique.values()]
+      .sort((a, b) => athleteSearchRank(a, q) - athleteSearchRank(b, q))
+      .slice(0, 20);
     const ids = filtered.map((r) => r.id).filter((x): x is string => !!x);
-    const { data: follows } = await supabase
+    const { data: follows, error: followsError } = await supabase
       .from("follows")
       .select("following_id")
       .eq("follower_id", userId)
       .in("following_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
+    if (followsError) throw new Error(followsError.message);
     const followingSet = new Set((follows ?? []).map((f) => f.following_id));
     return filtered.map((r) => ({
       ...r,
@@ -1732,12 +1742,13 @@ const handlers: Record<string, Handler> = {
   async getSuggestedAthletes(_data, req) {
     const { supabase, userId } = await requireAuth(req);
     const hidden = await blockedUserIds(supabase, userId);
-    const { data: follows } = await supabase
+    const { data: follows, error: followsError } = await supabase
       .from("follows")
       .select("following_id")
       .eq("follower_id", userId);
+    if (followsError) throw new Error(followsError.message);
     const followingSet = new Set((follows ?? []).map((f) => f.following_id));
-    const { data: rows } = await supabase
+    const { data: rows, error: rowsError } = await supabaseAdmin
       .from("public_profiles")
       .select(
         "id, username, display_name, avatar_url, bio, city, country, grit_points, public_stats",
@@ -1745,6 +1756,7 @@ const handlers: Record<string, Handler> = {
       .neq("id", userId)
       .order("grit_points", { ascending: false })
       .limit(30);
+    if (rowsError) throw new Error(rowsError.message);
     return (rows ?? [])
       .filter(
         (r): r is typeof r & { id: string } =>
@@ -1784,7 +1796,7 @@ const handlers: Record<string, Handler> = {
   async getAthleteCard(data, req) {
     const { supabase, userId } = await requireAuth(req);
     const d = z.object({ userId: z.string().uuid() }).parse(data);
-    const { data: row, error } = await supabase
+    const { data: row, error } = await supabaseAdmin
       .from("public_profiles")
       .select(
         "id, username, display_name, avatar_url, bio, city, country, grit_points, public_stats",
@@ -1824,7 +1836,7 @@ const handlers: Record<string, Handler> = {
         .eq("follower_id", d.userId),
       userId === d.userId
         ? Promise.resolve(null)
-        : supabase
+        : supabaseAdmin
             .from("public_profiles")
             .select("public_stats, grit_points")
             .eq("id", userId)
@@ -1950,11 +1962,12 @@ const handlers: Record<string, Handler> = {
 
   async getMyLocation(_data, req) {
     const { supabase, userId } = await requireAuth(req);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("profiles")
       .select("city, region, country")
       .eq("id", userId)
       .maybeSingle();
+    if (error) throw new Error(error.message);
     return {
       city: data?.city ?? null,
       region: data?.region ?? null,
@@ -1964,21 +1977,15 @@ const handlers: Record<string, Handler> = {
 
   async getNearbyAthletes(_data, req) {
     const { supabase, userId } = await requireAuth(req);
-    const { data: me } = await supabase
+    const { data: me, error: meError } = await supabase
       .from("profiles")
       .select("city, country")
       .eq("id", userId)
       .maybeSingle();
+    if (meError) throw new Error(meError.message);
     if (!me?.city || !me?.country) return { athletes: [], myCity: null, myCountry: null };
-    const { data: blocks } = await supabase
-      .from("user_blocks")
-      .select("blocker_id, blocked_id")
-      .or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`);
-    const hidden = new Set<string>();
-    (blocks ?? []).forEach((b) =>
-      hidden.add(b.blocker_id === userId ? b.blocked_id : b.blocker_id),
-    );
-    const { data: same } = await supabase
+    const hidden = await blockedUserIds(supabase, userId);
+    const { data: same, error: sameError } = await supabaseAdmin
       .from("public_profiles")
       .select(
         "id, username, display_name, avatar_url, bio, level, grit_points, public_stats, city, country",
@@ -1987,12 +1994,14 @@ const handlers: Record<string, Handler> = {
       .ilike("country", me.country)
       .neq("id", userId)
       .limit(30);
+    if (sameError) throw new Error(sameError.message);
     const ids = (same ?? []).map((r) => r.id).filter((x): x is string => !!x);
-    const { data: follows } = await supabase
+    const { data: follows, error: followsError } = await supabase
       .from("follows")
       .select("following_id")
       .eq("follower_id", userId)
       .in("following_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
+    if (followsError) throw new Error(followsError.message);
     const fset = new Set((follows ?? []).map((f) => f.following_id));
     const athletes = (same ?? [])
       .filter((r) => r.id && !hidden.has(r.id as string))
