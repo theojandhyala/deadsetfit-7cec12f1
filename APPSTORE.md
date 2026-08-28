@@ -6,8 +6,8 @@ This repository ships DEADSET as a bundled Capacitor iPhone app. The public webs
 
 - App Store ID: `6783511541`
 - Bundle identifier: `org.deadsetfit.app`
-- Version: `1.1`
-- Build: `133`
+- Version: `1.2`
+- Build: `134`
 - Device family: iPhone
 - Minimum iOS version: iOS 15
 - Category: Health & Fitness
@@ -78,7 +78,7 @@ The app recognizes these immutable product identifiers:
 - `org.deadsetfit.pro.monthly`
 - `org.deadsetfit.pro.annual`
 
-Only `org.deadsetfit.pro.monthly` is offered for a new purchase in version 1.1. Before submission, confirm it is Ready to Submit or approved in App Store Connect, attached to version 1.1, priced at £5.99 in the UK, and configured with a one-week introductory free trial. `org.deadsetfit.pro.annual` remains recognized only for existing legacy entitlements and must not be attached as a newly offered plan. RevenueCat observes StoreKit transactions; it does not replace Apple's purchase sheet.
+Only `org.deadsetfit.pro.monthly` is offered for a new purchase in version 1.2. Before submission, confirm it is approved in App Store Connect, priced at £5.99 in the UK, and configured with a one-week introductory free trial. `org.deadsetfit.pro.annual` remains recognized only for existing legacy entitlements and must not be presented as a newly offered plan. RevenueCat observes StoreKit transactions; it does not replace Apple's purchase sheet.
 
 The iPhone app must not expose Stripe, a web checkout, external purchase instructions or buttons that route users around Apple's in-app purchase system. Legacy web subscriptions may still be recognized after sign-in, but new iPhone purchases use StoreKit.
 
@@ -103,11 +103,11 @@ Never give App Review an expired account, a production paywall that cannot load,
 - Screenshots showing Train, the weekly set grid, Strength Map, live workout, friend comparison and Apple Fitness integration
 - Accurate app description, keywords, privacy answers and age rating
 - Current support and privacy URLs
-- Version 1.1 release notes matching the in-app New in 1.1 summary
+- Version 1.2 release notes matching the in-app New in 1.2 summary
 
 Suggested release notes:
 
-> DEADSET 1.1 turns your plan into visible progress. See every week's planned sets in one grid, understand which muscles your training develops, earn clear next-load recommendations from completed workouts, and compare PRs and Strength Maps with accepted friends. This update also improves onboarding, live workout reliability, Apple Fitness integration and account controls.
+> DEADSET 1.2 turns your plan into visible progress. See every week's planned sets in one grid, understand which muscles your training develops, earn clear next-load recommendations from completed workouts, and compare PRs and Strength Maps with accepted friends. This update also improves onboarding, live workout reliability, Apple Fitness integration and account controls.
 
 ## Archive and upload
 
@@ -117,7 +117,7 @@ Suggested release notes:
 4. Choose Product > Archive.
 5. In Organizer, run Validate App before Distribute App.
 6. Upload to App Store Connect and wait for processing.
-7. Attach build 133 to version 1.1, attach only the monthly subscription product offered by this build, and complete export compliance and content-rights questions.
+7. Attach build 134 to version 1.2 and complete export compliance and content-rights questions. The approved monthly subscription remains available to the app; do not present the annual legacy product as a new plan.
 8. Test the processed build in TestFlight before submitting it for review.
 
 Every bundled product update requires a new App Store build and review. Website deployment alone does not update the installed app.
