@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { Landing } from "@/components/Landing";
+import { GritLogo } from "@/components/GritLogo";
 import { NativeWelcome } from "@/components/NativeWelcome";
 import { isNativeApp } from "@/lib/platform";
 
@@ -106,7 +107,29 @@ function IndexRoute() {
     };
   }, [navigate]);
 
-  if (!entryReady) return <div className="min-h-[100dvh] bg-[#070708]" />;
+  if (!entryReady) return <NativeSessionLoading />;
   if (native) return <NativeWelcome />;
   return <Landing />;
+}
+
+/** Keeps the branded launch experience continuous while the saved session is restored. */
+function NativeSessionLoading() {
+  return (
+    <main
+      className="grid min-h-[100dvh] place-items-center bg-[radial-gradient(120%_90%_at_50%_0%,#1a0b0b_0%,#0a0a0a_55%)] px-6 text-center"
+      role="status"
+      aria-live="polite"
+    >
+      <div>
+        <GritLogo className="inline-block animate-pulse text-[46px]" />
+        <p className="label-cap mt-4 text-[9px] text-white/55">Loading your training</p>
+        <div
+          className="mx-auto mt-6 h-0.5 w-32 overflow-hidden rounded-full bg-white/10"
+          aria-hidden="true"
+        >
+          <span className="block h-full w-2/5 animate-pulse rounded-full bg-accent-red" />
+        </div>
+      </div>
+    </main>
+  );
 }

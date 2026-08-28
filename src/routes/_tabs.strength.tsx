@@ -110,6 +110,8 @@ function StrengthPage() {
   const locked = proLoading || !isPro;
 
   const needsBodyweight = (state.profile?.weightKg ?? 0) <= 0;
+  const needsStrengthReference = state.profile?.gender === "OTHER";
+  const needsStrengthProfile = needsBodyweight || needsStrengthReference;
 
   function openGrowthPlan(target: GrowthTarget) {
     setGrowthTarget(target);
@@ -140,15 +142,18 @@ function StrengthPage() {
         </Link>
       </header>
 
-      {needsBodyweight ? (
-        <MissingBodyweight />
-      ) : (
-        <StrengthBodyComparison
-          baseline={baseline}
-          current={report}
-          plannedMuscles={plannedMuscles}
-          onSelectMuscle={openGrowthPlan}
-          onShare={openStrengthShare}
+      <StrengthBodyComparison
+        baseline={needsStrengthProfile ? null : baseline}
+        current={report}
+        plannedMuscles={plannedMuscles}
+        onSelectMuscle={openGrowthPlan}
+        onShare={openStrengthShare}
+      />
+
+      {needsStrengthProfile && (
+        <MissingStrengthProfile
+          needsBodyweight={needsBodyweight}
+          needsStrengthReference={needsStrengthReference}
         />
       )}
 
@@ -170,7 +175,7 @@ function StrengthPage() {
         />
       )}
 
-      {!needsBodyweight && (
+      {!needsStrengthProfile && (
         <>
           {report.gradedCount > 0 ? (
             <>
@@ -614,20 +619,35 @@ function ExerciseRow({ grade, unit }: { grade: ExerciseGrade; unit: "kg" | "lb" 
   );
 }
 
-function MissingBodyweight() {
+function MissingStrengthProfile({
+  needsBodyweight,
+  needsStrengthReference,
+}: {
+  needsBodyweight: boolean;
+  needsStrengthReference: boolean;
+}) {
+  const both = needsBodyweight && needsStrengthReference;
   return (
-    <section className="px-5">
+    <section className="mt-5 px-5">
       <div className="rounded-2xl border border-grit bg-grit-card p-5">
         <Info size={22} className="text-accent-red" />
         <p className="display mt-3 text-lg font-extrabold uppercase text-grit">
-          Add your bodyweight
+          {both
+            ? "Finish strength setup"
+            : needsBodyweight
+              ? "Add your bodyweight"
+              : "Choose a strength reference"}
         </p>
         <p className="mt-1.5 text-xs leading-relaxed text-grit-dim">
-          Strength is graded relative to what you weigh — a 100 kg bench means something very
-          different at 60 kg than at 110. Without it we'd be guessing, so we won't grade you at all.
+          {needsBodyweight
+            ? "Strength is graded relative to what you weigh — a 100 kg bench means something very different at 60 kg than at 110."
+            : "Male and female strength tables use different reference points. Choose the table you want DEADSET to use; we will not silently guess."}{" "}
+          {both
+            ? "Add both details in Profile and the map will switch on."
+            : "Until then, the map stays grey."}
         </p>
         <Link to="/profile" className="btn-grit mt-4 w-full">
-          Set bodyweight
+          Open strength setup
         </Link>
       </div>
     </section>

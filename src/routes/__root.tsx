@@ -184,6 +184,11 @@ function RootComponent() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const isAuthRoute = pathname === "/auth" || pathname.startsWith("/auth/");
   const nativeIos = isNativeIos();
+  const setupPreview =
+    import.meta.env.DEV &&
+    pathname === "/onboarding" &&
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("preview") === "1";
   const isPublicWebsiteRoute = [
     "/",
     "/privacy",
@@ -203,7 +208,7 @@ function RootComponent() {
     capturePendingCrew();
   }, [isAuthRoute]);
 
-  if (!nativeIos) {
+  if (!nativeIos && !setupPreview) {
     return (
       <QueryClientProvider client={queryClient}>
         {isPublicWebsiteRoute ? <Outlet /> : <WebMarketingRedirect />}

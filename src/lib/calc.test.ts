@@ -57,6 +57,39 @@ describe("defaultSchedule", () => {
     }
   });
 
+  it("keeps core inside four-movement full-body sessions when core is a focus", () => {
+    const schedule = defaultSchedule(
+      profile({
+        daysPerWeek: 3,
+        exercisesPerSession: 4,
+        focusMuscles: ["CORE"],
+      }),
+    );
+
+    const trainingDays = Object.values(schedule).filter((day) => day.exerciseIds.length > 0);
+    expect(trainingDays).toHaveLength(3);
+    for (const day of trainingDays) {
+      expect(day.exerciseIds).toHaveLength(4);
+      expect(day.exerciseIds).toContain("plank");
+    }
+  });
+
+  it("reserves capped full-body slots for multiple selected focus muscles", () => {
+    const schedule = defaultSchedule(
+      profile({
+        daysPerWeek: 3,
+        exercisesPerSession: 4,
+        focusMuscles: ["CHEST", "CORE"],
+      }),
+    );
+
+    for (const day of Object.values(schedule).filter((candidate) => candidate.exerciseIds.length)) {
+      expect(day.exerciseIds).toHaveLength(4);
+      expect(day.exerciseIds).toEqual(expect.arrayContaining(["cable-fly", "plank"]));
+      expect(new Set(day.exerciseIds).size).toBe(day.exerciseIds.length);
+    }
+  });
+
   it("creates the exact number of training days selected during onboarding", () => {
     for (const daysPerWeek of [3, 4, 5, 6] as const) {
       const schedule = defaultSchedule(profile({ daysPerWeek }));

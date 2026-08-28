@@ -1,9 +1,8 @@
 import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { BottomNav } from "@/components/BottomNav";
 import { GritEarnedLayer } from "@/components/GritEarnedLayer";
-import { FirstRunTour } from "@/components/FirstRunTour";
 import { TopBar } from "@/components/TopBar";
 import {
   getLocalStateOwner,
@@ -26,6 +25,7 @@ import { usePro } from "@/hooks/usePro";
 import { FeatureTour } from "@/components/FeatureTour";
 import { buildWidgetSnapshot, publishWidgets } from "@/lib/widgets";
 import { ProgrammeWeightSetup } from "@/components/ProgrammeWeightSetup";
+import { programmeWeightRows } from "@/lib/programme-weight-setup";
 
 export const Route = createFileRoute("/_tabs")({
   component: TabsLayout,
@@ -37,6 +37,28 @@ function TabsLayout() {
   const getProfile = getMyProfile;
   const [state, set] = useAppState();
   const { isPro, loading: proLoading } = usePro();
+  const weightSetupRows = useMemo(
+    () =>
+      state.profile
+        ? programmeWeightRows({
+            schedule: state.schedule,
+            programs: state.programs,
+            activeProgramId: state.activeProgramId,
+            savedExercises: state.savedExercises,
+            sessions: state.sessions,
+          })
+        : [],
+    [
+      state.profile,
+      state.schedule,
+      state.programs,
+      state.activeProgramId,
+      state.savedExercises,
+      state.sessions,
+    ],
+  );
+  const needsWeightSetup = weightSetupRows.some((row) => !row.autoApply);
+  const weightsSettled = weightSetupRows.length === 0;
   // Start ready=true if local state already has a profile — render INSTANTLY
   // on hot refresh / navigation; remote sync continues in the background.
   const [ready, setReady] = useState(false);
@@ -206,15 +228,16 @@ function TabsLayout() {
         paddingBottom: "calc(104px + env(safe-area-inset-bottom))",
       }}
     >
-      <TopBar />
-      <div key={pathname} className="deadset-route-shell">
-        <Outlet />
+      <div inert={needsWeightSetup ? true : undefined} aria-hidden={needsWeightSetup || undefined}>
+        <TopBar />
+        <div key={pathname} className="deadset-route-shell">
+          <Outlet />
+        </div>
+        <BottomNav />
       </div>
-      <FeatureTour />
+      <FeatureTour active={!!state.profile && weightsSettled} />
       <GritEarnedLayer />
-      <FirstRunTour active={!!state.profile} />
-      <ProgrammeWeightSetup />
-      <BottomNav />
+      <ProgrammeWeightSetup rows={weightSetupRows} />
     </div>
   );
 }

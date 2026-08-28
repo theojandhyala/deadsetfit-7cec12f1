@@ -65,6 +65,7 @@ describe("workout flow", () => {
   it("requires a pre-workout load only for externally loaded movements", () => {
     expect(requiresWorkingWeight({ tracking: "WEIGHT" }, "BARBELL")).toBe(true);
     expect(requiresWorkingWeight({ tracking: "WEIGHT" }, "BODYWEIGHT")).toBe(false);
+    expect(requiresWorkingWeight({ tracking: "WEIGHT" }, "bodyweight")).toBe(false);
     expect(requiresWorkingWeight({ tracking: "DURATION" }, "MAT")).toBe(false);
     expect(requiresWorkingWeight({ tracking: "DISTANCE" }, "CARDIO")).toBe(false);
   });

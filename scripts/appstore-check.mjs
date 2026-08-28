@@ -68,6 +68,9 @@ const launchStoryboard = existsSync("ios/App/App/Base.lproj/LaunchScreen.storybo
   : "";
 const indexHtml = existsSync("index.html") ? read("index.html") : "";
 const indexRoute = existsSync("src/routes/index.tsx") ? read("src/routes/index.tsx") : "";
+const nativeWelcome = existsSync("src/components/NativeWelcome.tsx")
+  ? read("src/components/NativeWelcome.tsx")
+  : "";
 const entitlements = existsSync("ios/App/App/App.entitlements")
   ? read("ios/App/App/App.entitlements")
   : "";
@@ -227,9 +230,11 @@ check(
 );
 check(
   "signup-first native welcome",
-  indexRoute.includes("/auth/index.html?mode=signup") &&
-    indexRoute.includes("/auth/index.html?mode=signin") &&
-    authClient.includes('get("mode") === "signin"'),
+  nativeWelcome.includes('nativeAuthHref("signup")') &&
+    nativeWelcome.includes('nativeAuthHref("signin")') &&
+    nativeWelcome.includes("/auth/index.html?mode=${mode}") &&
+    oauthClient.includes('get("mode") === "signin"') &&
+    authClient.includes("authModeFromUrl(window.location.href)"),
   "First launch prioritizes account creation and provides a direct returning-user sign-in path.",
 );
 check(
@@ -481,8 +486,10 @@ check(
 );
 check(
   "native OAuth callback",
-  authClient.includes('nativeAuthCallback = "org.deadsetfit.app://auth/callback"') &&
-    authClient.includes('nativeAuthBridge = "https://deadsetfit.org/auth/native-callback"') &&
+  oauthClient.includes('NATIVE_AUTH_CALLBACK = "org.deadsetfit.app://auth/callback"') &&
+    oauthClient.includes('NATIVE_AUTH_BRIDGE = "https://deadsetfit.org/auth/native-callback"') &&
+    authClient.includes("NATIVE_AUTH_CALLBACK") &&
+    authClient.includes("NATIVE_AUTH_BRIDGE") &&
     authClient.includes('import("@capacitor/browser")') &&
     authClient.includes('import("@capacitor/app")') &&
     authClient.includes("setSession") &&

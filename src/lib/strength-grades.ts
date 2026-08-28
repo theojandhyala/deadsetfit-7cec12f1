@@ -207,6 +207,7 @@ function placeOnLadder(
  * with a 20% minimum increase so closely packed tables still demand a leap.
  */
 function thresholdsWithWorldClass(standard: ExerciseStandard, gender: string | null | undefined) {
+  if (gender !== "MALE" && gender !== "FEMALE") return null;
   const published = gender === "FEMALE" ? standard.female : standard.male;
   const elite = published[3];
   const advanced = published[2];
@@ -276,6 +277,7 @@ export function gradeExercise(
     STANDARDS[exerciseId] ?? (fallbackMuscle ? GENERIC_STANDARD[fallbackMuscle] : undefined);
   if (!standard) return null;
   const thresholds = thresholdsWithWorldClass(standard, gender);
+  if (!thresholds) return null;
 
   let value: number;
   if (standard.kind === "RATIO") {
@@ -327,11 +329,25 @@ export function strengthReport(
   state: AppState,
   library: Array<Pick<Exercise, "id" | "name"> & Partial<Pick<Exercise, "muscleGroup">>>,
 ): StrengthReport {
+  const bodyweightKg = state.profile?.weightKg ?? 0;
+  const gender = state.profile?.gender;
+
+  // All six areas remain discoverable as grey, but no lift is graded until
+  // both calibration inputs exist. This avoids silently treating an
+  // unspecified reference as male or grading only bodyweight movements.
+  if (bodyweightKg <= 0 || (gender !== "MALE" && gender !== "FEMALE")) {
+    return {
+      muscles: [],
+      tier: TIERS[0],
+      score: 0,
+      ungraded: [...GRADED_MUSCLES],
+      gradedCount: 0,
+    };
+  }
+
   const bests = personalBests(state);
   const names = new Map(library.map((exercise) => [exercise.id, exercise.name]));
   const muscles = new Map(library.map((exercise) => [exercise.id, exercise.muscleGroup]));
-  const bodyweightKg = state.profile?.weightKg ?? 0;
-  const gender = state.profile?.gender;
 
   const byMuscle = new Map<MuscleGroup, ExerciseGrade[]>();
   for (const [exerciseId, best] of bests) {

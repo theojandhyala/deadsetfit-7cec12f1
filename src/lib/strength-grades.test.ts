@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   gradeExercise,
+  GRADED_MUSCLES,
   personalBests,
   pointsToNextTier,
   STANDARDS,
@@ -117,6 +118,13 @@ describe("personalBests", () => {
 describe("gradeExercise", () => {
   const bests = { e1rmKg: 0, reps: 0, seconds: 0 };
 
+  it("stays ungraded until the athlete chooses a strength reference", () => {
+    expect(
+      gradeExercise("bench-press", "Bench", { ...bests, e1rmKg: 100 }, 80, "OTHER"),
+    ).toBeNull();
+    expect(gradeExercise("pull-ups", "Pull Ups", { ...bests, reps: 15 }, 80, null)).toBeNull();
+  });
+
   it("grades a loaded lift against bodyweight, not absolute load", () => {
     const light = gradeExercise("bench-press", "Bench", { ...bests, e1rmKg: 100 }, 60, "MALE");
     const heavy = gradeExercise("bench-press", "Bench", { ...bests, e1rmKg: 100 }, 120, "MALE");
@@ -188,6 +196,21 @@ describe("gradeExercise", () => {
 });
 
 describe("strengthReport", () => {
+  it("keeps the full report ungraded until bodyweight and reference are set", () => {
+    const trained = [session("pull-ups", "Pull Ups", [{ weight: 0, reps: 20 }])];
+    const missingWeight = strengthReport(
+      state(trained, { profile: { ...profile, weightKg: 0 } }),
+      library,
+    );
+    const missingReference = strengthReport(
+      state(trained, { profile: { ...profile, gender: "OTHER" } }),
+      library,
+    );
+    expect(missingWeight.gradedCount).toBe(0);
+    expect(missingReference.gradedCount).toBe(0);
+    expect(missingReference.ungraded).toEqual(GRADED_MUSCLES);
+  });
+
   it("reports nothing graded for a brand-new account", () => {
     const report = strengthReport(state([]), library);
     expect(report.muscles).toEqual([]);

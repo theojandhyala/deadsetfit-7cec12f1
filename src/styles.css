@@ -1124,6 +1124,27 @@
     animation: deadset-pulse-glow 2.8s ease-in-out infinite;
   }
 
+  .deadset-live-blueprint {
+    box-shadow:
+      0 18px 42px rgba(0, 0, 0, 0.38),
+      inset 0 1px 0 rgba(255, 255, 255, 0.055);
+  }
+
+  .deadset-live-scan {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      110deg,
+      transparent 25%,
+      rgba(230, 50, 34, 0.09) 46%,
+      rgba(255, 255, 255, 0.035) 50%,
+      transparent 70%
+    );
+    transform: translateX(-125%);
+    animation: deadset-live-scan 4.6s ease-in-out infinite;
+  }
+
   .no-scrollbar {
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -1739,6 +1760,17 @@
     }
   }
 
+  @keyframes deadset-live-scan {
+    0%,
+    32% {
+      transform: translateX(-125%);
+    }
+    72%,
+    100% {
+      transform: translateX(125%);
+    }
+  }
+
   @keyframes deadset-hero-sweep {
     0%,
     68% {
@@ -1959,6 +1991,7 @@
     .deadset-hero-card::after,
     .deadset-primary-action::after,
     .deadset-record-button::before,
+    .deadset-live-scan,
     .deadset-float,
     .deadset-pulse-glow {
       animation: none !important;
