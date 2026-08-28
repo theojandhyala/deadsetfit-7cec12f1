@@ -88,13 +88,27 @@ describe("formatting", () => {
   });
 
   it("writes each set in its own units", () => {
-    expect(formatSet({ weight: 60, reps: 8 })).toBe("60 kg × 8");
-    expect(formatSet({ weight: 0, reps: 12 }, false)).toBe("12 reps");
-    expect(formatSet({ weight: 0, reps: 0, mode: "duration", seconds: 60 })).toBe("1:00");
-    expect(formatSet({ weight: 20, reps: 0, mode: "duration", seconds: 45 })).toBe("20 kg · 45s");
-    expect(formatSet({ weight: 0, reps: 0, mode: "distance", meters: 1000, seconds: 240 })).toBe(
-      "1 km · 4:00",
+    expect(formatSet({ weight: 60, reps: 8 }, true, "kg")).toBe("60 kg × 8");
+    expect(formatSet({ weight: 0, reps: 12 }, false, "kg")).toBe("12 reps");
+    expect(formatSet({ weight: 0, reps: 0, mode: "duration", seconds: 60 }, true, "kg")).toBe(
+      "1:00",
     );
+    expect(formatSet({ weight: 20, reps: 0, mode: "duration", seconds: 45 }, true, "kg")).toBe(
+      "20 kg · 45s",
+    );
+    expect(
+      formatSet({ weight: 0, reps: 0, mode: "distance", meters: 1000, seconds: 240 }, true, "kg"),
+    ).toBe("1 km · 4:00");
+  });
+
+  it("takes the unit as an argument rather than defaulting to kilograms", () => {
+    // The default was a silent wrong answer: two live-workout call sites took
+    // it, so a pound athlete read their next set target in kilograms next to
+    // completed sets in pounds. The units-coverage test cannot catch that —
+    // there is no `kg` literal in the caller for it to find — so the type
+    // signature has to.
+    expect(formatSet({ weight: 100, reps: 5 }, true, "lb")).toBe("220 lb × 5");
+    expect(formatSet({ weight: 100, reps: 5 }, true, "kg")).toBe("100 kg × 5");
   });
 });
 

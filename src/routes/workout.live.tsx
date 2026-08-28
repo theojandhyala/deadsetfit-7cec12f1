@@ -1921,7 +1921,7 @@ function SetLogger({
     requestAnimationFrame(() => editWeightRef.current?.focus());
   }
 
-  const fmt = (w: number, r: number) => formatSet({ weight: w, reps: r }, requiresWeight);
+  const fmt = (w: number, r: number) => formatSet({ weight: w, reps: r }, requiresWeight, unit);
 
   return (
     <div className="mt-5 bg-grit-card border border-grit rounded-2xl p-4">
@@ -2092,7 +2092,7 @@ function SetLogger({
                   onLog({ weight: nextWeight, reps: nextReps });
                 }
               }}
-              className="w-full flex items-center justify-between border rounded-xl px-3 py-3 press text-left disabled:opacity-40"
+              className={`relative w-full flex items-center justify-between border rounded-xl px-3 py-3 press text-left disabled:opacity-40 overflow-hidden${done ? " set-row-done" : ""}`}
               style={{
                 borderColor: done
                   ? doneSet?.isPR
@@ -2105,14 +2105,18 @@ function SetLogger({
               }}
             >
               <span className="flex items-center gap-2.5">
+                {/* Keyed on `done` so the element remounts the moment a set
+                    lands and the pop plays exactly once, rather than on every
+                    re-render of a row that was already ticked. */}
                 <span
-                  className="flex h-6 w-6 items-center justify-center rounded-full border"
+                  key={done ? "done" : "pending"}
+                  className={`flex h-6 w-6 items-center justify-center rounded-full border${done ? " set-tick" : ""}`}
                   style={{
                     borderColor: done ? "#22c55e" : "#3a3a3a",
                     background: done ? "#22c55e" : "transparent",
                   }}
                 >
-                  {done && <Check size={14} className="text-black" strokeWidth={3} />}
+                  {done && <Check size={14} className="set-tick-mark text-black" strokeWidth={3} />}
                 </span>
                 <span
                   className="label-cap text-[10px]"
@@ -2134,7 +2138,7 @@ function SetLogger({
               </span>
               <span className="display text-lg font-extrabold text-grit leading-none flex items-center">
                 {done ? formatSet(doneSet!, requiresWeight, unit) : fmt(nextWeight, nextReps)}
-                {doneSet?.isPR && <Flame size={14} className="ml-2 text-accent-red" />}
+                {doneSet?.isPR && <Flame size={14} className="set-pr-flame ml-2 text-accent-red" />}
                 {isNext && !editing && (
                   <Pencil
                     size={13}
@@ -2827,7 +2831,7 @@ function TimedSetLogger({
               type="button"
               disabled={!doneSet}
               onClick={() => doneSet && setEditingSet(i)}
-              className="w-full flex items-center justify-between border rounded-xl px-3 py-3 press text-left disabled:opacity-40"
+              className={`relative w-full flex items-center justify-between border rounded-xl px-3 py-3 press text-left disabled:opacity-40 overflow-hidden${doneSet ? " set-row-done" : ""}`}
               style={{
                 borderColor: doneSet
                   ? doneSet.isPR
@@ -2839,19 +2843,22 @@ function TimedSetLogger({
             >
               <span className="flex items-center gap-2.5">
                 <span
-                  className="flex h-6 w-6 items-center justify-center rounded-full border"
+                  key={doneSet ? "done" : "pending"}
+                  className={`flex h-6 w-6 items-center justify-center rounded-full border${doneSet ? " set-tick" : ""}`}
                   style={{
                     borderColor: doneSet ? "#22c55e" : "#3a3a3a",
                     background: doneSet ? "#22c55e" : "transparent",
                   }}
                 >
-                  {doneSet && <Check size={14} className="text-black" strokeWidth={3} />}
+                  {doneSet && (
+                    <Check size={14} className="set-tick-mark text-black" strokeWidth={3} />
+                  )}
                 </span>
                 <span className="label-cap text-[10px] text-[#8a8a8a]">SET {i + 1}</span>
               </span>
               <span className="display text-lg font-extrabold text-grit leading-none flex items-center">
-                {doneSet ? formatSet(doneSet, false) : "—"}
-                {doneSet?.isPR && <Flame size={14} className="ml-2 text-accent-red" />}
+                {doneSet ? formatSet(doneSet, false, unit) : "—"}
+                {doneSet?.isPR && <Flame size={14} className="set-pr-flame ml-2 text-accent-red" />}
               </span>
             </button>
           );

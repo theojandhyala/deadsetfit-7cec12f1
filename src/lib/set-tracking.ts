@@ -70,11 +70,16 @@ export function formatDistance(meters: number): string {
  * Load is stored in kilograms and converted here, at the display boundary —
  * the only place in the app that should know pounds exist.
  */
-export function formatSet(
-  set: CompletedSet,
-  requiresWeight = true,
-  unit: WeightUnit = "kg",
-): string {
+/**
+ * `unit` is required rather than defaulting to kilograms.
+ *
+ * It defaulted, and two call sites in the live workout quietly took the
+ * default: a pound athlete saw their next set target and their timed-set
+ * history in kilograms while completed sets beside them read in pounds. A
+ * default here is a silent wrong answer, and the units-coverage test cannot
+ * see it because there is no `kg` literal in the caller to find.
+ */
+export function formatSet(set: CompletedSet, requiresWeight: boolean, unit: WeightUnit): string {
   const load = (kg: number) => `${trimNumber(toDisplay(kg, unit))} ${unit}`;
   if (set.mode === "duration") {
     const time = formatDuration(set.seconds ?? 0);

@@ -85,13 +85,23 @@ export function RestTimer({
   const left = state.remaining;
   const total = state.total;
   const pct = Math.max(0, Math.min(100, (left / total) * 100));
+  // The last three seconds already buzz. They should also be visible: in a gym
+  // the phone is on a bench, not in your hand, and "get under the bar" is
+  // worth seeing from a metre away.
+  const urgent = left <= 3 && left > 0;
   return (
     <div className="fixed inset-x-0 bottom-24 z-40 mx-auto max-w-md px-4 animate-slide-up">
       <div className="deadset-3d-panel bg-grit-card border border-accent-red p-4">
         <div className="flex items-center justify-between mb-3">
           <div>
             <div className="label-cap text-accent-red text-[10px]">REST</div>
-            <div className="display text-4xl font-extrabold text-grit leading-none">{left}s</div>
+            <div
+              key={left}
+              className={`display text-4xl font-extrabold leading-none${urgent ? " rest-urgent" : " rest-beat text-grit"}`}
+              style={urgent ? { color: "#e63222" } : undefined}
+            >
+              {left}s
+            </div>
             {nextExercise && (
               <div className="mt-1 max-w-40 truncate text-[10px] font-bold uppercase text-grit-dim">
                 Next · {nextExercise}
@@ -124,7 +134,7 @@ export function RestTimer({
         </div>
         <div className="h-1.5 bg-[#080808] rounded-full overflow-hidden">
           <div
-            className="h-full bg-accent-red rounded-full transition-all duration-1000 ease-linear"
+            className={`h-full rounded-full transition-all duration-1000 ease-linear${urgent ? " rest-bar-urgent" : ""} bg-accent-red`}
             style={{ width: `${pct}%` }}
           />
         </div>

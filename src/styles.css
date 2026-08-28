@@ -2467,3 +2467,175 @@
     }
   }
 }
+
+/*
+ * Logging a set.
+ *
+ * The most repeated interaction in the app — fifteen to thirty taps a session
+ * — and it had no motion at all: the circle simply changed colour between
+ * frames. That is the moment the app should feel best, because it is the
+ * moment somebody has just done the work.
+ *
+ * Keyed on the done state in JSX so the element remounts and each animation
+ * plays exactly once, when a set actually lands. Sets already logged when the
+ * screen mounts replay it as a settle-in, staggered down the list.
+ */
+@layer components {
+  .set-tick {
+    animation: set-tick-pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  @keyframes set-tick-pop {
+    0% {
+      transform: scale(0.4);
+    }
+    55% {
+      transform: scale(1.18);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  /* The check draws itself rather than appearing. */
+  .set-tick-mark path {
+    stroke-dasharray: 24;
+    animation: set-tick-draw 260ms ease-out 90ms both;
+  }
+
+  @keyframes set-tick-draw {
+    from {
+      stroke-dashoffset: 24;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  /* One green sweep across the row, so the whole set reads as banked. */
+  .set-row-done::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(
+      100deg,
+      transparent 20%,
+      rgba(34, 197, 94, 0.22) 50%,
+      transparent 80%
+    );
+    animation: set-row-sweep 620ms ease-out both;
+  }
+
+  @keyframes set-row-sweep {
+    from {
+      opacity: 1;
+      transform: translateX(-100%);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+  }
+
+  /* A record is worth more than a tick. */
+  .set-pr-flame {
+    animation: set-pr-burst 620ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  @keyframes set-pr-burst {
+    0% {
+      transform: scale(0.3) rotate(-18deg);
+      opacity: 0;
+    }
+    50% {
+      transform: scale(1.45) rotate(6deg);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1) rotate(0deg);
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .set-tick,
+    .set-pr-flame,
+    .set-tick-mark path {
+      animation-duration: 1ms;
+      animation-delay: 0ms;
+    }
+    .set-row-done::after {
+      animation: none;
+      display: none;
+    }
+  }
+}
+
+/*
+ * Rest countdown.
+ *
+ * The last three seconds already fire a haptic. They should also be visible:
+ * mid-session the phone is face-up on a bench rather than in your hand, and
+ * "get under the bar" is worth reading from a metre away.
+ *
+ * Both are keyed on the remaining seconds in JSX, so each new number remounts
+ * and animates once — a per-second beat rather than a digit silently swapping.
+ */
+@layer components {
+  .rest-beat {
+    animation: rest-beat 320ms ease-out both;
+  }
+
+  @keyframes rest-beat {
+    0% {
+      transform: scale(1.08);
+      opacity: 0.75;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  .rest-urgent {
+    animation: rest-urgent 900ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    text-shadow: 0 0 22px rgba(230, 50, 34, 0.55);
+  }
+
+  @keyframes rest-urgent {
+    0% {
+      transform: scale(1.35);
+    }
+    45% {
+      transform: scale(0.98);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  .rest-bar-urgent {
+    animation: rest-bar-urgent 600ms ease-in-out infinite alternate;
+  }
+
+  @keyframes rest-bar-urgent {
+    from {
+      box-shadow: 0 0 0 rgba(230, 50, 34, 0);
+    }
+    to {
+      box-shadow: 0 0 14px rgba(230, 50, 34, 0.85);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rest-beat,
+    .rest-urgent {
+      animation-duration: 1ms;
+    }
+    .rest-bar-urgent {
+      animation: none;
+    }
+  }
+}
