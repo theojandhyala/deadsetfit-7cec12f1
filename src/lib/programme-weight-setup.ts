@@ -209,3 +209,17 @@ export function parseDisplayWeight(value: FormDataEntryValue | null): number | n
   const weight = Number(normalized);
   return Number.isFinite(weight) && weight > 0 ? weight : null;
 }
+
+/**
+ * Validate the visible calibration values read directly from the native inputs.
+ * This avoids relying on an iOS FormData snapshot while keeping keystrokes
+ * DOM-owned and responsive.
+ */
+export function parseStrengthSetDraft(weight: string, repetitions: string) {
+  const displayWeight = parseDisplayWeight(weight);
+  const reps = Math.round(Number(repetitions));
+  if (displayWeight == null || !Number.isFinite(reps) || reps < 1 || reps > 100) {
+    return null;
+  }
+  return { displayWeight, reps };
+}

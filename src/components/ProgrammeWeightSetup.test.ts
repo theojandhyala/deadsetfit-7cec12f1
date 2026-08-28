@@ -7,6 +7,7 @@ import {
   applyProgrammeWeights,
   normaliseDecimalInput,
   parseDisplayWeight,
+  parseStrengthSetDraft,
   programmeWeightRows,
 } from "@/lib/programme-weight-setup";
 
@@ -215,6 +216,18 @@ describe("applyProgrammeWeights", () => {
 
     expect(next.schedule?.MON.exerciseConfig?.["bench-press"]?.weightKg).toBe(90);
     expect(next.schedule?.FRI.exerciseConfig?.["bench-press"]?.weightKg).toBe(90);
+  });
+});
+
+describe("parseStrengthSetDraft", () => {
+  it("accepts the prefilled decimal load and reps shown by the calibration form", () => {
+    expect(parseStrengthSetDraft("62.5", "10")).toEqual({ displayWeight: 62.5, reps: 10 });
+  });
+
+  it("accepts comma-decimal locales and rejects invalid rep ranges", () => {
+    expect(parseStrengthSetDraft("62,5", "10")).toEqual({ displayWeight: 62.5, reps: 10 });
+    expect(parseStrengthSetDraft("62.5", "0")).toBeNull();
+    expect(parseStrengthSetDraft("62.5", "101")).toBeNull();
   });
 });
 

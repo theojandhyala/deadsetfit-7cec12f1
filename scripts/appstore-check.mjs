@@ -191,9 +191,9 @@ check(
 check(
   "first update version",
   (xcodeProject.match(/MARKETING_VERSION = 1\.2;/g)?.length ?? 0) >= 6 &&
-    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 145;/g)?.length ?? 0) >= 6 &&
+    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 146;/g)?.length ?? 0) >= 6 &&
     whatsNew.includes("WHATS_NEW_VERSION = 202608288"),
-  "The app, activity extension and watch targets are versioned as 1.2 (145), with a matching in-app update summary.",
+  "The app, activity extension and watch targets are versioned as 1.2 (146), with a matching in-app update summary.",
 );
 check(
   "full check script",
@@ -400,10 +400,14 @@ check(
   weeklyStrengthCheckIn.includes('data-no-horizontal-overflow="true"') &&
     weeklyStrengthCheckIn.includes("max-w-[100dvw]") &&
     weeklyStrengthCheckIn.includes("size={1}") &&
+    weeklyStrengthCheckIn.includes('placeholder="Tap to set"') &&
+    weeklyStrengthCheckIn.includes("valueInput.current?.value") &&
     programmeWeightSetup.includes('data-no-horizontal-overflow="true"') &&
     programmeWeightSetup.includes("max-w-[100dvw]") &&
-    programmeWeightSetup.includes("size={1}"),
-  "Both lift-entry wizards constrain their cards and native inputs to the visual viewport so the keyboard cannot expose sideways overflow.",
+    programmeWeightSetup.includes("size={1}") &&
+    programmeWeightSetup.includes('placeholder="Tap to set"') &&
+    programmeWeightSetup.includes("weightInput.current?.value"),
+  "Both lift-entry wizards stay inside the visual viewport, mark missing loads honestly and validate the native input values shown to the athlete.",
 );
 check(
   "RevenueCat StoreKit 2 tracking",

@@ -5,7 +5,7 @@ import { MuscleDiagram } from "@/components/MuscleDiagram";
 import { getExercise } from "@/lib/exercises";
 import {
   applyProgrammeWeights,
-  parseDisplayWeight,
+  parseStrengthSetDraft,
   type WeightRow,
 } from "@/lib/programme-weight-setup";
 import { toDisplay, toKg, trimNumber, unitOf } from "@/lib/units";
@@ -32,6 +32,8 @@ export function ProgrammeWeightSetup({ rows: derivedRows }: { rows: WeightRow[] 
   const [state, set] = useAppState();
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState(0);
+  const weightInput = useRef<HTMLInputElement>(null);
+  const repsInput = useRef<HTMLInputElement>(null);
   const answers = useRef(new Map<string, StrengthCheckInAnswer>());
   const unit = unitOf(state);
   const automaticValues = useMemo(
@@ -118,19 +120,21 @@ export function ProgrammeWeightSetup({ rows: derivedRows }: { rows: WeightRow[] 
           noValidate
           onSubmit={(event) => {
             event.preventDefault();
-            const data = new FormData(event.currentTarget);
-            const display = parseDisplayWeight(data.get("weight"));
-            const reps = Math.round(Number(data.get("reps")));
-            if (display == null || !Number.isFinite(reps) || reps < 1 || reps > 100) {
+            const parsed = parseStrengthSetDraft(
+              weightInput.current?.value ?? "",
+              repsInput.current?.value ?? "",
+            );
+            if (!parsed) {
               hapticFailure();
               setError(`Enter the load and 1–100 reps you can honestly complete for ${row.name}.`);
+              weightInput.current?.focus();
               return;
             }
             answers.current.set(row.exerciseId, {
               exerciseId: row.exerciseId,
               kind: "RATIO",
-              value: toKg(display, unit),
-              reps,
+              value: toKg(parsed.displayWeight, unit),
+              reps: parsed.reps,
             });
             setError(null);
             if (activeStep < rows.length - 1) {
@@ -166,6 +170,7 @@ export function ProgrammeWeightSetup({ rows: derivedRows }: { rows: WeightRow[] 
                 <span className="flex min-h-14 w-full min-w-0 max-w-full items-center overflow-hidden rounded-xl border border-grit bg-black px-3 focus-within:border-accent-red">
                   <input
                     key={`${row.key}-weight`}
+                    ref={weightInput}
                     name="weight"
                     type="text"
                     size={1}
@@ -174,8 +179,8 @@ export function ProgrammeWeightSetup({ rows: derivedRows }: { rows: WeightRow[] 
                     defaultValue={
                       initialWeightKg > 0 ? trimNumber(toDisplay(initialWeightKg, unit)) : ""
                     }
-                    placeholder={unit === "kg" ? "62.5" : "135"}
-                    className="box-border w-full min-w-0 max-w-full flex-1 bg-transparent text-2xl font-black tabular-nums text-white outline-none"
+                    placeholder="Tap to set"
+                    className="box-border w-full min-w-0 max-w-full flex-1 bg-transparent text-2xl font-black tabular-nums text-white outline-none placeholder:text-sm placeholder:font-bold placeholder:text-grit-dim"
                   />
                   <span className="label-cap text-[8px] text-grit-dim">{unit}</span>
                 </span>
@@ -184,6 +189,7 @@ export function ProgrammeWeightSetup({ rows: derivedRows }: { rows: WeightRow[] 
                 <span className="label-cap mb-1 block text-[8px] text-grit-dim">REPS</span>
                 <input
                   key={`${row.key}-reps`}
+                  ref={repsInput}
                   name="reps"
                   type="text"
                   size={1}

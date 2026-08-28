@@ -117,7 +117,7 @@ Suggested release notes:
 4. Choose Product > Archive.
 5. In Organizer, run Validate App before Distribute App.
 6. Upload to App Store Connect and wait for processing.
-7. Attach build 145 to version 1.2 and complete export compliance and content-rights questions. Confirm both approved subscriptions are attached and available to the app.
+7. Attach build 146 to version 1.2 and complete export compliance and content-rights questions. Confirm both approved subscriptions are attached and available to the app.
 8. Test the processed build in TestFlight before submitting it for review.
 
 Every bundled product update requires a new App Store build and review. Website deployment alone does not update the installed app.

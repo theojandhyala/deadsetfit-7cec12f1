@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { MuscleDiagram } from "@/components/MuscleDiagram";
 import { lockBodyScroll } from "@/lib/body-scroll-lock";
 import { hapticFailure, hapticSelection, hapticStrengthMapUpdated } from "@/lib/haptics";
-import { parseDisplayWeight } from "@/lib/programme-weight-setup";
+import { parseStrengthSetDraft } from "@/lib/programme-weight-setup";
 import { strengthReport } from "@/lib/strength-grades";
 import { OPEN_STRENGTH_CHECK_IN_EVENT } from "@/lib/strength-check-in-events";
 import { useAppState } from "@/lib/storage";
@@ -50,6 +50,8 @@ export function WeeklyStrengthCheckIn({
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
+  const valueInput = useRef<HTMLInputElement>(null);
+  const repsInput = useRef<HTMLInputElement>(null);
   const answers = useRef(new Map<string, StrengthCheckInAnswer>());
   const unit = unitOf(state);
   const rows = useMemo(() => weeklyStrengthCheckInRows(state), [state]);
@@ -241,23 +243,25 @@ export function WeeklyStrengthCheckIn({
           noValidate
           onSubmit={(event) => {
             event.preventDefault();
-            const data = new FormData(event.currentTarget);
             if (row.kind === "RATIO") {
-              const displayWeight = parseDisplayWeight(data.get("value"));
-              const reps = Math.round(Number(data.get("reps")));
-              if (displayWeight == null || !Number.isFinite(reps) || reps < 1 || reps > 100) {
+              const parsed = parseStrengthSetDraft(
+                valueInput.current?.value ?? "",
+                repsInput.current?.value ?? "",
+              );
+              if (!parsed) {
                 hapticFailure();
                 setError(`Enter the load you lifted and 1–100 honest reps.`);
+                valueInput.current?.focus();
                 return;
               }
               answers.current.set(row.exerciseId, {
                 exerciseId: row.exerciseId,
                 kind: row.kind,
-                value: toKg(displayWeight, unit),
-                reps,
+                value: toKg(parsed.displayWeight, unit),
+                reps: parsed.reps,
               });
             } else {
-              const value = Math.round(Number(data.get("value")));
+              const value = Math.round(Number(valueInput.current?.value ?? ""));
               const max = row.kind === "SECONDS" ? 86_400 : 1_000;
               if (!Number.isFinite(value) || value < 1 || value > max) {
                 hapticFailure();
@@ -300,6 +304,7 @@ export function WeeklyStrengthCheckIn({
                   <span className="label-cap mb-1.5 block text-[9px] text-grit-dim">WEIGHT</span>
                   <span className="flex min-h-14 w-full min-w-0 items-center overflow-hidden rounded-xl border border-grit bg-black px-3 focus-within:border-accent-red">
                     <input
+                      ref={valueInput}
                       name="value"
                       type="text"
                       size={1}
@@ -309,8 +314,8 @@ export function WeeklyStrengthCheckIn({
                       defaultValue={
                         defaultValue > 0 ? trimNumber(toDisplay(defaultValue, unit)) : ""
                       }
-                      placeholder={unit === "kg" ? "62.5" : "135"}
-                      className="box-border w-full min-w-0 max-w-full flex-1 bg-transparent text-2xl font-black tabular-nums text-white outline-none"
+                      placeholder="Tap to set"
+                      className="box-border w-full min-w-0 max-w-full flex-1 bg-transparent text-2xl font-black tabular-nums text-white outline-none placeholder:text-sm placeholder:font-bold placeholder:text-grit-dim"
                     />
                     <span className="label-cap ml-1 shrink-0 text-[9px] text-grit-dim">{unit}</span>
                   </span>
@@ -318,6 +323,7 @@ export function WeeklyStrengthCheckIn({
                 <label className="min-w-0">
                   <span className="label-cap mb-1.5 block text-[9px] text-grit-dim">REPS</span>
                   <input
+                    ref={repsInput}
                     name="reps"
                     type="text"
                     size={1}
@@ -336,6 +342,7 @@ export function WeeklyStrengthCheckIn({
                   {row.kind === "SECONDS" ? "SECONDS" : "REPS"}
                 </span>
                 <input
+                  ref={valueInput}
                   name="value"
                   type="text"
                   inputMode="numeric"
