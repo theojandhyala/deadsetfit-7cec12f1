@@ -33,4 +33,17 @@ if (bytes < minBytes || ruleBlocks < minRuleBlocks) {
   process.exit(1);
 }
 
+const releaseSafetyRules = [
+  ["overflow-x:clip", "the app shell can move sideways on narrow iPhones"],
+  ["scrollbar-width:none", "scroll indicators can remain visible in Firefox/WebView fallbacks"],
+  ["::-webkit-scrollbar", "scroll indicators can remain visible in iOS WebKit"],
+];
+
+for (const [rule, failure] of releaseSafetyRules) {
+  if (!css.includes(rule)) {
+    console.error(`CSS build check failed: ${failure}. Missing compiled rule: ${rule}`);
+    process.exit(1);
+  }
+}
+
 console.log(`CSS build check passed: ${bytes} bytes, ${ruleBlocks} rule blocks.`);

@@ -567,7 +567,7 @@ function ProgressPage() {
             {/* Training Consistency Heatmap */}
             <div className="mb-6">
               <p className="label-cap mb-2">Training Consistency</p>
-              <div className="rounded-2xl p-4 overflow-x-auto">
+              <div className="min-w-0 overflow-hidden rounded-2xl p-4">
                 <ConsistencyHeatmap completedDates={state.completedDates} />
               </div>
             </div>
@@ -1081,61 +1081,33 @@ function ConsistencyHeatmap({ completedDates }: { completedDates: string[] }) {
     weeks.push(col);
   }
 
-  // Month labels: find first week of each month
-  const monthLabels: { label: string; weekIdx: number }[] = [];
-  for (let w = 0; w < WEEKS; w++) {
-    const firstDay = weeks[w][0].date;
-    const dt = new Date(firstDay);
-    // Show label if it's the first occurrence of this month
-    if (dt.getDate() <= 7) {
-      const prev = w > 0 ? new Date(weeks[w - 1][0].date).getMonth() : -1;
-      if (dt.getMonth() !== prev) {
-        monthLabels.push({
-          label: dt.toLocaleString("default", { month: "short" }).toUpperCase(),
-          weekIdx: w,
-        });
-      }
-    }
-  }
-
-  const CELL = 10;
-  const GAP = 2;
-  const totalW = WEEKS * (CELL + GAP) - GAP;
+  const timelineLabels = [0, 13, 26, 39, 51].map((weekIdx) =>
+    new Date(weeks[weekIdx][0].date).toLocaleString("default", { month: "short" }).toUpperCase(),
+  );
 
   return (
-    <div style={{ minWidth: totalW }}>
-      {/* Month labels */}
-      <div className="flex mb-1" style={{ gap: GAP }}>
-        {weeks.map((_, w) => {
-          const label = monthLabels.find((m) => m.weekIdx === w);
-          return (
-            <div key={w} style={{ width: CELL, flexShrink: 0 }}>
-              {label && (
-                <span
-                  className="text-[8px] label-cap text-[#8A8A8A]"
-                  style={{ whiteSpace: "nowrap" }}
-                >
-                  {label.label}
-                </span>
-              )}
-            </div>
-          );
-        })}
+    <div className="min-w-0 w-full">
+      <div className="mb-1 flex items-center justify-between">
+        {timelineLabels.map((label, index) => (
+          <span key={`${label}-${index}`} className="label-cap text-[7px] text-[#8A8A8A]">
+            {label}
+          </span>
+        ))}
       </div>
-      {/* Grid */}
-      <div className="flex" style={{ gap: GAP }}>
+      <div
+        className="grid min-w-0 w-full gap-px"
+        style={{ gridTemplateColumns: `repeat(${WEEKS}, minmax(0, 1fr))` }}
+      >
         {weeks.map((col, w) => (
-          <div key={w} className="flex flex-col" style={{ gap: GAP }}>
+          <div key={w} className="grid min-w-0 gap-px">
             {col.map((cell) => (
               <div
                 key={cell.date}
+                className="aspect-square min-w-0 rounded-[1px]"
                 title={`${cell.date}: ${cell.count} workout${cell.count !== 1 ? "s" : ""}`}
                 style={{
-                  width: CELL,
-                  height: CELL,
                   background:
                     cell.count === 0 ? "#0A0A0A" : cell.count === 1 ? "#7a1410" : "#e63222",
-                  flexShrink: 0,
                 }}
               />
             ))}
@@ -1146,7 +1118,7 @@ function ConsistencyHeatmap({ completedDates }: { completedDates: string[] }) {
       <div className="flex items-center gap-2 mt-2">
         <span className="text-[9px] label-cap text-[#8A8A8A]">Less</span>
         {["#0A0A0A", "#7a1410", "#e63222"].map((c) => (
-          <div key={c} style={{ width: CELL, height: CELL, background: c, flexShrink: 0 }} />
+          <div key={c} className="h-2.5 w-2.5 shrink-0" style={{ background: c }} />
         ))}
         <span className="text-[9px] label-cap text-[#8A8A8A]">More</span>
       </div>

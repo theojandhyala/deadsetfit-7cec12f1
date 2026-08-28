@@ -33,9 +33,9 @@ export function WeeklySetGrid({
         </div>
       </div>
 
-      <div className="overflow-x-auto px-3 pb-3 pt-2">
-        <div className="min-w-[328px]">
-          <div className="grid grid-cols-[72px_repeat(7,minmax(30px,1fr))] gap-1">
+      <div className="min-w-0 px-2 pb-3 pt-2 sm:px-3">
+        <div className="min-w-0">
+          <div className="grid min-w-0 grid-cols-[minmax(46px,72px)_repeat(7,minmax(0,1fr))] gap-1">
             <span />
             {SET_GRID_DAYS.map((day) => (
               <span key={day} className="label-cap py-1 text-center text-[7px] text-grit-dim">
@@ -55,7 +55,7 @@ export function WeeklySetGrid({
                       hapticSelection();
                       onSelectMuscle(row.muscle);
                     }}
-                    className="flex min-h-9 items-center justify-between gap-1 pr-1 text-left disabled:cursor-default"
+                    className="flex min-h-9 min-w-0 items-center justify-between gap-0.5 pr-0.5 text-left disabled:cursor-default sm:gap-1 sm:pr-1"
                     aria-label={`${row.muscle.toLowerCase()}, ${row.totalSets} planned sets`}
                   >
                     <span className="truncate text-[8px] font-black uppercase text-grit">
