@@ -103,7 +103,9 @@ function UpgradePage() {
   const [sessionError, setSessionError] = useState<string | null>(null);
   const [currency, setCurrency] = useState<SupportedCurrency>("gbp");
   const [plan, setPlan] = useState<BillingPlan>("yearly");
-  const [iosNative, setIosNative] = useState(false);
+  // Resolve this synchronously so a native launch never paints web-only
+  // checkout warnings before the first effect gets a chance to run.
+  const [iosNative, setIosNative] = useState(isNativeIos);
   const [appleProducts, setAppleProducts] = useState<AppleProduct[]>([]);
   const [appleProductsChecked, setAppleProductsChecked] = useState(false);
   const [purchaseLoading, setPurchaseLoading] = useState(false);
@@ -324,7 +326,7 @@ function UpgradePage() {
 
   if (isPro && !entitlementLoading) {
     return (
-      <div className="min-h-screen bg-[#090909] px-6 flex flex-col items-center justify-center text-center">
+      <div className="deadset-route-shell min-h-screen bg-[#090909] px-6 flex flex-col items-center justify-center text-center">
         <div className="h-20 w-20 rounded-full bg-accent-red flex items-center justify-center deadset-pulse-glow">
           <Check size={36} className="text-white" strokeWidth={3} />
         </div>
@@ -335,7 +337,10 @@ function UpgradePage() {
         <p className="mt-3 max-w-sm text-sm leading-relaxed text-grit-dim">
           Your Strength Map, programme, muscle coach and complete training history are unlocked.
         </p>
-        <Link to="/strength" className="btn-grit mt-7 w-full max-w-sm min-h-14">
+        <Link
+          to="/strength"
+          className="btn-grit deadset-primary-action mt-7 w-full max-w-sm min-h-14"
+        >
           Open my Strength Map
         </Link>
         <Link to="/train" className="btn-ghost mt-3 w-full max-w-sm min-h-12">
@@ -386,7 +391,7 @@ function UpgradePage() {
             type="button"
             onClick={startApplePurchase}
             disabled={purchaseLoading || !selectedAppleProduct}
-            className="btn-grit w-full min-h-14 disabled:opacity-50"
+            className="btn-grit deadset-primary-action w-full min-h-14 disabled:opacity-50"
           >
             {purchaseLoading ? (
               <Loader2 size={17} className="mr-2 inline animate-spin" />
@@ -492,7 +497,7 @@ function LoadingScreen({ label }: { label: string }) {
 function MembershipShell({ children }: { children: ReactNode }) {
   return (
     <main
-      className="min-h-screen bg-[#090909] px-5 pb-10"
+      className="deadset-route-shell min-h-screen overflow-x-hidden bg-[#090909] px-5 pb-10"
       style={{
         paddingTop: "calc(28px + env(safe-area-inset-top))",
         paddingBottom: "calc(32px + env(safe-area-inset-bottom))",
@@ -556,9 +561,9 @@ function PlanSelector({
               aria-checked={selected}
               disabled={disabled || !option.available}
               onClick={() => onChange(option.id)}
-              className={`relative min-w-0 overflow-hidden rounded-2xl border-2 p-3 text-left transition disabled:opacity-40 ${
+              className={`deadset-day-chip relative min-w-0 overflow-hidden rounded-2xl border-2 p-3 text-left transition disabled:opacity-40 ${
                 selected
-                  ? "border-accent-red bg-accent-red/[0.1] shadow-[0_10px_30px_rgba(230,50,34,.14)]"
+                  ? "deadset-day-chip-active border-accent-red bg-accent-red/[0.1] shadow-[0_10px_30px_rgba(230,50,34,.14)]"
                   : "border-white/10 bg-white/[0.025]"
               }`}
             >
@@ -740,7 +745,10 @@ function FeatureGrid() {
 
 function ErrorCard({ message }: { message: string }) {
   return (
-    <div className="mb-4 rounded-2xl border border-accent-red/50 bg-accent-red/10 p-3 text-center">
+    <div
+      role="alert"
+      className="animate-pop-in mb-4 rounded-2xl border border-accent-red/50 bg-accent-red/10 p-3 text-center"
+    >
       <p className="text-xs leading-relaxed text-accent-red">{message}</p>
     </div>
   );
