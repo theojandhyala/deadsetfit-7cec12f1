@@ -26,7 +26,8 @@
     "check:xcodeproj": "node scripts/check-xcodeproj.mjs",
     "render:diagram": "node scripts/render-cards.mjs --diagram",
     "render:pr": "node scripts/render-cards.mjs --pr",
-    "render:photo": "node scripts/render-cards.mjs --photo"
+    "render:photo": "node scripts/render-cards.mjs --photo",
+    "render:banner": "node scripts/render-cards.mjs --banner"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",

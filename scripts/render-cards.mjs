@@ -11,6 +11,7 @@
  *   node scripts/render-cards.mjs --diagram  # the <MuscleDiagram> that ships
  *   node scripts/render-cards.mjs --pr       # the PR card people post
  *   node scripts/render-cards.mjs --photo    # the before/after card
+ *   node scripts/render-cards.mjs --banner   # the Pro upgrade banner
  *
  * Not part of `npm run check`, and playwright/esbuild are deliberately NOT
  * dependencies: Xcode Cloud runs `npm ci` before every iOS archive, and making
@@ -30,6 +31,7 @@ const outDir = join(root, ".render-out");
 const diagramOnly = process.argv.includes("--diagram");
 const prOnly = process.argv.includes("--pr");
 const photoOnly = process.argv.includes("--photo");
+const bannerOnly = process.argv.includes("--banner");
 
 let chromium;
 try {
@@ -73,7 +75,30 @@ const browser = await chromium.launch(launchOptions);
 const page = await browser.newPage();
 await page.setContent("<canvas id=c></canvas>");
 
-if (photoOnly) {
+if (bannerOnly) {
+  // Renders against the real built stylesheet, so what is screenshotted is
+  // what ships rather than a hand-written approximation of it.
+  const { readdirSync, readFileSync } = await import("node:fs");
+  const assets = join(root, "dist/client/assets");
+  const cssFile = readdirSync(assets).find((name) => name.endsWith(".css"));
+  if (!cssFile) {
+    console.error("Run `npm run build` first — this renders the built stylesheet.");
+    process.exit(1);
+  }
+  const mod = await bundleModule("scripts/banner-entry.tsx", "Banner");
+  await page.addStyleTag({ content: readFileSync(join(assets, cssFile), "utf8") });
+  await page.addScriptTag({ content: mod });
+  await page.setViewportSize({ width: 460, height: 700 });
+  await page.evaluate(() => {
+    document.body.style.cssText = "background:#0a0a0a;margin:0";
+    document.getElementById("c")?.remove();
+    Banner.mount(document.body);
+  });
+  await page.waitForTimeout(900);
+  const out = join(outDir, "pro-banner.png");
+  await page.screenshot({ path: out, fullPage: true });
+  console.log("wrote", out);
+} else if (photoOnly) {
   const card = await bundleModule("src/lib/photo-card-draw.ts", "PhotoCard");
   await page.addScriptTag({ content: card });
   const dataUrl = await page.evaluate(async () => {

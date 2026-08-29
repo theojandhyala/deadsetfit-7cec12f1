@@ -2619,3 +2619,61 @@
     }
   }
 }
+
+/*
+ * The Pro banner.
+ *
+ * A gold sweep that runs three times and stops. This sits on screen for as
+ * long as somebody is reading the page behind it, and an animation looping
+ * forever in that position is not premium — it is a flashing advert, and the
+ * eye learns to skip it. Three passes catch attention once; after that the
+ * banner has to earn its place on the words.
+ */
+@layer components {
+  .pro-banner {
+    animation: pro-banner-in 280ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+
+  @keyframes pro-banner-in {
+    from {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .pro-banner-sheen {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      104deg,
+      transparent 38%,
+      rgba(230, 50, 34, 0.16) 48%,
+      rgba(255, 214, 140, 0.2) 52%,
+      transparent 62%
+    );
+    /* Only transform is animated, so this stays off the main thread. */
+    transform: translateX(-100%);
+    animation: pro-banner-sheen 2.6s cubic-bezier(0.23, 1, 0.32, 1) 400ms 3;
+  }
+
+  @keyframes pro-banner-sheen {
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pro-banner {
+      animation-duration: 1ms;
+    }
+    .pro-banner-sheen {
+      animation: none;
+      opacity: 0;
+    }
+  }
+}

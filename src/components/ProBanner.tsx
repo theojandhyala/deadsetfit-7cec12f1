@@ -1,19 +1,39 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { BarChart3, Crown, Gauge, Swords, X } from "lucide-react";
+import { ChevronRight, Crown, X } from "lucide-react";
+
 import { usePro } from "@/hooks/usePro";
+import { hapticSelection } from "@/lib/haptics";
+import { proPitch } from "@/lib/pro-pitch";
+import { useAppState } from "@/lib/storage";
 
 const DISMISS_KEY = "deadset_pro_banner_dismissed_session";
 
+/**
+ * The upgrade prompt, built from what this athlete has actually done.
+ *
+ * It used to say the same sentence to everybody — "Training Autopilot, Streak
+ * Armor, head-to-head challenges and deep analytics" — a feature list in a
+ * private vocabulary that means nothing on day one and nothing on day two
+ * hundred. Now it leads with a number they earned: their streak, the muscles
+ * they have graded, the records they hold. "23 sessions logged" is theirs;
+ * "deep analytics" was ours.
+ *
+ * The gold sweep runs three times and stops. A banner is on screen the whole
+ * time somebody is reading the page behind it, and an animation that loops
+ * forever there is not premium, it is a flashing advert.
+ */
 export function ProBanner() {
   const { isPro, loading } = usePro();
+  const [state] = useAppState();
   const [dismissed, setDismissed] = useState(false);
+  const pitch = useMemo(() => proPitch(state), [state]);
 
   useEffect(() => {
     try {
       if (sessionStorage.getItem(DISMISS_KEY)) setDismissed(true);
     } catch {
-      /* ignore */
+      /* Session storage is unavailable in some restricted browser modes. */
     }
   }, []);
 
@@ -25,52 +45,50 @@ export function ProBanner() {
     } catch {
       /* ignore */
     }
+    hapticSelection();
     setDismissed(true);
   }
 
   return (
-    <div className="mx-4 mt-3 rounded-lg border border-accent-red/40 bg-gradient-to-r from-accent-red/20 via-[#171717] to-accent-red/5 p-3">
-      <div className="flex items-center gap-3">
-        <div className="shrink-0 grid place-items-center w-9 h-9 rounded-md bg-accent-red/20 border border-accent-red/40">
+    <section
+      // Keyed on the pitch so a changed headline animates in rather than
+      // swapping text under the reader mid-glance.
+      key={pitch.id}
+      className="pro-banner relative mx-4 mt-3 overflow-hidden rounded-2xl border border-accent-red/35 bg-[#141013] p-3.5"
+      aria-label="DEADSET Pro"
+    >
+      <span className="pro-banner-sheen" aria-hidden />
+
+      <div className="relative flex items-start gap-3">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-accent-red/40 bg-accent-red/15">
           <Crown size={16} className="text-accent-red" />
-        </div>
+        </span>
+
         <div className="min-w-0 flex-1">
-          <p className="font-display text-xs uppercase tracking-widest text-grit-text">
-            Upgrade your training
+          <p className="label-cap text-[9px] text-accent-red">{pitch.eyebrow}</p>
+          <p className="display mt-0.5 text-base font-extrabold uppercase leading-tight text-grit">
+            {pitch.headline}
           </p>
-          <p className="text-[11px] text-grit mt-0.5">
-            Training Autopilot, Streak Armor, head-to-head challenges and deep analytics.
-          </p>
+          <p className="mt-1 text-[11px] leading-relaxed text-grit-dim">{pitch.detail}</p>
         </div>
-        <Link
-          to="/upgrade"
-          className="flex min-h-11 shrink-0 items-center rounded bg-accent-red px-3 font-display text-[10px] uppercase tracking-widest text-white hover:bg-accent-red/90"
-        >
-          Go Pro
-        </Link>
+
         <button
           onClick={dismiss}
-          aria-label="Dismiss"
-          className="icon-btn shrink-0 -mr-1 p-1 text-grit hover:text-grit-text tap-44"
+          aria-label="Dismiss Pro banner"
+          className="-mr-1 -mt-1 shrink-0 p-1.5 text-grit-dim press"
         >
           <X size={14} />
         </button>
       </div>
-      <div className="mt-3 grid grid-cols-3 gap-2">
-        {[
-          { label: "Autopilot", Icon: Gauge },
-          { label: "H2H", Icon: Swords },
-          { label: "Analytics", Icon: BarChart3 },
-        ].map(({ label, Icon }) => (
-          <div
-            key={label}
-            className="flex items-center justify-center gap-1 rounded border border-accent-red/20 bg-black/25 px-2 py-1"
-          >
-            <Icon size={11} className="text-accent-red" />
-            <span className="label-cap text-[8px] text-grit">{label}</span>
-          </div>
-        ))}
-      </div>
-    </div>
+
+      <Link
+        to="/upgrade"
+        onClick={hapticSelection}
+        className="btn-grit relative mt-3 min-h-11 w-full"
+      >
+        See what Pro adds
+        <ChevronRight size={15} className="ml-1.5" />
+      </Link>
+    </section>
   );
 }
