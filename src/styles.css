@@ -2677,3 +2677,68 @@
     }
   }
 }
+
+/*
+ * Tier up.
+ *
+ * The rarest moment in the app — a muscle climbing a strength tier takes
+ * months, not an afternoon — so unlike the set tick this one is allowed to be
+ * a production. Frequency earns duration.
+ */
+@layer components {
+  .tier-climb-line {
+    animation: tier-climb-line 420ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+
+  @keyframes tier-climb-line {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* The body arrives first and settles, so the tier name lands on a figure
+     that is already there rather than both appearing at once. */
+  .tier-climb-figure {
+    animation: tier-climb-figure 640ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
+
+  @keyframes tier-climb-figure {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .tier-climb-tier {
+    animation: tier-climb-tier 620ms cubic-bezier(0.34, 1.56, 0.64, 1) 140ms both;
+  }
+
+  @keyframes tier-climb-tier {
+    from {
+      opacity: 0;
+      transform: scale(0.72);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tier-climb-line,
+    .tier-climb-figure,
+    .tier-climb-tier {
+      animation-duration: 1ms;
+      animation-delay: 0ms;
+    }
+  }
+}

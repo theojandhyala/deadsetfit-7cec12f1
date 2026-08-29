@@ -26,6 +26,7 @@ import { CrewInviteRedeemer } from "../components/CrewInviteRedeemer";
 import { StreakMilestoneWatcher } from "../components/StreakMilestoneWatcher";
 import { AchievementWatcher } from "../components/AchievementWatcher";
 import { TonnageMilestoneWatcher } from "../components/TonnageMilestoneWatcher";
+import { StrengthTierWatcher } from "../components/StrengthTierWatcher";
 import { captureAttribution } from "../lib/attribution";
 import { routeForDeepLink } from "../lib/deep-links";
 import { capturePendingCrew } from "../lib/crew-invite";
@@ -278,6 +279,7 @@ function RootComponent() {
         {!isAuthRoute && <StreakMilestoneWatcher />}
         {!isAuthRoute && <AchievementWatcher />}
         {!isAuthRoute && <TonnageMilestoneWatcher />}
+        {!isAuthRoute && <StrengthTierWatcher />}
         {!isAuthRoute && <WeeklyRecapNudge />}
         {!isAuthRoute && <FirstWeekActivationNudge />}
         {!isAuthRoute && <FeedbackPulse />}
