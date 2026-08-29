@@ -76,6 +76,10 @@ function TermsPage() {
         displays. If your Apple Account is not eligible for an introductory offer, billing starts
         when you confirm. Subscriptions renew automatically unless cancelled at least 24 hours
         before the end of the current period and can be managed in your App Store account. Any
+        Apple offer code is subject to the eligibility, duration, redemption limit, renewal order,
+        and later standard price shown by Apple before confirmation. CHELTENHAM26 gives one free
+        month on the monthly membership; eligible new subscribers use the seven-day introductory
+        trial first, followed by that free month, before the standard monthly renewal begins. Any
         legacy website subscription remains subject to the terms shown when it was purchased.
         Membership access remains available through any active trial or paid period.
       </p>

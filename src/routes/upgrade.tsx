@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Sparkles,
   Target,
+  TicketPercent,
   UserRoundCog,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -42,6 +43,7 @@ import {
   getAppleProducts,
   manageApplePro,
   purchaseApplePro,
+  redeemAppleProOfferCode,
   restoreApplePro,
   type AppleProduct,
 } from "@/lib/storekit";
@@ -109,6 +111,7 @@ function UpgradePage() {
   const [appleProducts, setAppleProducts] = useState<AppleProduct[]>([]);
   const [appleProductsChecked, setAppleProductsChecked] = useState(false);
   const [purchaseLoading, setPurchaseLoading] = useState(false);
+  const [offerLoading, setOfferLoading] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [billingLoading, setBillingLoading] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
@@ -240,6 +243,39 @@ function UpgradePage() {
       );
     } finally {
       setPurchaseLoading(false);
+    }
+  }
+
+  async function redeemOfferCode() {
+    hapticSelection();
+    setOfferLoading(true);
+    setError(null);
+    try {
+      const result = await redeemAppleProOfferCode();
+      if (result.active) {
+        await syncRevenueCatPurchases(user?.id)
+          .then((synced) => {
+            if (synced) notifyRevenueCatUpdated();
+          })
+          .catch((syncError) => console.warn("RevenueCat offer-code sync failed", syncError));
+        await refresh();
+        hapticPlanUpdated();
+        toast.success("Offer redeemed — DEADSET is unlocked");
+        navigate({ to: "/train", replace: true });
+        return;
+      }
+      toast.message("Apple's offer-code sheet closed", {
+        description: "If Apple accepted your code, membership will unlock automatically.",
+      });
+    } catch (offerError) {
+      hapticFailure();
+      setError(
+        offerError instanceof Error
+          ? offerError.message
+          : "Apple could not open offer-code redemption.",
+      );
+    } finally {
+      setOfferLoading(false);
     }
   }
 
@@ -410,6 +446,7 @@ function UpgradePage() {
           >
             <RefreshCw size={14} className="mr-2 inline" /> Restore purchases
           </button>
+          <OfferCodeCard loading={offerLoading} onRedeem={redeemOfferCode} />
           {selectedAppleProduct && !exactAppleTrial && (
             <p className="mt-3 text-center text-[10px] leading-relaxed text-amber-300">
               Apple is not currently returning a seven-day introductory offer for this product, so
@@ -624,14 +661,54 @@ function TrialHero({
               : `Continue with DEADSET at ${price} per ${billingPeriod}.`}
         </p>
         {trialAvailable && (
-          <div className="mx-auto mt-5 grid max-w-xs grid-cols-[1fr_auto_1fr] items-center gap-2">
-            <TrialMoment label="Today" detail="Full access" active />
-            <div className="h-px w-8 bg-accent-red/60" />
+          <div className="mx-auto mt-5 grid max-w-sm grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-1">
+            <TrialMoment label="Today" detail="Unlock everything" active />
+            <div className="h-px w-5 bg-accent-red/60" />
+            <TrialMoment label="Days 1–7" detail="No charge" active />
+            <div className="h-px w-5 bg-white/20" />
             <TrialMoment label="Day 8" detail={`${price}/${billingPeriod}`} />
           </div>
         )}
       </div>
     </header>
+  );
+}
+
+function OfferCodeCard({
+  loading,
+  onRedeem,
+}: {
+  loading: boolean;
+  onRedeem: () => void;
+}) {
+  return (
+    <section className="mt-3 overflow-hidden rounded-2xl border border-emerald-400/25 bg-emerald-400/[0.055] p-4">
+      <div className="flex items-start gap-3">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-emerald-400/25 bg-emerald-400/10 text-emerald-400">
+          <TicketPercent size={19} aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="label-cap text-[8px] text-emerald-400">CHELTENHAM LAUNCH CODE</p>
+          <p className="display mt-1 text-xl font-black uppercase tracking-wide text-white">
+            CHELTENHAM26
+          </p>
+          <p className="mt-1 text-[10px] leading-relaxed text-grit-dim">
+            One month 100% off the monthly plan. Eligible new members get their 7-day free trial
+            first, then this free month, then Apple renews at the displayed monthly price unless
+            cancelled.
+          </p>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onRedeem}
+        disabled={loading}
+        className="mt-3 min-h-11 w-full rounded-xl border border-emerald-400/35 bg-emerald-400/10 px-4 label-cap text-[9px] text-emerald-300 transition active:scale-[0.985] disabled:opacity-50"
+      >
+        {loading ? <Loader2 size={14} className="mr-2 inline animate-spin" /> : null}
+        Redeem with Apple
+      </button>
+    </section>
   );
 }
 

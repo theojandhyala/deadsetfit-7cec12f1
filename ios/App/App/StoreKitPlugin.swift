@@ -11,6 +11,7 @@ public class StoreKitPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "getEntitlement", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "purchase", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "restore", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "redeemOfferCode", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "manageSubscriptions", returnType: CAPPluginReturnPromise)
     ]
 
@@ -105,6 +106,33 @@ public class StoreKitPlugin: CAPPlugin, CAPBridgedPlugin {
                 call.resolve(await currentEntitlement())
             } catch {
                 call.reject("Restore purchases failed", error.localizedDescription, error)
+            }
+        }
+    }
+
+    @objc func redeemOfferCode(_ call: CAPPluginCall) {
+        Task { @MainActor in
+            guard let scene = UIApplication.shared.connectedScenes
+                .compactMap({ $0 as? UIWindowScene })
+                .first(where: { $0.activationState == .foregroundActive }) else {
+                call.reject("No active App Store window")
+                return
+            }
+            do {
+                if #available(iOS 16.0, *) {
+                    try await AppStore.presentOfferCodeRedeemSheet(in: scene)
+                } else {
+                    // DEADSET still supports iOS 15. StoreKit 1 is the Apple-
+                    // provided redemption sheet on that OS version.
+                    SKPaymentQueue.default().presentCodeRedemptionSheet()
+                }
+                // The sheet returns after dismissal. Give StoreKit's transaction
+                // listener a brief chance to publish the redeemed entitlement,
+                // then return the authoritative on-device state to JavaScript.
+                try? await Task.sleep(nanoseconds: 600_000_000)
+                call.resolve(await currentEntitlement())
+            } catch {
+                call.reject("Unable to open offer code redemption", error.localizedDescription, error)
             }
         }
     }

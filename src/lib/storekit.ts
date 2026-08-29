@@ -36,6 +36,7 @@ type DeadSetStorePlugin = {
   getEntitlement(): Promise<AppleEntitlement>;
   purchase(options: { productId: string; appAccountToken?: string }): Promise<AppleEntitlement>;
   restore(): Promise<AppleEntitlement>;
+  redeemOfferCode(): Promise<AppleEntitlement>;
   manageSubscriptions(): Promise<void>;
   addListener(
     eventName: "entitlementChanged",
@@ -59,6 +60,10 @@ export function purchaseApplePro(productId: string, appAccountToken?: string) {
 
 export function restoreApplePro() {
   return DeadSetStore.restore();
+}
+
+export function redeemAppleProOfferCode() {
+  return DeadSetStore.redeemOfferCode();
 }
 
 export function manageApplePro() {
