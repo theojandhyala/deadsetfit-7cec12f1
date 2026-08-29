@@ -78,6 +78,7 @@ const indexRoute = existsSync("src/routes/index.tsx") ? read("src/routes/index.t
 const nativeWelcome = existsSync("src/components/NativeWelcome.tsx")
   ? read("src/components/NativeWelcome.tsx")
   : "";
+const appStyles = existsSync("src/styles.css") ? read("src/styles.css") : "";
 const entitlements = existsSync("ios/App/App/App.entitlements")
   ? read("ios/App/App/App.entitlements")
   : "";
@@ -191,9 +192,9 @@ check(
 check(
   "first update version",
   (xcodeProject.match(/MARKETING_VERSION = 1\.2;/g)?.length ?? 0) >= 6 &&
-    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 149;/g)?.length ?? 0) >= 6 &&
+    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 150;/g)?.length ?? 0) >= 6 &&
     whatsNew.includes("WHATS_NEW_VERSION = 202608288"),
-  "The app, activity extension and watch targets are versioned as 1.2 (149), with a matching in-app update summary.",
+  "The app, activity extension and watch targets are versioned as 1.2 (150), with a matching in-app update summary.",
 );
 check(
   "full check script",
@@ -296,12 +297,21 @@ check(
 );
 check(
   "signup-first native welcome",
-  nativeWelcome.includes('nativeAuthHref("signup")') &&
+    nativeWelcome.includes('nativeAuthHref("signup")') &&
     nativeWelcome.includes('nativeAuthHref("signin")') &&
+    nativeWelcome.includes("Get started") &&
+    nativeWelcome.includes("native-entry-wordmark") &&
+    appStyles.includes(".native-entry-wordmark") &&
+    appStyles.includes("prefers-reduced-motion: reduce") &&
     nativeWelcome.includes("/auth/index.html?mode=${mode}") &&
     oauthClient.includes('get("mode") === "signin"') &&
-    authClient.includes("authModeFromUrl(window.location.href)"),
-  "First launch prioritizes account creation and provides a direct returning-user sign-in path.",
+    authClient.includes("authModeFromUrl(window.location.href)") &&
+    staticAuthPage.includes('id="signup-progress"') &&
+    staticAuthPage.includes('id="email-stage"') &&
+    staticAuthPage.includes('id="password-stage"') &&
+    authClient.includes("signupStage === 1") &&
+    authClient.includes("renderAuthStage(true)"),
+  "First launch has an animated branded reveal, a direct returning-user login, and a staged email-to-password account flow.",
 );
 check(
   "iPhone portrait and arm64 release support",

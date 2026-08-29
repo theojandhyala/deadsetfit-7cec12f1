@@ -61,7 +61,12 @@ export const Route = createFileRoute("/")({
  */
 function IndexRoute() {
   const navigate = useNavigate();
-  const [native] = useState(() => isNativeApp());
+  const [native] = useState(
+    () =>
+      isNativeApp() ||
+      (import.meta.env.DEV &&
+        new URLSearchParams(window.location.search).get("nativePreview") === "1"),
+  );
   const [entryReady, setEntryReady] = useState(!native);
 
   useEffect(() => {

@@ -1,160 +1,85 @@
-import {
-  ArrowRight,
-  CalendarDays,
-  ChartNoAxesCombined,
-  Check,
-  Dumbbell,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowRight, CalendarDays, Dumbbell, ScanLine } from "lucide-react";
+import { useEffect, useState } from "react";
 
-import { GritLogo } from "@/components/GritLogo";
-import { MuscleDiagram } from "@/components/MuscleDiagram";
 import { hapticSelection } from "@/lib/haptics";
 
 type AuthMode = "signin" | "signup";
 
-const STRENGTH_PREVIEW = {
-  CHEST: "#45bd62",
-  BACK: "#3297e3",
-  LEGS: "#a43ac2",
-  SHOULDERS: "#ec3f83",
-  ARMS: "#f59e0b",
-  CORE: "#ef4444",
-} as const;
-
-const HIGHLIGHTS: Array<{ Icon: LucideIcon; label: string; detail: string }> = [
-  { Icon: CalendarDays, label: "Plan", detail: "Your week, decided" },
-  { Icon: Dumbbell, label: "Lift", detail: "Every set, captured" },
-  { Icon: ChartNoAxesCombined, label: "Prove", detail: "Strength made visible" },
-];
+const PROOF = [
+  { Icon: CalendarDays, value: "YOUR WEEK", label: "built around you" },
+  { Icon: Dumbbell, value: "EVERY SET", label: "turned into progress" },
+  { Icon: ScanLine, value: "YOUR MAP", label: "strength made visible" },
+] as const;
 
 function nativeAuthHref(mode: AuthMode) {
   return `/auth/index.html?mode=${mode}`;
 }
 
 export function NativeWelcome() {
+  const [revealed, setRevealed] = useState(false);
+
+  useEffect(() => {
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) {
+      setRevealed(true);
+      return;
+    }
+    const timer = window.setTimeout(() => setRevealed(true), 1050);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   return (
-    <main className="relative isolate min-h-[100dvh] overflow-x-hidden bg-[#070708] text-grit">
-      <div
-        className="pointer-events-none absolute inset-0 -z-10"
-        style={{
-          background:
-            "radial-gradient(circle at 78% 16%, rgba(230,50,34,0.19), transparent 31%), radial-gradient(circle at 0% 58%, rgba(230,50,34,0.08), transparent 36%), linear-gradient(180deg, #100708 0%, #070708 46%, #050506 100%)",
-        }}
-        aria-hidden="true"
-      />
-      <div
-        className="pointer-events-none absolute inset-0 -z-10 opacity-[0.14]"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)",
-          backgroundSize: "30px 30px",
-          maskImage: "linear-gradient(to bottom, black, transparent 72%)",
-        }}
-        aria-hidden="true"
-      />
+    <main
+      className={`native-entry min-h-[100dvh] overflow-hidden bg-[#050505] text-grit ${revealed ? "is-revealed" : ""}`}
+    >
+      <div className="native-entry-grid" aria-hidden="true" />
+      <div className="native-entry-aura" aria-hidden="true" />
+      <div className="native-entry-scan" aria-hidden="true" />
 
-      <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col px-5 pb-[max(22px,env(safe-area-inset-bottom))] pt-[max(18px,env(safe-area-inset-top))]">
-        <header className="flex min-h-11 items-center justify-between">
-          <GritLogo className="w-28" />
-          <a
-            href={nativeAuthHref("signin")}
-            onClick={hapticSelection}
-            className="label-cap inline-flex min-h-11 items-center rounded-full border border-white/12 bg-white/[0.045] px-4 text-[9px] text-white press"
-          >
-            Log in
-          </a>
-        </header>
-
-        <section className="mt-7 animate-slide-up">
-          <p className="deadset-kicker">YOUR TRAINING. PROVEN.</p>
-          <h1 className="display mt-3 max-w-[9ch] text-[46px] font-black uppercase leading-[0.88] tracking-[-0.025em] text-white">
-            Train like it counts.
-          </h1>
-          <p className="mt-4 max-w-sm text-[14px] font-semibold leading-6 text-white/58">
-            Build your week, log every set, and watch the strength you earn come alive.
+      <div className="relative z-10 mx-auto flex min-h-[100dvh] w-full max-w-md flex-col px-5 pb-[max(20px,env(safe-area-inset-bottom))] pt-[max(28px,env(safe-area-inset-top))]">
+        <section className="native-entry-brand flex flex-1 flex-col items-center justify-center text-center">
+          <p className="native-entry-eyebrow">FORGE YOUR BODY</p>
+          <div className="native-entry-wordmark" aria-label="DEADSET">
+            <span className="native-entry-dead">DEAD</span>
+            <span className="native-entry-set">SET</span>
+          </div>
+          <div className="native-entry-strike" aria-hidden="true" />
+          <p className="native-entry-promise">
+            Your plan. Your lifts. Your strength—finally visible.
           </p>
         </section>
 
-        <section
-          className="deadset-hero-card relative mt-5 overflow-hidden rounded-[26px] border border-white/10 px-4 pb-4 pt-4"
-          aria-label="DEADSET strength map preview"
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="label-cap text-[8px] text-accent-red">SIGNATURE STRENGTH MAP</p>
-              <p className="display mt-1 text-lg font-black uppercase text-white">
-                See what is getting stronger
-              </p>
-            </div>
-            <span className="label-cap rounded-full border border-white/10 bg-black/30 px-2.5 py-1.5 text-[7px] text-grit-dim">
-              REAL LIFTS
-            </span>
-          </div>
+        <section className="native-entry-actions" aria-label="Start using DEADSET">
+          <ul className="native-entry-proof" aria-label="What DEADSET builds for you">
+            {PROOF.map(({ Icon, value, label }) => (
+              <li key={value}>
+                <Icon size={15} aria-hidden="true" />
+                <span>
+                  <strong>{value}</strong>
+                  <small>{label}</small>
+                </span>
+              </li>
+            ))}
+          </ul>
 
-          <div className="relative mt-2 grid grid-cols-2 gap-5">
-            <div className="text-center">
-              <p className="label-cap text-[8px] text-grit-dim">START</p>
-              <MuscleDiagram view="front" size={158} />
-            </div>
-            <div className="text-center">
-              <p className="label-cap text-[8px] text-white">YOU</p>
-              <MuscleDiagram view="front" gradeColors={STRENGTH_PREVIEW} size={158} />
-            </div>
-            <span className="absolute left-1/2 top-1/2 grid h-8 w-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-white/15 bg-[#1b1c20] text-white shadow-xl">
-              <ArrowRight size={15} aria-hidden="true" />
-            </span>
-          </div>
-
-          <p className="mt-1 flex items-center justify-center gap-1.5 text-center text-[9px] font-bold text-white/48">
-            <Check size={11} className="text-accent-red" aria-hidden="true" /> Every colour comes
-            from what you actually lift.
-          </p>
-        </section>
-
-        <ul className="mt-3 grid grid-cols-3 gap-2" aria-label="What DEADSET does">
-          {HIGHLIGHTS.map(({ Icon, label, detail }) => (
-            <li
-              key={label}
-              className="rounded-2xl border border-white/[0.075] bg-white/[0.035] px-3 py-3"
-            >
-              <Icon size={15} className="text-accent-red" aria-hidden="true" />
-              <p className="display mt-2 text-sm font-black uppercase text-white">{label}</p>
-              <p className="mt-1 text-[8px] font-bold leading-3.5 text-white/42">{detail}</p>
-            </li>
-          ))}
-        </ul>
-
-        <div className="mt-auto pt-5">
           <a
             href={nativeAuthHref("signup")}
             onClick={hapticSelection}
-            className="btn-grit flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl text-[13px] press"
+            className="btn-grit native-entry-primary press"
           >
-            Create my account <ArrowRight size={17} aria-hidden="true" />
+            Get started <ArrowRight size={18} aria-hidden="true" />
           </a>
-          <a
-            href={nativeAuthHref("signin")}
-            onClick={hapticSelection}
-            className="btn-ghost mt-2.5 flex min-h-13 w-full items-center justify-center rounded-2xl text-[12px] press"
-          >
-            I already have an account
-          </a>
-          <p className="label-cap mt-3 text-center text-[7px] text-white/34">
-            SET UP FIRST · 7-DAY TRIAL AFTER
-          </p>
-          <p className="mt-1.5 text-center text-[9px] font-semibold text-white/28">
-            By continuing, you agree to our{" "}
-            <a href="/terms" className="underline">
-              Terms
-            </a>{" "}
-            and{" "}
-            <a href="/privacy" className="underline">
-              Privacy Policy
+          <p className="native-entry-login">
+            Already have an account?{" "}
+            <a href={nativeAuthHref("signin")} onClick={hapticSelection}>
+              Log in
             </a>
-            .
           </p>
-        </div>
+          <p className="native-entry-legal">
+            By continuing, you agree to our <a href="/terms">Terms</a> and{" "}
+            <a href="/privacy">Privacy Policy</a>.
+          </p>
+        </section>
       </div>
     </main>
   );

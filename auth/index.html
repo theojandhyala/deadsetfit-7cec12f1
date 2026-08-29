@@ -35,13 +35,9 @@
 
       html,
       body,
-      .page,
-      main,
-      .card,
       form,
       .field {
         transform: none !important;
-        animation: none !important;
       }
 
       html,
@@ -140,6 +136,7 @@
       .brand-wrap {
         margin: 0 0 22px;
         text-align: center;
+        animation: authBrandIn 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
       }
 
       .brand-row {
@@ -309,9 +306,13 @@
       }
 
       @media (prefers-reduced-motion: reduce) {
-        .rank-dot.hot {
-          animation: none;
+        .rank-dot.hot,
+        .auth-step.is-entering,
+        .brand-wrap,
+        .card {
+          animation: none !important;
         }
+        .signup-progress-track span::after { transition: none; }
       }
 
       .card {
@@ -324,6 +325,17 @@
           0 0 0 1px rgba(255, 255, 255, 0.025) inset,
           0 28px 90px rgba(0, 0, 0, 0.56),
           0 0 42px rgba(230, 50, 34, 0.1);
+        animation: authCardIn 680ms cubic-bezier(0.16, 1, 0.3, 1) 90ms both;
+      }
+
+      @keyframes authBrandIn {
+        from { opacity: 0; transform: translateY(-14px) scale(.96); filter: blur(5px); }
+        to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      }
+
+      @keyframes authCardIn {
+        from { opacity: 0; transform: translateY(24px); }
+        to { opacity: 1; transform: translateY(0); }
       }
 
       .auth-heading {
@@ -348,6 +360,43 @@
         font-size: 13px;
         font-weight: 700;
         line-height: 1.45;
+      }
+
+      .signup-progress { margin: 0 0 20px; }
+      .signup-progress-head {
+        display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px;
+        color: #85848e; font-size: 9px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase;
+      }
+      .signup-progress-head strong { color: #fff; }
+      .signup-progress-track { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; }
+      .signup-progress-track span {
+        height: 4px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.09);
+      }
+      .signup-progress-track span::after {
+        content: ""; display: block; width: 100%; height: 100%; border-radius: inherit;
+        background: var(--red); box-shadow: 0 0 15px rgba(240,6,6,.7);
+        transform: scaleX(0); transform-origin: left;
+        transition: transform 420ms cubic-bezier(.16,1,.3,1);
+      }
+      .signup-progress[data-stage="1"] span:first-child::after,
+      .signup-progress[data-stage="2"] span::after { transform: scaleX(1); }
+      .auth-step.is-entering { animation: authStepIn 440ms cubic-bezier(.16,1,.3,1) both; }
+      .email-summary {
+        display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        margin: 0 0 16px; padding: 12px 14px; border: 1px solid rgba(255,255,255,.08);
+        border-radius: 15px; background: rgba(0,0,0,.24); color: #aaa9b2;
+        font-size: 12px; font-weight: 750;
+      }
+      .email-summary strong {
+        min-width: 0; overflow: hidden; color: white; text-overflow: ellipsis; white-space: nowrap;
+      }
+      .stage-back {
+        min-height: 44px; margin: 3px auto -8px; padding: 0 12px; border: 0;
+        background: transparent; color: #aaa9b2; font-size: 12px; font-weight: 850; cursor: pointer;
+      }
+      @keyframes authStepIn {
+        from { opacity: 0; transform: translateX(20px); filter: blur(3px); }
+        to { opacity: 1; transform: translateX(0); filter: blur(0); }
       }
 
       .social-stack {
@@ -735,8 +784,16 @@
           <div class="auth-heading">
             <h2 class="auth-title" id="auth-title">Create your account</h2>
             <p class="auth-subtitle" id="auth-subtitle">
-              Build your training plan and start logging in minutes.
+              First, where should we send your account details?
             </p>
+          </div>
+
+          <div class="signup-progress" id="signup-progress" data-stage="1" aria-live="polite">
+            <div class="signup-progress-head">
+              <span id="signup-step-label">ACCOUNT · EMAIL</span>
+              <strong id="signup-step-count">1 / 2</strong>
+            </div>
+            <div class="signup-progress-track" aria-hidden="true"><span></span><span></span></div>
           </div>
 
           <div class="social-stack" id="social-options">
@@ -774,40 +831,44 @@
           <div class="divider" id="email-divider">or continue with email</div>
 
           <form id="auth-form" autocomplete="on">
-            <div class="field">
-              <label for="email">Email</label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                inputmode="email"
-                autocomplete="email"
-                autocapitalize="none"
-                autocorrect="off"
-                spellcheck="false"
-                placeholder="your@email.com"
-                required
-              />
-            </div>
-
-            <div class="field">
-              <label for="password">Password</label>
-              <div class="pw-wrap">
+            <div class="auth-step" id="email-stage">
+              <div class="field">
+                <label for="email">Email</label>
                 <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autocomplete="new-password"
-                  placeholder="Password"
-                  minlength="6"
+                  id="email"
+                  name="email"
+                  type="email"
+                  inputmode="email"
+                  autocomplete="email"
+                  autocapitalize="none"
+                  autocorrect="off"
+                  spellcheck="false"
+                  placeholder="your@email.com"
                   required
                 />
-                <button
-                  class="pw-toggle"
-                  id="toggle-password"
-                  type="button"
-                  aria-label="Show password"
-                >
+              </div>
+            </div>
+
+            <div class="auth-step" id="password-stage" hidden>
+              <p class="email-summary" id="email-summary-row">Creating account for <strong id="email-summary"></strong></p>
+              <div class="field">
+                <label for="password" id="password-label">Create a password</label>
+                <div class="pw-wrap">
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autocomplete="new-password"
+                    placeholder="At least 6 characters"
+                    minlength="6"
+                    required
+                  />
+                  <button
+                    class="pw-toggle"
+                    id="toggle-password"
+                    type="button"
+                    aria-label="Show password"
+                  >
                   <svg
                     class="eye"
                     viewBox="0 0 24 24"
@@ -839,13 +900,15 @@
                     />
                     <line x1="2" x2="22" y1="2" y2="22" />
                   </svg>
-                </button>
+                  </button>
+                </div>
+                <p class="pw-hint" id="password-hint">At least 6 characters</p>
               </div>
-              <p class="pw-hint" id="password-hint" hidden>At least 6 characters</p>
             </div>
 
             <button class="forgot" id="forgot" type="button" hidden>Forgot password?</button>
-            <button class="submit" id="submit" type="submit">Create Account</button>
+            <button class="submit" id="submit" type="submit">Continue</button>
+            <button class="stage-back" id="signup-back" type="button" hidden>← Back to email</button>
             <p class="free-note" id="free-note">
               Set up first. Trial terms are shown before purchase.
             </p>
