@@ -1946,13 +1946,39 @@ function BlueprintStep({
       </div>
 
       <div className="mt-auto pt-5">
+        <section className="mb-3 overflow-hidden rounded-2xl border border-accent-red/35 bg-[linear-gradient(135deg,rgba(230,50,34,.14),rgba(17,18,20,.96)_58%)] p-4 shadow-[0_0_28px_rgba(230,50,34,.1)]">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="label-cap text-[8px] text-accent-red">FINAL SIGN-UP STEP</p>
+              <p className="display mt-1 text-xl font-black uppercase tracking-wide text-white">
+                Choose your membership
+              </p>
+            </div>
+            <span className="rounded-full border border-accent-red/35 bg-accent-red/10 px-2.5 py-1 label-cap text-[7px] text-accent-red">
+              NEXT
+            </span>
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {[
+              ["7 DAYS", "Free if eligible"],
+              ["2 PLANS", "Monthly or annual"],
+              ["GOT A CODE?", "Redeem with Apple"],
+            ].map(([label, detail]) => (
+              <div key={label} className="rounded-xl border border-white/10 bg-black/25 p-2.5">
+                <Check size={12} className="mb-1.5 text-accent-red" aria-hidden="true" />
+                <p className="label-cap text-[7px] text-white">{label}</p>
+                <p className="mt-1 text-[8px] leading-tight text-grit-dim">{detail}</p>
+              </div>
+            ))}
+          </div>
+        </section>
         <button onClick={onEnter} className="btn-grit w-full min-h-14 animate-subtle-pulse">
           <Zap size={16} className="mr-2" />
-          Continue to 7-day free trial
+          See plans &amp; start trial
         </button>
         <p className="mt-2 text-center text-[9px] leading-relaxed text-grit-dim">
-          Your setup is saved before Apple opens. Eligible new subscribers get seven days free, then
-          the monthly subscription begins.
+          Your setup is saved first. Apple then shows your exact price, eligibility and renewal
+          terms before you confirm. Eligible first-time subscribers get seven days free.
         </p>
       </div>
     </div>
