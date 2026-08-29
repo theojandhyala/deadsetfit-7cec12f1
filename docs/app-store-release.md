@@ -72,9 +72,9 @@ Eligible new members receive a seven-day free trial, then DEADSET is £5.99 per 
 Apple's displayed local price. One membership unlocks workout planning, logging, Strength Map,
 muscle development, progression, competition, recovery, and history tools.
 
-The launch code CHELTENHAM26 gives one month 100% off the monthly plan while its App Store Connect
-campaign remains active. Eligible new members receive the seven-day introductory trial first, then
-the free month, then the standard Apple monthly price unless cancelled.
+Private campaign codes are distributed directly to their intended recipients and are never named
+in App Store metadata or public app UI. The generic Apple redemption sheet remains available for
+people who have received a code privately.
 
 DEADSET provides fitness information and tracking, not medical advice. Consult a qualified
 professional before beginning a new training program.

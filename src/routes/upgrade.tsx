@@ -688,14 +688,13 @@ function OfferCodeCard({
           <TicketPercent size={19} aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="label-cap text-[8px] text-emerald-400">CHELTENHAM LAUNCH CODE</p>
+          <p className="label-cap text-[8px] text-emerald-400">PRIVATE OFFER CODE</p>
           <p className="display mt-1 text-xl font-black uppercase tracking-wide text-white">
-            CHELTENHAM26
+            Have a code?
           </p>
           <p className="mt-1 text-[10px] leading-relaxed text-grit-dim">
-            One month 100% off the monthly plan. Eligible new members get their 7-day free trial
-            first, then this free month, then Apple renews at the displayed monthly price unless
-            cancelled.
+            Redeem a code shared directly with you. Apple will show its eligibility, duration and
+            renewal terms before you confirm.
           </p>
         </div>
       </div>
@@ -706,7 +705,7 @@ function OfferCodeCard({
         className="mt-3 min-h-11 w-full rounded-xl border border-emerald-400/35 bg-emerald-400/10 px-4 label-cap text-[9px] text-emerald-300 transition active:scale-[0.985] disabled:opacity-50"
       >
         {loading ? <Loader2 size={14} className="mr-2 inline animate-spin" /> : null}
-        Redeem with Apple
+        Redeem offer code with Apple
       </button>
     </section>
   );

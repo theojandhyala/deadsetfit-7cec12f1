@@ -36,8 +36,8 @@ already cost something.
    Connect, not invented by the client. `StoreKitPlugin.swift` returns Apple's
    localized price, offer and eligibility, and the paywall only advertises the
    trial when those values confirm it. Subscription offer codes must use
-   Apple's native redemption sheet; CHELTENHAM26 is a one-month-free monthly
-   offer that stacks after the introductory trial for eligible new members.
+   Apple's native redemption sheet. Private campaign codes are distributed
+   directly to their intended recipients and must never be named in public UI.
    Preserve purchase, offer redemption, restore, manage, terms, privacy, logout
    and deletion access around the mandatory gate.
 3. **Inputs must be DOM-owned** (`defaultValue` + ref). A controlled `value=`

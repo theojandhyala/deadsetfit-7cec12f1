@@ -191,9 +191,9 @@ check(
 check(
   "first update version",
   (xcodeProject.match(/MARKETING_VERSION = 1\.2;/g)?.length ?? 0) >= 6 &&
-    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 148;/g)?.length ?? 0) >= 6 &&
+    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 149;/g)?.length ?? 0) >= 6 &&
     whatsNew.includes("WHATS_NEW_VERSION = 202608288"),
-  "The app, activity extension and watch targets are versioned as 1.2 (148), with a matching in-app update summary.",
+  "The app, activity extension and watch targets are versioned as 1.2 (149), with a matching in-app update summary.",
 );
 check(
   "full check script",
@@ -377,12 +377,12 @@ check(
   storeKitPlugin.includes('CAPPluginMethod(name: "redeemOfferCode"') &&
     storeKitPlugin.includes("AppStore.presentOfferCodeRedeemSheet") &&
     storeKitClient.includes("redeemAppleProOfferCode") &&
-    upgradePage.includes("CHELTENHAM26") &&
-    upgradePage.includes("Redeem with Apple") &&
-    upgradePage.includes("One month 100% off") &&
-    upgradePage.includes("then this free month") &&
-    upgradePage.includes("renews at the displayed monthly price unless"),
-  "The iPhone paywall opens Apple's system redemption sheet and clearly discloses the CHELTENHAM26 trial, free month, and later renewal order.",
+    upgradePage.includes("Redeem offer code with Apple") &&
+    upgradePage.includes("Redeem a code shared directly with you") &&
+    upgradePage.includes("Apple will show its eligibility, duration and") &&
+    upgradePage.includes("renewal terms before you confirm") &&
+    !/cheltenham\d*/i.test(upgradePage),
+  "The iPhone paywall opens Apple's system redemption sheet without publicly exposing private campaign codes.",
 );
 check(
   "StoreKit seven-day trial disclosure",
