@@ -96,8 +96,8 @@ export function RestTimer({
           <div>
             <div className="label-cap text-accent-red text-[10px]">REST</div>
             <div
-              key={left}
-              className={`display text-4xl font-extrabold leading-none${urgent ? " rest-urgent" : " rest-beat text-grit"}`}
+              key={urgent ? left : "steady"}
+              className={`display text-4xl font-extrabold leading-none${urgent ? " rest-urgent" : " text-grit"}`}
               style={urgent ? { color: "#e63222" } : undefined}
             >
               {left}s
@@ -134,7 +134,7 @@ export function RestTimer({
         </div>
         <div className="h-1.5 bg-[#080808] rounded-full overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all duration-1000 ease-linear${urgent ? " rest-bar-urgent" : ""} bg-accent-red`}
+            className={`h-full rounded-full transition-[width] duration-1000 ease-linear${urgent ? " rest-bar-urgent" : ""} bg-accent-red`}
             style={{ width: `${pct}%` }}
           />
         </div>

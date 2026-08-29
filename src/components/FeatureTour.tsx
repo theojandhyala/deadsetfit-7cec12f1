@@ -391,7 +391,7 @@ export function FeatureTour({ active = true }: { active?: boolean }) {
           <div
             key={idx}
             aria-hidden="true"
-            className="h-1.5 rounded-full transition-all"
+            className="h-1.5 rounded-full transition-[width,background-color] duration-200 ease-out"
             style={{ width: idx === i ? 20 : 6, background: idx === i ? "#e63222" : "#333" }}
           />
         ))}

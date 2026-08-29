@@ -65,7 +65,7 @@ export function WeeklyRecap({ state }: Props) {
       </div>
       <div className="mt-3 h-1 bg-grit overflow-hidden">
         <div
-          className="h-1 bg-accent-red transition-all"
+          className="h-1 bg-accent-red transition-[width] duration-500 ease-out"
           style={{ width: `${Math.min(100, (stats.daysTrained / 7) * 100)}%` }}
         />
       </div>

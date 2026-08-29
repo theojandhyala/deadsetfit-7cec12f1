@@ -232,7 +232,7 @@ export function WeeklyStrengthCheckIn({
           aria-valuenow={activeStep + 1}
         >
           <div
-            className="h-full rounded-full bg-accent-red transition-all"
+            className="h-full rounded-full bg-accent-red transition-[width] duration-500 ease-out"
             style={{ width: `${((activeStep + 1) / rows.length) * 100}%` }}
           />
         </div>

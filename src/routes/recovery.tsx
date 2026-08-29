@@ -302,7 +302,7 @@ function RecoveryPage() {
                     </div>
                     <div className="h-1.5 bg-[#1a1a1a] rounded-full mt-1 overflow-hidden">
                       <div
-                        className="h-full rounded-full transition-all"
+                        className="h-full rounded-full transition-[width,background-color] duration-500 ease-out"
                         style={{ width: `${m.pct}%`, background: meta.color }}
                       />
                     </div>

@@ -95,7 +95,7 @@ export function LiftLevels({ state }: { state: AppState }) {
             </div>
             <div className="h-1 bg-grit overflow-hidden">
               <div
-                className="h-1 transition-all"
+                className="h-1 transition-[width] duration-500 ease-out"
                 style={{ width: `${r.pct}%`, background: LEVEL_COLOR[r.level] }}
               />
             </div>

@@ -191,7 +191,7 @@ export function RankEmblem({
           style={{ height: 4, background: "#1f2937", maxWidth: dim * 1.4 }}
         >
           <div
-            className="h-full rounded-full transition-all duration-700"
+            className="h-full rounded-full transition-[width] duration-700 ease-out"
             style={{
               width: `${Math.round(progress * 100)}%`,
               background: `linear-gradient(90deg, ${rank.gradient[0]}, ${rank.color})`,

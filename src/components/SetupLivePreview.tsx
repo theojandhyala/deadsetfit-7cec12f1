@@ -84,7 +84,7 @@ export function SetupLivePreview({
                   {day.dayKey.charAt(0)}
                 </span>
                 <span
-                  className={`mx-auto mt-1 block h-1.5 rounded-full transition-all duration-500 ${
+                  className={`mx-auto mt-1 block h-1.5 rounded-full transition-[width,background-color] duration-500 ease-out ${
                     day.isTraining ? "w-full bg-accent-red" : "w-1.5 bg-white/10"
                   }`}
                   title={`${day.dayLabel}: ${day.shortLabel}`}

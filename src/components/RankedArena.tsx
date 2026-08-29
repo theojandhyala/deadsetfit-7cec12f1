@@ -115,7 +115,7 @@ export function RankedArena({ state, compact = false }: RankedArenaProps) {
               </p>
               <div className="mt-2.5 h-1.5 rounded-full bg-black/60 border border-white/10 overflow-hidden">
                 <div
-                  className="h-full rounded-full transition-all duration-700"
+                  className="h-full rounded-full transition-[width] duration-700 ease-out"
                   style={{
                     width: `${Math.round(progress * 100)}%`,
                     background: `linear-gradient(90deg, ${rank.gradient[0]}, ${rank.color})`,

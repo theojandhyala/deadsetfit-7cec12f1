@@ -787,7 +787,7 @@ function CalorieGoalGrid({
           <div key={day.date} className="flex flex-col items-center gap-1.5">
             <span
               title={`${day.date}: ${day.calories} / ${target} kcal`}
-              className="h-6 w-6 rounded-full transition-all"
+              className="h-6 w-6 rounded-full transition-[background-color,border-color,transform] duration-200 ease-out"
               style={{
                 background: day.hit
                   ? "radial-gradient(circle at 35% 30%, #ff756a, #e63222 58%, #7a130c)"

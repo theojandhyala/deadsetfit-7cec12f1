@@ -514,11 +514,15 @@
       box-shadow 0.15s ease;
     transform: translateZ(0);
   }
-  .btn-grit:hover {
-    filter: brightness(1.1);
-    box-shadow:
-      0 14px 34px rgba(230, 50, 34, 0.32),
-      0 0 24px rgba(230, 50, 34, 0.18);
+  /* Touch fires :hover on tap and leaves it stuck, so the primary button
+     stayed brightened after every press on the platform this ships to. */
+  @media (hover: hover) and (pointer: fine) {
+    .btn-grit:hover {
+      filter: brightness(1.1);
+      box-shadow:
+        0 14px 34px rgba(230, 50, 34, 0.32),
+        0 0 24px rgba(230, 50, 34, 0.18);
+    }
   }
   .btn-grit:active {
     transform: translateY(1px) scale(0.99);
@@ -544,8 +548,10 @@
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.01));
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
   }
-  .btn-ghost:hover {
-    background: #1a1a1a;
+  @media (hover: hover) and (pointer: fine) {
+    .btn-ghost:hover {
+      background: #1a1a1a;
+    }
   }
   .label-cap {
     text-transform: uppercase;
@@ -1065,18 +1071,30 @@
   }
 
   .press {
+    /* Stronger than the built-in curve, which is too weak to read as
+       intentional at these durations. */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
     transition:
-      transform 120ms ease,
+      transform 120ms var(--ease-out),
       border-color 160ms ease,
       background-color 160ms ease,
       box-shadow 160ms ease,
       opacity 160ms ease;
     will-change: transform;
   }
-  .press:hover {
-    border-color: rgba(230, 50, 34, 0.72);
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
-    transform: translateY(-1px);
+  /*
+   * Hover only where a pointer actually hovers.
+   *
+   * A touch device fires :hover on tap and leaves it stuck there, so on the
+   * platform this app actually ships to, every button someone pressed stayed
+   * lifted and red-bordered until they touched something else.
+   */
+  @media (hover: hover) and (pointer: fine) {
+    .press:hover {
+      border-color: rgba(230, 50, 34, 0.72);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
+      transform: translateY(-1px);
+    }
   }
   .press:active {
     transform: translateY(1px) scale(0.985);
@@ -1123,12 +1141,14 @@
       border-color 180ms ease;
     transform: translateZ(0);
   }
-  .deadset-lift:hover {
-    transform: translateY(-3px) rotateX(1deg);
-    box-shadow:
-      0 24px 54px rgba(0, 0, 0, 0.42),
-      0 0 24px rgba(230, 50, 34, 0.12);
-    border-color: rgba(230, 50, 34, 0.58) !important;
+  @media (hover: hover) and (pointer: fine) {
+    .deadset-lift:hover {
+      transform: translateY(-3px) rotateX(1deg);
+      box-shadow:
+        0 24px 54px rgba(0, 0, 0, 0.42),
+        0 0 24px rgba(230, 50, 34, 0.12);
+      border-color: rgba(230, 50, 34, 0.58) !important;
+    }
   }
 
   .deadset-float {
@@ -1473,8 +1493,10 @@
       filter 0.15s ease,
       transform 0.05s ease;
   }
-  .auth-submit:hover {
-    filter: brightness(1.08);
+  @media (hover: hover) and (pointer: fine) {
+    .auth-submit:hover {
+      filter: brightness(1.08);
+    }
   }
   .auth-submit:active {
     transform: translateY(1px);
@@ -2473,24 +2495,28 @@
  *
  * The most repeated interaction in the app — fifteen to thirty taps a session
  * — and it had no motion at all: the circle simply changed colour between
- * frames. That is the moment the app should feel best, because it is the
- * moment somebody has just done the work.
+ * frames.
+ *
+ * That frequency is also the constraint. An animation seen twenty-five times
+ * in forty-five minutes stops being delight and starts being latency, so this
+ * is deliberately brief and unshowy: a tick at button-feedback speed, not a
+ * celebration. The first version bounced for 420ms and swept the whole row for
+ * another 620ms, which would have felt slower every session.
+ *
+ * A record is the exception. That is rare, so it gets to be loud.
  *
  * Keyed on the done state in JSX so the element remounts and each animation
- * plays exactly once, when a set actually lands. Sets already logged when the
- * screen mounts replay it as a settle-in, staggered down the list.
+ * plays exactly once, when a set actually lands.
  */
 @layer components {
   .set-tick {
-    animation: set-tick-pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    animation: set-tick-pop 160ms cubic-bezier(0.23, 1, 0.32, 1) both;
   }
 
+  /* Never from scale(0) — nothing appears out of nothing. */
   @keyframes set-tick-pop {
     0% {
-      transform: scale(0.4);
-    }
-    55% {
-      transform: scale(1.18);
+      transform: scale(0.85);
     }
     100% {
       transform: scale(1);
@@ -2500,7 +2526,7 @@
   /* The check draws itself rather than appearing. */
   .set-tick-mark path {
     stroke-dasharray: 24;
-    animation: set-tick-draw 260ms ease-out 90ms both;
+    animation: set-tick-draw 140ms cubic-bezier(0.23, 1, 0.32, 1) both;
   }
 
   @keyframes set-tick-draw {
@@ -2512,36 +2538,9 @@
     }
   }
 
-  /* One green sweep across the row, so the whole set reads as banked. */
-  .set-row-done::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    background: linear-gradient(
-      100deg,
-      transparent 20%,
-      rgba(34, 197, 94, 0.22) 50%,
-      transparent 80%
-    );
-    animation: set-row-sweep 620ms ease-out both;
-  }
-
-  @keyframes set-row-sweep {
-    from {
-      opacity: 1;
-      transform: translateX(-100%);
-    }
-    to {
-      opacity: 0;
-      transform: translateX(100%);
-    }
-  }
-
   /* A record is worth more than a tick. */
   .set-pr-flame {
-    animation: set-pr-burst 620ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    animation: set-pr-burst 520ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
 
   @keyframes set-pr-burst {
@@ -2566,10 +2565,6 @@
       animation-duration: 1ms;
       animation-delay: 0ms;
     }
-    .set-row-done::after {
-      animation: none;
-      display: none;
-    }
   }
 }
 
@@ -2580,25 +2575,11 @@
  * mid-session the phone is face-up on a bench rather than in your hand, and
  * "get under the bar" is worth reading from a metre away.
  *
- * Both are keyed on the remaining seconds in JSX, so each new number remounts
- * and animates once — a per-second beat rather than a digit silently swapping.
+ * Only the last three seconds animate. A pulse on every tick would fire once
+ * a second for the whole rest period, which is the frequency at which motion
+ * stops informing and starts nagging.
  */
 @layer components {
-  .rest-beat {
-    animation: rest-beat 320ms ease-out both;
-  }
-
-  @keyframes rest-beat {
-    0% {
-      transform: scale(1.08);
-      opacity: 0.75;
-    }
-    100% {
-      transform: scale(1);
-      opacity: 1;
-    }
-  }
-
   .rest-urgent {
     animation: rest-urgent 900ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
     text-shadow: 0 0 22px rgba(230, 50, 34, 0.55);
@@ -2630,7 +2611,6 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .rest-beat,
     .rest-urgent {
       animation-duration: 1ms;
     }

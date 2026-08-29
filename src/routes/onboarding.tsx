@@ -349,7 +349,7 @@ function Onboarding() {
           aria-valuenow={idx}
         >
           <div
-            className="h-full bg-accent-red rounded-full transition-all"
+            className="h-full bg-accent-red rounded-full transition-[width] duration-300 ease-out"
             style={{
               width:
                 idx === 0 ? "0%" : `${Math.round((idx / Math.max(1, ORDER.length - 1)) * 100)}%`,
@@ -2196,7 +2196,7 @@ function AnalyzingStep({ draft, onDone }: { draft: Partial<Profile>; onDone: () 
       </div>
       <div className="h-1.5 bg-grit-card rounded-full overflow-hidden">
         <div
-          className="h-full bg-accent-red rounded-full transition-all duration-500"
+          className="h-full bg-accent-red rounded-full transition-[width] duration-500 ease-out"
           style={{ width: `${pct}%` }}
         />
       </div>

@@ -1362,7 +1362,10 @@ function LiveWorkoutPage() {
       </div>
 
       <div className="h-1 bg-[#1a1a1a]">
-        <div className="h-full bg-accent-red transition-all" style={{ width: `${progress}%` }} />
+        <div
+          className="h-full bg-accent-red transition-[width] duration-300 ease-out"
+          style={{ width: `${progress}%` }}
+        />
       </div>
 
       <div className="grid grid-cols-3 border-b border-grit bg-grit-card">
@@ -1388,7 +1391,7 @@ function LiveWorkoutPage() {
           </div>
           <div className="mt-1.5 h-1.5 rounded-full bg-[#1a1a1a] overflow-hidden">
             <div
-              className="h-full rounded-full transition-all"
+              className="h-full rounded-full transition-[width] duration-300 ease-out"
               style={{
                 width: `${Math.min(100, Math.round((totals.vol / lastTime.volume) * 100))}%`,
                 background: totals.vol >= lastTime.volume ? "#22c55e" : "#e63222",
@@ -2092,7 +2095,7 @@ function SetLogger({
                   onLog({ weight: nextWeight, reps: nextReps });
                 }
               }}
-              className={`relative w-full flex items-center justify-between border rounded-xl px-3 py-3 press text-left disabled:opacity-40 overflow-hidden${done ? " set-row-done" : ""}`}
+              className={`w-full flex items-center justify-between border rounded-xl px-3 py-3 press text-left disabled:opacity-40`}
               style={{
                 borderColor: done
                   ? doneSet?.isPR
@@ -2831,7 +2834,7 @@ function TimedSetLogger({
               type="button"
               disabled={!doneSet}
               onClick={() => doneSet && setEditingSet(i)}
-              className={`relative w-full flex items-center justify-between border rounded-xl px-3 py-3 press text-left disabled:opacity-40 overflow-hidden${doneSet ? " set-row-done" : ""}`}
+              className={`w-full flex items-center justify-between border rounded-xl px-3 py-3 press text-left disabled:opacity-40`}
               style={{
                 borderColor: doneSet
                   ? doneSet.isPR
