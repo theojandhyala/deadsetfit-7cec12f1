@@ -17,19 +17,27 @@ def centered_text(draw: ImageDraw.ImageDraw, text: str, y: int, size: int) -> No
 
 
 def render_hook() -> None:
-    source = PROJECT / "marketing/tiktok/video/viral-research-hero/qa/motivation-0.5.jpg"
+    source = ROOT / "source-gym-pose.jpg"
     image = ImageOps.fit(Image.open(source).convert("RGB"), SIZE, method=Image.Resampling.LANCZOS)
-    centered_text(ImageDraw.Draw(image), "so the breakup really hurt?", 840, 58)
+    # Keep the first slide looking like an ordinary gym post rather than a
+    # designed ad. A light vignette only protects the native TikTok caption.
+    shade = Image.new("RGBA", SIZE, (0, 0, 0, 0))
+    shade_draw = ImageDraw.Draw(shade)
+    for y in range(0, 620):
+        alpha = max(0, int(115 * (1 - y / 620)))
+        shade_draw.line((0, y, SIZE[0], y), fill=(0, 0, 0, alpha))
+    image = Image.alpha_composite(image.convert("RGBA"), shade).convert("RGB")
+    centered_text(ImageDraw.Draw(image), "how much did the breakup hurt?", 260, 58)
     image.save(ROOT / "01-hook.png", optimize=True)
 
 
-def render_payoff() -> None:
-    image = Image.new("RGB", SIZE, "#070708")
-    top = Image.open(ROOT / "02-muscle-map-top.png").convert("RGB")
-    image.paste(top, (0, 0))
-    centered_text(ImageDraw.Draw(image), "the muscle map says yes.", 1310, 54)
-    ImageDraw.Draw(image).rectangle((0, 1914, 1080, 1919), fill="#ed3528")
-    image.save(ROOT / "02-muscle-map.png", optimize=True)
+def verify_payoff() -> None:
+    """The payoff is captured from the exact Xcode-shipped component."""
+    payoff = ROOT / "02-muscle-map.png"
+    if not payoff.exists():
+        raise FileNotFoundError("Capture 02-muscle-map.png from xcode-muscle-preview.html first")
+    if Image.open(payoff).size != SIZE:
+        raise ValueError("Xcode muscle-map capture must be 1080x1920")
 
 
 def render_contact_sheet() -> None:
@@ -42,5 +50,5 @@ def render_contact_sheet() -> None:
 
 if __name__ == "__main__":
     render_hook()
-    render_payoff()
+    verify_payoff()
     render_contact_sheet()

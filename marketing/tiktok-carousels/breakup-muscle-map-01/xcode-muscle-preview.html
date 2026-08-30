@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, initial-scale=1" />
+    <title>DEADSET Xcode muscle-map capture</title>
+    <style>
+      * { box-sizing: border-box; }
+      html, body { margin: 0; width: 1080px; min-height: 1920px; background: #070708; }
+      body { color: #f5f5f0; font-family: Inter, Arial, sans-serif; }
+      #capture {
+        position: relative;
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        padding: 92px 72px 82px;
+        background:
+          radial-gradient(70% 48% at 50% 45%, rgba(240,68,50,.09), transparent 74%),
+          linear-gradient(180deg, #0b0b0d, #050506);
+      }
+      .brand { font-size: 34px; font-weight: 900; font-style: italic; letter-spacing: -1px; }
+      .brand span { color: #f04432; }
+      .eyebrow { margin-top: 150px; color: #f04432; font-size: 22px; font-weight: 900; letter-spacing: 8px; }
+      h1 { max-width: 890px; margin: 18px 0 12px; font-size: 68px; line-height: .98; letter-spacing: -3px; }
+      .sub { color: #8f9095; font-size: 24px; }
+      .map-card {
+        margin-top: 74px;
+        padding: 62px 30px 48px;
+        border: 2px solid #27282d;
+        border-radius: 28px;
+        background: linear-gradient(180deg, #141519, #0d0e10);
+        box-shadow: 0 45px 90px rgba(0,0,0,.5);
+      }
+      .map-card > div { display: flex; width: 100%; align-items: flex-end; justify-content: center; gap: 10px; }
+      .map-card svg { display: block; max-width: 100%; }
+      .legend { display: flex; justify-content: center; gap: 38px; margin-top: 24px; color: #8d8e93; font-size: 18px; font-weight: 800; letter-spacing: 3px; }
+      .legend i { display: inline-block; width: 13px; height: 13px; margin-right: 9px; background: #f04432; }
+      .payoff { margin-top: 68px; text-align: center; font-size: 58px; font-weight: 900; letter-spacing: -2px; }
+      .qualifier { margin-top: 18px; color: #696a70; text-align: center; font-size: 18px; letter-spacing: 3px; text-transform: uppercase; }
+      .rail { position: absolute; left: 0; right: 0; bottom: 0; height: 10px; background: #f04432; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module">
+      import { j as jsxRuntime, f as ReactDOM } from '/Library/Developer/CoreSimulator/Devices/E11AB4B1-2A87-4085-AE29-78A5CA9E0A88/data/Containers/Bundle/Application/A9FCFB36-0B06-467C-A0D6-4E3643041C0F/DeadSet.app/public/assets/vendor-react-r20260726-fitness2-CH1VOCqL.js';
+      import { M as MuscleDiagram } from '/Library/Developer/CoreSimulator/Devices/E11AB4B1-2A87-4085-AE29-78A5CA9E0A88/data/Containers/Bundle/Application/A9FCFB36-0B06-467C-A0D6-4E3643041C0F/DeadSet.app/public/assets/MuscleDiagram-r20260726-fitness2-DOKE9MD5.js';
+
+      const h = jsxRuntime.jsx;
+      const hs = jsxRuntime.jsxs;
+      const diagram = h(MuscleDiagram, {
+        primary: ['chest', 'back', 'legs', 'shoulders', 'arms', 'core'],
+        size: 720,
+      });
+
+      ReactDOM.createRoot(document.getElementById('root')).render(
+        hs('main', {
+          id: 'capture',
+          children: [
+            hs('div', { className: 'brand', children: ['DEAD', h('span', { children: 'SET' })] }),
+            h('div', { className: 'eyebrow', children: 'YOUR MUSCLE MAP' }),
+            h('h1', { children: 'The work shows up here.' }),
+            h('div', { className: 'sub', children: 'Every trained muscle. Front and back.' }),
+            hs('section', {
+              className: 'map-card',
+              children: [
+                diagram,
+                hs('div', {
+                  className: 'legend',
+                  children: [
+                    hs('span', { children: [h('i', {}), 'TRAINED'] }),
+                    h('span', { children: 'FRONT / BACK' }),
+                  ],
+                }),
+              ],
+            }),
+            h('div', { className: 'payoff', children: 'this much.' }),
+            h('div', { className: 'qualifier', children: 'Built from the exercises you log in DEADSET' }),
+            h('div', { className: 'rail' }),
+          ],
+        }),
+      );
+    </script>
+  </body>
+</html>
