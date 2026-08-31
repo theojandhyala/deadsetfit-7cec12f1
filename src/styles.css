@@ -2742,3 +2742,29 @@
     }
   }
 }
+
+/*
+ * A muscle changing grade.
+ *
+ * Climbing a tier is the payoff for months of work and it used to swap a
+ * colour between frames. Transitioning the fill means the change is something
+ * you watch happen.
+ *
+ * A transition rather than a keyframe: grades can change several at once when
+ * a session is saved, and a transition retargets smoothly where a keyframe
+ * restarts from zero. `fill` specifically, never `all` — these are up to sixty
+ * paths per figure and four figures on the strength screen.
+ */
+@layer components {
+  .muscle-fill path {
+    transition: fill 420ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .muscle-fill path {
+      /* Colour change still reads as information, so it stays — only its
+         duration goes, per reduced-motion guidance. */
+      transition-duration: 1ms;
+    }
+  }
+}

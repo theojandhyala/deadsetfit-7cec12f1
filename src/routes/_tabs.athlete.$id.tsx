@@ -24,7 +24,7 @@ import { RARITY_COLOR, type AchievementRarity } from "@/lib/achievements";
 import { gritBadge, badgeColor } from "@/lib/calc";
 import { hapticFailure, hapticPlanUpdated, hapticSelection } from "@/lib/haptics";
 import { MuscleDiagram } from "@/components/MuscleDiagram";
-import { GRADED_MUSCLES, TIER_COLOR, type StrengthTier } from "@/lib/strength-grades";
+import { GRADED_MUSCLES, TIER_COLOR, TIERS, type StrengthTier } from "@/lib/strength-grades";
 
 export const Route = createFileRoute("/_tabs/athlete/$id")({
   head: () => ({ meta: [{ title: "DEADSET — Athlete" }] }),
@@ -391,6 +391,25 @@ function AthletePage() {
         />
       )}
 
+      {/*
+        Their map, public.
+
+        A stranger landing here — from a shared link, from discovery — used to
+        see a follower count and a locked panel. The single most compelling
+        thing about an athlete in this app was hidden from exactly the person
+        deciding whether to follow them.
+
+        Their own map is their public identity and is shown to anyone. The
+        side-by-side comparison below stays friends-only, because that one
+        involves the viewer's data rather than theirs.
+      */}
+      {theirStrengthMap && theirStrengthMap.muscles.length > 0 && (
+        <PublicStrengthShowcase
+          name={card.username || card.display_name || "them"}
+          map={theirStrengthMap}
+        />
+      )}
+
       {/* Headline PRs + head-to-head vs you */}
       <section className="px-5 mb-5">
         <p className="label-cap mb-2 flex items-center gap-2">
@@ -706,5 +725,54 @@ function PRHeadToHead({ them, mine, themName }: { them: PR[]; mine: PR[]; themNa
         })}
       </div>
     </div>
+  );
+}
+
+/**
+ * An athlete's own strength map, shown to anyone who lands on their profile.
+ *
+ * This is the showcase: the reason to follow somebody. It deliberately shows
+ * their strongest area rather than a bare score, because "Elite chest" is a
+ * claim a stranger can evaluate and a number out of a hundred is not.
+ */
+function PublicStrengthShowcase({ name, map }: { name: string; map: PublicStrengthMap }) {
+  const colors = Object.fromEntries(
+    map.muscles.map((muscle) => [muscle.muscle, TIER_COLOR[muscle.tier]]),
+  );
+  const best = [...map.muscles].sort(
+    (a, b) => TIERS.indexOf(b.tier) - TIERS.indexOf(a.tier) || b.score - a.score,
+  )[0];
+  const tierColor = TIER_COLOR[map.tier];
+
+  return (
+    <section className="px-5 mb-5">
+      <div className="overflow-hidden rounded-2xl border border-grit bg-grit-card">
+        <div className="flex items-baseline justify-between gap-3 px-4 pb-2 pt-4">
+          <div className="min-w-0">
+            <p className="label-cap text-[9px] text-grit-dim">STRENGTH MAP</p>
+            <p className="display truncate text-base font-extrabold uppercase text-grit">
+              What @{name} has built
+            </p>
+          </div>
+          <p className="label-cap shrink-0 text-[9px]" style={{ color: tierColor }}>
+            {map.tier.replace("_", " ")}
+          </p>
+        </div>
+
+        <div className="border-y border-grit bg-[#0d0e10] py-3">
+          <MuscleDiagram view="both" gradeColors={colors} size={188} />
+        </div>
+
+        {best && (
+          <p className="px-4 py-3 text-center text-xs leading-relaxed text-grit-dim">
+            Strongest area:{" "}
+            <span className="font-bold" style={{ color: TIER_COLOR[best.tier] }}>
+              {best.tier.replace("_", " ").toLowerCase()} {best.muscle.toLowerCase()}
+            </span>
+            . Every colour was earned from logged lifts, adjusted for bodyweight.
+          </p>
+        )}
+      </div>
+    </section>
   );
 }

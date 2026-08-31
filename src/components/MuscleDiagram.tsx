@@ -221,7 +221,19 @@ function AnatomyFigure({
         )}
       </g>
 
-      <g stroke={MUSCLE_OUTLINE} strokeWidth={MUSCLE_STROKE_WIDTH} strokeLinejoin="round">
+      {/*
+        A grade change is the payoff for months of training, and it used to
+        swap a colour between frames. `muscle-fill` transitions it instead, so
+        a muscle visibly moves from one tier to the next. CSS transitions do
+        not fire on first paint, so the map still arrives fully coloured
+        rather than fading up every time the screen opens.
+      */}
+      <g
+        className="muscle-fill"
+        stroke={MUSCLE_OUTLINE}
+        strokeWidth={MUSCLE_STROKE_WIDTH}
+        strokeLinejoin="round"
+      >
         {[...diagram.muscles, ...(diagram.view === "FRONT" ? FRONT_HIP_FLEXORS : [])].flatMap(
           (path, index) =>
             expandPath(path, mirror).map((part, partIndex) => (
