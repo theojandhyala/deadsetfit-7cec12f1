@@ -12,6 +12,8 @@ import {
 } from "../src/lib/leaderboard-integrity";
 import { currentWeekStart, type WeeklyCompetitionStats } from "../src/lib/competition";
 import { getRank } from "../src/lib/rank";
+import { rankAthletes } from "../src/lib/athlete-discovery";
+import { TIERS } from "../src/lib/strength-grades";
 import type { AppState } from "../src/lib/types";
 import type { Database } from "../src/integrations/supabase/types";
 import { revokeAppleRefreshToken } from "../src/lib/apple-oauth.server";
@@ -1785,34 +1787,77 @@ const handlers: Record<string, Handler> = {
       .eq("follower_id", userId);
     if (followsError) throw new Error(followsError.message);
     const followingSet = new Set((follows ?? []).map((f) => f.following_id));
+
+    // A wider pool than the old top-30-by-grit, because the ranking below is
+    // what picks — ordering the query by grit would pre-filter out exactly the
+    // athletes this is meant to surface.
     const { data: rows, error: rowsError } = await supabaseAdmin
       .from("public_profiles")
       .select(
         "id, username, display_name, avatar_url, bio, city, country, grit_points, public_stats",
       )
       .neq("id", userId)
-      .order("grit_points", { ascending: false })
-      .limit(30);
+      .not("public_stats", "is", null)
+      .limit(300);
     if (rowsError) throw new Error(rowsError.message);
-    return (rows ?? [])
-      .filter(
-        (r): r is typeof r & { id: string } =>
-          !!r.id && !followingSet.has(r.id) && !hidden.has(r.id),
-      )
-      .slice(0, 10)
-      .map((r) => ({
-        id: r.id,
-        username: r.username,
-        display_name: r.display_name,
-        avatar_url: r.avatar_url,
-        level: gritLevel(r.grit_points ?? 0),
-        grit_points: r.grit_points ?? 0,
-        bio: r.bio,
-        city: r.city,
-        country: r.country,
-        public_stats: r.public_stats,
-        following: false,
-      }));
+
+    const eligible = (rows ?? []).filter(
+      (r): r is typeof r & { id: string } => !!r.id && !followingSet.has(r.id) && !hidden.has(r.id),
+    );
+
+    type Stats = {
+      streak?: number;
+      totalWorkouts?: number;
+      totalPRs?: number;
+      weekly?: { sessions?: number };
+      strengthMap?: { muscles?: { muscle: string; tier: string }[] };
+    };
+    const statsFor = (row: (typeof eligible)[number]) => (row.public_stats ?? {}) as Stats;
+
+    const ranked = rankAthletes(
+      eligible.map((r) => {
+        const stats = statsFor(r);
+        // The athlete's single best-graded muscle is their claim on a
+        // stranger's attention; the rest of the map is detail for later.
+        const best = [...(stats.strengthMap?.muscles ?? [])].sort(
+          (a, b) => TIERS.indexOf(b.tier as never) - TIERS.indexOf(a.tier as never),
+        )[0];
+        return {
+          id: r.id,
+          username: r.username,
+          gritPoints: r.grit_points ?? 0,
+          streak: stats.streak ?? 0,
+          sessionsThisWeek: stats.weekly?.sessions ?? 0,
+          totalWorkouts: stats.totalWorkouts ?? 0,
+          totalPRs: stats.totalPRs ?? 0,
+          best: best ? { muscle: best.muscle, tier: best.tier as never } : null,
+        };
+      }),
+    );
+
+    const byId = new Map(eligible.map((r) => [r.id, r]));
+    return ranked.flatMap((entry) => {
+      const r = byId.get(entry.id);
+      if (!r) return [];
+      return [
+        {
+          id: r.id,
+          username: r.username,
+          display_name: r.display_name,
+          avatar_url: r.avatar_url,
+          level: gritLevel(r.grit_points ?? 0),
+          grit_points: r.grit_points ?? 0,
+          bio: r.bio,
+          city: r.city,
+          country: r.country,
+          public_stats: r.public_stats,
+          following: false,
+          /** Why this athlete was surfaced, shown on the row. */
+          reason: entry.reason.label,
+          reasonKind: entry.reason.kind,
+        },
+      ];
+    });
   },
 
   async getMyFollowStats(_data, req) {

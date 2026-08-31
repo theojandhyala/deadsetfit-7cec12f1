@@ -1806,7 +1806,11 @@ function Friends() {
 
           {!results && (
             <>
-              <p className="label-cap text-[#8a8a8a] mb-2 mt-2">Suggested rivals</p>
+              <p className="label-cap mb-1 mt-2 text-[#8a8a8a]">Athletes worth following</p>
+              <p className="mb-2 text-[10px] leading-relaxed text-grit-dim">
+                Surfaced for what they have actually done — a standout lift, a streak nobody else is
+                holding, a week of real work. Not whoever has been here longest.
+              </p>
               {!suggested && (
                 <div className="flex justify-center py-6">
                   <Loader2 className="animate-spin text-accent-red" />
@@ -1854,6 +1858,8 @@ function AthleteRow({
     city?: string | null;
     country?: string | null;
     public_stats?: Record<string, unknown> | null;
+    /** Why discovery surfaced this athlete: "elite Chest", "31-day streak". */
+    reason?: string | null;
   };
   status: FriendStatus;
   busy: boolean;
@@ -1885,6 +1891,11 @@ function AthleteRow({
             {a.username ? `@${a.username} · ` : ""}
             {a.level}
           </p>
+          {/* The reason this athlete was surfaced. A name and a number is not
+              a reason to tap; "elite Chest" is. */}
+          {a.reason && (
+            <p className="label-cap mt-1 truncate text-[9px] text-accent-red">{a.reason}</p>
+          )}
           <div className="mt-1 flex items-center gap-2 overflow-hidden text-[9px] font-bold text-grit-dim">
             {overall > 0 && <span className="text-accent-red">{overall} OVR</span>}
             {streak > 0 && (
