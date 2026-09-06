@@ -3,9 +3,13 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useAppState } from "@/lib/storage";
 import { usePro } from "@/hooks/usePro";
 import { openPaywall } from "@/lib/paywall-events";
-import { askConfirm } from "@/lib/confirm";
+import { askConfirm, askText } from "@/lib/confirm";
 import type { DayKey, Program, ProgramExerciseRef, SplitType } from "@/lib/types";
-import { Plus, Check, Trash2, Lock, X } from "lucide-react";
+import { duplicateProgram, makeProgramFolder, removeProgramFolder } from "@/lib/program-organizer";
+import { hapticFailure, hapticPlanUpdated, hapticSelection, hapticUndo } from "@/lib/haptics";
+import { ProgramOrganizer } from "@/components/ProgramOrganizer";
+import { Plus, Lock } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_tabs/programs")({
   head: () => ({ meta: [{ title: "DEADSET — Programs" }] }),
@@ -386,6 +390,7 @@ function ProgramsPage() {
   const { isPro, loading } = usePro();
   const locked = loading || !isPro;
   const [preview, setPreview] = useState<string | null>(null);
+  const programFolders = (state.programFolders ?? []).filter((folder) => !folder.deletedAt);
 
   const customProgramCount = state.programs.filter(
     (p) => !FEATURED_NAMES.has(p.name.trim().toUpperCase()),
@@ -437,10 +442,12 @@ function ProgramsPage() {
 
   function activate(id: string) {
     set((s) => ({ ...s, activeProgramId: id }));
+    hapticPlanUpdated();
   }
   /** Hands the week back to the lifter's own schedule on the Train tab. */
   function deactivate() {
     set((s) => ({ ...s, activeProgramId: null }));
+    hapticUndo();
   }
   async function remove(id: string) {
     const ok = await askConfirm({
@@ -454,6 +461,118 @@ function ProgramsPage() {
       programs: s.programs.filter((p) => p.id !== id),
       activeProgramId: s.activeProgramId === id ? null : s.activeProgramId,
     }));
+    hapticUndo();
+  }
+
+  function toggleFavorite(id: string) {
+    set((s) => ({
+      ...s,
+      programs: s.programs.map((program) =>
+        program.id === id ? { ...program, favorite: !program.favorite } : program,
+      ),
+    }));
+    hapticSelection();
+  }
+
+  function duplicate(id: string) {
+    set((s) => {
+      const source = s.programs.find((program) => program.id === id);
+      return source ? { ...s, programs: [...s.programs, duplicateProgram(source)] } : s;
+    });
+    hapticPlanUpdated();
+    toast.success("Routine duplicated", { description: "The copy is ready to edit." });
+  }
+
+  function archive(id: string, shouldArchive: boolean) {
+    set((s) => ({
+      ...s,
+      programs: s.programs.map((program) =>
+        program.id === id
+          ? { ...program, archivedAt: shouldArchive ? new Date().toISOString() : undefined }
+          : program,
+      ),
+      activeProgramId: shouldArchive && s.activeProgramId === id ? null : s.activeProgramId,
+    }));
+    if (shouldArchive) hapticUndo();
+    else hapticPlanUpdated();
+    toast.success(shouldArchive ? "Routine archived" : "Routine restored");
+  }
+
+  function move(id: string, folderId?: string) {
+    set((s) => ({
+      ...s,
+      programs: s.programs.map((program) =>
+        program.id === id ? { ...program, folderId } : program,
+      ),
+    }));
+    hapticSelection();
+  }
+
+  async function createFolder() {
+    const name = await askText({
+      title: "New routine folder",
+      message: "Group training blocks by goal, season, gym or client.",
+      placeholder: "e.g. Strength blocks",
+      confirmLabel: "Create folder",
+    });
+    if (!name) return;
+    const folder = makeProgramFolder(name, state.programFolders ?? []);
+    if (!folder) {
+      hapticFailure();
+      toast.error("Choose a unique folder name");
+      return;
+    }
+    set((s) => ({ ...s, programFolders: [...(s.programFolders ?? []), folder] }));
+    hapticPlanUpdated();
+    toast.success("Folder created", { description: folder.name });
+  }
+
+  async function renameFolder(id: string) {
+    const current = programFolders.find((folder) => folder.id === id);
+    if (!current) return;
+    const name = await askText({
+      title: `Rename ${current.name}`,
+      placeholder: "New folder name",
+      confirmLabel: "Rename",
+    });
+    if (!name) return;
+    const cleaned = name.trim().replace(/\s+/g, " ").slice(0, 28);
+    if (
+      !cleaned ||
+      programFolders.some(
+        (folder) => folder.id !== id && folder.name.toLocaleLowerCase() === cleaned.toLocaleLowerCase(),
+      )
+    ) {
+      hapticFailure();
+      toast.error("Choose a unique folder name");
+      return;
+    }
+    set((s) => ({
+      ...s,
+      programFolders: (s.programFolders ?? []).map((folder) =>
+        folder.id === id ? { ...folder, name: cleaned } : folder,
+      ),
+    }));
+    hapticPlanUpdated();
+    toast.success("Folder renamed");
+  }
+
+  async function deleteFolder(id: string) {
+    const folder = programFolders.find((item) => item.id === id);
+    if (!folder) return;
+    const ok = await askConfirm({
+      title: `Delete ${folder.name}?`,
+      message: "Its routines stay safe and move back to Unfiled.",
+      confirmLabel: "Delete folder",
+      danger: true,
+    });
+    if (!ok) return;
+    set((s) => {
+      const result = removeProgramFolder(s.programs, s.programFolders ?? [], id);
+      return { ...s, programs: result.programs, programFolders: result.folders };
+    });
+    hapticUndo();
+    toast.success("Folder deleted", { description: "Its routines are now Unfiled." });
   }
 
   return (
@@ -481,69 +600,21 @@ function ProgramsPage() {
         </div>
       )}
 
-      <ul className="space-y-2 mb-6">
-        {state.programs.map((p) => {
-          const filled = DAYS.reduce((a, d) => a + p.days[d].items.length, 0);
-          const trainingDays = DAYS.filter((d) => p.days[d].label !== "REST").length;
-          const isActive = p.id === state.activeProgramId;
-          return (
-            <li
-              key={p.id}
-              className="bg-grit-card border"
-              style={{ borderColor: isActive ? "#e63222" : "#262626" }}
-            >
-              <div className="flex items-stretch">
-                <Link
-                  to="/programs/$programId"
-                  params={{ programId: p.id }}
-                  className="flex-1 p-4 min-w-0"
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    {isActive && (
-                      <span className="text-[9px] px-1.5 py-0.5 bg-accent-red text-white label-cap">
-                        ACTIVE
-                      </span>
-                    )}
-                    <span className="display text-lg font-extrabold uppercase text-grit truncate">
-                      {p.name}
-                    </span>
-                  </div>
-                  <p className="label-cap text-grit-dim text-[10px]">
-                    {trainingDays} DAYS · {filled} EXERCISES
-                  </p>
-                </Link>
-                {/* Text labels, not bare icons: a `title` tooltip never appears
-                    on a touch screen, so these read as unmarked squares there. */}
-                <div className="flex flex-col border-l border-grit">
-                  <button
-                    onClick={() => (isActive ? deactivate() : activate(p.id))}
-                    className="px-3 py-2 flex-1 flex items-center gap-1.5 justify-center"
-                  >
-                    {isActive ? (
-                      <>
-                        <X size={14} className="text-grit-dim" />
-                        <span className="label-cap text-[9px] text-grit-dim">Stop</span>
-                      </>
-                    ) : (
-                      <>
-                        <Check size={16} className="text-accent-red" />
-                        <span className="label-cap text-[9px] text-grit">Use</span>
-                      </>
-                    )}
-                  </button>
-                  <button
-                    onClick={() => remove(p.id)}
-                    className="px-3 py-2 flex-1 flex items-center gap-1.5 justify-center border-t border-grit"
-                  >
-                    <Trash2 size={14} className="text-grit-dim" />
-                    <span className="label-cap text-[9px] text-grit-dim">Delete</span>
-                  </button>
-                </div>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+      <ProgramOrganizer
+        programs={state.programs}
+        folders={programFolders}
+        activeProgramId={state.activeProgramId}
+        onActivate={activate}
+        onDeactivate={deactivate}
+        onDelete={(id) => void remove(id)}
+        onDuplicate={duplicate}
+        onToggleFavorite={toggleFavorite}
+        onArchive={archive}
+        onMove={move}
+        onCreateFolder={() => void createFolder()}
+        onRenameFolder={(id) => void renameFolder(id)}
+        onDeleteFolder={(id) => void deleteFolder(id)}
+      />
 
       <p className="label-cap text-grit-dim text-xs mb-2">★ Featured programs</p>
       <ul className="space-y-2 mb-6">

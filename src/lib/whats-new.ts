@@ -2,7 +2,7 @@
 // ship. The card hides once dismissed at the current version, so stale
 // announcements never linger.
 
-export const WHATS_NEW_VERSION = 202608288;
+export const WHATS_NEW_VERSION = 202609061;
 export const WHATS_NEW_SEEN_KEY = "deadset_whats_new_seen";
 
 export interface WhatsNewEntry {
@@ -13,6 +13,11 @@ export interface WhatsNewEntry {
 }
 
 export const WHATS_NEW: WhatsNewEntry[] = [
+  {
+    title: "Your programmes now have a proper home",
+    body: "Search every routine and exercise, create colour-coded folders, pin favourites, duplicate blocks safely, and archive old plans without losing them.",
+    where: "Programs · Routine Vault",
+  },
   {
     title: "Friend search and nearby now work end to end",
     body: "Find athletes by name or @username, discover lifters in your city and manage sent, incoming, accepted, declined and removed requests with clear recovery when the network drops.",

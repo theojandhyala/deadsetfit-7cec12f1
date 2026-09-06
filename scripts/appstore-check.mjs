@@ -187,6 +187,15 @@ const athletePage = existsSync("src/routes/_tabs.athlete.$id.tsx")
   ? read("src/routes/_tabs.athlete.$id.tsx")
   : "";
 const fifaStats = existsSync("src/lib/fifa-stats.ts") ? read("src/lib/fifa-stats.ts") : "";
+const programsPage = existsSync("src/routes/_tabs.programs.tsx")
+  ? read("src/routes/_tabs.programs.tsx")
+  : "";
+const programOrganizer = existsSync("src/components/ProgramOrganizer.tsx")
+  ? read("src/components/ProgramOrganizer.tsx")
+  : "";
+const programOrganizerLogic = existsSync("src/lib/program-organizer.ts")
+  ? read("src/lib/program-organizer.ts")
+  : "";
 
 check("package.json exists", !!packageJson.name, "Project metadata is readable.");
 check(
@@ -197,9 +206,9 @@ check(
 check(
   "1.3 update version",
   (xcodeProject.match(/MARKETING_VERSION = 1\.3;/g)?.length ?? 0) >= 6 &&
-    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 153;/g)?.length ?? 0) >= 6 &&
-    whatsNew.includes("WHATS_NEW_VERSION = 202608288"),
-  "The app, activity extension and watch targets are versioned as 1.3 (153), directly above shipped build 152.",
+    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 154;/g)?.length ?? 0) >= 6 &&
+    whatsNew.includes("WHATS_NEW_VERSION = 202609061"),
+  "The app, activity extension and watch targets are versioned as 1.3 (154), above shipped build 152.",
 );
 check(
   "full check script",
@@ -237,6 +246,17 @@ check(
     strengthTutorial.includes("prefers-reduced-motion") &&
     onboardingPage.includes("<StrengthEngineTutorial"),
   "Muscle Lab ties next-load guidance to logged performance and onboarding explains the Plan-to-progress loop with Reduce Motion support.",
+);
+check(
+  "routine vault organization",
+  existsSync("src/lib/program-organizer.test.ts") &&
+    programsPage.includes("<ProgramOrganizer") &&
+    programOrganizer.includes("Search routines, exercises or muscles") &&
+    programOrganizer.includes("Duplicate") &&
+    programOrganizer.includes("Archive") &&
+    programOrganizerLogic.includes("deletedAt") &&
+    programOrganizerLogic.includes("structuredClone"),
+  "Programmes support tested search, folders, pins, deep duplication and recoverable archiving without invalidating 1.2 data.",
 );
 check(
   "Capacitor config",

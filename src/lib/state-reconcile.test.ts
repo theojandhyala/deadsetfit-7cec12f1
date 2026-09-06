@@ -73,4 +73,28 @@ describe("mergeAppStates", () => {
     expect(merged.completedDates).toEqual(["2026-09-04", "2026-09-05"]);
     expect(merged.waterTargetMl).toBe(3500);
   });
+
+  it("keeps routine folders and their deletion tombstones across devices", () => {
+    const local = state({
+      programFolders: [
+        { id: "strength", name: "Strength", accent: "RED", createdAt: "2026-09-01" },
+      ],
+      syncMeta: { revision: 2, updatedAt: "2026-09-06T12:00:00.000Z", deviceId: "phone" },
+    });
+    const remote = state({
+      programFolders: [
+        {
+          id: "old",
+          name: "Old blocks",
+          accent: "BLUE",
+          createdAt: "2026-08-01",
+          deletedAt: "2026-09-05T00:00:00.000Z",
+        },
+      ],
+      syncMeta: { revision: 3, updatedAt: "2026-09-06T11:00:00.000Z", deviceId: "ipad" },
+    });
+    const merged = mergeAppStates(local, remote);
+    expect(merged.programFolders).toHaveLength(2);
+    expect(merged.programFolders?.find((folder) => folder.id === "old")?.deletedAt).toBeTruthy();
+  });
 });

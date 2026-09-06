@@ -11,6 +11,7 @@ export const DEFAULT_STATE: AppState = {
   foodLog: [],
   completedDates: [],
   programs: [],
+  programFolders: [],
   activeProgramId: null,
   sessions: [],
   activeSessionId: null,

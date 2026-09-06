@@ -135,6 +135,11 @@ export function mergeAppStates(local: AppState, remote: AppState): AppState {
     ),
     water: unionBy(preferred.water, other.water, (item) => `${item.date}:${item.at}:${item.ml}`),
     programs: unionBy(preferred.programs, other.programs, (item) => item.id),
+    programFolders: unionBy(
+      preferred.programFolders ?? [],
+      other.programFolders ?? [],
+      (item) => item.id,
+    ),
     savedExercises: unionBy(preferred.savedExercises, other.savedExercises, (item) => item.id),
     challengeRecords: unionBy(
       preferred.challengeRecords ?? [],

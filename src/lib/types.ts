@@ -158,6 +158,21 @@ export interface Program {
   splitType: SplitType;
   days: Record<DayKey, ProgramDay>;
   createdAt: string;
+  /** Optional user-created collection. Missing keeps every 1.2 programme valid. */
+  folderId?: string;
+  /** Pinned routines rise above the rest without changing the active week. */
+  favorite?: boolean;
+  /** Archived routines stay recoverable but leave the everyday library. */
+  archivedAt?: string;
+}
+
+export interface ProgramFolder {
+  id: string;
+  name: string;
+  accent: "RED" | "ORANGE" | "BLUE" | "PURPLE" | "GREEN";
+  createdAt: string;
+  /** Tombstone retained so an older device cannot resurrect a deleted folder. */
+  deletedAt?: string;
 }
 
 export interface SetLog {
@@ -328,6 +343,8 @@ export interface AppState {
   foodLog: FoodLogItem[];
   completedDates: string[];
   programs: Program[];
+  /** User-created routine collections. Optional for seamless 1.2 migration. */
+  programFolders?: ProgramFolder[];
   activeProgramId: string | null;
   sessions: WorkoutSession[];
   activeSessionId: string | null;

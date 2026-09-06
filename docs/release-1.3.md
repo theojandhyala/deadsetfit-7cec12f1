@@ -2,7 +2,7 @@
 
 Status: in development  
 Started: 6 September 2026  
-iOS version/build: 1.3 (153)
+iOS version/build: 1.3 (154)
 
 Production baseline: App Store version 1.2. This update is built directly on that shipped product;
 it is not based on the archived 1.1 build.
@@ -26,6 +26,19 @@ This is not a feature dump. Every addition must improve at least one of these mo
 5. Share or compare progress safely.
 
 ## Scope and status
+
+### 0. Routine Vault
+
+- [x] Search saved programmes by routine name, split, exercise or target muscle.
+- [x] Create colour-coded folders for goals, seasons, gyms or training blocks.
+- [x] Pin favourite routines above the rest without changing the active week.
+- [x] Deep-duplicate a programme so edits to the copy never alter the original.
+- [x] Move routines between folders or return them to Unfiled.
+- [x] Archive and restore old blocks instead of forcing permanent deletion.
+- [x] Preserve deletion tombstones during cloud merges so stale devices cannot resurrect folders.
+- [x] Keep every 1.2 programme valid through optional, backwards-compatible fields.
+- [x] Provide distinct haptic feedback for pinning, filing, duplicating, archiving and restoring.
+- [x] Keep all filter controls in a wrapping grid with no horizontal carousel or sideways scroll.
 
 ### 1. Signature Strength Map
 
@@ -97,7 +110,7 @@ This is not a feature dump. Every addition must improve at least one of these mo
   and after reconnect.
 - No horizontal page scrolling, visible browser scrollbars inside the native shell, clipped controls,
   blank boot states, or keyboard-covered primary actions.
-- App Store screenshots and release notes describe only behaviour present in build 153.
+- App Store screenshots and release notes describe only behaviour present in build 154.
 
 ## Measurement
 
