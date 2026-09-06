@@ -12,25 +12,20 @@ import {
 
 export function RestTimer({
   seconds,
-  initialEndsAt,
   nextExercise,
   onDone,
   onDisable,
-  onDeadlineChange,
 }: {
   seconds: number;
-  /** Restoring an interrupted workout reuses the original absolute deadline. */
-  initialEndsAt?: number;
   /** Named in the notification so the alert is useful from the lock screen. */
   nextExercise?: string;
   onDone: () => void;
   onDisable?: () => void;
-  onDeadlineChange?: (endsAt: number) => void;
 }) {
   // A deadline, not a counter. iOS suspends JS timers when the app leaves the
   // foreground, so anything that counts ticks freezes while the phone is in a
   // pocket — which is where it spends most of a rest period.
-  const [endsAt, setEndsAt] = useState(() => initialEndsAt ?? Date.now() + seconds * 1000);
+  const [endsAt, setEndsAt] = useState(() => Date.now() + seconds * 1000);
   const [state, setState] = useState(() => restTimerState(endsAt, seconds));
   const finished = useRef(false);
   const playedCountdownTicks = useRef(new Set<number>());
@@ -51,13 +46,12 @@ export function RestTimer({
   // puts the countdown on the Dynamic Island and Lock Screen, counted down by the
   // system rather than by us.
   useEffect(() => {
-    onDeadlineChange?.(endsAt);
     void scheduleRestAlert(endsAt, nextExercise);
     void startRestActivity(endsAt, state.total, nextExercise);
     // state.total is intentionally not a dependency: it only grows alongside
     // endsAt, and re-running would restart the island animation mid-rest.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [endsAt, nextExercise, onDeadlineChange]);
+  }, [endsAt, nextExercise]);
 
   useEffect(() => {
     const tick = () => {

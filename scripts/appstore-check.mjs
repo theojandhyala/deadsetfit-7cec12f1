@@ -195,11 +195,11 @@ check(
   "Build script runs Vite.",
 );
 check(
-  "first update version",
-  (xcodeProject.match(/MARKETING_VERSION = 1\.2;/g)?.length ?? 0) >= 6 &&
-    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 152;/g)?.length ?? 0) >= 6 &&
+  "1.3 update version",
+  (xcodeProject.match(/MARKETING_VERSION = 1\.3;/g)?.length ?? 0) >= 6 &&
+    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 153;/g)?.length ?? 0) >= 6 &&
     whatsNew.includes("WHATS_NEW_VERSION = 202608288"),
-  "The app, activity extension and watch targets are versioned as 1.2 (152), with a matching in-app update summary.",
+  "The app, activity extension and watch targets are versioned as 1.3 (153), directly above shipped build 152.",
 );
 check(
   "full check script",

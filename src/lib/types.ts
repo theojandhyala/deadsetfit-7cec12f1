@@ -270,6 +270,18 @@ export interface WorkoutSession {
   note?: string;
   /** Post-session rating, used to spot when training is drifting. */
   feel?: SessionFeel;
+  /** Last visible movement, retained when iOS suspends or terminates the app. */
+  activeExerciseIndex?: number;
+  /** Absolute rest deadline so countdowns survive background suspension. */
+  restEndsAt?: number;
+  /** Movement selected when the persisted rest period finishes. */
+  restNextExerciseIndex?: number;
+}
+
+export interface StateSyncMeta {
+  revision: number;
+  updatedAt: string;
+  deviceId: string;
 }
 
 export interface ChallengeRecord {

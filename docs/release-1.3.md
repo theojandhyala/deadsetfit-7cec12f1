@@ -2,7 +2,7 @@
 
 Status: in development  
 Started: 6 September 2026  
-iOS version/build: 1.3 (133)
+iOS version/build: 1.3 (153)
 
 Production baseline: App Store version 1.2. This update is built directly on that shipped product;
 it is not based on the archived 1.1 build.
@@ -97,7 +97,7 @@ This is not a feature dump. Every addition must improve at least one of these mo
   and after reconnect.
 - No horizontal page scrolling, visible browser scrollbars inside the native shell, clipped controls,
   blank boot states, or keyboard-covered primary actions.
-- App Store screenshots and release notes describe only behaviour present in build 133.
+- App Store screenshots and release notes describe only behaviour present in build 153.
 
 ## Measurement
 

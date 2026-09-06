@@ -81,43 +81,6 @@ function StoreButton({ label = "Download DEADSET" }: { label?: string }) {
   );
 }
 
-function AppStoreBadge({ className = "" }: { className?: string }) {
-  return (
-    <a
-      href={DEADSET_APP_STORE_URL}
-      target="_blank"
-      rel="noreferrer"
-      aria-label="Download DEADSET on the App Store"
-      onClick={() => trackWhopEvent("app_store_click")}
-      className={`inline-flex min-h-14 items-center justify-center rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f13a2c] focus-visible:ring-offset-4 focus-visible:ring-offset-[#070708] transition-transform hover:-translate-y-0.5 ${className}`}
-    >
-      <img
-        src={APP_STORE_BADGE_URL}
-        alt="Download on the App Store"
-        width={250}
-        height={83}
-        className="h-[60px] w-auto sm:h-[64px]"
-      />
-    </a>
-  );
-}
-
-function StoreButton({ label = "Download DEADSET" }: { label?: string }) {
-  return (
-    <a
-      href={DEADSET_APP_STORE_URL}
-      target="_blank"
-      rel="noreferrer"
-      onClick={() => trackWhopEvent("app_store_click")}
-      className="inline-flex min-h-13 items-center justify-center gap-3 rounded-lg bg-[#f13a2c] px-5 text-sm font-extrabold text-white shadow-[0_14px_35px_rgba(241,58,44,0.22)] transition hover:-translate-y-0.5 hover:bg-[#ff493a]"
-    >
-      <Apple size={18} fill="currentColor" aria-hidden="true" />
-      {label}
-      <ArrowUpRight size={17} aria-hidden="true" />
-    </a>
-  );
-}
-
 function Header() {
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-[#070708]/90 pt-[env(safe-area-inset-top)] backdrop-blur-xl">

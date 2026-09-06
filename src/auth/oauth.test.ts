@@ -4,6 +4,7 @@ import {
   buildOAuthStartUrl,
   createOAuthState,
   emailAuthRedirectUrl,
+  authRecoveryRedirectUrl,
   hasOAuthResult,
   NATIVE_AUTH_BRIDGE,
   OAUTH_BROKER_ORIGIN,

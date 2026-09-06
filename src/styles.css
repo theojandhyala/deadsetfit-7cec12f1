@@ -48,7 +48,17 @@
 /* === First-download reveal =============================================
    Returning athletes bypass this through session restoration. */
 @layer components {
-  .native-entry { position: relative; isolation: isolate; }
+  .native-entry {
+    position: relative;
+    isolation: isolate;
+  }
+  .native-entry-brand {
+    opacity: 0;
+  }
+  html[data-deadset-app-ready="true"] .native-entry-brand {
+    opacity: 1;
+    transition: opacity 240ms ease 420ms;
+  }
   .native-entry-grid, .native-entry-aura, .native-entry-scan {
     position: absolute; inset: 0; pointer-events: none;
   }

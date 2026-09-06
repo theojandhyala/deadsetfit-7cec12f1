@@ -307,14 +307,6 @@ function blocksProfileProFallback(status: string | null): boolean {
   return ["past_due", "incomplete", "unpaid"].includes(status ?? "");
 }
 
-/** A current Stripe record in one of these states must not fall through to an
- * old `profiles.pro_until` cache. That cache also represents referral rewards,
- * so it is only a fallback when Stripe is not reporting an unpaid/current
- * subscription for this customer. */
-function blocksProfileProFallback(status: string | null): boolean {
-  return ["trialing", "past_due", "incomplete", "unpaid"].includes(status ?? "");
-}
-
 function subscriptionStatusFromStripeSubscription(subscription: any): SubscriptionStatus {
   const item = subscription.items?.data?.[0];
   const end = item?.current_period_end ?? subscription.current_period_end ?? null;

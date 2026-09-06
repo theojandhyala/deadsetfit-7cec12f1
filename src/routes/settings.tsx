@@ -278,33 +278,6 @@ function SettingsPage() {
     const r = new FileReader();
     r.onload = async () => {
       try {
-        if (/\.csv$/i.test(file.name) || file.type === "text/csv") {
-          const imported = parseWorkoutCsv(String(r.result), state.savedExercises);
-          const ok = await askConfirm({
-            title: `Import ${imported.sessions.length} workouts?`,
-            message: `${imported.source} history will be added without deleting your DEADSET workouts${
-              imported.skippedRows ? `. ${imported.skippedRows} invalid rows will be skipped` : ""
-            }.`,
-            confirmLabel: "Import",
-          });
-          if (!ok) return;
-          set((current) => {
-            const sessions = new Map(current.sessions.map((session) => [session.id, session]));
-            for (const session of imported.sessions) sessions.set(session.id, session);
-            return {
-              ...current,
-              sessions: [...sessions.values()].sort((a, b) => a.startedAt.localeCompare(b.startedAt)),
-              completedDates: [
-                ...new Set([
-                  ...current.completedDates,
-                  ...imported.sessions.map((session) => session.date),
-                ]),
-              ].sort(),
-            };
-          });
-          toast.success(`${imported.sessions.length} ${imported.source} workouts imported`);
-          return;
-        }
         const parsed = JSON.parse(String(r.result));
         if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
           throw new Error("That doesn't look like a DEADSET backup file");
@@ -806,12 +779,12 @@ function SettingsPage() {
               <Upload size={14} className="mr-2" /> Import From File
             </button>
             <p className="text-[10px] text-grit-dim mt-1.5">
-              Add Strong, Hevy or generic workout CSVs, or restore a DEADSET JSON backup.
+              Restores a backup — overwrites current device state.
             </p>
             <input
               ref={fileRef}
               type="file"
-              accept="application/json,text/csv,.json,.csv"
+              accept="application/json"
               className="hidden"
               onChange={(e) => e.target.files?.[0] && importData(e.target.files[0])}
             />

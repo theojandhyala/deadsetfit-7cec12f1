@@ -6,7 +6,10 @@ import { NativeWelcome } from "@/components/NativeWelcome";
 import { finishAppBoot } from "@/lib/app-boot";
 import { isNativeApp } from "@/lib/platform";
 
-const NATIVE_SESSION_DEADLINE_MS = 1200;
+// Persisted sessions resolve from local storage almost immediately. Do not
+// hold a signed-out athlete on the launch screen for a slow recovery request;
+// the auth listener below still handles a session that arrives afterwards.
+const NATIVE_SESSION_DEADLINE_MS = 450;
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -72,7 +75,6 @@ function IndexRoute() {
   const [entryReady, setEntryReady] = useState(!native);
 
   useEffect(() => {
-    if (!nativeIos) return;
     let cancelled = false;
     let unsubscribe: (() => void) | undefined;
 
@@ -88,13 +90,21 @@ function IndexRoute() {
           return;
         }
 
-        // Keep the branded launch layer up while the persisted session and its
-        // cookie backup are genuinely resolved. A retry appears on the launch
-        // layer if this stalls; we never reveal a false signed-out screen.
-        await restoreSupabaseSession();
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        // A normal persisted session resolves locally. Backup recovery may
+        // need the network, so keep it running without trapping a signed-out
+        // athlete behind a blank WebView. The auth listener still redirects a
+        // returning member the instant late recovery succeeds.
+        const session = await Promise.race([
+          (async () => {
+            const current = await supabase.auth.getSession();
+            if (current.data.session) return current.data.session;
+            await restoreSupabaseSession();
+            return (await supabase.auth.getSession()).data.session;
+          })(),
+          new Promise<null>((resolve) =>
+            window.setTimeout(() => resolve(null), NATIVE_SESSION_DEADLINE_MS),
+          ),
+        ]);
         if (cancelled) return;
         if (session) {
           navigate({ to: "/train", replace: true });
@@ -110,7 +120,7 @@ function IndexRoute() {
       cancelled = true;
       unsubscribe?.();
     };
-  }, [nativeIos, navigate]);
+  }, [navigate]);
 
   useEffect(() => {
     if (entryReady) finishAppBoot();

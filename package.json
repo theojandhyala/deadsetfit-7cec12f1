@@ -6,9 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && node scripts/check-css-build.mjs",
-    "test": "vitest run",
+    "test": "vitest run src",
     "test:watch": "vitest",
-    "check": "tsc --noEmit && eslint . && vitest run && vite build && node scripts/check-css-build.mjs && node scripts/check-xcodeproj.mjs",
+    "check": "tsc --noEmit && eslint . && vitest run src && vite build && node scripts/check-css-build.mjs && node scripts/check-xcodeproj.mjs",
     "appstore:check": "npm run check && node scripts/appstore-check.mjs",
     "appstore:strict": "APPSTORE_STRICT=1 npm run appstore:check",
     "security:check": "npm audit",

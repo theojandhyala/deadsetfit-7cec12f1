@@ -2,7 +2,6 @@ import { useEffect } from "react";
 
 import { hapticPersonalRecord } from "@/lib/haptics";
 import { Trophy, X } from "lucide-react";
-import { successFeedback } from "@/lib/haptics";
 
 const PARTICLES = Array.from({ length: 56 });
 const COLORS = ["#e63222", "#f5c542", "#f5f5f0", "#ff6b35", "#ffffff"];

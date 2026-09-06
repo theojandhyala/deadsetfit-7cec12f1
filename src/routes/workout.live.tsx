@@ -104,7 +104,6 @@ import type {
   WorkoutSessionExercise,
   CompletedSet,
   DayKey,
-  Exercise,
   Program,
   Schedule,
 } from "@/lib/types";
@@ -568,7 +567,7 @@ function LiveWorkoutPage() {
 
   const session = state.sessions.find((s) => s.id === state.activeSessionId);
 
-  const [activeIdx, setActiveIdx] = useState(() => session?.activeExerciseIndex ?? 0);
+  const [activeIdx, setActiveIdx] = useState(0);
   const swipeRef = useRef<{ x: number; y: number } | null>(null);
   const prAwardedRef = useRef<Set<string>>(new Set());
   const [videoQuery, setVideoQuery] = useState<string | null>(null);
@@ -584,57 +583,6 @@ function LiveWorkoutPage() {
   const [pickingBar, setPickingBar] = useState(false);
   const restPref = state.restTimerSeconds ?? 90;
   const unit = unitOf(state);
-
-  function persistWorkoutPosition(index: number, restState?: typeof rest) {
-    if (!session) return;
-    const safeIndex = Math.max(0, Math.min(session.exercises.length - 1, index));
-    setActiveIdx(safeIndex);
-    set((currentState) => ({
-      ...currentState,
-      sessions: currentState.sessions.map((item) =>
-        item.id === session.id
-          ? {
-              ...item,
-              activeExerciseIndex: safeIndex,
-              restEndsAt: restState?.endsAt,
-              restNextExerciseIndex: restState?.nextIndex,
-            }
-          : item,
-      ),
-    }));
-  }
-
-  useEffect(() => {
-    if (!session) return;
-    const restoredIndex = Math.max(
-      0,
-      Math.min(session.exercises.length - 1, session.activeExerciseIndex ?? 0),
-    );
-    setActiveIdx(restoredIndex);
-    if (
-      session.restEndsAt &&
-      session.restEndsAt > Date.now() &&
-      session.restNextExerciseIndex != null
-    ) {
-      setRest({
-        seconds: Math.max(1, Math.ceil((session.restEndsAt - Date.now()) / 1000)),
-        nextIndex: session.restNextExerciseIndex,
-        endsAt: session.restEndsAt,
-      });
-    } else if (session.restEndsAt || session.restNextExerciseIndex != null) {
-      set((currentState) => ({
-        ...currentState,
-        sessions: currentState.sessions.map((item) =>
-          item.id === session.id
-            ? { ...item, restEndsAt: undefined, restNextExerciseIndex: undefined }
-            : item,
-        ),
-      }));
-    }
-    // Only restore when opening another session. Current movement changes are
-    // persisted by persistWorkoutPosition.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.id]);
 
   const totals = useMemo(() => {
     if (!session) return { vol: 0, sets: 0, prs: 0 };
@@ -1020,16 +968,10 @@ function LiveWorkoutPage() {
         ? { nextIndex: index, shouldRest: true }
         : nextStepAfterWorkingSet(session!.exercises, index);
     if (!step.shouldRest || exerciseRest <= 0) {
-      persistWorkoutPosition(step.nextIndex);
+      setActiveIdx(step.nextIndex);
       return;
     }
-    const restState = {
-      seconds: exerciseRest,
-      nextIndex: step.nextIndex,
-      endsAt: Date.now() + exerciseRest * 1000,
-    };
-    setRest(restState);
-    persistWorkoutPosition(activeIdx, restState);
+    setRest({ seconds: exerciseRest, nextIndex: step.nextIndex });
   }
 
   /**
@@ -1470,8 +1412,8 @@ function LiveWorkoutPage() {
           return (
             <button
               key={i}
-              onClick={() => persistWorkoutPosition(i)}
-              className="min-w-0 truncate px-2 py-1.5 border text-[10px] font-bold uppercase tracking-wider"
+              onClick={() => setActiveIdx(i)}
+              className="flex-shrink-0 px-3 py-1.5 border text-xs font-bold uppercase tracking-wider"
               style={{
                 borderColor: active ? "#e63222" : done ? "#3a8a3a" : "#262626",
                 color: active ? "#e63222" : done ? "#7acc7a" : "#8a8a8a",
@@ -1497,9 +1439,7 @@ function LiveWorkoutPage() {
           const dx = e.changedTouches[0].clientX - start.x;
           const dy = e.changedTouches[0].clientY - start.y;
           if (Math.abs(dx) < 64 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
-          persistWorkoutPosition(
-            dx < 0 ? Math.min(totalEx - 1, activeIdx + 1) : Math.max(0, activeIdx - 1),
-          );
+          setActiveIdx((i) => (dx < 0 ? Math.min(totalEx - 1, i + 1) : Math.max(0, i - 1)));
         }}
       >
         <div className="flex items-start justify-between gap-3 mb-2">
@@ -1679,7 +1619,7 @@ function LiveWorkoutPage() {
         style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
       >
         <button
-          onClick={() => persistWorkoutPosition(Math.min(totalEx - 1, activeIdx + 1))}
+          onClick={() => setActiveIdx((i) => Math.min(totalEx - 1, i + 1))}
           disabled={activeIdx >= totalEx - 1}
           className="btn-ghost disabled:opacity-40"
         >
@@ -1760,22 +1700,15 @@ function LiveWorkoutPage() {
         <RestTimer
           key={session.exercises[activeIdx]?.sets.length ?? 0}
           seconds={rest.seconds}
-          initialEndsAt={rest.endsAt}
           nextExercise={session.exercises[rest.nextIndex]?.name}
-          onDeadlineChange={(endsAt) => {
-            if (endsAt === rest.endsAt) return;
-            const nextRest = { ...rest, endsAt };
-            setRest(nextRest);
-            persistWorkoutPosition(activeIdx, nextRest);
-          }}
           onDone={() => {
+            setActiveIdx(rest.nextIndex);
             setRest(null);
-            persistWorkoutPosition(rest.nextIndex, null);
           }}
           onDisable={() => {
             set((s) => ({ ...s, restTimerSeconds: 0 }));
+            setActiveIdx(rest.nextIndex);
             setRest(null);
-            persistWorkoutPosition(rest.nextIndex, null);
           }}
         />
       )}
@@ -1961,7 +1894,7 @@ function SetLogger({
       return;
     }
     if (!suggestion) return;
-    setOverride({ weight: suggestion.weightKg, reps: suggestion.targetReps ?? nextReps });
+    setOverride({ weight: suggestion.weightKg, reps: nextReps });
   }
 
   function saveEdit() {
@@ -2100,11 +2033,7 @@ function SetLogger({
                 ? "SMART SUGGESTION"
                 : suggestion.kind === "up"
                   ? "MOVE UP"
-                  : suggestion.kind === "reps"
-                    ? "ADD A REP"
-                    : suggestion.kind === "reduce"
-                      ? "RESET & REBUILD"
-                      : "HOLD & EARN IT"}
+                  : "HOLD & EARN IT"}
             </span>
             <span
               className={
