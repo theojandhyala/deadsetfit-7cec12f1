@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  authRecoveryRedirectUrl,
   buildOAuthStartUrl,
   createOAuthState,
   hasOAuthResult,
@@ -90,6 +91,18 @@ describe("first-party OAuth", () => {
         "https://deadsetfit.org/auth/?error=access_denied&error_description=Cancelled",
       ).error,
     ).toBe("Cancelled");
+  });
+
+  it("returns password recovery to the iPhone app through the HTTPS bridge", () => {
+    expect(authRecoveryRedirectUrl(true, "capacitor://localhost")).toBe(
+      "https://deadsetfit.org/auth/native-callback",
+    );
+  });
+
+  it("returns browser password recovery to the current web origin", () => {
+    expect(authRecoveryRedirectUrl(false, "https://deadsetfit.org/")).toBe(
+      "https://deadsetfit.org/auth/",
+    );
   });
 
   it("creates an unpredictable state value", () => {

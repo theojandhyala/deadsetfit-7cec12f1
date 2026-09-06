@@ -2,6 +2,8 @@
 // Audio chime works inside the iOS WKWebView (after the first user gesture, which
 // a live workout always has), and navigator.vibrate is a best-effort buzz on the
 // platforms that support it (Android/web; a no-op on iOS Safari).
+import { successFeedback } from "./haptics";
+
 export function restDoneChime() {
   try {
     const Ctx =
@@ -30,9 +32,5 @@ export function restDoneChime() {
   } catch {
     /* audio not available — ignore */
   }
-  try {
-    navigator.vibrate?.([120, 60, 120]);
-  } catch {
-    /* vibrate unsupported — ignore */
-  }
+  void successFeedback();
 }

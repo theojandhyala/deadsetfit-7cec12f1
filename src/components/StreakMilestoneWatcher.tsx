@@ -3,6 +3,7 @@ import { Flame } from "lucide-react";
 import { useAppState, getHydrationCount } from "@/lib/storage";
 import { calculateStreak } from "@/lib/calc";
 import { currentMilestone, type StreakMilestone } from "@/lib/streak-milestones";
+import { SocialShareButton } from "@/components/SocialShareButton";
 
 const SEEN_KEY = "deadset_streak_milestone_seen";
 
@@ -63,7 +64,8 @@ export function StreakMilestoneWatcher() {
   return (
     <div
       className="fixed inset-0 z-[120] flex items-center justify-center px-6"
-      style={{ background: "rgba(8,4,2,0.84)", backdropFilter: "blur(6px)" }}
+      // No backdrop-filter: composites as solid black while scrolling in WKWebView/iOS Safari.
+      style={{ background: "rgba(8,4,2,0.93)" }}
       role="dialog"
       aria-modal="true"
       onClick={() => setHit(null)}
@@ -102,9 +104,15 @@ export function StreakMilestoneWatcher() {
         <p className="text-xs text-[#b7a9a4] mt-3 mb-5">
           {hit.days} straight days on the grind. Keep the fire lit.
         </p>
-        <button onClick={() => setHit(null)} className="btn-grit w-full rounded-xl">
-          Keep Going
-        </button>
+        <div className="grid grid-cols-2 gap-2">
+          <SocialShareButton
+            text={`Just hit a ${hit.days}-day training streak on DEADSET. ${hit.label}.`}
+            className="btn-ghost flex min-h-11 items-center justify-center gap-2 rounded-xl text-xs"
+          />
+          <button onClick={() => setHit(null)} className="btn-grit rounded-xl text-xs">
+            Keep Going
+          </button>
+        </div>
       </div>
     </div>
   );

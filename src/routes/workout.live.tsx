@@ -13,9 +13,11 @@ import {
   Ghost,
   Pencil,
   Link2,
+  RefreshCw,
+  Dumbbell,
 } from "lucide-react";
 import { useAppState, getState } from "@/lib/storage";
-import { getExercise } from "@/lib/exercises";
+import { allExercises, getExercise } from "@/lib/exercises";
 import { defaultSchedule, isoDay, todayKey, plateBreakdown, warmupRamp } from "@/lib/calc";
 import {
   topSetHistory,
@@ -34,6 +36,7 @@ import { exportSessionToHealth } from "@/lib/health";
 import { shareWorkoutToFeed } from "@/lib/auto-share";
 import { emitGritEarned } from "@/lib/grit-events";
 import { isPersonalRecord } from "@/lib/workout-pr";
+import { liveExerciseSwapCandidates } from "@/lib/live-exercise-swap";
 import {
   buildSupersetIds,
   completedWorkingSets,
@@ -50,6 +53,7 @@ import type {
   WorkoutSessionExercise,
   CompletedSet,
   DayKey,
+  Exercise,
   Program,
   Schedule,
 } from "@/lib/types";
@@ -475,16 +479,73 @@ function LiveWorkoutPage() {
 
   const session = state.sessions.find((s) => s.id === state.activeSessionId);
 
-  const [activeIdx, setActiveIdx] = useState(0);
+  const [activeIdx, setActiveIdx] = useState(() => session?.activeExerciseIndex ?? 0);
   const swipeRef = useRef<{ x: number; y: number } | null>(null);
   const prAwardedRef = useRef<Set<string>>(new Set());
   const [videoQuery, setVideoQuery] = useState<string | null>(null);
   const [videoTitle, setVideoTitle] = useState("");
+  const [showSwap, setShowSwap] = useState(false);
+  const [swapQuery, setSwapQuery] = useState("");
   const [finished, setFinished] = useState(false);
   const [finishedSessionId, setFinishedSessionId] = useState<string | null>(null);
   const [share, setShare] = useState(false);
-  const [rest, setRest] = useState<{ seconds: number; nextIndex: number } | null>(null);
+  const [rest, setRest] = useState<{
+    seconds: number;
+    nextIndex: number;
+    endsAt: number;
+  } | null>(null);
   const restPref = state.restTimerSeconds ?? 90;
+
+  function persistWorkoutPosition(index: number, restState?: typeof rest) {
+    if (!session) return;
+    const safeIndex = Math.max(0, Math.min(session.exercises.length - 1, index));
+    setActiveIdx(safeIndex);
+    set((currentState) => ({
+      ...currentState,
+      sessions: currentState.sessions.map((item) =>
+        item.id === session.id
+          ? {
+              ...item,
+              activeExerciseIndex: safeIndex,
+              restEndsAt: restState?.endsAt,
+              restNextExerciseIndex: restState?.nextIndex,
+            }
+          : item,
+      ),
+    }));
+  }
+
+  useEffect(() => {
+    if (!session) return;
+    const restoredIndex = Math.max(
+      0,
+      Math.min(session.exercises.length - 1, session.activeExerciseIndex ?? 0),
+    );
+    setActiveIdx(restoredIndex);
+    if (
+      session.restEndsAt &&
+      session.restEndsAt > Date.now() &&
+      session.restNextExerciseIndex != null
+    ) {
+      setRest({
+        seconds: Math.max(1, Math.ceil((session.restEndsAt - Date.now()) / 1000)),
+        nextIndex: session.restNextExerciseIndex,
+        endsAt: session.restEndsAt,
+      });
+    } else if (session.restEndsAt || session.restNextExerciseIndex != null) {
+      set((currentState) => ({
+        ...currentState,
+        sessions: currentState.sessions.map((item) =>
+          item.id === session.id
+            ? { ...item, restEndsAt: undefined, restNextExerciseIndex: undefined }
+            : item,
+        ),
+      }));
+    }
+    // Only restore when opening another session. Current movement changes are
+    // persisted by persistWorkoutPosition.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.id]);
 
   const totals = useMemo(() => {
     if (!session) return { vol: 0, sets: 0, prs: 0 };
@@ -557,6 +618,19 @@ function LiveWorkoutPage() {
       return { weight: Number(hist.weight) || 0, reps: Number(hist.reps) || repsGuess };
     return { weight: 0, reps: repsGuess };
   }, [state, session, activeIdx]);
+
+  const liveSwapOptions = useMemo(() => {
+    if (!session || !activeExercise) return [];
+    return liveExerciseSwapCandidates(allExercises(state.savedExercises), {
+      currentExerciseId: activeExercise.exerciseId,
+      targetMuscles: activeExercise.primary_muscles,
+      availableEquipment: state.profile?.equipment,
+      reservedExerciseIds: session.exercises
+        .filter((_, index) => index !== activeIdx)
+        .map((exercise) => exercise.exerciseId),
+      query: swapQuery,
+    });
+  }, [activeExercise, activeIdx, session, state.profile?.equipment, state.savedExercises, swapQuery]);
 
   if (finished && finishedSessionId) {
     const finalSession = state.sessions.find((s) => s.id === finishedSessionId);
@@ -721,10 +795,16 @@ function LiveWorkoutPage() {
         ? { nextIndex: activeIdx, shouldRest: true }
         : nextStepAfterWorkingSet(session!.exercises, activeIdx);
     if (!step.shouldRest || exerciseRest <= 0) {
-      setActiveIdx(step.nextIndex);
+      persistWorkoutPosition(step.nextIndex);
       return;
     }
-    setRest({ seconds: exerciseRest, nextIndex: step.nextIndex });
+    const restState = {
+      seconds: exerciseRest,
+      nextIndex: step.nextIndex,
+      endsAt: Date.now() + exerciseRest * 1000,
+    };
+    setRest(restState);
+    persistWorkoutPosition(activeIdx, restState);
   }
 
   function undoLastSet() {
@@ -743,6 +823,41 @@ function LiveWorkoutPage() {
           : s,
       ),
     }));
+  }
+
+  function chooseLiveSwap(replacement: Exercise) {
+    if (!session || current.sets.length > 0) return;
+    set((st) => {
+      const live = st.sessions.find((item) => item.id === session.id);
+      const target = live?.exercises[activeIdx];
+      // Swapping after logging would assign the previous movement's history to
+      // the replacement. Keep the session record accurate instead.
+      if (!live || !target || target.sets.length > 0) return st;
+      return {
+        ...st,
+        sessions: st.sessions.map((item) =>
+          item.id !== session.id
+            ? item
+            : {
+                ...item,
+                exercises: item.exercises.map((exercise, index) =>
+                  index === activeIdx
+                    ? {
+                        ...exercise,
+                        exerciseId: replacement.id,
+                        name: replacement.name,
+                        primary_muscles: [replacement.muscleGroup],
+                        // A load on a different movement is not a safe default.
+                        plannedWeightKg: undefined,
+                      }
+                    : exercise,
+                ),
+              },
+        ),
+      };
+    });
+    setShowSwap(false);
+    setSwapQuery("");
   }
 
   // Tag the effort of the most recently logged set (optional, one tap). Feeds
@@ -882,15 +997,15 @@ function LiveWorkoutPage() {
         <Stat label="PRS" value={`${totals.prs}`} accent={totals.prs > 0} />
       </div>
 
-      <div className="flex gap-2 overflow-x-auto px-4 py-3 border-b border-grit">
+      <div className="grid grid-cols-3 gap-2 px-4 py-3 border-b border-grit">
         {session.exercises.map((e, i) => {
           const done = e.targetSets > 0 && completedWorkingSets(e.sets) >= e.targetSets;
           const active = i === activeIdx;
           return (
             <button
               key={i}
-              onClick={() => setActiveIdx(i)}
-              className="flex-shrink-0 px-3 py-1.5 border text-xs font-bold uppercase tracking-wider"
+              onClick={() => persistWorkoutPosition(i)}
+              className="min-w-0 truncate px-2 py-1.5 border text-[10px] font-bold uppercase tracking-wider"
               style={{
                 borderColor: active ? "#e63222" : done ? "#3a8a3a" : "#262626",
                 color: active ? "#e63222" : done ? "#7acc7a" : "#8a8a8a",
@@ -916,7 +1031,9 @@ function LiveWorkoutPage() {
           const dx = e.changedTouches[0].clientX - start.x;
           const dy = e.changedTouches[0].clientY - start.y;
           if (Math.abs(dx) < 64 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
-          setActiveIdx((i) => (dx < 0 ? Math.min(totalEx - 1, i + 1) : Math.max(0, i - 1)));
+          persistWorkoutPosition(
+            dx < 0 ? Math.min(totalEx - 1, activeIdx + 1) : Math.max(0, activeIdx - 1),
+          );
         }}
       >
         <div className="flex items-start justify-between gap-3 mb-2">
@@ -968,20 +1085,46 @@ function LiveWorkoutPage() {
             <Link
               to="/lift/$exerciseId"
               params={{ exerciseId: current.exerciseId }}
-              className="w-12 h-12 border border-grit flex items-center justify-center text-grit-dim"
+              className="flex h-12 min-w-12 flex-col items-center justify-center gap-0.5 rounded-xl border border-grit px-1 text-grit-dim"
               aria-label="Lift history"
+              title="Lift history"
             >
-              <Trophy size={18} />
+              <Trophy size={15} />
+              <span className="text-[7px] font-black uppercase">History</span>
             </Link>
+            <button
+              type="button"
+              disabled={current.sets.length > 0}
+              onClick={() => {
+                if (!isPro || proLoading) {
+                  openPaywall("smart-swaps");
+                  return;
+                }
+                setSwapQuery("");
+                setShowSwap(true);
+              }}
+              className="flex h-12 min-w-12 flex-col items-center justify-center gap-0.5 rounded-xl border border-grit px-1 text-grit-dim disabled:opacity-35"
+              aria-label={
+                current.sets.length > 0
+                  ? "Exercise swaps are available before logging a set"
+                  : "Swap this exercise"
+              }
+              title={current.sets.length > 0 ? "Swap before logging a set" : "Swap exercise"}
+            >
+              <RefreshCw size={15} />
+              <span className="text-[7px] font-black uppercase">Swap</span>
+            </button>
             <button
               onClick={() => {
                 setVideoQuery(current.name + " form");
                 setVideoTitle(current.name);
               }}
-              className="w-12 h-12 border border-accent-red flex items-center justify-center"
+              className="flex h-12 min-w-12 flex-col items-center justify-center gap-0.5 rounded-xl border border-accent-red px-1"
               aria-label={`${current.name} form guide`}
+              title="Form guide"
             >
-              <Play size={20} className="text-accent-red" />
+              <Play size={15} className="text-accent-red" />
+              <span className="text-[7px] font-black uppercase text-accent-red">Form</span>
             </button>
           </div>
         </div>
@@ -1021,7 +1164,7 @@ function LiveWorkoutPage() {
         style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
       >
         <button
-          onClick={() => setActiveIdx((i) => Math.min(totalEx - 1, i + 1))}
+          onClick={() => persistWorkoutPosition(Math.min(totalEx - 1, activeIdx + 1))}
           disabled={activeIdx >= totalEx - 1}
           className="btn-ghost disabled:opacity-40"
         >
@@ -1049,19 +1192,39 @@ function LiveWorkoutPage() {
       {videoQuery && (
         <VideoModal query={videoQuery} title={videoTitle} onClose={() => setVideoQuery(null)} />
       )}
+      {showSwap && (
+        <LiveExerciseSwap
+          currentName={current.name}
+          candidates={liveSwapOptions}
+          query={swapQuery}
+          onQueryChange={setSwapQuery}
+          onChoose={chooseLiveSwap}
+          onClose={() => {
+            setShowSwap(false);
+            setSwapQuery("");
+          }}
+        />
+      )}
       {rest && rest.seconds > 0 && (
         <RestTimer
           key={session.exercises[activeIdx]?.sets.length ?? 0}
           seconds={rest.seconds}
+          initialEndsAt={rest.endsAt}
           nextExercise={session.exercises[rest.nextIndex]?.name}
+          onDeadlineChange={(endsAt) => {
+            if (endsAt === rest.endsAt) return;
+            const nextRest = { ...rest, endsAt };
+            setRest(nextRest);
+            persistWorkoutPosition(activeIdx, nextRest);
+          }}
           onDone={() => {
-            setActiveIdx(rest.nextIndex);
             setRest(null);
+            persistWorkoutPosition(rest.nextIndex, null);
           }}
           onDisable={() => {
             set((s) => ({ ...s, restTimerSeconds: 0 }));
-            setActiveIdx(rest.nextIndex);
             setRest(null);
+            persistWorkoutPosition(rest.nextIndex, null);
           }}
         />
       )}
@@ -1080,6 +1243,92 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
       >
         {value}
       </p>
+    </div>
+  );
+}
+
+function LiveExerciseSwap({
+  currentName,
+  candidates,
+  query,
+  onQueryChange,
+  onChoose,
+  onClose,
+}: {
+  currentName: string;
+  candidates: Exercise[];
+  query: string;
+  onQueryChange: (value: string) => void;
+  onChoose: (exercise: Exercise) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-end bg-black/75 p-3 sm:items-center sm:justify-center"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="live-swap-title"
+    >
+      <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/15 bg-[#111214] shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-white/10 p-4">
+          <div className="min-w-0">
+            <p className="label-cap text-[9px] text-pro">PRO SMART SWAP</p>
+            <h2 id="live-swap-title" className="display mt-1 text-2xl font-black uppercase text-grit">
+              Keep the session moving
+            </h2>
+            <p className="mt-1 text-xs leading-relaxed text-grit-dim">
+              Replace {currentName} before you log a set. Your workout targets stay in place.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="icon-btn shrink-0 text-grit-dim"
+            aria-label="Close exercise swaps"
+          >
+            <X size={20} />
+          </button>
+        </div>
+        <div className="p-4">
+          <input
+            autoFocus
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder="Search alternatives"
+            className="input-grit w-full"
+            aria-label="Search exercise alternatives"
+          />
+          <div className="mt-3 max-h-[52vh] space-y-2 overflow-y-auto pr-1">
+            {candidates.map((exercise) => (
+              <button
+                key={exercise.id}
+                type="button"
+                onClick={() => onChoose(exercise)}
+                className="flex min-h-16 w-full items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-left press hover:border-accent-red/60"
+              >
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-accent-red/10 text-accent-red">
+                  <Dumbbell size={16} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-bold text-grit">{exercise.name}</span>
+                  <span className="mt-0.5 block text-[10px] font-semibold uppercase text-grit-dim">
+                    {exercise.muscleGroup} · {exercise.equipmentLabel ?? exercise.equipment[0].replace("_", " ")}
+                  </span>
+                </span>
+                <RefreshCw size={15} className="shrink-0 text-accent-red" />
+              </button>
+            ))}
+            {candidates.length === 0 && (
+              <div className="rounded-xl border border-white/10 bg-black/25 px-4 py-8 text-center">
+                <p className="text-sm font-bold text-grit">No matching swap found</p>
+                <p className="mt-1 text-xs leading-relaxed text-grit-dim">
+                  Try a broader search or keep the planned movement for today.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1142,7 +1391,7 @@ function SetLogger({
       return;
     }
     if (!suggestion) return;
-    setOverride({ weight: suggestion.weightKg, reps: nextReps });
+    setOverride({ weight: suggestion.weightKg, reps: suggestion.targetReps ?? nextReps });
   }
 
   function saveEdit() {
@@ -1276,7 +1525,11 @@ function SetLogger({
                 ? "SMART SUGGESTION"
                 : suggestion.kind === "up"
                   ? "MOVE UP"
-                  : "HOLD & EARN IT"}
+                  : suggestion.kind === "reps"
+                    ? "ADD A REP"
+                    : suggestion.kind === "reduce"
+                      ? "RESET & REBUILD"
+                      : "HOLD & EARN IT"}
             </span>
             <span
               className={

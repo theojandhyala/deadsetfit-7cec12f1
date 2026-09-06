@@ -3,6 +3,7 @@ export type OAuthProvider = "google" | "apple";
 /** The broker lives on our own domain (see src/lib/oauth.server.ts), so every
  *  screen in the sign-in flow — Google's, Apple's, ours — says deadsetfit.org. */
 export const OAUTH_BROKER_ORIGIN = "https://deadsetfit.org";
+export const NATIVE_AUTH_BRIDGE = "https://deadsetfit.org/auth/native-callback";
 
 export type OAuthCallback = {
   accessToken: string | null;
@@ -39,6 +40,10 @@ export function buildOAuthStartUrl(
 
 export function oauthProvidersUrl(brokerOrigin?: string) {
   return `${oauthBrokerOrigin(brokerOrigin)}/api/auth/providers`;
+}
+
+export function authRecoveryRedirectUrl(native: boolean, origin: string) {
+  return native ? NATIVE_AUTH_BRIDGE : `${origin.replace(/\/$/, "")}/auth/`;
 }
 
 export function parseOAuthCallback(value: string): OAuthCallback {

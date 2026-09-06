@@ -68,12 +68,14 @@ export function StateSync() {
           // Offline edits stashed as pending are NEWER than the remote we just
           // fetched — push them up instead of letting the older remote hydrate
           // over them (which would permanently lose the offline session).
-          const localIsNewer =
+          const reconciled =
             getLocalStateOwner() === userId &&
             (await reconcilePendingRemoteState(async (json) => {
               await save({ data: { data: json } });
-            }));
-          if (!localIsNewer) {
+            }, JSON.parse(res.data)));
+          if (reconciled) {
+            hydrateFromRemote(reconciled, userId);
+          } else {
             try {
               hydrateFromRemote(JSON.parse(res.data), userId);
             } catch {

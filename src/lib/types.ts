@@ -223,6 +223,21 @@ export interface WorkoutSession {
   exercises: WorkoutSessionExercise[];
   totalVolume: number;
   prCount: number;
+  /** Last open movement, persisted so an interrupted workout resumes in place. */
+  activeExerciseIndex?: number;
+  /** Absolute rest deadline; survives an iOS suspension or app restart. */
+  restEndsAt?: number;
+  /** Exercise to show after the persisted rest period completes. */
+  restNextExerciseIndex?: number;
+}
+
+export interface StateSyncMeta {
+  /** Monotonic on this device; useful for diagnostics and old-payload migration. */
+  revision: number;
+  /** Last local mutation. Used to resolve editable settings across devices. */
+  updatedAt: string;
+  /** Stable random identifier; contains no hardware or personal information. */
+  deviceId: string;
 }
 
 export interface ChallengeRecord {
@@ -272,6 +287,8 @@ export interface AppState {
   activeProgramId: string | null;
   sessions: WorkoutSession[];
   activeSessionId: string | null;
+  /** Conflict-resolution metadata. Older 1.2 payloads legitimately omit it. */
+  syncMeta?: StateSyncMeta;
   water: WaterEntry[];
   waterTargetMl: number;
   hydrationAlertsEnabled: boolean;

@@ -20,7 +20,7 @@ export function topSetHistory(state: AppState, exerciseId: string, limit = 6): T
       if (ex.exerciseId !== exerciseId) continue;
       let best: { weight: number; reps: number } | null = null;
       for (const s of ex.sets) {
-        if (s.weight <= 0) continue;
+        if (s.weight <= 0 || s.kind) continue;
         if (!best || s.weight > best.weight || (s.weight === best.weight && s.reps > best.reps)) {
           best = { weight: s.weight, reps: s.reps };
         }
@@ -37,9 +37,11 @@ const BIG_JUMP = new Set(["squat", "deadlift", "leg-press", "rdl", "hip-thrust"]
 
 export interface Suggestion {
   weightKg: number;
-  /** "up" = add weight, "hold" = repeat weight, "start" = first prescription */
-  kind: "up" | "hold";
+  /** Exactly one next-session decision, derived from logged performance. */
+  kind: "up" | "reps" | "hold" | "reduce";
   reason: string;
+  /** Concrete rep target for the next working sets when applicable. */
+  targetReps?: number;
   /** True when the lift is clearly ready to progress (hit reps with reps in reserve). */
   ready?: boolean;
 }
@@ -55,6 +57,11 @@ function avgRpe(sets: { rpe?: number }[]): number | undefined {
 export function minTargetReps(targetReps: string): number {
   const n = parseInt(targetReps, 10);
   return Number.isFinite(n) && n > 0 ? n : 5;
+}
+
+export function maxTargetReps(targetReps: string): number {
+  const numbers = targetReps.match(/\d+/g)?.map(Number).filter((value) => value > 0) ?? [];
+  return numbers.length ? Math.max(...numbers) : minTargetReps(targetReps);
 }
 
 /**
@@ -77,8 +84,10 @@ export function suggestNextWeight(
     const working = ex.sets.filter((s) => s.weight > 0);
     if (working.length === 0) continue;
     const top = Math.max(...working.map((s) => s.weight));
-    const target = minTargetReps(targetReps);
-    const allHit = working.every((s) => s.reps >= target);
+    const minimum = minTargetReps(targetReps);
+    const maximum = maxTargetReps(targetReps);
+    const allHitMinimum = working.every((s) => s.reps >= minimum);
+    const allHitMaximum = working.every((s) => s.reps >= maximum);
     const jump = BIG_JUMP.has(exerciseId) ? 5 : 2.5;
     const effort = avgRpe(working);
 
@@ -106,7 +115,7 @@ export function suggestNextWeight(
       };
     }
 
-    if (allHit) {
+    if (allHitMaximum) {
       // Autoregulation: hitting the reps AT RPE 9+ (grinding) means the weight
       // is already near-max — consolidate before adding. Reps in reserve
       // (RPE ≤ 8) means it moved well; progress with confidence.
@@ -114,19 +123,39 @@ export function suggestNextWeight(
         return {
           weightKg: top,
           kind: "hold",
-          reason: `Hit ${target}+ reps but at RPE ${effort.toFixed(0)} — lock in ${top}kg before adding`,
+          reason: `Hit ${maximum}+ reps but at RPE ${effort.toFixed(0)} — lock in ${top}kg before adding`,
+          targetReps: maximum,
         };
       }
       const reason =
         effort !== undefined
-          ? `All sets hit ${target}+ reps at RPE ${effort.toFixed(0)} — reps in reserve, move up`
-          : `All sets hit ${target}+ reps at ${top}kg last time`;
-      return { weightKg: top + jump, kind: "up", reason, ready: true };
+          ? `All sets hit ${maximum}+ reps at RPE ${effort.toFixed(0)} — range complete, move up`
+          : `All sets reached the top of the ${minimum}–${maximum} rep range at ${top}kg`;
+      return { weightKg: top + jump, kind: "up", reason, targetReps: minimum, ready: true };
+    }
+    if (allHitMinimum) {
+      if (effort !== undefined && effort >= 9) {
+        return {
+          weightKg: top,
+          kind: "hold",
+          targetReps: Math.min(...working.map((set) => set.reps)),
+          reason: `${top}kg averaged RPE ${effort.toFixed(1)} — repeat it before adding reps`,
+        };
+      }
+      const achieved = Math.min(...working.map((set) => set.reps));
+      const nextReps = Math.min(maximum, achieved + 1);
+      return {
+        weightKg: top,
+        kind: "reps",
+        targetReps: nextReps,
+        reason: `Keep ${top}kg and reach ${nextReps} reps on every set before adding load`,
+      };
     }
     return {
       weightKg: top,
       kind: "hold",
-      reason: `Chase ${target} reps on every set at ${top}kg first`,
+      targetReps: minimum,
+      reason: `Chase at least ${minimum} reps on every set at ${top}kg first`,
     };
   }
   return null;
@@ -206,10 +235,11 @@ export function progressionBoard(state: AppState): ProgressionEntry[] {
       lastWeight: hist[0]?.weight ?? 0,
     });
   }
-  // Ready-to-progress first, then holds; heavier lifts first within each group.
+  // Load increases first, then rep progress, then holds.
   return entries.sort((a, b) => {
-    const ra = a.suggestion.kind === "up" ? 0 : 1;
-    const rb = b.suggestion.kind === "up" ? 0 : 1;
+    const rank = { up: 0, reps: 1, hold: 2, reduce: 3 } as const;
+    const ra = rank[a.suggestion.kind];
+    const rb = rank[b.suggestion.kind];
     if (ra !== rb) return ra - rb;
     return b.lastWeight - a.lastWeight;
   });

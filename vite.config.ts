@@ -29,7 +29,9 @@ export default defineConfig({
         main: fileURLToPath(new URL("index.html", import.meta.url)),
         authRoot: fileURLToPath(new URL("auth.html", import.meta.url)),
         auth: fileURLToPath(new URL("auth/index.html", import.meta.url)),
-        nativeAuthCallback: fileURLToPath(new URL("auth/native-callback.html", import.meta.url)),
+        nativeAuthCallback: fileURLToPath(
+          new URL("auth/native-callback/index.html", import.meta.url),
+        ),
       },
       output: {
         // Keep every JS file in a release-specific namespace. If a CDN race

@@ -35,17 +35,11 @@
         width: min(100%, 360px);
         text-align: center;
       }
-      .mark {
-        display: grid;
-        width: 52px;
-        height: 52px;
-        margin: 0 auto 24px;
-        place-items: center;
-        border: 1px solid #313131;
-        border-radius: 14px;
-        background: #151515;
-        font-size: 22px;
-        font-weight: 900;
+      .brand {
+        width: 184px;
+        height: auto;
+        margin: 0 auto 18px;
+        filter: drop-shadow(0 12px 30px rgba(239, 48, 40, 0.18));
       }
       h1 {
         margin: 0;
@@ -64,8 +58,9 @@
         justify-content: center;
         border-radius: 12px;
         padding: 0 20px;
-        background: #f5f5f5;
-        color: #090909;
+        background: #ef3028;
+        box-shadow: 0 12px 34px rgba(239, 48, 40, 0.24);
+        color: #fff;
         font-weight: 800;
         text-decoration: none;
       }
@@ -73,9 +68,9 @@
   </head>
   <body>
     <main>
-      <div class="mark" aria-hidden="true">D</div>
+      <img class="brand" src="/icon-512.png" alt="DEADSET — Forge Your Body" />
       <h1>Returning to DEADSET</h1>
-      <p>Your sign-in is complete. The app should reopen automatically.</p>
+      <p>Your secure account flow is complete. DEADSET should reopen automatically.</p>
       <a id="return-to-app" href="org.deadsetfit.app://auth/callback">Return to DEADSET</a>
     </main>
     <script>

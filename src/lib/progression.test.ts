@@ -43,14 +43,23 @@ describe("progression", () => {
     const result = suggestNextWeight(
       state([
         session("one", "2026-07-20", [
-          { weight: 80, reps: 8, rpe: 8 },
-          { weight: 80, reps: 9, rpe: 8 },
+          { weight: 80, reps: 10, rpe: 8 },
+          { weight: 80, reps: 10, rpe: 8 },
         ]),
       ]),
       "bench-press",
       "8-10",
     );
     expect(result).toMatchObject({ weightKg: 82.5, kind: "up", ready: true });
+  });
+
+  it("adds reps before load in a double-progression range", () => {
+    const result = suggestNextWeight(
+      state([session("one", "2026-07-20", [{ weight: 80, reps: 8, rpe: 8 }])]),
+      "bench-press",
+      "8-10",
+    );
+    expect(result).toMatchObject({ weightKg: 80, kind: "reps", targetReps: 9 });
   });
 
   it("holds weight when target reps are missed or effort is maximal", () => {

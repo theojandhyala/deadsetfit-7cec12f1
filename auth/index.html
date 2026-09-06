@@ -517,6 +517,41 @@
         color: #f5f5f0;
       }
 
+      .code-input {
+        text-align: center;
+        font-size: 25px;
+        font-weight: 900;
+        letter-spacing: 0.34em;
+        padding-left: calc(22px + 0.34em);
+      }
+
+      .code-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 9px 2px 0;
+        color: #777680;
+        font-size: 11px;
+        font-weight: 750;
+      }
+
+      .code-resend {
+        min-height: 40px;
+        padding: 0 2px;
+        border: 0;
+        background: transparent;
+        color: #f5f5f0;
+        font-size: 12px;
+        font-weight: 900;
+        cursor: pointer;
+      }
+
+      .code-resend:focus-visible {
+        outline: 2px solid var(--red);
+        outline-offset: 3px;
+      }
+
       .free-note {
         margin: 12px 0 0;
         color: #777680;
@@ -780,7 +815,28 @@
               />
             </div>
 
-            <div class="field">
+            <div class="field" id="recovery-code-field" hidden>
+              <label for="recovery-code">Reset code</label>
+              <input
+                class="code-input"
+                id="recovery-code"
+                name="recovery-code"
+                type="text"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                autocapitalize="none"
+                autocorrect="off"
+                spellcheck="false"
+                maxlength="8"
+                placeholder="00000000"
+              />
+              <div class="code-meta">
+                <span>Use the code from your email</span>
+                <button class="code-resend" id="recovery-resend" type="button">Resend</button>
+              </div>
+            </div>
+
+            <div class="field" id="password-field">
               <label for="password">Password</label>
               <div class="pw-wrap">
                 <input

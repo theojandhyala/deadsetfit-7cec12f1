@@ -467,7 +467,7 @@ function GrindTab({
   const eliteLocked = !proLoading && !isPro;
   return (
     <>
-      <div className="px-5 mb-3 flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+      <div className="mb-3 grid grid-cols-3 gap-1.5 px-5 pb-1">
         {(["ALL", "EASY", "BEAST", "GOD", "ELITE", "BEATEN"] as const).map((f) => (
           <button
             key={f}

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Trophy, X } from "lucide-react";
+import { successFeedback } from "@/lib/haptics";
 
 const PARTICLES = Array.from({ length: 56 });
 const COLORS = ["#e63222", "#f5c542", "#f5f5f0", "#ff6b35", "#ffffff"];
@@ -20,11 +21,7 @@ export function PRCelebration({
   const delta = prevBest > 0 ? Math.round((weight - prevBest) * 10) / 10 : 0;
 
   useEffect(() => {
-    try {
-      navigator.vibrate?.([100, 50, 100, 50, 200]);
-    } catch {
-      /* noop */
-    }
+    void successFeedback();
     const t = setTimeout(onClose, 6500);
     return () => clearTimeout(t);
   }, [onClose]);

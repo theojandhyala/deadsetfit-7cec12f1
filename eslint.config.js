@@ -8,12 +8,14 @@ export default tseslint.config(
   {
     ignores: [
       "dist",
+      "build",
       ".output",
       ".vinxi",
       "ios",
       "android",
       "node_modules",
       "coverage",
+      "artifacts",
       "public",
       "worker-configuration.d.ts",
       "src/routeTree.gen.ts",

@@ -69,12 +69,12 @@ function TermsPage() {
 
       <H>6. Subscriptions & payments</H>
       <p>
-        DEADSET Pro may be sold as a monthly or annual auto-renewing subscription. Purchases made in
-        the iPhone app are processed by Apple and charged to your Apple Account when confirmed. They
-        renew automatically unless cancelled at least 24 hours before the end of the current period
-        and can be managed in your App Store account. Purchases made on the website are processed by
-        Stripe and can be managed from your DEADSET account. Prices and billing periods are shown
-        before purchase. Pro access remains available through the paid period.
+        DEADSET Pro may be sold as a monthly or annual auto-renewing subscription. New subscriptions
+        are purchased in the iPhone app, processed by Apple, and charged to your Apple Account when
+        confirmed. They renew automatically unless cancelled at least 24 hours before the end of the
+        current period and can be managed in your App Store account. Any legacy website subscription
+        remains subject to the terms shown when it was purchased. Prices and billing periods are
+        shown before purchase. Pro access remains available through the paid period.
       </p>
 
       <H>7. Termination</H>

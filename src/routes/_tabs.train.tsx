@@ -19,6 +19,7 @@ import { VideoModal } from "@/components/VideoModal";
 import { Reminders } from "@/components/Reminders";
 import { DailyQuests } from "@/components/DailyQuests";
 import { Big3Card } from "@/components/Big3Card";
+import { FirstWinsCard } from "@/components/FirstWinsCard";
 import { WeeklyRecap } from "@/components/WeeklyRecap";
 import { RankedArena } from "@/components/RankedArena";
 import { TodayReadiness } from "@/components/TodayReadiness";
@@ -37,6 +38,7 @@ import { WeekPaceCard } from "@/components/WeekPaceCard";
 import { StreakChaseCard } from "@/components/StreakChaseCard";
 import { SupersetHint } from "@/components/SupersetHint";
 import { TrainingAutopilot } from "@/components/TrainingAutopilot";
+import { StrengthMapPulse } from "@/components/StrengthMapPulse";
 import { openPaywall } from "@/lib/paywall-events";
 import type { DayKey, Schedule, Program } from "@/lib/types";
 
@@ -102,6 +104,7 @@ export const Route = createFileRoute("/_tabs/train")({
 function TrainPage() {
   const [state] = useAppState();
   const [selectedDay, setSelectedDay] = useState<DayKey>(todayKey());
+  const [homeView, setHomeView] = useState<"TODAY" | "INSIGHTS">("TODAY");
   const [videoState, setVideoState] = useState<{
     videoId?: string;
     query?: string;
@@ -182,7 +185,7 @@ function TrainPage() {
         <div className="deadset-hero-card p-5">
           <div className="relative">
             <div className="flex items-start justify-between gap-4">
-              <div>
+              <div key={selectedDay} className="deadset-day-switch min-w-0">
                 <p className="label-cap text-accent-red">{selectedHype.eyebrow}</p>
                 <h1 className="display mt-2 text-4xl font-black uppercase leading-[0.92] text-grit">
                   {selectedTitle}
@@ -200,14 +203,19 @@ function TrainPage() {
                     {selectedExercisePreview.slice(0, 3).map((exercise, index) => (
                       <div
                         key={exercise.id}
-                        className="flex min-w-0 items-center gap-2 text-[11px]"
+                        className="deadset-exercise-reveal flex min-w-0 items-center gap-2 text-[11px]"
+                        style={{ animationDelay: `${80 + index * 55}ms` }}
                       >
                         <span className="w-4 shrink-0 font-black text-accent-red">{index + 1}</span>
                         <span className="min-w-0 flex-1 truncate font-bold text-grit">
                           {exercise.name}
                         </span>
                         {exercise.superset && (
-                          <Link2 size={11} className="shrink-0 text-accent-red" aria-label="Superset" />
+                          <Link2
+                            size={11}
+                            className="shrink-0 text-accent-red"
+                            aria-label="Superset"
+                          />
                         )}
                         <span className="shrink-0 text-grit-dim">{exercise.target}</span>
                       </div>
@@ -283,7 +291,7 @@ function TrainPage() {
                         day: selectedDay,
                         source: activeProgram ? "program" : "schedule",
                       }}
-                      className="btn-grit flex-1 min-h-[54px] text-sm flex items-center justify-center rounded-2xl"
+                      className="btn-grit deadset-primary-action flex-1 min-h-[54px] text-sm flex items-center justify-center rounded-2xl"
                     >
                       <Flame size={18} className="mr-2" />
                       Start {selectedDay === todayKey() ? "Workout" : DAY_SHORT[selectedDay]}
@@ -294,7 +302,7 @@ function TrainPage() {
                   return (
                     <Link
                       to="/plan"
-                      className="btn-grit flex-1 min-h-[54px] text-sm flex items-center justify-center rounded-2xl"
+                      className="btn-grit deadset-primary-action flex-1 min-h-[54px] text-sm flex items-center justify-center rounded-2xl"
                     >
                       <Pencil size={18} className="mr-2" />
                       Build My Split
@@ -330,7 +338,7 @@ function TrainPage() {
               </Link>
             )}
 
-            <div className="mt-4 flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+            <div className="mt-4 grid grid-cols-7 gap-1">
               {DAY_KEYS.map((k) => {
                 const active = k === selectedDay;
                 const isToday = k === todayKey();
@@ -342,7 +350,10 @@ function TrainPage() {
                   <button
                     key={k}
                     onClick={() => setSelectedDay(k)}
-                    className="flex-shrink-0 min-w-[74px] rounded-2xl px-3 py-2.5 border text-center press"
+                    aria-pressed={active}
+                    className={`deadset-day-chip min-w-0 rounded-xl border px-0.5 py-2 text-center press ${
+                      active ? "deadset-day-chip-active" : ""
+                    }`}
                     style={{
                       borderColor: active ? "#e63222" : "rgba(255,255,255,.10)",
                       background: active ? "rgba(230,50,34,.16)" : "rgba(0,0,0,.30)",
@@ -365,7 +376,8 @@ function TrainPage() {
         </div>
       </header>
       <div className="flex flex-col">
-        <section className="deadset-section order-first" aria-labelledby="daily-hub-title">
+        <StrengthMapPulse state={state} />
+        <section className="deadset-section order-[-2]" aria-labelledby="daily-hub-title">
           <div className="mb-2.5 flex items-center justify-between">
             <h2 id="daily-hub-title" className="label-cap text-[10px] text-grit-dim">
               DAILY HUB
@@ -415,30 +427,75 @@ function TrainPage() {
             </Link>
           </div>
         </section>
-        <TrainingAutopilot compact priority />
-        <TodayReadiness state={state} schedule={schedule} />
-        <div className="px-5">
-          <TrainingInsight />
-          <WeekPaceCard state={state} />
-          <StreakChaseCard state={state} />
-          <WeeklyMission state={state} />
-        </div>
-        <WeeklyReportCard />
-        <WhatsNewCard />
-        <ProBanner />
-        <Reminders />
-
-        <section className="deadset-section">
-          <RankedArena state={state} compact />
+        <section className="deadset-section order-[-1]" aria-label="Train screen view">
+          <div
+            className="grid grid-cols-2 rounded-2xl border border-white/10 bg-black/30 p-1"
+            role="tablist"
+            aria-label="Choose what to see"
+          >
+            {(["TODAY", "INSIGHTS"] as const).map((view) => {
+              const active = homeView === view;
+              return (
+                <button
+                  key={view}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  aria-controls={`train-${view.toLowerCase()}-panel`}
+                  onClick={() => setHomeView(view)}
+                  className={`min-h-11 rounded-xl text-[11px] font-black uppercase transition-colors ${
+                    active
+                      ? "bg-accent-red text-white shadow-[0_8px_22px_rgba(230,50,34,.22)]"
+                      : "text-grit-dim"
+                  }`}
+                >
+                  {view === "TODAY" ? "Today" : "Insights"}
+                </button>
+              );
+            })}
+          </div>
         </section>
-        <div className="deadset-section">
-          <Big3Card state={state} />
-        </div>
-        <div className="deadset-section">
-          <WeeklyRecap state={state} />
-        </div>
 
-        <DailyQuests />
+        {homeView === "TODAY" ? (
+          <div
+            id="train-today-panel"
+            key="today"
+            role="tabpanel"
+            className="deadset-view-switch flex flex-col"
+          >
+            <FirstWinsCard />
+            <WhatsNewCard />
+            <TrainingAutopilot compact />
+            <TodayReadiness state={state} schedule={schedule} />
+            <DailyQuests />
+            <Reminders />
+          </div>
+        ) : (
+          <div
+            id="train-insights-panel"
+            key="insights"
+            role="tabpanel"
+            className="deadset-view-switch flex flex-col"
+          >
+            <div className="px-5">
+              <TrainingInsight />
+              <WeekPaceCard state={state} />
+              <StreakChaseCard state={state} />
+              <WeeklyMission state={state} />
+            </div>
+            <WeeklyReportCard />
+            <ProBanner />
+            <section className="deadset-section">
+              <RankedArena state={state} compact />
+            </section>
+            <div className="deadset-section">
+              <Big3Card state={state} />
+            </div>
+            <div className="deadset-section">
+              <WeeklyRecap state={state} />
+            </div>
+          </div>
+        )}
 
         {activeProgram && (
           <div className="px-5 mb-3">
@@ -456,7 +513,7 @@ function TrainPage() {
         )}
 
         {/* The workout sits first in this flex group: execution before analytics. */}
-        <div className="deadset-section order-first flex flex-col gap-3">
+        <div className="deadset-section order-[-3] flex flex-col gap-3">
           <div className="deadset-section-title">
             <div>
               <p className="label-cap text-accent-red text-[10px]">Workout plan</p>

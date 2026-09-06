@@ -1,1 +1,36 @@
 project_id = "fqfdygbveeztgxwkbmfi"
+
+[auth]
+site_url = "https://deadsetfit.org"
+additional_redirect_urls = [
+  "https://deadsetfit.org/auth/",
+  "https://deadsetfit.org/auth/native-callback",
+  "https://www.deadsetfit.org/auth/",
+  "https://www.deadsetfit.org/auth/native-callback",
+  "http://localhost:5173/auth/",
+  "http://localhost:5173/auth/native-callback",
+  "http://localhost:4173/auth/",
+  "http://localhost:4173/auth/native-callback",
+]
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[auth.email]
+max_frequency = "60s"
+otp_length = 8
+otp_expiry = 3600
+
+[auth.email.smtp]
+enabled = true
+host = "smtp.resend.com"
+port = 465
+user = "resend"
+pass = "env(DEADSET_SMTP_PASSWORD)"
+admin_email = "support@deadsetfit.org"
+sender_name = "DEADSET"
+
+[auth.email.template.recovery]
+subject = "Your secure DEADSET reset code"
+content_path = "./supabase/templates/recovery.html"

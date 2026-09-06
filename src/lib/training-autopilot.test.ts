@@ -67,8 +67,8 @@ function stateWith(sessions: WorkoutSession[]): AppState {
 }
 
 describe("training autopilot", () => {
-  it("prescribes an increase after clean target reps", () => {
-    const state = stateWith([session("2026-07-20", 80, 10, 8)]);
+  it("prescribes an increase after clean reps reach the top of the range", () => {
+    const state = stateWith([session("2026-07-20", 80, 12, 8)]);
     const plan = buildAutopilotPlan(state, "HYPERTROPHY");
     expect(plan.prescriptions[0]).toMatchObject({
       exerciseId: "bench-press",

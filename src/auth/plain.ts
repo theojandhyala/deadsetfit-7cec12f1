@@ -1,5 +1,6 @@
 import { createClient, type Session } from "@supabase/supabase-js";
 import {
+  authRecoveryRedirectUrl,
   buildOAuthStartUrl,
   createOAuthState,
   hasOAuthResult,
@@ -24,6 +25,10 @@ const oauthStateKey = "deadset_oauth_state_v1";
 const form = document.getElementById("auth-form") as HTMLFormElement;
 const emailInput = document.getElementById("email") as HTMLInputElement;
 const passwordInput = document.getElementById("password") as HTMLInputElement;
+const passwordField = document.getElementById("password-field") as HTMLDivElement;
+const recoveryCodeField = document.getElementById("recovery-code-field") as HTMLDivElement;
+const recoveryCodeInput = document.getElementById("recovery-code") as HTMLInputElement;
+const recoveryResendButton = document.getElementById("recovery-resend") as HTMLButtonElement;
 const submitButton = document.getElementById("submit") as HTMLButtonElement;
 const googleButton = document.getElementById("google-auth") as HTMLButtonElement;
 const appleButton = document.getElementById("apple-auth") as HTMLButtonElement;
@@ -45,6 +50,8 @@ let mode: "signin" | "signup" = "signup";
 // Landing from a Supabase email link (?code=...) — confirm or recovery.
 // The auth event (SIGNED_IN vs PASSWORD_RECOVERY) decides what happens.
 let recoveryMode = false;
+let recoveryCodeMode = false;
+let requestedRecoveryEmail = "";
 const initialAuthCallback = parseOAuthCallback(window.location.href);
 const hasAuthCallback = hasOAuthResult(initialAuthCallback);
 
@@ -68,10 +75,13 @@ function setBusy(busy: boolean) {
   appleButton.disabled = busy;
   modeSwitch.disabled = busy;
   forgotButton.disabled = busy;
+  recoveryResendButton.disabled = busy;
   submitButton.textContent = busy
     ? "Please wait..."
     : recoveryMode
       ? "Set New Password"
+      : recoveryCodeMode
+        ? "Verify Code"
       : mode === "signup"
         ? "Create Account"
         : "Log In";
@@ -173,10 +183,7 @@ function isNativeShell() {
 }
 
 function emailRedirectUrl() {
-  if (isNativeShell()) {
-    return "https://deadsetfit.org/auth/";
-  }
-  return `${window.location.origin}/auth/`;
+  return authRecoveryRedirectUrl(isNativeShell(), window.location.origin);
 }
 
 /** The broker sends the finished session to /auth/ on the web and to the
@@ -220,9 +227,6 @@ function errorMessage(error: unknown, fallback: string) {
   if (lower.includes("already registered")) {
     return "That email already has an account — sign in instead.";
   }
-  if (lower.includes("email not confirmed")) {
-    return "Confirm your email first — check your inbox for the link we sent.";
-  }
   if (lower.includes("at least 6 characters") || lower.includes("password should be")) {
     return "Password needs at least 6 characters.";
   }
@@ -250,8 +254,13 @@ const supabase =
 
 function enterRecoveryMode(session: Session | null) {
   recoveryMode = true;
+  recoveryCodeMode = false;
   if (session?.user.email) emailInput.value = session.user.email;
   emailInput.disabled = true;
+  recoveryCodeField.hidden = true;
+  recoveryCodeInput.required = false;
+  passwordField.hidden = false;
+  passwordInput.required = true;
   socialOptions.hidden = true;
   emailDivider.hidden = true;
   modeRow.hidden = true;
@@ -264,6 +273,29 @@ function enterRecoveryMode(session: Session | null) {
   submitButton.textContent = "Set New Password";
   setMessage("Choose a new password for your account.");
   passwordInput.focus();
+}
+
+function enterRecoveryCodeMode(email: string) {
+  requestedRecoveryEmail = email;
+  recoveryCodeMode = true;
+  recoveryMode = false;
+  emailInput.value = email;
+  emailInput.disabled = true;
+  passwordField.hidden = true;
+  passwordInput.required = false;
+  recoveryCodeField.hidden = false;
+  recoveryCodeInput.required = true;
+  recoveryCodeInput.value = "";
+  socialOptions.hidden = true;
+  emailDivider.hidden = true;
+  modeRow.hidden = true;
+  forgotButton.hidden = true;
+  if (freeNote) freeNote.hidden = true;
+  authTitle.textContent = "Check your email";
+  authSubtitle.textContent = `Enter the one-time code sent to ${email}.`;
+  submitButton.textContent = "Verify Code";
+  setMessage("We sent a secure reset code and link.", "success");
+  recoveryCodeInput.focus();
 }
 
 supabase?.auth.onAuthStateChange((event, session) => {
@@ -363,6 +395,11 @@ async function setupNativeAuthCallback() {
       const session = await sessionFromCallback(callback);
       if (!session) throw new Error("No session returned. Please try again.");
       saveSessionBackup(session);
+      if (callback.type === "recovery") {
+        enterRecoveryMode(session);
+        setBusy(false);
+        return;
+      }
       window.location.replace(await destinationFor(session));
     } catch (error) {
       setMessage(errorMessage(error, "Could not finish sign in."), "error");
@@ -378,6 +415,14 @@ async function setupNativeAuthCallback() {
 
 function switchMode(next: "signin" | "signup") {
   mode = next;
+  recoveryMode = false;
+  recoveryCodeMode = false;
+  requestedRecoveryEmail = "";
+  emailInput.disabled = false;
+  passwordField.hidden = false;
+  passwordInput.required = true;
+  recoveryCodeField.hidden = true;
+  recoveryCodeInput.required = false;
   const signingUp = mode === "signup";
   authTitle.textContent = signingUp ? "Create your account" : "Welcome back";
   authSubtitle.textContent = signingUp
@@ -475,6 +520,14 @@ forgotButton.addEventListener("click", async () => {
     return;
   }
 
+  await sendRecoveryEmail(email, true);
+});
+
+async function sendRecoveryEmail(email: string, moveToCodeStep: boolean) {
+  if (!supabase) {
+    setMessage("Authentication is not configured.", "error");
+    return;
+  }
   setBusy(true);
   setMessage("Sending reset email...");
   try {
@@ -482,12 +535,21 @@ forgotButton.addEventListener("click", async () => {
       redirectTo: emailRedirectUrl(),
     });
     if (error) throw error;
-    setMessage("Password reset email sent. Check your inbox.", "success");
+    if (moveToCodeStep) enterRecoveryCodeMode(email);
+    else setMessage("A fresh code is on its way.", "success");
   } catch (error) {
     setMessage(errorMessage(error, "Could not send reset email"), "error");
   } finally {
     setBusy(false);
   }
+}
+
+recoveryResendButton.addEventListener("click", () => {
+  if (requestedRecoveryEmail) void sendRecoveryEmail(requestedRecoveryEmail, false);
+});
+
+recoveryCodeInput.addEventListener("input", () => {
+  recoveryCodeInput.value = recoveryCodeInput.value.replace(/\D/g, "").slice(0, 8);
 });
 
 form.addEventListener("submit", async (event) => {
@@ -496,6 +558,33 @@ form.addEventListener("submit", async (event) => {
   const password = passwordInput.value;
   if (!supabase) {
     setMessage("Authentication is not configured.", "error");
+    return;
+  }
+
+  if (recoveryCodeMode) {
+    const token = recoveryCodeInput.value.trim();
+    if (!/^\d{8}$/.test(token)) {
+      setMessage("Enter the 8-digit code from your email.", "error");
+      recoveryCodeInput.focus();
+      return;
+    }
+    setBusy(true);
+    setMessage("Verifying code...");
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: requestedRecoveryEmail,
+        token,
+        type: "recovery",
+      });
+      if (error) throw error;
+      if (!data.session) throw new Error("This code has expired. Request a new one.");
+      saveSessionBackup(data.session);
+      enterRecoveryMode(data.session);
+    } catch (error) {
+      setMessage(errorMessage(error, "That code is invalid or expired."), "error");
+    } finally {
+      setBusy(false);
+    }
     return;
   }
 
@@ -539,19 +628,16 @@ form.addEventListener("submit", async (event) => {
         window.location.replace(await destinationFor(data.session, true));
         return;
       }
-      // With email confirmation on, Supabase "succeeds" for an existing email
-      // but returns a user with no identities — surface that honestly.
+      // Supabase "succeeds" for an existing email but returns a user with no
+      // identities — surface that honestly rather than pretending to sign up.
       if ((data.user?.identities?.length ?? 0) === 0) {
         switchMode("signin");
         setMessage("That email already has an account — sign in instead.", "error");
         return;
       }
-      switchMode("signin");
-      setMessage(
-        "Almost there — confirm your email via the link we sent, then sign in.",
-        "success",
-      );
-      return;
+      // Email confirmation is disabled for this project, so signUp should always
+      // return a session above. If it didn't, something unexpected happened.
+      throw new Error("Could not create your account. Please try again.");
     }
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -566,7 +652,9 @@ form.addEventListener("submit", async (event) => {
   }
 });
 
-switchMode("signup");
+switchMode(
+  new URLSearchParams(window.location.search).get("mode") === "signin" ? "signin" : "signup",
+);
 void completeBrowserAuthCallback()
   .then((handled) => {
     if (!handled) return restoreExistingSession();

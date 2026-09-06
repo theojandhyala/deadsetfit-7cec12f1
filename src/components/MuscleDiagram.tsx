@@ -8,7 +8,11 @@ type Muscle = string;
 interface Props {
   primary?: Muscle[];
   secondary?: Muscle[];
+  /** Optional 0–100 strength score per anatomical key. Zero stays grey. */
+  intensity?: Partial<Record<string, number>>;
   size?: number;
+  /** VoiceOver summary; individual selectable regions are exposed by the adjacent controls. */
+  accessibilityLabel?: string;
 }
 
 const ACCENT = "#e63222";
@@ -75,11 +79,34 @@ function bodyPath() {
   return "M100 30 q24 0 24 26 q0 22 -16 30 q22 6 28 28 l8 50 q-2 22 -18 34 l-10 18 v60 q8 30 -2 60 q-8 30 -8 60 v50 q4 22 -4 30 h-24 q-8 -8 -4 -30 v-50 q0 -30 -8 -60 q-10 -30 -2 -60 v-60 l-10 -18 q-16 -12 -18 -34 l8 -50 q6 -22 28 -28 q-16 -8 -16 -30 q0 -26 24 -26 z";
 }
 
-export function MuscleDiagram({ primary = [], secondary = [], size = 220 }: Props) {
+function intensityColor(score: number) {
+  if (score <= 0) return BASE;
+  if (score < 55) return "#a33a32";
+  if (score < 65) return ACCENT;
+  if (score < 75) return "#f59e0b";
+  if (score < 85) return "#22c55e";
+  if (score < 95) return "#3b82f6";
+  return "#a855f7";
+}
+
+export function MuscleDiagram({
+  primary = [],
+  secondary = [],
+  intensity,
+  size = 220,
+  accessibilityLabel = "Front and back muscle map",
+}: Props) {
   const prim = new Set(primary.map((m) => m.toLowerCase()));
   const sec = new Set(secondary.map((m) => m.toLowerCase()));
 
-  const fill = (key: string) => (prim.has(key) ? ACCENT : sec.has(key) ? DIM : BASE);
+  const fill = (key: string) =>
+    intensity?.[key] != null
+      ? intensityColor(intensity[key] ?? 0)
+      : prim.has(key)
+        ? ACCENT
+        : sec.has(key)
+          ? DIM
+          : BASE;
 
   const render = (side: "f" | "b") =>
     Object.entries(SHAPES).flatMap(([key, def]) =>
@@ -95,7 +122,12 @@ export function MuscleDiagram({ primary = [], secondary = [], size = 220 }: Prop
     );
 
   return (
-    <div className="flex justify-center gap-4" style={{ width: "100%" }}>
+    <div
+      className="flex justify-center gap-4"
+      style={{ width: "100%" }}
+      role="img"
+      aria-label={accessibilityLabel}
+    >
       {(["f", "b"] as const).map((side) => (
         <svg key={side} viewBox="0 0 200 420" width={size / 2.2} height={size} aria-hidden>
           <path d={bodyPath()} fill={BASE} stroke={STROKE} strokeWidth={1.2} />

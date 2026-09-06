@@ -108,7 +108,7 @@ function LibraryPage() {
         style={{ background: "#1a1a1a", color: "#f5f5f0", border: "1px solid #2a2a2a" }}
       />
 
-      <div className="flex gap-2 overflow-x-auto mb-2 -mx-4 px-4 pb-1">
+      <div className="mb-2 flex flex-wrap gap-2 pb-1">
         {CATEGORIES.map((c) => (
           <button
             key={c}
@@ -124,7 +124,7 @@ function LibraryPage() {
           </button>
         ))}
       </div>
-      <div className="flex gap-2 overflow-x-auto mb-4 -mx-4 px-4 pb-1">
+      <div className="mb-4 flex flex-wrap gap-2 pb-1">
         {EQUIPMENT.map((e) => (
           <button
             key={e}

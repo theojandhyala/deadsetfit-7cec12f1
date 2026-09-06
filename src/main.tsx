@@ -84,6 +84,18 @@ try {
   renderBootFailure(error);
 }
 
-void withBootTimeout(restoreSupabaseSession()).catch((error) => {
-  console.warn("Session restore failed; continuing app boot", error);
-});
+// Session repair is valuable, but it is not render-critical. Running it in the
+// same task as React startup can contend with the route's local session probe
+// inside Supabase's auth lock and leave the loading screen visible for seconds.
+// Authenticated routes still await the same coalesced restore when they need it.
+const scheduleSessionRepair = () => {
+  void withBootTimeout(restoreSupabaseSession(), 1800).catch((error) => {
+    console.warn("Session restore failed; continuing app boot", error);
+  });
+};
+
+if (typeof window.requestIdleCallback === "function") {
+  window.requestIdleCallback(scheduleSessionRepair, { timeout: 1500 });
+} else {
+  globalThis.setTimeout(scheduleSessionRepair, 400);
+}

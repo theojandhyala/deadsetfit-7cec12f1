@@ -2,7 +2,7 @@
 // ship. The card hides once dismissed at the current version, so stale
 // announcements never linger.
 
-export const WHATS_NEW_VERSION = 20260810;
+export const WHATS_NEW_VERSION = 20260906;
 export const WHATS_NEW_SEEN_KEY = "deadset_whats_new_seen";
 
 export interface WhatsNewEntry {
@@ -14,34 +14,44 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
-    title: "Your Story",
-    body: "Lifetime tonnage in real-world objects, best streak, heaviest set — plus milestone celebrations from 10 t to 1,000 t.",
+    title: "Your strength, mapped",
+    body: "Tap any muscle to see its contributing lifts, progress proof, next load target and equipment-matched exercise recommendations.",
     where: "Progress",
   },
   {
-    title: "Session records",
-    body: "Biggest day, most reps, longest session — with a banner when you break one.",
-    where: "Progress",
+    title: "Turn gaps into a plan",
+    body: "Add a recommended movement to the right training day—or auto-cover every missing area—without creating duplicates.",
+    where: "Strength Map",
   },
   {
-    title: "Your rhythm",
-    body: "Which weekday you lift heaviest, and which scheduled day keeps slipping.",
-    where: "Progress",
+    title: "A baseline that follows you",
+    body: "Setup now captures one working set per planned exercise, reuses repeated movements and brings your map live before workout one.",
+    where: "Setup",
   },
   {
-    title: "Calorie cycling",
-    body: "Training days eat more, rest days less — same weekly average as your goal.",
-    where: "Diet → Insights",
+    title: "Deadset now feels native",
+    body: "Buttons, tabs and selections use a restrained iPhone haptic language, with stronger feedback for completed actions and PRs.",
+    where: "Everywhere",
   },
   {
-    title: "Protein spread",
-    body: "How many meals a day actually carry a muscle-building protein dose.",
-    where: "Diet → Insights",
+    title: "A clearer training day",
+    body: "See the next workout, food, recovery and first steps without mixing them into analytics.",
+    where: "Train",
   },
   {
-    title: "Fresh stimulus",
-    body: "A heads-up when a muscle has lived on one movement too long, with alternatives.",
-    where: "Progress",
+    title: "Build your whole week",
+    body: "Choose training days, exercises, sets and rep targets, then edit any day whenever plans change.",
+    where: "Plan",
+  },
+  {
+    title: "Smarter live workouts",
+    body: "Swap an unavailable exercise, use supersets and keep targets and history visible while logging.",
+    where: "Workout",
+  },
+  {
+    title: "Apple Fitness and Pro sync",
+    body: "Bring in Watch activity, send finished sessions to Apple Fitness and restore Pro across devices.",
+    where: "Settings",
   },
 ];
 

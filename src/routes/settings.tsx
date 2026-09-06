@@ -13,7 +13,9 @@ import {
   Cloud,
   CloudOff,
   FileSpreadsheet,
+  Mail,
   PlayCircle,
+  Star,
   UserRound,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -32,6 +34,8 @@ import {
 } from "@/lib/device-reminders";
 import { supabase } from "@/integrations/supabase/client";
 import { resetFeatureTour } from "@/lib/feature-tour";
+import { openAppStoreReviewPage } from "@/lib/app-review";
+import { parseWorkoutCsv } from "@/lib/import-workouts";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "DEADSET — Settings" }] }),
@@ -43,6 +47,7 @@ function SettingsPage() {
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
   const [sessionLogs, setSessionLogs] = useState(() => readSessionLogs());
+  const [appInfo, setAppInfo] = useState<{ version: string; build: string } | null>(null);
   const [account, setAccount] = useState<{
     email: string | null;
     status: "loading" | "signed-out" | "syncing" | "ready" | "offline";
@@ -71,6 +76,22 @@ function SettingsPage() {
         status: isRemoteStateReady(session.user.id) ? "ready" : "offline",
       });
     });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isNativeIos()) return;
+
+    let active = true;
+    void import("@capacitor/app")
+      .then(({ App }) => App.getInfo())
+      .then((info) => {
+        if (active) setAppInfo({ version: info.version, build: info.build });
+      })
+      .catch(() => {});
+
     return () => {
       active = false;
     };
@@ -134,10 +155,45 @@ function SettingsPage() {
     }
   }
 
+  async function handleRateDeadset() {
+    try {
+      await openAppStoreReviewPage();
+    } catch {
+      toast.error("Couldn't open the App Store");
+    }
+  }
+
   function importData(file: File) {
     const r = new FileReader();
     r.onload = async () => {
       try {
+        if (/\.csv$/i.test(file.name) || file.type === "text/csv") {
+          const imported = parseWorkoutCsv(String(r.result), state.savedExercises);
+          const ok = await askConfirm({
+            title: `Import ${imported.sessions.length} workouts?`,
+            message: `${imported.source} history will be added without deleting your DEADSET workouts${
+              imported.skippedRows ? `. ${imported.skippedRows} invalid rows will be skipped` : ""
+            }.`,
+            confirmLabel: "Import",
+          });
+          if (!ok) return;
+          set((current) => {
+            const sessions = new Map(current.sessions.map((session) => [session.id, session]));
+            for (const session of imported.sessions) sessions.set(session.id, session);
+            return {
+              ...current,
+              sessions: [...sessions.values()].sort((a, b) => a.startedAt.localeCompare(b.startedAt)),
+              completedDates: [
+                ...new Set([
+                  ...current.completedDates,
+                  ...imported.sessions.map((session) => session.date),
+                ]),
+              ].sort(),
+            };
+          });
+          toast.success(`${imported.sessions.length} ${imported.source} workouts imported`);
+          return;
+        }
         const parsed = JSON.parse(String(r.result));
         if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
           throw new Error("That doesn't look like a DEADSET backup file");
@@ -236,22 +292,61 @@ function SettingsPage() {
         <p className="label-cap mb-2 flex items-center gap-1.5">
           <PlayCircle size={12} className="text-accent-red" /> Help
         </p>
-        <button
-          type="button"
-          onClick={() => {
-            resetFeatureTour();
-            navigate({ to: "/train" as never });
-          }}
-          className="flex w-full items-center justify-between rounded-lg border border-grit bg-grit-card px-4 py-4 text-left"
-        >
-          <span>
-            <span className="block text-sm font-bold text-grit">Replay app tutorial</span>
-            <span className="mt-1 block text-[11px] text-grit-dim">
-              A one-minute guide to every main feature.
+        <div className="divide-y divide-[#262626] overflow-hidden rounded-lg border border-grit bg-grit-card">
+          <button
+            type="button"
+            onClick={() => {
+              resetFeatureTour();
+              navigate({ to: "/train" as never });
+            }}
+            className="flex w-full items-center justify-between px-4 py-4 text-left"
+          >
+            <span>
+              <span className="block text-sm font-bold text-grit">Replay app tutorial</span>
+              <span className="mt-1 block text-[11px] text-grit-dim">
+                A one-minute guide to every main feature.
+              </span>
             </span>
-          </span>
-          <ChevronLeft size={18} className="rotate-180 text-grit-dim" />
-        </button>
+            <ChevronLeft size={18} className="rotate-180 text-grit-dim" />
+          </button>
+          {isNativeIos() && (
+            <button
+              type="button"
+              onClick={() => void handleRateDeadset()}
+              className="flex w-full items-center justify-between px-4 py-4 text-left"
+            >
+              <span className="flex items-center gap-3">
+                <span className="grid h-9 w-9 place-items-center rounded-lg border border-grit bg-black">
+                  <Star size={17} className="text-accent-red" />
+                </span>
+                <span>
+                  <span className="block text-sm font-bold text-grit">Rate DEADSET</span>
+                  <span className="mt-1 block text-[11px] text-grit-dim">
+                    Leave a rating or review on the App Store.
+                  </span>
+                </span>
+              </span>
+              <ChevronLeft size={18} className="rotate-180 text-grit-dim" />
+            </button>
+          )}
+          <a
+            href="mailto:support@deadsetfit.org?subject=DEADSET%20Support"
+            className="flex w-full items-center justify-between px-4 py-4 text-left"
+          >
+            <span className="flex items-center gap-3">
+              <span className="grid h-9 w-9 place-items-center rounded-lg border border-grit bg-black">
+                <Mail size={17} className="text-accent-red" />
+              </span>
+              <span>
+                <span className="block text-sm font-bold text-grit">Contact support</span>
+                <span className="mt-1 block text-[11px] text-grit-dim">
+                  Get help with your account, workouts or subscription.
+                </span>
+              </span>
+            </span>
+            <ChevronLeft size={18} className="rotate-180 text-grit-dim" />
+          </a>
+        </div>
       </section>
 
       {/* Weight calculations use one canonical unit across training and rankings. */}
@@ -465,12 +560,12 @@ function SettingsPage() {
               <Upload size={14} className="mr-2" /> Import From File
             </button>
             <p className="text-[10px] text-grit-dim mt-1.5">
-              Restores a backup — overwrites current device state.
+              Add Strong, Hevy or generic workout CSVs, or restore a DEADSET JSON backup.
             </p>
             <input
               ref={fileRef}
               type="file"
-              accept="application/json"
+              accept="application/json,text/csv,.json,.csv"
               className="hidden"
               onChange={(e) => e.target.files?.[0] && importData(e.target.files[0])}
             />
@@ -516,6 +611,10 @@ function SettingsPage() {
           </div>
         </div>
       </details>
+
+      <p className="px-5 pb-4 text-center text-[10px] text-grit-dim">
+        {appInfo ? `DEADSET ${appInfo.version} (${appInfo.build})` : "DEADSET for iPhone"}
+      </p>
     </div>
   );
 }

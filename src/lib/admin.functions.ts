@@ -10,6 +10,7 @@ export type AdminStats = {
     location: string | null;
   }[];
   activeSubscriptions: number;
+  referrals: { total: number; last30Days: number };
   subscriptionPlans: { plan: string; count: number }[];
   sources: { source: string; count: number }[];
   engagement: {

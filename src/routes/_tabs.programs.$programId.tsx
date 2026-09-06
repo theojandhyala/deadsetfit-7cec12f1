@@ -207,7 +207,7 @@ function BuilderPage() {
 
       {/* Day strip */}
       <div className="px-5 mb-4">
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+        <div className="grid grid-cols-4 gap-2 pb-1">
           {DAYS.map((k) => {
             const active = k === day;
             const lbl = program.days[k].label.split(" — ")[0];
@@ -215,7 +215,7 @@ function BuilderPage() {
               <button
                 key={k}
                 onClick={() => setDay(k)}
-                className="flex-shrink-0 min-w-[64px] p-2 border text-center"
+                className="min-w-0 p-2 border text-center"
                 style={{
                   borderColor: active ? "#e63222" : "#262626",
                   background: active ? "#1a1a1a" : "transparent",
@@ -242,7 +242,7 @@ function BuilderPage() {
           }}
           className="input-grit"
         />
-        <div className="flex gap-1.5 overflow-x-auto pt-2 -mx-1 px-1">
+        <div className="flex flex-wrap gap-1.5 pt-2">
           {[
             "PUSH",
             "PULL",
@@ -393,7 +393,7 @@ function BuilderPage() {
               />
             </div>
             <div className="mb-3 space-y-2">
-              <div className="flex gap-1.5 overflow-x-auto pb-1">
+              <div className="flex flex-wrap gap-1.5 pb-1">
                 {muscleOptions.map((m) => (
                   <button
                     key={m}
@@ -409,7 +409,7 @@ function BuilderPage() {
                   </button>
                 ))}
               </div>
-              <div className="flex gap-1.5 overflow-x-auto pb-1">
+              <div className="flex flex-wrap gap-1.5 pb-1">
                 {equipmentOptions.map((eq) => (
                   <button
                     key={eq}

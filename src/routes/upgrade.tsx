@@ -47,6 +47,11 @@ import {
   restoreApplePro,
   type AppleProduct,
 } from "@/lib/storekit";
+import {
+  notifyRevenueCatUpdated,
+  recordRevenueCatPurchase,
+  syncRevenueCatPurchases,
+} from "@/lib/revenuecat";
 
 export const Route = createFileRoute("/upgrade")({
   head: () => ({ meta: [{ title: "DEADSET — Go Pro" }] }),
@@ -82,7 +87,7 @@ const PRO_FEATURES = [
     icon: RefreshCw,
     color: "#f4c33a",
     title: "Smart Exercise Swaps",
-    desc: "Replace a busy or unsuitable movement with a same-muscle alternative while preserving every target and coaching setting.",
+    desc: "Replace a busy or unsuitable movement in your plan or mid-workout with a same-muscle alternative while preserving every target and coaching setting.",
   },
   {
     icon: CalendarDays,
@@ -138,7 +143,13 @@ function UpgradePage() {
   const navigate = useNavigate();
   const { isPro, loading, refresh } = usePro();
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
-  const [plan, setPlan] = useState<"monthly" | "yearly">("yearly");
+  const [plan, setPlan] = useState<"monthly" | "yearly">(() => {
+    try {
+      return sessionStorage.getItem("deadset_preferred_plan") === "monthly" ? "monthly" : "yearly";
+    } catch {
+      return "yearly";
+    }
+  });
   const [currency, setCurrency] = useState<SupportedCurrency>("usd");
   const [showCheckout, setShowCheckout] = useState(false);
   const [showCompare, setShowCompare] = useState(false);
@@ -248,6 +259,11 @@ function UpgradePage() {
           description: "Pro unlocks as soon as Apple approves it.",
         });
       else if (!result.cancelled && result.active) {
+        await recordRevenueCatPurchase(productId, user.id)
+          .then((synced) => {
+            if (synced) notifyRevenueCatUpdated();
+          })
+          .catch((error) => console.warn("RevenueCat purchase recording failed", error));
         await refresh();
         toast.success("DEADSET Pro unlocked");
       }
@@ -265,6 +281,11 @@ function UpgradePage() {
     setCheckoutError(null);
     try {
       const result = await restoreApplePro();
+      await syncRevenueCatPurchases(user?.id)
+        .then((synced) => {
+          if (synced) notifyRevenueCatUpdated();
+        })
+        .catch((error) => console.warn("RevenueCat restore sync failed", error));
       await refresh();
       if (result.active) toast.success("Purchases restored");
       else toast.message("No active DEADSET Pro purchase was found");
@@ -370,13 +391,17 @@ function UpgradePage() {
             Sign in / Create account
           </button>
           <p className="mt-2.5 text-center text-[10px]" style={{ color: "#8a8a8a" }}>
-            Takes under a minute — then checkout loads right here.
+            {iosNative
+              ? "Takes under a minute — then Apple's subscription options load here."
+              : "Takes under a minute — then checkout loads right here."}
           </p>
           <p
             className="mt-3 text-center label-cap text-[9px] leading-relaxed"
             style={{ color: "#8a8a8a" }}
           >
-            Secure payment by Stripe · Promo codes enabled · Cancel anytime
+            {iosNative
+              ? "Subscriptions handled securely by Apple · Restore purchases anytime"
+              : "Secure payment by Stripe · Promo codes enabled · Cancel anytime"}
           </p>
         </div>
 
@@ -554,8 +579,8 @@ function UpgradePage() {
               Fully dialled in.
             </h1>
             <p className="mt-3 text-sm" style={{ color: "#8A8A8A" }}>
-              Keep logging free, forever. Pro reviews the week, updates the plan, projects your next
-              PR and shows exactly what to change.
+              Your seven-day trial includes the complete experience. Pro reviews the week, updates
+              the plan, projects your next PR and shows exactly what to change.
             </p>
             <div className="flex items-center justify-center gap-4 mt-4">
               <div className="flex items-center gap-1.5 animate-pop-in delay-50">

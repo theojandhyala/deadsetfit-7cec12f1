@@ -67,7 +67,8 @@ export function ProWelcome() {
   return (
     <div
       className="fixed inset-0 z-[120] flex items-center justify-center px-6"
-      style={{ background: "rgba(6,5,2,0.82)", backdropFilter: "blur(6px)" }}
+      // No backdrop-filter: composites as solid black while scrolling in WKWebView/iOS Safari.
+      style={{ background: "rgba(6,5,2,0.92)" }}
       role="dialog"
       aria-modal="true"
       onClick={() => setShow(false)}

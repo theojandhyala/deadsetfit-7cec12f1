@@ -164,7 +164,9 @@ export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>,
   },
 });
 
-export async function restoreSupabaseSession() {
+let sessionRestoreInFlight: Promise<void> | null = null;
+
+async function performSessionRestore() {
   if (!isBrowser()) return;
   const {
     data: { session },
@@ -198,4 +200,20 @@ export async function restoreSupabaseSession() {
     // deleting the refresh token here causes the very logout loop we're trying
     // to prevent. Explicit logout still clears it.
   }
+}
+
+/**
+ * Coalesce startup callers onto one restore. The root route, authenticated
+ * layout and background recovery can mount together on iOS; allowing all of
+ * them to call setSession/refreshSession independently makes WebKit wait on
+ * Supabase's auth lock and turns a quick launch into a multi-second loader.
+ */
+export function restoreSupabaseSession(): Promise<void> {
+  if (!isBrowser()) return Promise.resolve();
+  if (sessionRestoreInFlight) return sessionRestoreInFlight;
+
+  sessionRestoreInFlight = performSessionRestore().finally(() => {
+    sessionRestoreInFlight = null;
+  });
+  return sessionRestoreInFlight;
 }

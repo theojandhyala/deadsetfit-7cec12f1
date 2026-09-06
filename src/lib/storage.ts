@@ -1,10 +1,12 @@
 import { useSyncExternalStore } from "react";
 import type { AppState } from "./types";
 import { DEFAULT_STATE } from "./default-state";
+import { mergeAppStates } from "./state-reconcile";
 
 const KEY = "grit_app_state_v1";
 const OWNER_KEY = "grit_app_state_owner_v1";
 const PENDING_SYNC_KEY = "grit_app_state_pending_sync_v1";
+const DEVICE_ID_KEY = "grit_device_id_v1";
 
 // Matches the server's user_state payload cap (api/rpc.ts). Above this the push
 // is rejected, so we skip it rather than fail silently every 1.2s.
@@ -70,7 +72,16 @@ function read(): AppState {
 
 function write(state: AppState) {
   if (typeof window === "undefined") return;
-  const serialized = JSON.stringify(state);
+  const previousRevision = state.syncMeta?.revision ?? read().syncMeta?.revision ?? 0;
+  const stamped: AppState = {
+    ...state,
+    syncMeta: {
+      revision: previousRevision + 1,
+      updatedAt: new Date().toISOString(),
+      deviceId: getDeviceId(),
+    },
+  };
+  const serialized = JSON.stringify(stamped);
   try {
     localStorage.setItem(KEY, serialized);
   } catch (e) {
@@ -81,7 +92,7 @@ function write(state: AppState) {
   }
   // We already hold the parsed object — seed the cache directly.
   bumpVersion();
-  cachedState = state;
+  cachedState = stamped;
   cachedVersion = stateVersion;
   listeners.forEach((l) => l());
   if (remoteSyncEnabled && pushSaver) {
@@ -97,6 +108,9 @@ function write(state: AppState) {
       );
       return;
     }
+    // A set is locally durable immediately, but iOS may kill the WebView before
+    // the debounce fires. Mark the newest full snapshot for retry first.
+    markPendingRemoteState(json);
     pushTimer = setTimeout(() => {
       saver(json)
         .then(() => {
@@ -108,6 +122,18 @@ function write(state: AppState) {
           console.warn("state sync failed", e);
         });
     }, 1200);
+  }
+}
+
+function getDeviceId() {
+  try {
+    const existing = localStorage.getItem(DEVICE_ID_KEY);
+    if (existing) return existing;
+    const created = crypto.randomUUID();
+    localStorage.setItem(DEVICE_ID_KEY, created);
+    return created;
+  } catch {
+    return "unknown-device";
   }
 }
 
@@ -174,7 +200,15 @@ export function getHydrationCount(): number {
 export function hydrateFromRemote(remote: Partial<AppState>, userId?: string) {
   hydrationCount += 1;
   const current = read();
-  const merged = { ...DEFAULT_STATE, ...current, ...remote } as AppState;
+  const normalizedRemote = { ...DEFAULT_STATE, ...remote } as AppState;
+  // After clearLocalState(), read() returns DEFAULT_STATE even though no local
+  // snapshot exists. It must not win a metadata tie against a genuine legacy
+  // remote payload or a returning 1.2 user would appear reset.
+  const hasLocalSnapshot =
+    typeof window !== "undefined" && Boolean(localStorage.getItem(KEY));
+  const merged = hasLocalSnapshot
+    ? mergeAppStates(current, normalizedRemote)
+    : normalizedRemote;
   if (!remote.profile && current.profile) merged.profile = current.profile;
   if (!remote.schedule && current.schedule) merged.schedule = current.schedule;
   // Invariant: every armor-rescued day must exist in completedDates. A remote
@@ -220,24 +254,37 @@ export function clearLocalState() {
  *  Returns true when a pending blob exists (pushed or still stashed). */
 export async function reconcilePendingRemoteState(
   saver: (json: string) => Promise<void>,
-): Promise<boolean> {
+  remote?: Partial<AppState>,
+): Promise<AppState | null> {
   const pending = readPendingRemoteState();
-  if (!pending) return false;
+  if (!pending) return null;
   if (pending.length > MAX_SYNC_BYTES) {
     // A stashed oversized blob would fail forever — drop it and let the
     // remote hydrate proceed.
     clearPendingRemoteState(pending);
-    return false;
+    return null;
   }
+  let pendingState: AppState;
   try {
-    await saver(pending);
+    pendingState = { ...DEFAULT_STATE, ...JSON.parse(pending) } as AppState;
+  } catch {
     clearPendingRemoteState(pending);
+    return null;
+  }
+  const reconciled = remote
+    ? mergeAppStates(pendingState, { ...DEFAULT_STATE, ...remote } as AppState)
+    : pendingState;
+  const reconciledJson = JSON.stringify(reconciled);
+  markPendingRemoteState(reconciledJson);
+  try {
+    await saver(reconciledJson);
+    clearPendingRemoteState(reconciledJson);
   } catch (e) {
     // Push failed (still offline?) — keep the stash for the next retry, and
     // still report "local is newer" so hydrate doesn't wipe it.
     console.warn("pending state reconcile failed", e);
   }
-  return true;
+  return reconciled;
 }
 
 export function beginRemoteStateLoad(userId: string) {

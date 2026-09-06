@@ -165,7 +165,7 @@ function FriendsPage() {
         </div>
         <NotificationsBell />
       </header>
-      <div className="px-5 mt-3 flex gap-2 border-b border-grit overflow-x-auto">
+      <div className="mt-3 grid grid-cols-3 gap-2 border-b border-grit px-5">
         {(["FRIENDS", "FEED", "ARENA", "INVITE"] as Tab[]).map((t) => (
           <button
             key={t}

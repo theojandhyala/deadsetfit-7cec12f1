@@ -1,6 +1,7 @@
-/auth /auth/index.html 200
-/auth/ /auth/index.html 200
-/auth.html /auth/index.html 200
+/auth / 302
+/auth/ / 302
+/auth.html / 302
+/auth/index.html / 302
 # Apple looks for the Sign in with Apple domain proof under /.well-known/.
 # Dot-prefixed files are unreliable through the Pages upload, so the file lives
 # at the root and is served from the path Apple checks.

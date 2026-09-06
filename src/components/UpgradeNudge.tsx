@@ -49,7 +49,8 @@ export function UpgradeNudge() {
   return (
     <div
       className="fixed inset-0 z-[115] flex items-end sm:items-center justify-center px-4 pb-4 sm:pb-0"
-      style={{ background: "rgba(6,5,2,0.7)", backdropFilter: "blur(4px)" }}
+      // No backdrop-filter: composites as solid black while scrolling in WKWebView/iOS Safari.
+      style={{ background: "rgba(6,5,2,0.86)" }}
       role="dialog"
       aria-modal="true"
       onClick={dismiss}

@@ -256,7 +256,7 @@ public class HealthKitPlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         group.enter()
-        let components = calendar.dateComponents([.year, .month, .day], from: today)
+        let components = calendar.dateComponents([.calendar, .year, .month, .day], from: today)
         let summaryPredicate = HKQuery.predicateForActivitySummary(with: components)
         let summaryQuery = HKActivitySummaryQuery(predicate: summaryPredicate) { _, summaries, error in
             if let summary = summaries?.first {

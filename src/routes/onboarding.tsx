@@ -56,6 +56,7 @@ type Step =
   | "equipment"
   | "focus"
   | "session"
+  | "preferences"
   | "schedule"
   | "experience"
   | "about"
@@ -98,9 +99,34 @@ function orderFor(mode: Mode | null): Step[] {
   if (!mode) return base;
   const schedule: Step[] =
     mode === "GENERATE"
-      ? ["goal", "experience", "about", "days", "equipment", "focus", "session", "schedule"]
-      : ["goal", "experience", "about", "days", "equipment", "focus", "session"];
-  return [...base, ...schedule, "username"];
+      ? [
+          "goal",
+          "why",
+          "experience",
+          "about",
+          "days",
+          "equipment",
+          "focus",
+          "session",
+          "preferences",
+          "schedule",
+          "injuries",
+          "prs",
+        ]
+      : [
+          "goal",
+          "why",
+          "experience",
+          "about",
+          "days",
+          "equipment",
+          "focus",
+          "session",
+          "preferences",
+          "injuries",
+          "prs",
+        ];
+  return [...base, ...schedule, "username", "analyzing", "blueprint", "pro"];
 }
 
 function Onboarding() {
@@ -171,15 +197,35 @@ function Onboarding() {
         return;
       }
       savingRef.current = true;
-      const p = {
-        ...merged,
+      // The first workout should not be blocked by body-stat questions. Keep
+      // durable defaults here; the profile screen can refine calorie and
+      // strength-standard calculations whenever the athlete is ready.
+      const p: Profile = {
+        goal: merged.goal ?? "MAINTAIN",
+        experience: merged.experience ?? "BEGINNER",
+        age: merged.age ?? 25,
+        weightKg: merged.weightKg ?? 75,
+        heightCm: merged.heightCm ?? 175,
+        gender: merged.gender ?? "OTHER",
+        daysPerWeek: merged.daysPerWeek ?? 3,
+        trainingDays: merged.trainingDays ?? ["MON", "WED", "FRI"],
+        equipment: merged.equipment ?? "FULL_GYM",
+        exercisesPerSession: merged.exercisesPerSession ?? 4,
+        sessionMinutes: merged.sessionMinutes ?? 45,
+        focusMuscles: merged.focusMuscles ?? [],
         motivation: merged.motivation ?? "DISCIPLINE",
         sleepQuality: merged.sleepQuality ?? "OK",
         weakness: merged.weakness ?? "CONSISTENCY",
         displayName: merged.displayName ?? merged.username,
         injuries: merged.injuries ?? "",
-        startingWeightKg: merged.startingWeightKg ?? merged.weightKg,
-      } as Profile;
+        startingWeightKg: merged.startingWeightKg ?? merged.weightKg ?? 75,
+        username: merged.username,
+        avatarDataUrl: merged.avatarDataUrl,
+        targetWeightKg: merged.targetWeightKg,
+        dreamOutcome: merged.dreamOutcome,
+        commitmentDate: merged.commitmentDate,
+        committed: merged.committed,
+      };
       const sched = mode === "BUILD" ? emptySchedule() : (draftSchedule ?? defaultSchedule(p));
       const publicStats = buildPublicStats({ ...getState(), profile: p, schedule: sched });
       save({
@@ -349,6 +395,9 @@ function Onboarding() {
             onPick={(v) => next({ equipment: v as Equipment })}
           />
         )}
+        {step === "preferences" && (
+          <TrainingPreferencesStep initial={draft} onSubmit={(patch) => next(patch)} />
+        )}
         {step === "schedule" && (
           <SchedulePreview
             draft={draft}
@@ -433,7 +482,7 @@ function Onboarding() {
             onPick={(v) => next({ weakness: v as Weakness })}
           />
         )}
-        {step === "prs" && <PRStep onContinue={() => next({})} />}
+        {step === "prs" && <PRStep schedule={draftSchedule} onContinue={() => next({})} />}
         {step === "name" && (
           <NameStep initial={draft.displayName} onSubmit={(n) => next({ displayName: n })} />
         )}
@@ -495,6 +544,155 @@ function Choice({
           </button>
         ))}
       </div>
+    </>
+  );
+}
+
+function TrainingPreferencesStep({
+  initial,
+  onSubmit,
+}: {
+  initial?: Partial<Profile>;
+  onSubmit: (patch: Partial<Profile>) => void;
+}) {
+  const [experience, setExperience] = useState<Experience>(initial?.experience ?? "BEGINNER");
+  const initialExerciseCount = initial?.exercisesPerSession;
+  const [exerciseCount, setExerciseCount] = useState<3 | 4 | 5 | 6 | 7>(
+    initialExerciseCount === 3 ||
+      initialExerciseCount === 4 ||
+      initialExerciseCount === 5 ||
+      initialExerciseCount === 6 ||
+      initialExerciseCount === 7
+      ? initialExerciseCount
+      : 4,
+  );
+  const [focus, setFocus] = useState<FocusMuscle[]>(initial?.focusMuscles ?? []);
+  const focusOptions: { value: FocusMuscle; label: string }[] = [
+    { value: "CHEST", label: "Chest" },
+    { value: "BACK", label: "Back" },
+    { value: "SHOULDERS", label: "Shoulders" },
+    { value: "ARMS", label: "Arms" },
+    { value: "LEGS", label: "Legs" },
+    { value: "CORE", label: "Core" },
+  ];
+
+  function toggleFocus(muscle: FocusMuscle) {
+    setFocus((current) => {
+      if (current.includes(muscle)) return current.filter((item) => item !== muscle);
+      return current.length < 2 ? [...current, muscle] : [current[1], muscle];
+    });
+  }
+
+  const sessionMinutes =
+    exerciseCount <= 3 ? 30 : exerciseCount <= 4 ? 45 : exerciseCount <= 5 ? 60 : 90;
+
+  return (
+    <>
+      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">Plan preferences</h1>
+      <p className="text-sm text-[#8a8a8a] mb-7">Set the training style for your first week.</p>
+
+      <section className="mb-6" aria-labelledby="experience-label">
+        <p id="experience-label" className="label-cap text-[10px] text-grit-dim mb-2">
+          Experience
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {(["BEGINNER", "INTERMEDIATE", "ADVANCED"] as Experience[]).map((level) => {
+            const active = experience === level;
+            return (
+              <button
+                key={level}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setExperience(level)}
+                className="border rounded-2xl p-3 press"
+                style={{
+                  borderColor: active ? "#e63222" : "#262626",
+                  background: active ? "rgba(230,50,34,0.1)" : "#141414",
+                }}
+              >
+                <span className="display block text-sm uppercase font-extrabold text-grit">
+                  {level === "BEGINNER" ? "New" : level === "INTERMEDIATE" ? "Regular" : "Advanced"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="mb-6" aria-labelledby="exercise-count-label">
+        <div className="flex items-baseline justify-between mb-2">
+          <p id="exercise-count-label" className="label-cap text-[10px] text-grit-dim">
+            Exercises per workout
+          </p>
+          <span className="label-cap text-[9px] text-accent-red">{sessionMinutes} min target</span>
+        </div>
+        <div className="grid grid-cols-5 gap-2">
+          {([3, 4, 5, 6, 7] as const).map((count) => {
+            const active = exerciseCount === count;
+            return (
+              <button
+                key={count}
+                type="button"
+                aria-label={`${count} exercises per workout`}
+                aria-pressed={active}
+                onClick={() => setExerciseCount(count)}
+                className="border rounded-2xl min-h-12 press"
+                style={{
+                  borderColor: active ? "#e63222" : "#262626",
+                  background: active ? "rgba(230,50,34,0.1)" : "#141414",
+                }}
+              >
+                <span className="display text-lg font-extrabold text-grit">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section aria-labelledby="focus-label">
+        <div className="flex items-baseline justify-between mb-2">
+          <p id="focus-label" className="label-cap text-[10px] text-grit-dim">
+            Focus muscles
+          </p>
+          <span className="label-cap text-[9px] text-grit-dim">Optional, up to 2</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {focusOptions.map((option) => {
+            const active = focus.includes(option.value);
+            return (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={active}
+                onClick={() => toggleFocus(option.value)}
+                className="border rounded-2xl px-4 py-3 text-left press"
+                style={{
+                  borderColor: active ? "#e63222" : "#262626",
+                  background: active ? "rgba(230,50,34,0.1)" : "#141414",
+                }}
+              >
+                <span className="display text-base uppercase font-extrabold text-grit">
+                  {option.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <button
+        onClick={() =>
+          onSubmit({
+            experience,
+            exercisesPerSession: exerciseCount,
+            sessionMinutes,
+            focusMuscles: focus,
+          })
+        }
+        className="btn-grit mt-auto"
+      >
+        Preview my week
+      </button>
     </>
   );
 }
@@ -1218,81 +1416,134 @@ function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
   );
 }
 
-const ONBOARDING_PRS: Array<{
-  id: string;
-  label: string;
-  unit: string;
-  placeholder: string;
-}> = [
-  { id: "bench-press", label: "Bench Press", unit: "kg", placeholder: "80" },
-  { id: "squat", label: "Back Squat", unit: "kg", placeholder: "100" },
-  { id: "deadlift", label: "Deadlift", unit: "kg", placeholder: "120" },
-];
+const FALLBACK_BASELINES = ["bench-press", "squat", "deadlift"];
 
-function PRStep({ onContinue }: { onContinue: () => void }) {
-  const [vals, setVals] = useState<Record<string, string>>({});
+function PRStep({ schedule, onContinue }: { schedule: Schedule | null; onContinue: () => void }) {
+  const exerciseIds = useMemo(() => {
+    const scheduled = schedule
+      ? [...new Set(Object.values(schedule).flatMap((day) => day.exerciseIds))]
+      : [];
+    return scheduled.length ? scheduled : FALLBACK_BASELINES;
+  }, [schedule]);
+  const exercises = useMemo(
+    () =>
+      exerciseIds.flatMap((id) => {
+        const exercise = getExercise(id, getState().savedExercises);
+        return exercise ? [exercise] : [];
+      }),
+    [exerciseIds],
+  );
+  const [index, setIndex] = useState(0);
+  const [vals, setVals] = useState<Record<string, { weight: string; reps: string }>>({});
+  const exercise = exercises[index];
+  const current = exercise ? (vals[exercise.id] ?? { weight: "", reps: "" }) : null;
 
   function commit() {
     const today = isoDay();
     const manualPRs: Record<string, { value: number; reps?: number; date: string }> = {};
-    for (const pr of ONBOARDING_PRS) {
-      const n = Number(vals[pr.id]);
-      if (n > 0) {
-        manualPRs[pr.id] =
-          pr.unit === "kg" ? { value: n, reps: 1, date: today } : { value: n, date: today };
-      }
+    for (const [id, value] of Object.entries(vals)) {
+      const weight = Number(value.weight);
+      const reps = Number(value.reps);
+      if (weight > 0 && reps > 0) manualPRs[id] = { value: weight, reps, date: today };
     }
     if (Object.keys(manualPRs).length) {
-      setState((s) => ({ ...s, manualPRs: { ...(s.manualPRs ?? {}), ...manualPRs } }));
+      setState((state) => ({
+        ...state,
+        manualPRs: { ...(state.manualPRs ?? {}), ...manualPRs },
+      }));
     }
     onContinue();
   }
 
-  return (
-    <>
-      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">Your PRs</h1>
-      <p className="text-sm text-[#8a8a8a] mb-6">
-        Best single lift for each. Rough numbers are fine — leave blank to skip.
-      </p>
-      <div className="flex flex-col gap-3 mb-6">
-        {ONBOARDING_PRS.map((pr) => (
-          <div
-            key={pr.id}
-            className="bg-grit-card border border-grit rounded-xl p-4 flex items-center justify-between gap-4"
-          >
-            <div className="min-w-0">
-              <p className="display text-base font-extrabold uppercase text-grit truncate">
-                {pr.label}
-              </p>
-              <p className="label-cap text-[9px] text-grit-dim mt-0.5">1-rep max · optional</p>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <input
-                defaultValue={vals[pr.id] ?? ""}
-                onChange={(e) => {
-                  const clean = e.target.value.replace(/[^0-9.]/g, "");
-                  e.target.value = clean;
-                  setVals((v) => ({ ...v, [pr.id]: clean }));
-                }}
-                inputMode="decimal"
-                placeholder={pr.placeholder}
-                className="input-grit w-24 h-12 text-center text-xl font-display font-extrabold"
-                aria-label={`${pr.label} one-rep max in kilograms`}
-              />
-              <span className="label-cap text-[10px] text-grit-dim">{pr.unit}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="mt-auto flex flex-col gap-3">
-        <button onClick={commit} className="btn-grit">
+  function advance() {
+    if (index < exercises.length - 1) setIndex((value) => value + 1);
+    else commit();
+  }
+
+  if (!exercise || !current) {
+    return (
+      <div className="flex flex-1 flex-col justify-center text-center">
+        <h1 className="display text-3xl font-extrabold uppercase text-grit">Baseline ready</h1>
+        <button onClick={onContinue} className="btn-grit mt-6">
           Continue
         </button>
-        <button onClick={onContinue} className="btn-ghost">
-          Skip for now
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-1 flex-col">
+      <p className="label-cap mb-1 text-[10px] text-accent-red">
+        Strength baseline · {index + 1} of {exercises.length}
+      </p>
+      <h1 className="display mb-2 text-3xl font-extrabold uppercase text-grit">
+        Set your starting point
+      </h1>
+      <p className="mb-6 text-sm text-[#8a8a8a]">
+        One movement at a time. Enter a normal working set—not a guess or an all-out max.
+      </p>
+
+      <div className="rounded-[24px] border border-accent-red/35 bg-[radial-gradient(circle_at_80%_10%,rgba(230,50,34,.18),transparent_45%),#141414] p-5">
+        <p className="label-cap text-[9px] text-grit-dim">Your plan movement</p>
+        <h2 className="display mt-1 text-2xl font-black uppercase text-white">{exercise.name}</h2>
+        <p className="mt-1 text-[11px] text-grit-dim">
+          {exercise.muscleGroup} · planned {exercise.sets} × {exercise.reps}
+        </p>
+
+        <div className="mt-6 grid grid-cols-2 gap-3">
+          <label className="min-w-0">
+            <span className="label-cap mb-2 block text-[9px] text-grit-dim">Weight (kg)</span>
+            <input
+              key={`${exercise.id}-weight`}
+              value={current.weight}
+              onChange={(event) => {
+                const weight = event.target.value.replace(/[^0-9.]/g, "");
+                setVals((all) => ({ ...all, [exercise.id]: { ...current, weight } }));
+              }}
+              inputMode="decimal"
+              placeholder="e.g. 60"
+              className="input-grit h-14 w-full min-w-0 text-center text-xl font-extrabold"
+            />
+          </label>
+          <label className="min-w-0">
+            <span className="label-cap mb-2 block text-[9px] text-grit-dim">Reps</span>
+            <input
+              key={`${exercise.id}-reps`}
+              value={current.reps}
+              onChange={(event) => {
+                const reps = event.target.value.replace(/\D/g, "").slice(0, 3);
+                setVals((all) => ({ ...all, [exercise.id]: { ...current, reps } }));
+              }}
+              inputMode="numeric"
+              placeholder="e.g. 8"
+              className="input-grit h-14 w-full min-w-0 text-center text-xl font-extrabold"
+            />
+          </label>
+        </div>
+        <p className="mt-3 text-[10px] leading-relaxed text-grit-dim">
+          This becomes the first point on your Strength Map. Repeated appearances of this movement
+          use this same baseline automatically.
+        </p>
+      </div>
+
+      <div className="mt-4 grid grid-cols-3 gap-1.5" aria-label="Baseline progress">
+        {exercises.map((item, itemIndex) => (
+          <span
+            key={item.id}
+            className={`h-1 rounded-full ${itemIndex <= index ? "bg-accent-red" : "bg-white/10"}`}
+          />
+        ))}
+      </div>
+
+      <div className="mt-auto flex flex-col gap-3 pt-6">
+        <button onClick={advance} className="btn-grit">
+          {index === exercises.length - 1 ? "Save baselines" : "Save & next"}
+        </button>
+        <button onClick={advance} className="btn-ghost">
+          Skip this exercise
         </button>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -1316,8 +1567,8 @@ function TrainingDaysStep({
         Which days do you train?
       </h1>
       <p className="text-sm text-[#8a8a8a] mb-6">
-        Tap the days that suit your week. We'll put your workouts on exactly those
-        days and rest you on the others.
+        Tap the days that suit your week. We'll put your workouts on exactly those days and rest you
+        on the others.
       </p>
 
       <WeekdayPicker value={days} onChange={setDays} />
@@ -1595,7 +1846,8 @@ function ProChoiceStep({ onChoose }: { onChoose: (goPro: boolean) => void }) {
       <p className="label-cap text-accent-red text-[10px] mb-1">One decision left</p>
       <h1 className="display text-3xl font-extrabold uppercase text-grit mb-1">Choose your edge</h1>
       <p className="text-xs text-grit-dim mb-5">
-        Everything core is free forever. Pro is for the ones chasing rank.
+        Start with seven days free. You will only be billed after the trial, and can cancel before
+        it ends.
       </p>
 
       {/* Free vs Pro ticks */}
@@ -1674,18 +1926,22 @@ function ProChoiceStep({ onChoose }: { onChoose: (goPro: boolean) => void }) {
 
       <div className="mt-auto">
         <button
-          onClick={() => onChoose(true)}
+          onClick={() => {
+            try {
+              sessionStorage.setItem("deadset_preferred_plan", plan);
+            } catch {
+              // The upgrade screen safely defaults to yearly.
+            }
+            onChoose(true);
+          }}
           className="btn-grit w-full py-4 text-base animate-subtle-pulse"
         >
           <Zap size={16} className="mr-2" />
-          Unlock DEADSET Pro
+          Continue to 7-day free trial
         </button>
-        <button
-          onClick={() => onChoose(false)}
-          className="mt-3 w-full text-center label-cap text-[10px] text-grit-dim press py-2"
-        >
-          Start free — upgrade any time
-        </button>
+        <p className="mt-3 text-center text-[9px] leading-relaxed text-grit-dim">
+          The App Store confirms the exact price and renewal date before you subscribe.
+        </p>
       </div>
     </div>
   );

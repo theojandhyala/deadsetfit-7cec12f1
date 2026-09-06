@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { TrendingUp, ArrowUp, Minus, Lock } from "lucide-react";
+import { TrendingUp, ArrowUp, Minus, Lock, Repeat2 } from "lucide-react";
 import { useAppState } from "@/lib/storage";
 import { usePro } from "@/hooks/usePro";
 import { openPaywall } from "@/lib/paywall-events";
@@ -40,6 +40,7 @@ export function ProgressionBoard() {
         <div className="flex flex-col gap-2">
           {board.slice(0, 6).map((e) => {
             const up = e.suggestion.kind === "up";
+            const reps = e.suggestion.kind === "reps";
             return (
               <button
                 key={e.exerciseId}
@@ -62,7 +63,7 @@ export function ProgressionBoard() {
                       "display text-lg font-extrabold leading-none" +
                       (locked ? " blur-[5px] select-none" : "")
                     }
-                    style={{ color: up ? "#e63222" : "#8A8A8A" }}
+                    style={{ color: up ? "#e63222" : reps ? "#f4c33a" : "#8A8A8A" }}
                   >
                     {e.suggestion.weightKg}kg
                   </span>
@@ -70,6 +71,8 @@ export function ProgressionBoard() {
                     <Lock size={13} className="text-accent-red" />
                   ) : up ? (
                     <ArrowUp size={16} className="text-accent-red" />
+                  ) : reps ? (
+                    <Repeat2 size={16} className="text-amber-300" />
                   ) : (
                     <Minus size={16} className="text-grit-dim" />
                   )}

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CalendarRange, Dumbbell, Flame, Trophy, X } from "lucide-react";
 import { useAppState } from "@/lib/storage";
 import { calculateStreak } from "@/lib/calc";
+import { SocialShareButton } from "@/components/SocialShareButton";
 
 const SHOWN_KEY = "deadset_weekly_recap_at";
 const MIN_GAP_MS = 6 * 86400000; // at most once every ~week
@@ -63,7 +64,8 @@ export function WeeklyRecapNudge() {
   return (
     <div
       className="fixed inset-0 z-[114] flex items-end sm:items-center justify-center px-4 pb-4 sm:pb-0"
-      style={{ background: "rgba(6,6,8,0.72)", backdropFilter: "blur(4px)" }}
+      // No backdrop-filter: composites as solid black while scrolling in WKWebView/iOS Safari.
+      style={{ background: "rgba(6,6,8,0.88)" }}
       role="dialog"
       aria-modal="true"
       onClick={() => setOpen(false)}
@@ -99,9 +101,15 @@ export function WeeklyRecapNudge() {
               ? "Consistent week. This is how it's built."
               : "Every session counts. Let's stack a few more next week."}
         </p>
-        <button onClick={() => setOpen(false)} className="btn-grit w-full rounded-xl">
-          Let's Go Again
-        </button>
+        <div className="grid grid-cols-2 gap-2">
+          <SocialShareButton
+            text={`I logged ${recap.count} workout${recap.count === 1 ? "" : "s"}${recap.prs ? ` and hit ${recap.prs} PR${recap.prs === 1 ? "" : "s"}` : ""} this week. Keeping it DEADSET.`}
+            className="btn-ghost flex min-h-11 items-center justify-center gap-2 rounded-xl text-xs"
+          />
+          <button onClick={() => setOpen(false)} className="btn-grit rounded-xl text-xs">
+            Let's Go Again
+          </button>
+        </div>
       </div>
     </div>
   );
