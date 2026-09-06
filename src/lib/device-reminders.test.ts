@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Schedule } from "./types";
-import { buildWorkoutReminderDrafts } from "./device-reminders";
+import { buildNotificationTestDraft, buildWorkoutReminderDrafts } from "./device-reminders";
 
 const schedule: Schedule = {
   SUN: { label: "REST", exerciseIds: [] },
@@ -21,6 +21,7 @@ describe("workout reminder scheduling", () => {
     expect(drafts[0].title).toContain("PUSH");
     expect(drafts[0].schedule?.at).toEqual(new Date(2026, 6, 27, 18, 30, 0));
     expect(drafts.every((draft) => draft.body.includes("ready"))).toBe(true);
+    expect(drafts.every((draft) => draft.sound === "default.wav")).toBe(true);
   });
 
   it("skips today's reminder when its chosen time has passed", () => {
@@ -33,5 +34,13 @@ describe("workout reminder scheduling", () => {
 
   it("returns no reminders without a schedule", () => {
     expect(buildWorkoutReminderDrafts(null)).toEqual([]);
+  });
+
+  it("builds a five-second audible Lock Screen test", () => {
+    const now = new Date(2026, 7, 28, 17, 0, 0);
+    const draft = buildNotificationTestDraft(now);
+    expect(draft.schedule?.at).toEqual(new Date(now.getTime() + 5_000));
+    expect(draft.sound).toBe("default.wav");
+    expect(draft.extra?.path).toBe("/train");
   });
 });

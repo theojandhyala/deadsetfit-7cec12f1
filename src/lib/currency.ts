@@ -27,8 +27,8 @@ export const CURRENCY_META: Record<
   SupportedCurrency,
   { symbol: string; monthly: string; yearly: string }
 > = {
-  usd: { symbol: "$", monthly: "$4.99", yearly: "$39.99" },
-  gbp: { symbol: "£", monthly: "£4.99", yearly: "£39.99" },
+  usd: { symbol: "$", monthly: "$5.99", yearly: "$39.99" },
+  gbp: { symbol: "£", monthly: "£5.99", yearly: "£39.99" },
 };
 
 export function priceIdFor(plan: "monthly" | "yearly", currency: SupportedCurrency): string {

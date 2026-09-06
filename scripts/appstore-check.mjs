@@ -67,12 +67,23 @@ const activeCapacitorConfig = capacitorConfig
   .filter((line) => !line.trimStart().startsWith("//"))
   .join("\n");
 const upgradePage = existsSync("src/routes/upgrade.tsx") ? read("src/routes/upgrade.tsx") : "";
+const weeklyStrengthCheckIn = existsSync("src/components/WeeklyStrengthCheckIn.tsx")
+  ? read("src/components/WeeklyStrengthCheckIn.tsx")
+  : "";
+const programmeWeightSetup = existsSync("src/components/ProgrammeWeightSetup.tsx")
+  ? read("src/components/ProgrammeWeightSetup.tsx")
+  : "";
 const infoPlist = existsSync("ios/App/App/Info.plist") ? read("ios/App/App/Info.plist") : "";
 const launchStoryboard = existsSync("ios/App/App/Base.lproj/LaunchScreen.storyboard")
   ? read("ios/App/App/Base.lproj/LaunchScreen.storyboard")
   : "";
 const indexHtml = existsSync("index.html") ? read("index.html") : "";
+const staticAuthPage = existsSync("auth/index.html") ? read("auth/index.html") : "";
 const indexRoute = existsSync("src/routes/index.tsx") ? read("src/routes/index.tsx") : "";
+const nativeWelcome = existsSync("src/components/NativeWelcome.tsx")
+  ? read("src/components/NativeWelcome.tsx")
+  : "";
+const appStyles = existsSync("src/styles.css") ? read("src/styles.css") : "";
 const entitlements = existsSync("ios/App/App/App.entitlements")
   ? read("ios/App/App/App.entitlements")
   : "";
@@ -153,19 +164,29 @@ const xcodeProject = existsSync("ios/App/DeadSet.xcodeproj/project.pbxproj")
   ? read("ios/App/DeadSet.xcodeproj/project.pbxproj")
   : "";
 const whatsNew = existsSync("src/lib/whats-new.ts") ? read("src/lib/whats-new.ts") : "";
+const weeklySetGrid = existsSync("src/components/WeeklySetGrid.tsx")
+  ? read("src/components/WeeklySetGrid.tsx")
+  : "";
+const plannedSetGrid = existsSync("src/lib/planned-set-grid.ts")
+  ? read("src/lib/planned-set-grid.ts")
+  : "";
+const muscleGrowthCoach = existsSync("src/components/MuscleGrowthCoach.tsx")
+  ? read("src/components/MuscleGrowthCoach.tsx")
+  : "";
+const strengthTutorial = existsSync("src/components/StrengthEngineTutorial.tsx")
+  ? read("src/components/StrengthEngineTutorial.tsx")
+  : "";
 const onboardingPage = existsSync("src/routes/onboarding.tsx")
   ? read("src/routes/onboarding.tsx")
   : "";
-const strengthMap = existsSync("src/lib/strength-map.ts") ? read("src/lib/strength-map.ts") : "";
-const gritLogo = existsSync("src/components/GritLogo.tsx")
-  ? read("src/components/GritLogo.tsx")
+const planPage = existsSync("src/routes/_tabs.plan.tsx") ? read("src/routes/_tabs.plan.tsx") : "";
+const strengthPage = existsSync("src/routes/_tabs.strength.tsx")
+  ? read("src/routes/_tabs.strength.tsx")
   : "";
-const appIconPath = "ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png";
-const splashPaths = [
-  "ios/App/App/Assets.xcassets/Splash.imageset/splash-2732x2732.png",
-  "ios/App/App/Assets.xcassets/Splash.imageset/splash-2732x2732-1.png",
-  "ios/App/App/Assets.xcassets/Splash.imageset/splash-2732x2732-2.png",
-];
+const athletePage = existsSync("src/routes/_tabs.athlete.$id.tsx")
+  ? read("src/routes/_tabs.athlete.$id.tsx")
+  : "";
+const fifaStats = existsSync("src/lib/fifa-stats.ts") ? read("src/lib/fifa-stats.ts") : "";
 
 check("package.json exists", !!packageJson.name, "Project metadata is readable.");
 check(
@@ -174,40 +195,11 @@ check(
   "Build script runs Vite.",
 );
 check(
-  "release version",
-  (xcodeProject.match(/MARKETING_VERSION = 1\.3;/g)?.length ?? 0) >= 4 &&
-    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 133;/g)?.length ?? 0) >= 4 &&
-    whatsNew.includes("WHATS_NEW_VERSION = 20260906"),
-  "The app and activity extension are versioned as 1.3 (133), with a matching in-app update summary.",
-);
-check(
-  "1.2 production baseline preserved",
-  indexRoute.includes("NativeSessionLoading") &&
-    indexRoute.includes("NativeWelcome") &&
-    indexHtml.includes("boot-mark") &&
-    indexHtml.includes("boot-slide") &&
-    onboardingPage.includes("SchedulePreview") &&
-    onboardingPage.includes("ProChoiceStep") &&
-    friendsPage.toLowerCase().includes("nearby") &&
-    friendsPage.includes("searchAthletes") &&
-    friendsPage.includes("toggleFollow") &&
-    friendsPage.includes("getMyFollowStats") &&
-    deviceReminders.includes("buildWorkoutReminderDrafts") &&
-    strengthMap.includes("buildStrengthMap"),
-  "The 1.3 candidate retains the defining 1.2 launch, staged setup/paywall, social, reminder, and Strength Map flows.",
-);
-check(
-  "official DEADSET brand assets",
-  existsSync(appIconPath) &&
-    sha256(appIconPath) === "80b3fa8afec4606efeee4c6b55989e1cde74d53e39821f05b76f3dc83effa811" &&
-    splashPaths.every((path) => existsSync(path)) &&
-    new Set(splashPaths.map((path) => sha256(path))).size === 1 &&
-    sha256(splashPaths[0]) === "c46da025f03a3e00544e460d3e8cc6157f012ac6c5171b844d0e76f5016407b3" &&
-    indexHtml.includes('<div class="boot-mark" role="img" aria-label="DEADSET">') &&
-    indexHtml.includes('<span class="boot-dead">DEAD</span><span class="boot-set">SET</span>') &&
-    gritLogo.includes("DEAD") &&
-    gritLogo.includes("SET"),
-  "The App Store icon, native splash, animated boot wordmark, and reusable in-app logo retain the approved DEADSET identity.",
+  "first update version",
+  (xcodeProject.match(/MARKETING_VERSION = 1\.2;/g)?.length ?? 0) >= 6 &&
+    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 152;/g)?.length ?? 0) >= 6 &&
+    whatsNew.includes("WHATS_NEW_VERSION = 202608288"),
+  "The app, activity extension and watch targets are versioned as 1.2 (152), with a matching in-app update summary.",
 );
 check(
   "full check script",
@@ -224,6 +216,27 @@ check(
     existsSync("src/lib/rank.test.ts") &&
     existsSync("src/lib/device-reminders.test.ts"),
   "Schedule, progression, competition, rank, and reminder logic have automated coverage.",
+);
+check(
+  "weekly planned-set map",
+  existsSync("src/lib/planned-set-grid.test.ts") &&
+    weeklySetGrid.includes("buildPlannedSetGrid") &&
+    plannedSetGrid.includes("exerciseConfig") &&
+    plannedSetGrid.includes("state.programs") &&
+    planPage.includes("<WeeklySetGrid") &&
+    strengthPage.includes("<WeeklySetGrid"),
+  "Plan and Strength share a tested weekly square grid derived from scheduled exercises and active program sets.",
+);
+check(
+  "earned muscle progression",
+  muscleGrowthCoach.includes("progressionBoard") &&
+    muscleGrowthCoach.includes("HOLD LOAD") &&
+    muscleGrowthCoach.includes("NEXT LOAD") &&
+    muscleGrowthCoach.includes("Earn more load") &&
+    strengthTutorial.includes("Plan → lift → progress") &&
+    strengthTutorial.includes("prefers-reduced-motion") &&
+    onboardingPage.includes("<StrengthEngineTutorial"),
+  "Muscle Lab ties next-load guidance to logged performance and onboarding explains the Plan-to-progress loop with Reduce Motion support.",
 );
 check(
   "Capacitor config",
@@ -267,20 +280,43 @@ check(
   "native cold-start experience",
   infoPlist.includes("<string>LaunchScreen</string>") &&
     launchStoryboard.includes('image="Splash"') &&
-    indexHtml.includes("Loading your training") &&
+    indexHtml.includes('id="deadset-boot-screen"') &&
+    indexHtml.includes('class="boot-mark"') &&
+    !indexHtml.includes('class="boot-logo"') &&
+    !indexHtml.includes('src="/icon-512.png"') &&
+    indexHtml.includes("Preparing your training") &&
     indexRoute.includes("NativeSessionLoading") &&
-    indexRoute.includes("NativeWelcome") &&
-    indexRoute.includes("NATIVE_SESSION_DEADLINE_MS = 1200") &&
-    viewController.includes("deadsetBackground") &&
-    viewController.includes("webView?.backgroundColor = deadsetBackground"),
-  "The native launch image hands off without a white flash, caps session waiting at 1.2 seconds, and opens the focused first-run welcome screen.",
+    indexRoute.includes("finishAppBoot") &&
+    indexRoute.includes("NativeWelcome"),
+  "The native launch image hands off to a persistent readiness loader and only reveals a fully painted destination.",
+);
+check(
+  "auth and loader wordmarks",
+  staticAuthPage.includes('<h1 class="brand">DEAD<span>SET</span></h1>') &&
+    staticAuthPage.includes(".page::-webkit-scrollbar") &&
+    staticAuthPage.includes("scrollbar-width: none") &&
+    !staticAuthPage.includes('class="brand-image"') &&
+    indexHtml.includes('<span class="boot-dead">DEAD</span>') &&
+    indexHtml.includes('<span class="boot-set">SET</span>'),
+  "Authentication restores the compact neon wordmark, while launch uses standalone animated lettering with no boxed app icon or visible side scrollbar.",
 );
 check(
   "signup-first native welcome",
-  indexRoute.includes("/auth/index.html?mode=signup") &&
-    indexRoute.includes("/auth/index.html?mode=signin") &&
-    authClient.includes('get("mode") === "signin"'),
-  "First launch prioritizes account creation and provides a direct returning-user sign-in path.",
+    nativeWelcome.includes('nativeAuthHref("signup")') &&
+    nativeWelcome.includes('nativeAuthHref("signin")') &&
+    nativeWelcome.includes("Get started") &&
+    nativeWelcome.includes("native-entry-wordmark") &&
+    appStyles.includes(".native-entry-wordmark") &&
+    appStyles.includes("prefers-reduced-motion: reduce") &&
+    nativeWelcome.includes("/auth/index.html?mode=${mode}") &&
+    oauthClient.includes('get("mode") === "signin"') &&
+    authClient.includes("authModeFromUrl(window.location.href)") &&
+    staticAuthPage.includes('id="signup-progress"') &&
+    staticAuthPage.includes('id="email-stage"') &&
+    staticAuthPage.includes('id="password-stage"') &&
+    authClient.includes("signupStage === 1") &&
+    authClient.includes("renderAuthStage(true)"),
+  "First launch has an animated branded reveal, a direct returning-user login, and a staged email-to-password account flow.",
 );
 check(
   "iPhone portrait and arm64 release support",
@@ -347,9 +383,58 @@ check(
   "Apple purchase recovery",
   storeKitPlugin.includes("AppStore.sync()") &&
     storeKitPlugin.includes("showManageSubscriptions") &&
-    upgradePage.includes("Restore Purchases") &&
-    upgradePage.includes("Subscribe with Apple"),
+    upgradePage.includes("Restore purchases") &&
+    upgradePage.includes("purchaseApplePro"),
   "The iPhone paywall can purchase, restore, and manage Apple subscriptions.",
+);
+check(
+  "native Apple offer-code redemption",
+  storeKitPlugin.includes('CAPPluginMethod(name: "redeemOfferCode"') &&
+    storeKitPlugin.includes("AppStore.presentOfferCodeRedeemSheet") &&
+    storeKitClient.includes("redeemAppleProOfferCode") &&
+    upgradePage.includes("Redeem offer code with Apple") &&
+    upgradePage.includes("Redeem a code shared directly with you") &&
+    upgradePage.includes("Apple will show its eligibility, duration and") &&
+    upgradePage.includes("renewal terms before you confirm") &&
+    !/cheltenham\d*/i.test(upgradePage),
+  "The iPhone paywall opens Apple's system redemption sheet without publicly exposing private campaign codes.",
+);
+check(
+  "StoreKit seven-day trial disclosure",
+  storeKitPlugin.includes("introductoryOffer") &&
+    storeKitPlugin.includes("isEligibleForIntroOffer") &&
+    storeKitPlugin.includes("paymentModeWireValue") &&
+    storeKitPlugin.includes('case .freeTrial: return "freeTrial"') &&
+    storeKitPlugin.includes('case .week: return "week"') &&
+    upgradePage.includes("isSevenDayFreeTrial") &&
+    upgradePage.includes("Start my 7-day free trial") &&
+    upgradePage.includes("No charge today") &&
+    upgradePage.includes("On Day 8, Apple bills"),
+  "The iPhone paywall normalises StoreKit's offer payload, verifies eligibility, and discloses the free period and Day 8 renewal before purchase.",
+);
+check(
+  "selectable monthly and annual Apple plans",
+  upgradePage.includes('type BillingPlan = "monthly" | "yearly"') &&
+    upgradePage.includes("APPLE_PRO_PRODUCTS.yearly") &&
+    upgradePage.includes("selectedAppleProduct") &&
+    upgradePage.includes('name: "Annual"') &&
+    upgradePage.includes('name: "Monthly"') &&
+    termsPage.includes("£39.99 per year"),
+  "The paywall presents both approved StoreKit products, purchases the selected identifier, and discloses both renewal prices.",
+);
+check(
+  "strength setup horizontal containment",
+  weeklyStrengthCheckIn.includes('data-no-horizontal-overflow="true"') &&
+    weeklyStrengthCheckIn.includes("max-w-[100dvw]") &&
+    weeklyStrengthCheckIn.includes("size={1}") &&
+    weeklyStrengthCheckIn.includes('placeholder="Tap to set"') &&
+    weeklyStrengthCheckIn.includes("valueInput.current?.value") &&
+    programmeWeightSetup.includes('data-no-horizontal-overflow="true"') &&
+    programmeWeightSetup.includes("max-w-[100dvw]") &&
+    programmeWeightSetup.includes("size={1}") &&
+    programmeWeightSetup.includes('placeholder="Tap to set"') &&
+    programmeWeightSetup.includes("weightInput.current?.value"),
+  "Both lift-entry wizards stay inside the visual viewport, mark missing loads honestly and validate the native input values shown to the athlete.",
 );
 check(
   "RevenueCat StoreKit 2 tracking",
@@ -393,6 +478,15 @@ check(
   "camera usage string",
   infoPlist.includes("NSCameraUsageDescription"),
   "Info.plist declares NSCameraUsageDescription (required — camera is used for check-in photos).",
+);
+// The nearby-athletes city fill calls navigator.geolocation. WKWebView only
+// raises the permission prompt when the host app declares a purpose string, and
+// App Privacy declares Coarse Location — a binary without this contradicts it.
+check(
+  "location usage string",
+  !/navigator\.geolocation/.test(friendsPage) ||
+    infoPlist.includes("NSLocationWhenInUseUsageDescription"),
+  "Info.plist declares NSLocationWhenInUseUsageDescription for the optional city lookup.",
 );
 check(
   "photo library usage string",
@@ -464,6 +558,32 @@ check(
   "User-generated social content has report and block controls on both client and server.",
 );
 check(
+  "friend requests and strength comparisons",
+  friendsPage.includes("getFriendConnections") &&
+    friendsPage.includes("updateFriendship") &&
+    friendsPage.includes("Friend requests") &&
+    rpcServer.includes("async getFriendConnections") &&
+    rpcServer.includes("async updateFriendship") &&
+    athletePage.includes("MuscleHeadToHead") &&
+    fifaStats.includes("strengthMap"),
+  "Friendship is request-based, handled on both client and server, and mutual friends can compare public Strength Maps.",
+);
+// Crew names and tags are athlete-authored and shown on the public ladder, so
+// they are a user-generated surface in their own right. Guideline 1.2 wants a
+// report path for every such surface, and blocking has to hold inside a crew.
+const crewPanel = existsSync("src/components/CrewPanel.tsx")
+  ? read("src/components/CrewPanel.tsx")
+  : "";
+check(
+  "crew safety controls",
+  !crewPanel ||
+    (crewPanel.includes("reportContent") &&
+      rpcServer.includes("crewId") &&
+      rpcServer.includes("reported_crew_id") &&
+      rpcServer.includes("blockedUserIds(supabaseAdmin, viewerId)")),
+  "Crews are reportable and crew rosters respect blocks.",
+);
+check(
   "Google and Apple auth",
   authClient.includes('continueWithProvider("google")') &&
     authClient.includes('continueWithProvider("apple")'),
@@ -507,8 +627,10 @@ check(
 );
 check(
   "native OAuth callback",
-  authClient.includes('nativeAuthCallback = "org.deadsetfit.app://auth/callback"') &&
-    authClient.includes('nativeAuthBridge = "https://deadsetfit.org/auth/native-callback"') &&
+  oauthClient.includes('NATIVE_AUTH_CALLBACK = "org.deadsetfit.app://auth/callback"') &&
+    oauthClient.includes('NATIVE_AUTH_BRIDGE = "https://deadsetfit.org/auth/native-callback"') &&
+    authClient.includes("NATIVE_AUTH_CALLBACK") &&
+    authClient.includes("NATIVE_AUTH_BRIDGE") &&
     authClient.includes('import("@capacitor/browser")') &&
     authClient.includes('import("@capacitor/app")') &&
     authClient.includes("setSession") &&

@@ -31,6 +31,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkoutLiveRouteImport } from './routes/workout.live'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as TabsTrainRouteImport } from './routes/_tabs.train'
+import { Route as TabsStrengthRouteImport } from './routes/_tabs.strength'
 import { Route as TabsProgressRouteImport } from './routes/_tabs.progress'
 import { Route as TabsProgramsRouteImport } from './routes/_tabs.programs'
 import { Route as TabsProfileRouteImport } from './routes/_tabs.profile'
@@ -153,6 +154,11 @@ const TabsTrainRoute = TabsTrainRouteImport.update({
   path: '/train',
   getParentRoute: () => TabsRoute,
 } as any)
+const TabsStrengthRoute = TabsStrengthRouteImport.update({
+  id: '/strength',
+  path: '/strength',
+  getParentRoute: () => TabsRoute,
+} as any)
 const TabsProgressRoute = TabsProgressRouteImport.update({
   id: '/progress',
   path: '/progress',
@@ -242,6 +248,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof TabsProfileRoute
   '/programs': typeof TabsProgramsRouteWithChildren
   '/progress': typeof TabsProgressRoute
+  '/strength': typeof TabsStrengthRoute
   '/train': typeof TabsTrainRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/workout/live': typeof WorkoutLiveRoute
@@ -277,6 +284,7 @@ export interface FileRoutesByTo {
   '/profile': typeof TabsProfileRoute
   '/programs': typeof TabsProgramsRouteWithChildren
   '/progress': typeof TabsProgressRoute
+  '/strength': typeof TabsStrengthRoute
   '/train': typeof TabsTrainRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/workout/live': typeof WorkoutLiveRoute
@@ -314,6 +322,7 @@ export interface FileRoutesById {
   '/_tabs/profile': typeof TabsProfileRoute
   '/_tabs/programs': typeof TabsProgramsRouteWithChildren
   '/_tabs/progress': typeof TabsProgressRoute
+  '/_tabs/strength': typeof TabsStrengthRoute
   '/_tabs/train': typeof TabsTrainRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/workout/live': typeof WorkoutLiveRoute
@@ -351,6 +360,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/programs'
     | '/progress'
+    | '/strength'
     | '/train'
     | '/checkout/return'
     | '/workout/live'
@@ -386,6 +396,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/programs'
     | '/progress'
+    | '/strength'
     | '/train'
     | '/checkout/return'
     | '/workout/live'
@@ -422,6 +433,7 @@ export interface FileRouteTypes {
     | '/_tabs/profile'
     | '/_tabs/programs'
     | '/_tabs/progress'
+    | '/_tabs/strength'
     | '/_tabs/train'
     | '/checkout/return'
     | '/workout/live'
@@ -610,6 +622,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TabsTrainRouteImport
       parentRoute: typeof TabsRoute
     }
+    '/_tabs/strength': {
+      id: '/_tabs/strength'
+      path: '/strength'
+      fullPath: '/strength'
+      preLoaderRoute: typeof TabsStrengthRouteImport
+      parentRoute: typeof TabsRoute
+    }
     '/_tabs/progress': {
       id: '/_tabs/progress'
       path: '/progress'
@@ -719,6 +738,7 @@ interface TabsRouteChildren {
   TabsProfileRoute: typeof TabsProfileRoute
   TabsProgramsRoute: typeof TabsProgramsRouteWithChildren
   TabsProgressRoute: typeof TabsProgressRoute
+  TabsStrengthRoute: typeof TabsStrengthRoute
   TabsTrainRoute: typeof TabsTrainRoute
   TabsAthleteIdRoute: typeof TabsAthleteIdRoute
   TabsLiftExerciseIdRoute: typeof TabsLiftExerciseIdRoute
@@ -734,6 +754,7 @@ const TabsRouteChildren: TabsRouteChildren = {
   TabsProfileRoute: TabsProfileRoute,
   TabsProgramsRoute: TabsProgramsRouteWithChildren,
   TabsProgressRoute: TabsProgressRoute,
+  TabsStrengthRoute: TabsStrengthRoute,
   TabsTrainRoute: TabsTrainRoute,
   TabsAthleteIdRoute: TabsAthleteIdRoute,
   TabsLiftExerciseIdRoute: TabsLiftExerciseIdRoute,

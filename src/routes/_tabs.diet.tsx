@@ -251,11 +251,14 @@ function DietPage() {
             ) : (
               <>
                 <p className="label-cap text-accent-red">Fuel dashboard</p>
-                <div className="flex items-end justify-between gap-4 mt-2">
-                  <div>
-                    <div className="display text-[4rem] font-black text-grit leading-none">
+                <div className="mt-2 flex items-end justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    {/* Scales with the viewport: a fixed 4rem pushed a
+                        four-figure target hard enough to shove the score card
+                        off the right edge of a phone. */}
+                    <div className="display text-[clamp(2.4rem,12vw,4rem)] font-black leading-none text-grit">
                       {remainingCalories}
-                      <span className="text-xl text-[#8a8a8a] ml-2">KCAL</span>
+                      <span className="ml-2 text-lg text-[#8a8a8a]">KCAL</span>
                     </div>
                     <p className="text-sm text-[#8a8a8a] mt-2">
                       left today · {totals.c} eaten from {calories}
@@ -311,7 +314,9 @@ function DietPage() {
               onClick={() => setView(option)}
               aria-pressed={view === option}
               className={`rounded-lg px-4 py-3 text-xs font-bold uppercase transition-colors ${
-                view === option ? "bg-grit text-black" : "text-grit-dim hover:text-grit"
+                view === option
+                  ? "bg-accent-red text-white"
+                  : "text-grit-dim hover:text-grit"
               }`}
             >
               {option}
@@ -643,7 +648,7 @@ function DietPage() {
               onClick={() =>
                 set((s) => ({ ...s, hydrationAlertsEnabled: !s.hydrationAlertsEnabled }))
               }
-              className="label-cap text-[#8a8a8a] flex items-center gap-1"
+              className="label-cap text-[#8a8a8a] flex items-center gap-1 tap-44"
               title={state.hydrationAlertsEnabled ? "Alerts on" : "Alerts off"}
             >
               {state.hydrationAlertsEnabled ? <Bell size={12} /> : <BellOff size={12} />}

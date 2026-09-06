@@ -159,7 +159,7 @@ export function Reminders() {
                   e.stopPropagation();
                   dismiss(r.id);
                 }}
-                className="absolute top-1.5 right-1.5 p-1 text-grit-dim hover:text-grit cursor-pointer"
+                className="tap-44 absolute right-1.5 top-1.5 cursor-pointer p-1 text-grit-dim hover:text-grit"
                 role="button"
                 aria-label="Dismiss"
               >

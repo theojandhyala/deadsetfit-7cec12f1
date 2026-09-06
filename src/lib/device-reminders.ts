@@ -3,13 +3,21 @@ import type { AppState, DayKey, Schedule } from "./types";
 import { isNativeIos } from "./platform";
 
 const REMINDER_ID_START = 7100;
+const TEST_NOTIFICATION_ID = 7199;
 const REMINDER_WINDOW_DAYS = 28;
 const DAY_KEYS: DayKey[] = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
 export type WorkoutReminderDraft = Pick<
   LocalNotificationSchema,
-  "id" | "title" | "body" | "schedule" | "extra" | "threadIdentifier"
+  "id" | "title" | "body" | "schedule" | "sound" | "extra" | "threadIdentifier"
 >;
+
+export type NotificationPermissionState =
+  | "granted"
+  | "denied"
+  | "prompt"
+  | "prompt-with-rationale"
+  | "unavailable";
 
 function reminderIds() {
   return Array.from({ length: REMINDER_WINDOW_DAYS }, (_, index) => ({
@@ -41,6 +49,7 @@ export function buildWorkoutReminderDrafts(
       title: `Today's workout: ${workout.label}`,
       body: `${movementCount} ${movementCount === 1 ? "exercise is" : "exercises are"} ready. Open DEADSET and start strong.`,
       schedule: { at },
+      sound: "default.wav",
       extra: { path: "/train" },
       threadIdentifier: "deadset-workouts",
     });
@@ -81,6 +90,34 @@ export async function requestWorkoutNotificationPermission() {
   if (current.display === "granted") return true;
   const requested = await LocalNotifications.requestPermissions();
   return requested.display === "granted";
+}
+
+export async function getWorkoutNotificationPermission(): Promise<NotificationPermissionState> {
+  if (!isNativeIos()) return "unavailable";
+  const current = await LocalNotifications.checkPermissions();
+  return current.display;
+}
+
+export function buildNotificationTestDraft(now = new Date()): WorkoutReminderDraft {
+  const at = new Date(now.getTime() + 5_000);
+  return {
+    id: TEST_NOTIFICATION_ID,
+    title: "DEADSET notifications are on",
+    body: "Workout, streak and rival alerts can now reach your Lock Screen.",
+    schedule: { at },
+    sound: "default.wav",
+    extra: { path: "/train" },
+    threadIdentifier: "deadset-test",
+  };
+}
+
+export async function scheduleNotificationTest(): Promise<boolean> {
+  if (!isNativeIos()) return false;
+  const permission = await LocalNotifications.checkPermissions();
+  if (permission.display !== "granted") return false;
+  await LocalNotifications.cancel({ notifications: [{ id: TEST_NOTIFICATION_ID }] });
+  await LocalNotifications.schedule({ notifications: [buildNotificationTestDraft()] });
+  return true;
 }
 
 export async function listenForWorkoutNotificationTap(onOpen: (path: string) => void) {

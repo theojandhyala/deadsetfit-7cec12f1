@@ -119,20 +119,21 @@ export function StoryShareCard({
     // Athlete
     ctx.font = "800 52px Arial, sans-serif";
     ctx.fillStyle = "#f5f5f0";
-    ctx.fillText(displayName.toUpperCase(), W / 2, 1480);
+    ctx.fillText(displayName.toUpperCase(), W / 2, 1420);
     if (username) {
       ctx.font = "600 38px Arial, sans-serif";
       ctx.fillStyle = "#8a8a8a";
-      ctx.fillText(`@${username}`, W / 2, 1540);
+      ctx.fillText(`@${username}`, W / 2, 1478);
     }
 
-    // CTA
+    // CTA — kept above y≈1660: TikTok/Reels overlay the caption and
+    // username strip below that, which would hide the domain.
     ctx.font = "700 44px Arial, sans-serif";
     ctx.fillStyle = "#f5f5f0";
-    ctx.fillText("WHAT'S YOUR NUMBER?", W / 2, 1700);
+    ctx.fillText("WHAT'S YOUR NUMBER?", W / 2, 1580);
     ctx.font = "700 40px Arial, sans-serif";
     ctx.fillStyle = "#8a8a8a";
-    ctx.fillText("DEADSETFIT.ORG", W / 2, 1770);
+    ctx.fillText("DEADSETFIT.ORG", W / 2, 1645);
 
     setDataUrl(c.toDataURL("image/png"));
   }, [stats, displayName, username]);

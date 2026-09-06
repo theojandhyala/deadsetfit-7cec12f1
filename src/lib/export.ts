@@ -1,7 +1,7 @@
 import { Capacitor } from "@capacitor/core";
 
 import { getState } from "./storage";
-import type { WorkoutSession } from "./types";
+import type { CompletedSet, WorkoutSession } from "./types";
 
 export type DeliveryResult = "delivered" | "cancelled" | "failed";
 
@@ -65,13 +65,25 @@ export async function exportJsonBackup(): Promise<DeliveryResult> {
   return deliverFile(`deadset-backup-${todayIso()}.json`, json, "application/json");
 }
 
+/** How a row should describe itself: "working", "warmup", "drop", "hold"... */
+function setType(set: CompletedSet): string {
+  if (set.mode === "duration") return set.kind ? `${set.kind}-hold` : "hold";
+  if (set.mode === "distance") return set.kind ? `${set.kind}-distance` : "distance";
+  return set.kind ?? "working";
+}
+
 /**
  * Build a CSV of workout history: one row per logged set. Only sessions with
  * `endedAt` set are included — unfinished sessions never count anywhere in
  * this app, so they must not appear in exports either.
  */
 export function buildWorkoutCsv(sessions: WorkoutSession[]): string {
-  const rows: string[] = ["date,workout,exercise,set,reps,weight_kg,rpe,pr"];
+  // set_type, seconds and meters are not optional extras: without them a
+  // plank exports as "0 reps, 0 kg" and a rowing interval as nothing at all,
+  // which would silently drop whole movements out of an athlete's own data.
+  const rows: string[] = [
+    "date,workout,exercise,set,set_type,reps,weight_kg,seconds,meters,rpe,pr",
+  ];
   const finished = sessions
     .filter((s) => s.endedAt)
     .sort((a, b) => a.startedAt.localeCompare(b.startedAt));
@@ -84,8 +96,11 @@ export function buildWorkoutCsv(sessions: WorkoutSession[]): string {
             csvEscape(session.label),
             csvEscape(exercise.name),
             i + 1,
+            csvEscape(setType(set)),
             set.reps,
             set.weight,
+            set.seconds ?? "",
+            set.meters ?? "",
             set.rpe ?? "",
             set.isPR ? "yes" : "",
           ].join(","),

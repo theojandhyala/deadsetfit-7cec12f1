@@ -3,108 +3,37 @@ import { X, Download, Share2 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { toast } from "sonner";
 import type { WorkoutSession } from "@/lib/types";
+import {
+  drawSessionCard,
+  SESSION_CARD_H,
+  SESSION_CARD_W,
+} from "@/lib/session-card-draw";
 import { getInviteUrl } from "@/lib/referral";
 
 // 9:16 TikTok / Reels / Shorts ready (1080 x 1920)
-export function ShareCard({ session, onClose }: { session: WorkoutSession; onClose: () => void }) {
+export function ShareCard({
+  session,
+  displayName,
+  username,
+  onClose,
+}: {
+  session: WorkoutSession;
+  displayName?: string;
+  username?: string | null;
+  onClose: () => void;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dataUrl, setDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const c = canvasRef.current;
     if (!c) return;
-    const w = 1080,
-      h = 1920;
-    c.width = w;
-    c.height = h;
+    c.width = SESSION_CARD_W;
+    c.height = SESSION_CARD_H;
     const ctx = c.getContext("2d")!;
-
-    // Background — deep black with subtle vertical gradient
-    const bg = ctx.createLinearGradient(0, 0, 0, h);
-    bg.addColorStop(0, "#0a0a0a");
-    bg.addColorStop(1, "#141414");
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, w, h);
-
-    // Top + bottom safe-zone hint rails (TikTok UI overlays the edges)
-    ctx.fillStyle = "#e63222";
-    ctx.fillRect(0, 0, w, 16);
-    ctx.fillRect(0, h - 16, w, 16);
-
-    // Diagonal red wedge top-right
-    ctx.fillStyle = "#e63222";
-    ctx.beginPath();
-    ctx.moveTo(w, 0);
-    ctx.lineTo(w, 520);
-    ctx.lineTo(w - 360, 0);
-    ctx.closePath();
-    ctx.fill();
-
-    // Brand
-    ctx.fillStyle = "#f5f5f0";
-    ctx.font = "900 120px Impact, 'Arial Black', sans-serif";
-    ctx.fillText("DEADSET", 70, 230);
-    ctx.font = "700 34px Arial, sans-serif";
-    ctx.fillStyle = "#8a8a8a";
-    ctx.fillText("FORGE YOUR BODY", 70, 285);
-
-    // Session complete badge
-    ctx.fillStyle = "#e63222";
-    ctx.font = "700 38px Arial, sans-serif";
-    ctx.fillText("SESSION COMPLETE", 70, 460);
-
-    // Big workout label (wrap to 2 lines if needed)
-    ctx.fillStyle = "#f5f5f0";
-    ctx.font = "900 130px Impact, 'Arial Black', sans-serif";
-    const label = session.label.toUpperCase().split(" — ")[0].slice(0, 22);
-    ctx.fillText(label, 70, 600);
-
-    // Stats grid 2x2 — large for vertical
-    const stats = [
-      { k: "EXERCISES", v: String(session.exercises.length) },
-      { k: "PRs", v: String(session.prCount) },
-      { k: "VOLUME KG", v: session.totalVolume.toLocaleString() },
-      { k: "SETS", v: String(session.exercises.reduce((s, e) => s + e.sets.length, 0)) },
-    ];
-    const gridTop = 760;
-    const cellW = 460,
-      cellH = 280,
-      gap = 20;
-    stats.forEach((s, i) => {
-      const col = i % 2;
-      const row = Math.floor(i / 2);
-      const x = 70 + col * (cellW + gap);
-      const y = gridTop + row * (cellH + gap);
-      ctx.fillStyle = "#1a1a1a";
-      ctx.fillRect(x, y, cellW, cellH);
-      ctx.strokeStyle = "#2a2a2a";
-      ctx.lineWidth = 3;
-      ctx.strokeRect(x, y, cellW, cellH);
-      ctx.fillStyle = "#e63222";
-      ctx.font = "700 30px Arial, sans-serif";
-      ctx.fillText(s.k, x + 28, y + 62);
-      ctx.fillStyle = "#f5f5f0";
-      ctx.font = "900 150px Impact, 'Arial Black', sans-serif";
-      ctx.fillText(s.v, x + 28, y + 220);
-    });
-
-    // Date
-    ctx.fillStyle = "#8a8a8a";
-    ctx.font = "700 26px Arial, sans-serif";
-    ctx.fillText(new Date(session.startedAt).toDateString().toUpperCase(), 70, 1540);
-
-    // CTA bottom
-    ctx.fillStyle = "#e63222";
-    ctx.fillRect(70, 1670, w - 140, 4);
-    ctx.fillStyle = "#f5f5f0";
-    ctx.font = "900 76px Impact, 'Arial Black', sans-serif";
-    ctx.fillText("YOUR TURN.", 70, 1770);
-    ctx.fillStyle = "#8a8a8a";
-    ctx.font = "700 32px Arial, sans-serif";
-    ctx.fillText("DEADSETFIT.ORG", 70, 1820);
-
+    drawSessionCard(ctx, { session, displayName, username });
     setDataUrl(c.toDataURL("image/png"));
-  }, [session]);
+  }, [session, displayName, username]);
 
   async function shareNow() {
     if (!dataUrl) return;

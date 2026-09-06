@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   BarChart3,
+  BicepsFlexed,
   CalendarDays,
   Check,
   Dumbbell,
@@ -19,7 +20,9 @@ import {
 import { useAppState } from "@/lib/storage";
 import { usePro } from "@/hooks/usePro";
 import { isNativeIos } from "@/lib/platform";
-import { FEATURE_TOUR_SEEN_KEY } from "@/lib/feature-tour";
+import { FEATURE_TOUR_REPLAY_EVENT, FEATURE_TOUR_SEEN_KEY } from "@/lib/feature-tour";
+import { hapticSelection, hapticSetupComplete } from "@/lib/haptics";
+import { lockBodyScroll } from "@/lib/body-scroll-lock";
 
 type Slide = {
   icon: typeof Dumbbell;
@@ -94,6 +97,18 @@ const SLIDES: Slide[] = [
     ],
   },
   {
+    icon: BicepsFlexed,
+    color: "#a43ac2",
+    eyebrow: "Strength Map",
+    title: "See the body your lifts are building",
+    body: "Strength turns your real logged lifts into a front-and-back muscle map, adjusted for your bodyweight instead of guessed from activity.",
+    tips: [
+      "Grey shows exactly which areas still need an exercise or logged result",
+      "Tap any muscle for a rule-based growth game plan and recommended movements",
+      "Share a 9:16 Strength Map card when the colours change",
+    ],
+  },
+  {
     icon: HeartPulse,
     color: "#14b8a6",
     eyebrow: "Health & recovery",
@@ -144,10 +159,10 @@ const SLIDES: Slide[] = [
   {
     icon: Crown,
     color: "#f4c33a",
-    eyebrow: "Optional upgrade",
-    title: "DEADSET Pro",
+    eyebrow: "Your membership",
+    title: "DEADSET intelligence",
     pro: true,
-    body: "The complete training and logging loop stays free. Pro adds automation, advanced programming and deeper analysis.",
+    body: "Your membership includes the complete training loop, automation, advanced programming and deeper analysis.",
     tips: [
       "Training Autopilot applies progression decisions",
       "Plan Intelligence audits volume and recovery spacing",
@@ -168,12 +183,20 @@ const SLIDES: Slide[] = [
   },
 ];
 
+function markFeatureTourSeen() {
+  try {
+    localStorage.setItem(FEATURE_TOUR_SEEN_KEY, "1");
+  } catch {
+    /* Local storage can be unavailable in restricted browser modes. */
+  }
+}
+
 /**
  * One-time guided tour of every feature, shown to brand-new users after
  * onboarding. Existing users (who already have training data) are marked seen
  * silently so they're never interrupted.
  */
-export function FeatureTour() {
+export function FeatureTour({ active = true }: { active?: boolean }) {
   const [state] = useAppState();
   const { isPro } = usePro();
   const navigate = useNavigate();
@@ -182,6 +205,11 @@ export function FeatureTour() {
   const decided = useRef(false);
 
   useEffect(() => {
+    if (!active) {
+      decided.current = false;
+      setShow(false);
+      return;
+    }
     if (decided.current) return;
     let seen = true;
     try {
@@ -189,48 +217,68 @@ export function FeatureTour() {
     } catch {
       /* ignore */
     }
-    if (seen) return;
+    if (seen) {
+      decided.current = true;
+      return;
+    }
     // Wait until onboarding has produced a profile.
     if (!state.profile) return;
     decided.current = true;
     const hasHistory = (state.sessions?.length ?? 0) > 0 || state.completedDates.length > 0;
-    try {
-      localStorage.setItem(FEATURE_TOUR_SEEN_KEY, "1");
-    } catch {
-      /* ignore */
-    }
     // New users get the walkthrough automatically. Existing users can replay it
     // from Settings without being interrupted after an update.
-    if (!hasHistory) setShow(true);
-  }, [state.profile, state.sessions, state.completedDates]);
+    if (hasHistory) {
+      markFeatureTourSeen();
+      return;
+    }
+    setI(0);
+    setShow(true);
+  }, [active, state.profile, state.sessions, state.completedDates]);
+
+  useEffect(() => {
+    const replay = () => {
+      decided.current = false;
+      setI(0);
+      if (!active || !state.profile) return;
+      decided.current = true;
+      setShow(true);
+    };
+    window.addEventListener(FEATURE_TOUR_REPLAY_EVENT, replay);
+    return () => window.removeEventListener(FEATURE_TOUR_REPLAY_EVENT, replay);
+  }, [active, state.profile]);
 
   useEffect(() => {
     if (!show) return;
 
-    const previousOverflow = document.body.style.overflow;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setShow(false);
+      if (event.key !== "Escape") return;
+      markFeatureTourSeen();
+      hapticSelection();
+      setShow(false);
     };
 
-    document.body.style.overflow = "hidden";
+    const unlock = lockBodyScroll();
     window.addEventListener("keydown", onKeyDown);
 
     return () => {
-      document.body.style.overflow = previousOverflow;
+      unlock();
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [show]);
 
   if (!show) return null;
 
-  // Drop the Pro slide for users who already have Pro — and on native iOS,
-  // Paid members do not need a tour slide advertising features they already own.
-  const slides = isPro ? SLIDES.filter((s) => !s.pro) : SLIDES;
+  // Native iOS never renders upgrade promotion. Pro is sold on the web only.
+  const slides = isPro || isNativeIos() ? SLIDES.filter((s) => !s.pro) : SLIDES;
   const slide = slides[Math.min(i, slides.length - 1)];
   const last = i >= slides.length - 1;
   const Icon = slide.icon;
 
-  const close = () => setShow(false);
+  const close = () => {
+    markFeatureTourSeen();
+    hapticSetupComplete();
+    setShow(false);
+  };
 
   return (
     <div
@@ -303,7 +351,10 @@ export function FeatureTour() {
         {i > 0 ? (
           <button
             type="button"
-            onClick={() => setI(i - 1)}
+            onClick={() => {
+              hapticSelection();
+              setI(i - 1);
+            }}
             className="btn-ghost px-4 inline-flex items-center gap-1"
           >
             <ChevronLeft size={16} /> Back
@@ -326,7 +377,10 @@ export function FeatureTour() {
         ) : (
           <button
             type="button"
-            onClick={() => setI(i + 1)}
+            onClick={() => {
+              hapticSelection();
+              setI(i + 1);
+            }}
             className="btn-grit flex-1 rounded-xl inline-flex items-center justify-center gap-1"
           >
             Next <ChevronRight size={16} />

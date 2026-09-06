@@ -6,9 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && node scripts/check-css-build.mjs",
-    "test": "vitest run src",
-    "test:watch": "vitest src",
-    "check": "tsc --noEmit && eslint . && vitest run src && vite build && node scripts/check-css-build.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "tsc --noEmit && eslint . && vitest run && vite build && node scripts/check-css-build.mjs && node scripts/check-xcodeproj.mjs",
     "appstore:check": "npm run check && node scripts/appstore-check.mjs",
     "appstore:strict": "APPSTORE_STRICT=1 npm run appstore:check",
     "security:check": "npm audit",
@@ -22,7 +22,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "start": "node server.js"
+    "start": "node server.js",
+    "check:xcodeproj": "node scripts/check-xcodeproj.mjs"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",
@@ -31,6 +32,7 @@
     "@capacitor/ios": "^8.4.1",
     "@capacitor/local-notifications": "^8.2.1",
     "@hookform/resolvers": "^5.2.2",
+    "@musclemap/assets": "^1.0.1",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-aspect-ratio": "^1.1.8",

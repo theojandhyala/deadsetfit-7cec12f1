@@ -13,6 +13,9 @@ import {
   Ghost,
   Pencil,
   Link2,
+  ListPlus,
+  Timer,
+  StickyNote,
   RefreshCw,
   Dumbbell,
 } from "lucide-react";
@@ -43,12 +46,60 @@ import {
   nextStepAfterWorkingSet,
   supersetPosition,
 } from "@/lib/workout-flow";
+import { indexAfterMove, indexAfterRemoval, moveItem } from "@/lib/session-edit";
+import { BAR_TYPES, DEFAULT_BAR_KG, barLabel, usesBarbell } from "@/lib/bars";
+import {
+  formatVolume,
+  formatWeight,
+  formatWeightValue,
+  increment,
+  plateLoad,
+  toDisplay,
+  toKg,
+  trimNumber,
+  unitOf,
+  type WeightUnit,
+} from "@/lib/units";
+import {
+  hapticSelection,
+  hapticSetLogged,
+  hapticSpecialSet,
+  hapticUndo,
+  hapticWorkoutComplete,
+  hapticWorkoutStart,
+} from "@/lib/haptics";
+import { endWorkoutActivity, syncWorkoutActivity } from "@/lib/workout-activity";
+import {
+  clearWatch,
+  drainWatchActions,
+  onWatchAction,
+  publishToWatch,
+  type WatchAction,
+} from "@/lib/watch";
+import {
+  formatDistance,
+  formatDuration,
+  formatSet,
+  isTimedPersonalRecord,
+  parseDurationTarget,
+  countsForRecords,
+  isWorkingSet,
+  setVolume,
+  timedBestsFor,
+  trackingModeFor,
+  type TrackingMode,
+} from "@/lib/set-tracking";
 import { VideoModal } from "@/components/VideoModal";
 import { ShareCard } from "@/components/ShareCard";
 import { GritEarnedLayer } from "@/components/GritEarnedLayer";
 import { RestTimer } from "@/components/RestTimer";
+import { FormCoaching } from "@/components/FormCoaching";
+import { SessionReflection } from "@/components/SessionReflection";
+import { SessionExerciseSheet } from "@/components/SessionExerciseSheet";
 import type {
   AppState,
+  Exercise,
+  ExercisePlan,
   WorkoutSession,
   WorkoutSessionExercise,
   CompletedSet,
@@ -59,6 +110,16 @@ import type {
 } from "@/lib/types";
 
 type WorkoutSource = "auto" | "program" | "schedule";
+
+/** One set as the logger hands it over, before PR and rest handling. */
+type LoggedEntry = {
+  weight: number;
+  reps: number;
+  kind?: CompletedSet["kind"];
+  mode?: "duration" | "distance";
+  seconds?: number;
+  meters?: number;
+};
 type LiveWorkoutSearch = {
   day?: DayKey;
   source?: Exclude<WorkoutSource, "auto">;
@@ -80,6 +141,23 @@ export const Route = createFileRoute("/workout/live")({
 
 function getScheduleForState(state: ReturnType<typeof useAppState>[0]) {
   return state.schedule ?? (state.profile ? defaultSchedule(state.profile) : null);
+}
+
+/**
+ * How a movement in this session should be logged. Resolved once, when the
+ * session is built, so a mid-session library edit can't change the units of
+ * sets already recorded against it.
+ */
+function resolveTracking(
+  state: ReturnType<typeof useAppState>[0],
+  exerciseId: string,
+  name: string,
+  reps: string | undefined,
+): { tracking: TrackingMode; targetSeconds?: number } {
+  const definition = getExercise(exerciseId, state.savedExercises);
+  const tracking = trackingModeFor({ name, tracking: definition?.tracking }, reps);
+  const targetSeconds = tracking === "DURATION" ? (parseDurationTarget(reps) ?? 45) : undefined;
+  return { tracking, ...(targetSeconds ? { targetSeconds } : {}) };
 }
 
 function buildSession(
@@ -121,7 +199,9 @@ function buildSession(
             plannedWeightKg:
               prescription && prescription.prescribedWeightKg > 0
                 ? prescription.prescribedWeightKg
-                : undefined,
+                : it.weightKg,
+            restSeconds: it.restSeconds,
+            ...resolveTracking(state, it.id, it.name, it.reps),
             sets: [],
           };
         }),
@@ -160,7 +240,9 @@ function buildSession(
         progression: cfg?.progression,
         tempo: cfg?.tempo,
         note: cfg?.note,
+        barKg: cfg?.barKg,
         supersetId: supersetIds[index],
+        ...resolveTracking(state, eid, ex?.name ?? eid, cfg?.reps ?? d.reps ?? ex?.reps ?? "8-12"),
         sets: [],
       };
     }),
@@ -186,8 +268,12 @@ function bestsFor(state: AppState, exerciseId: string): { bestWeight: number; be
   state.sessions.forEach((s) =>
     s.exercises.forEach((e) => {
       if (e.exerciseId !== exerciseId) return;
-      // Warm-up and drop sets never count toward a lift's best (and so never PR).
-      e.sets.forEach((cs) => cs.kind || consider(cs.weight, cs.reps));
+      // Timed efforts have no load x reps pair, and warm-ups and drops are not
+      // genuine attempts at the load — neither should move a lift's best.
+      e.sets.forEach((cs) => {
+        if (cs.mode || !countsForRecords(cs)) return;
+        consider(cs.weight, cs.reps);
+      });
     }),
   );
   return { bestWeight, bestBwReps };
@@ -402,12 +488,15 @@ function LiveWorkoutPage() {
   function startDay(dayKey: DayKey, source: WorkoutSource = "auto") {
     const s = buildSession(state, dayKey, source);
     if (!s) return;
+    hapticWorkoutStart();
     set((st) => ({ ...st, sessions: [...st.sessions, s], activeSessionId: s.id }));
   }
 
   // One-tap restart of the most recent finished session — same exercises and
   // targets, fresh (empty) sets. The fastest path back into training.
   function repeatSession(sourceId: string) {
+    if (!state.sessions.some((session) => session.id === sourceId)) return;
+    hapticWorkoutStart();
     set((st) => {
       const last = st.sessions.find((s) => s.id === sourceId);
       if (!last) return st;
@@ -489,12 +578,12 @@ function LiveWorkoutPage() {
   const [finished, setFinished] = useState(false);
   const [finishedSessionId, setFinishedSessionId] = useState<string | null>(null);
   const [share, setShare] = useState(false);
-  const [rest, setRest] = useState<{
-    seconds: number;
-    nextIndex: number;
-    endsAt: number;
-  } | null>(null);
+  const [rest, setRest] = useState<{ seconds: number; nextIndex: number } | null>(null);
+  const [managing, setManaging] = useState(false);
+  const [noting, setNoting] = useState(false);
+  const [pickingBar, setPickingBar] = useState(false);
   const restPref = state.restTimerSeconds ?? 90;
+  const unit = unitOf(state);
 
   function persistWorkoutPosition(index: number, restState?: typeof rest) {
     if (!session) return;
@@ -555,7 +644,7 @@ function LiveWorkoutPage() {
     session.exercises.forEach((e) => {
       e.sets.forEach((s) => {
         if (s.kind === "warmup") return; // warm-ups aren't working volume
-        vol += s.weight * s.reps;
+        vol += setVolume(s);
         sets += 1;
         if (s.isPR) prs += 1;
       });
@@ -605,6 +694,31 @@ function LiveWorkoutPage() {
       activeExercise && session ? ghostSets(state, activeExercise.exerciseId, session.id) : [],
     [state, activeExercise, session],
   );
+  const timedBests = useMemo(
+    () =>
+      activeExercise && session
+        ? timedBestsFor(state.sessions, activeExercise.exerciseId, session.id)
+        : { seconds: 0, meters: 0 },
+    [state.sessions, activeExercise, session],
+  );
+
+  /**
+   * The same workout, last time you did it. Strong shows you the last set;
+   * this shows whether the whole session is ahead — the number that actually
+   * says if you are progressing.
+   */
+  const lastTime = useMemo(() => {
+    if (!session) return null;
+    const previous = state.sessions
+      .filter((s) => s.endedAt && s.id !== session.id && s.label === session.label)
+      .sort((a, b) => b.startedAt.localeCompare(a.startedAt))[0];
+    if (!previous) return null;
+    const volume = previous.exercises.reduce(
+      (sum, e) => sum + e.sets.reduce((inner, cs) => inner + setVolume(cs), 0),
+      0,
+    );
+    return volume > 0 ? { volume, date: previous.date } : null;
+  }, [state.sessions, session]);
 
   // Pre-logged defaults: allocated weight from the schedule → last session
   // containing the exercise → smart suggestion → bodyweight (0).
@@ -619,6 +733,62 @@ function LiveWorkoutPage() {
     return { weight: 0, reps: repsGuess };
   }, [state, session, activeIdx]);
 
+  // `applyWatchAction` closes over this render's session, but the watch
+  // subscription below is mounted once and must not be torn down and rebuilt
+  // on every state change — actions arriving in the gap would be lost. A ref
+  // refreshed each render gives the long-lived listener the current handler.
+  const applyWatchActionRef = useRef<(action: WatchAction) => void>(() => {});
+  useEffect(() => {
+    applyWatchActionRef.current = applyWatchAction;
+  });
+
+  // Keep the watch showing the current session. Publishing the whole state on
+  // every change is cheap and cannot desynchronise the way a missed diff can.
+  useEffect(() => {
+    void publishToWatch(state, session);
+  }, [state, session]);
+
+  // The Lock Screen and Dynamic Island follow the same moments. Only a live,
+  // unfinished session gets an activity — finishWorkout ends it explicitly, so
+  // this effect never has to guess whether a session is over.
+  useEffect(() => {
+    if (!session || session.endedAt) return;
+    void syncWorkoutActivity(session, activeIdx);
+  }, [session, activeIdx]);
+
+  useEffect(() => {
+    let disposed = false;
+    let unsubscribe: (() => void) | undefined;
+    const apply = (action: WatchAction) => {
+      if (!disposed) applyWatchActionRef.current(action);
+    };
+
+    // Two paths, because iOS suspends this web layer whenever the app is
+    // backgrounded — which is where a phone lives while its owner trains.
+    // Foreground sets arrive as events; sets logged with the phone in a
+    // pocket are buffered natively and collected here on resume.
+    void (async () => {
+      const buffered = await drainWatchActions();
+      buffered.forEach(apply);
+      const remove = await onWatchAction(apply);
+      if (disposed) remove();
+      else unsubscribe = remove;
+    })();
+
+    const onResume = () => {
+      void drainWatchActions().then((actions) => actions.forEach(apply));
+    };
+    document.addEventListener("resume", onResume);
+    document.addEventListener("visibilitychange", onResume);
+
+    return () => {
+      disposed = true;
+      unsubscribe?.();
+      document.removeEventListener("resume", onResume);
+      document.removeEventListener("visibilitychange", onResume);
+    };
+  }, []);
+
   const liveSwapOptions = useMemo(() => {
     if (!session || !activeExercise) return [];
     return liveExerciseSwapCandidates(allExercises(state.savedExercises), {
@@ -630,7 +800,14 @@ function LiveWorkoutPage() {
         .map((exercise) => exercise.exerciseId),
       query: swapQuery,
     });
-  }, [activeExercise, activeIdx, session, state.profile?.equipment, state.savedExercises, swapQuery]);
+  }, [
+    activeExercise,
+    activeIdx,
+    session,
+    state.profile?.equipment,
+    state.savedExercises,
+    swapQuery,
+  ]);
 
   if (finished && finishedSessionId) {
     const finalSession = state.sessions.find((s) => s.id === finishedSessionId);
@@ -734,35 +911,68 @@ function LiveWorkoutPage() {
           ? "Manual progression"
           : null;
   const totalEx = session.exercises.length;
-  const progress = Math.min(
-    100,
-    Math.round((completedPlanSets / Math.max(1, plannedSets)) * 100),
-  );
+  const progress = Math.min(100, Math.round((completedPlanSets / Math.max(1, plannedSets)) * 100));
 
-  function logSet(weight: number, reps: number, kind?: "warmup" | "drop") {
-    const ex = session!.exercises[activeIdx];
+  function logSet(entry: LoggedEntry) {
+    logSetAt(activeIdx, entry);
+  }
+
+  /**
+   * Record a set against one movement. Takes an index rather than reading the
+   * active one so a set logged on the Apple Watch runs through identical PR
+   * detection, grit and rest handling — two code paths for "log a set" is how
+   * a watch companion ends up awarding records the phone does not.
+   */
+  function logSetAt(index: number, entry: LoggedEntry) {
+    const { weight, reps, kind, mode, seconds, meters } = entry;
+    const ex = session!.exercises[index];
     if (!ex) return;
     // Compute the PR flag INSIDE the updater against fresh state, so a rapid
     // double-tap (which reads the same render-closure state twice) can't award
     // and count the same PR twice. Warm-up and drop sets never PR.
     let awardedPR = false;
+    // Captured for the share card: the record this set beat, read from the same
+    // fresh state that decided the PR, before the new set is written into it.
+    let prPreviousBest = 0;
+    let prIsBodyweight = false;
+    // Timed and distance efforts get their own record line, and no share card:
+    // the PR card is built around a load and a rep count.
+    let timedPRLabel: string | null = null;
     set((st) => {
-      const { bestWeight, bestBwReps } = bestsFor(st, ex.exerciseId);
       const definition = getExercise(ex.exerciseId, st.savedExercises);
-      const supportsBodyweight = definition?.equipment.includes("BODYWEIGHT") ?? false;
-      awardedPR = isPersonalRecord({
-        weight,
-        reps,
-        bestWeight,
-        bestBodyweightReps: bestBwReps,
-        supportsBodyweight,
-        specialSet: !!kind,
-      });
+      if (mode) {
+        const bests = timedBestsFor(st.sessions, ex.exerciseId, session!.id);
+        awardedPR = isTimedPersonalRecord({ mode, seconds, meters, kind }, bests);
+        if (awardedPR) {
+          timedPRLabel =
+            mode === "duration" ? formatDuration(seconds ?? 0) : `${Math.round(meters ?? 0)}m`;
+        }
+      } else {
+        const { bestWeight, bestBwReps } = bestsFor(st, ex.exerciseId);
+        const supportsBodyweight = definition?.equipment.includes("BODYWEIGHT") ?? false;
+        awardedPR = isPersonalRecord({
+          weight,
+          reps,
+          bestWeight,
+          bestBodyweightReps: bestBwReps,
+          supportsBodyweight,
+          // A set to failure is still a genuine attempt at the load, so it can
+          // set a record; warm-ups and drops cannot.
+          specialSet: !countsForRecords({ kind }),
+        });
+        if (awardedPR) {
+          prIsBodyweight = weight <= 0;
+          prPreviousBest = prIsBodyweight ? bestBwReps : bestWeight;
+        }
+      }
       const newSet: CompletedSet = {
         weight,
         reps,
         ...(awardedPR ? { isPR: true } : {}),
         ...(kind ? { kind } : {}),
+        ...(mode ? { mode } : {}),
+        ...(seconds ? { seconds } : {}),
+        ...(meters ? { meters } : {}),
       };
       return {
         ...st,
@@ -771,19 +981,34 @@ function LiveWorkoutPage() {
             ? {
                 ...s,
                 exercises: s.exercises.map((e, i) =>
-                  i === activeIdx ? { ...e, sets: [...e.sets, newSet] } : e,
+                  i === index ? { ...e, sets: [...e.sets, newSet] } : e,
                 ),
               }
             : s,
         ),
       };
     });
+    if (kind === "warmup" || kind === "drop") hapticSpecialSet();
+    else if (!awardedPR) hapticSetLogged();
+
     if (awardedPR) {
       // Undo + re-tick must not farm the award twice.
-      const key = `${ex.exerciseId}:${weight}:${reps}`;
+      const key = `${ex.exerciseId}:${weight}:${reps}:${seconds ?? 0}:${meters ?? 0}`;
       if (!prAwardedRef.current.has(key)) {
         prAwardedRef.current.add(key);
-        emitGritEarned(25, `NEW PR — ${ex.name.toUpperCase()}`, "pr");
+        if (timedPRLabel) {
+          emitGritEarned(25, `NEW PR — ${ex.name.toUpperCase()} ${timedPRLabel}`, "pr");
+        } else {
+          emitGritEarned(25, `NEW PR — ${ex.name.toUpperCase()}`, "pr", {
+            pr: {
+              exercise: ex.name,
+              weight,
+              reps,
+              ...(prPreviousBest > 0 ? { previousBest: prPreviousBest } : {}),
+              ...(prIsBodyweight ? { bodyweight: true } : {}),
+            },
+          });
+        }
       }
     }
     // Superset movements rotate immediately and rest only after a full round.
@@ -792,8 +1017,8 @@ function LiveWorkoutPage() {
     const exerciseRest = ex.restSeconds ?? restPref;
     const step =
       kind === "drop"
-        ? { nextIndex: activeIdx, shouldRest: true }
-        : nextStepAfterWorkingSet(session!.exercises, activeIdx);
+        ? { nextIndex: index, shouldRest: true }
+        : nextStepAfterWorkingSet(session!.exercises, index);
     if (!step.shouldRest || exerciseRest <= 0) {
       persistWorkoutPosition(step.nextIndex);
       return;
@@ -807,55 +1032,248 @@ function LiveWorkoutPage() {
     persistWorkoutPosition(activeIdx, restState);
   }
 
+  /**
+   * Apply something the athlete did on their Apple Watch.
+   *
+   * Everything routes through the same functions the phone's own buttons use,
+   * so a watch-logged set earns the same PR, the same grit and the same rest.
+   */
+  function applyWatchAction(action: WatchAction) {
+    const live = getState().sessions.find((s) => s.id === action.sessionId);
+    // The session it targets is over, or a different one has started since.
+    // Applying it anyway would write sets into the wrong workout.
+    if (!live || live.endedAt || live.id !== session?.id) return;
+    const index = live.exercises.findIndex((e) => e.exerciseId === action.exerciseId);
+
+    if (action.kind === "finish") {
+      finishWorkout();
+      return;
+    }
+    if (index < 0) return;
+
+    if (action.kind === "undoSet") {
+      mutateExercise(index, (e) => ({ ...e, sets: e.sets.slice(0, -1) }));
+      return;
+    }
+    logSetAt(index, {
+      weight: action.weight,
+      reps: action.reps,
+      ...(action.mode ? { mode: action.mode } : {}),
+      ...(action.seconds ? { seconds: action.seconds } : {}),
+      ...(action.meters ? { meters: action.meters } : {}),
+    });
+  }
+
+  /** Rewrite this session in place, leaving every other session untouched. */
+  function mutateSession(fn: (s: WorkoutSession) => WorkoutSession) {
+    set((st) => ({
+      ...st,
+      sessions: st.sessions.map((s) => (s.id === session!.id ? fn(s) : s)),
+    }));
+  }
+
+  /** Rewrite one exercise of this session in place. */
+  function mutateExercise(
+    index: number,
+    fn: (e: WorkoutSessionExercise) => WorkoutSessionExercise,
+  ) {
+    mutateSession((s) => ({
+      ...s,
+      exercises: s.exercises.map((e, i) => (i === index ? fn(e) : e)),
+    }));
+  }
+
   function undoLastSet() {
     const ex = session!.exercises[activeIdx];
     if (!ex || ex.sets.length === 0) return;
-    set((st) => ({
-      ...st,
-      sessions: st.sessions.map((s) =>
-        s.id === session!.id
+    hapticUndo();
+    mutateExercise(activeIdx, (e) => ({ ...e, sets: e.sets.slice(0, -1) }));
+  }
+
+  /**
+   * Correct a set that was already ticked. Every logged set stays editable for
+   * the length of the session — a mis-tapped weight three sets ago shouldn't
+   * mean unwinding everything after it.
+   */
+  function editSet(setIndex: number, patch: LoggedEntry) {
+    mutateExercise(activeIdx, (e) => ({
+      ...e,
+      sets: e.sets.map((cs, i) =>
+        i === setIndex
           ? {
-              ...s,
-              exercises: s.exercises.map((e, i) =>
-                i === activeIdx ? { ...e, sets: e.sets.slice(0, -1) } : e,
-              ),
+              ...cs,
+              weight: patch.weight,
+              reps: patch.reps,
+              ...(patch.seconds ? { seconds: patch.seconds } : { seconds: undefined }),
+              ...(patch.meters ? { meters: patch.meters } : { meters: undefined }),
             }
-          : s,
+          : cs,
       ),
     }));
   }
 
-  function chooseLiveSwap(replacement: Exercise) {
-    if (!session || current.sets.length > 0) return;
+  function deleteSet(setIndex: number) {
+    hapticUndo();
+    mutateExercise(activeIdx, (e) => ({
+      ...e,
+      sets: e.sets.filter((_, i) => i !== setIndex),
+    }));
+  }
+
+  /** Per-exercise rest, changed on the gym floor and kept for next time. */
+  function setExerciseRest(seconds: number) {
+    const ex = session!.exercises[activeIdx];
+    if (!ex) return;
+    mutateExercise(activeIdx, (e) => ({ ...e, restSeconds: seconds }));
+    persistToPlan(ex.exerciseId, { restSeconds: seconds });
+  }
+
+  /** Which bar this movement is loaded on — drives plate and warm-up maths. */
+  function setExerciseBar(barKg: number) {
+    const ex = session!.exercises[activeIdx];
+    if (!ex) return;
+    mutateExercise(activeIdx, (e) => ({ ...e, barKg }));
+    persistToPlan(ex.exerciseId, { barKg });
+    hapticSelection();
+  }
+
+  /** A cue written mid-session, kept on the plan so it shows up next time. */
+  function setExerciseNote(note: string) {
+    const ex = session!.exercises[activeIdx];
+    if (!ex) return;
+    const trimmed = note.trim();
+    mutateExercise(activeIdx, (e) => ({ ...e, note: trimmed || undefined }));
+    persistToPlan(ex.exerciseId, { note: trimmed || undefined });
+  }
+
+  /**
+   * Write one field back onto the day's plan, so an adjustment made during a
+   * workout survives into the next one. Only touches the scheduled day — a
+   * session started from a programme leaves the programme alone.
+   */
+  function persistToPlan(exerciseId: string, patch: Partial<ExercisePlan>) {
     set((st) => {
-      const live = st.sessions.find((item) => item.id === session.id);
-      const target = live?.exercises[activeIdx];
-      // Swapping after logging would assign the previous movement's history to
-      // the replacement. Keep the session record accurate instead.
-      if (!live || !target || target.sets.length > 0) return st;
+      const schedule = st.schedule ?? (st.profile ? defaultSchedule(st.profile) : null);
+      const day = schedule?.[session!.dayKey];
+      if (!schedule || !day || !day.exerciseIds.includes(exerciseId)) return st;
+      const config = { ...(day.exerciseConfig ?? {}) };
+      const next = { ...(config[exerciseId] ?? {}), ...patch };
+      // Clearing a note shouldn't leave an empty key behind.
+      for (const key of Object.keys(next) as Array<keyof ExercisePlan>) {
+        if (next[key] === undefined) delete next[key];
+      }
+      config[exerciseId] = next;
       return {
         ...st,
-        sessions: st.sessions.map((item) =>
-          item.id !== session.id
-            ? item
-            : {
-                ...item,
-                exercises: item.exercises.map((exercise, index) =>
-                  index === activeIdx
-                    ? {
-                        ...exercise,
-                        exerciseId: replacement.id,
-                        name: replacement.name,
-                        primary_muscles: [replacement.muscleGroup],
-                        // A load on a different movement is not a safe default.
-                        plannedWeightKg: undefined,
-                      }
-                    : exercise,
-                ),
-              },
-        ),
+        schedule: { ...schedule, [session!.dayKey]: { ...day, exerciseConfig: config } },
       };
     });
+  }
+
+  /** Add a movement that wasn't planned — the rack was taken, or you felt good. */
+  function addExerciseLive(exercise: Exercise) {
+    const alreadyThere = session!.exercises.findIndex((e) => e.exerciseId === exercise.id);
+    if (alreadyThere >= 0) {
+      setActiveIdx(alreadyThere);
+      return;
+    }
+    const entry: WorkoutSessionExercise = {
+      exerciseId: exercise.id,
+      name: exercise.name,
+      primary_muscles: [exercise.muscleGroup],
+      targetSets: exercise.sets,
+      targetReps: exercise.reps,
+      addedLive: true,
+      ...resolveTracking(state, exercise.id, exercise.name, exercise.reps),
+      sets: [],
+    };
+    mutateSession((s) => ({ ...s, exercises: [...s.exercises, entry] }));
+    setActiveIdx(session!.exercises.length);
+  }
+
+  /**
+   * Swap the movement in this slot for another. Logged sets belong to the old
+   * movement, so a swap after work is done is refused rather than silently
+   * reattributing them — remove and add instead.
+   */
+  async function replaceExerciseLive(exercise: Exercise) {
+    const current = session!.exercises[activeIdx];
+    if (!current) return;
+    if (current.sets.length > 0) {
+      const ok = await askConfirm({
+        title: `Drop ${current.sets.length} logged ${current.sets.length === 1 ? "set" : "sets"}?`,
+        message: `Those sets were logged against ${current.name}. Swapping to ${exercise.name} throws them away.`,
+        confirmLabel: "Swap anyway",
+        danger: true,
+      });
+      if (!ok) return;
+    }
+    mutateExercise(activeIdx, () => ({
+      exerciseId: exercise.id,
+      name: exercise.name,
+      primary_muscles: [exercise.muscleGroup],
+      targetSets: current.targetSets,
+      targetReps: exercise.reps,
+      addedLive: true,
+      ...resolveTracking(state, exercise.id, exercise.name, exercise.reps),
+      sets: [],
+    }));
+  }
+
+  async function removeExerciseLive(index: number) {
+    const target = session!.exercises[index];
+    if (!target) return;
+    if (session!.exercises.length <= 1) return;
+    if (target.sets.length > 0) {
+      const ok = await askConfirm({
+        title: `Remove ${target.name}?`,
+        message: `${target.sets.length} logged ${target.sets.length === 1 ? "set" : "sets"} on this movement will be thrown away.`,
+        confirmLabel: "Remove",
+        danger: true,
+      });
+      if (!ok) return;
+    }
+    const lengthBefore = session!.exercises.length;
+    mutateSession((s) => ({ ...s, exercises: s.exercises.filter((_, i) => i !== index) }));
+    setActiveIdx((i) => indexAfterRemoval(i, index, lengthBefore));
+  }
+
+  /** Reorder the session when the gym floor doesn't match the plan. */
+  function moveExerciseLive(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= session!.exercises.length) return;
+    mutateSession((s) => ({ ...s, exercises: moveItem(s.exercises, index, direction) }));
+    setActiveIdx((i) => indexAfterMove(i, index, direction));
+  }
+
+  /**
+   * Apply a smart swap to this session slot without carrying an unsafe load
+   * or stale tracking mode onto a different movement. The slot's programming
+   * (sets, reps, rest, RIR, tempo and superset) remains intact.
+   */
+  function chooseLiveSwap(replacement: Exercise) {
+    if (!session || current.sets.length > 0) return;
+    mutateExercise(activeIdx, (target) => {
+      // Re-check inside the state update so a late set cannot be reattributed
+      // to the replacement if it lands at the same time as this tap.
+      if (target.sets.length > 0) return target;
+      const tracking = resolveTracking(state, replacement.id, replacement.name, target.targetReps);
+      return {
+        ...target,
+        exerciseId: replacement.id,
+        name: replacement.name,
+        primary_muscles: [replacement.muscleGroup],
+        // A load on a different movement is not a safe default.
+        plannedWeightKg: undefined,
+        addedLive: true,
+        // Explicitly clear a previous duration target before resolving the
+        // replacement's tracking mode.
+        targetSeconds: undefined,
+        ...tracking,
+        sets: [],
+      };
+    });
+    hapticSelection();
     setShowSwap(false);
     setSwapQuery("");
   }
@@ -897,7 +1315,7 @@ function LiveWorkoutPage() {
       live.exercises.forEach((e) =>
         e.sets.forEach((cs) => {
           if (cs.kind === "warmup") return; // warm-ups aren't working volume
-          totalVolume += cs.weight * cs.reps;
+          totalVolume += setVolume(cs);
           if (cs.isPR) prCount += 1;
         }),
       );
@@ -905,7 +1323,9 @@ function LiveWorkoutPage() {
       live.exercises.forEach((e) => {
         let best: CompletedSet | null = null;
         e.sets.forEach((cs) => {
-          if (cs.weight <= 0 || cs.kind) return; // only true working sets set the best
+          // Only true load x reps attempts set the best: a timed hold has no
+          // weight-and-reps pair to write into the lift log.
+          if (cs.weight <= 0 || cs.mode || !countsForRecords(cs)) return;
           if (
             !best ||
             cs.weight > best.weight ||
@@ -935,6 +1355,12 @@ function LiveWorkoutPage() {
     });
     setFinishedSessionId(session!.id);
     setFinished(true);
+    // Send the watch back to idle now rather than waiting for the next render
+    // to publish it: the app is often backgrounded the moment a workout ends,
+    // and a wrist still showing a live session is worse than a blank one.
+    void clearWatch();
+    void endWorkoutActivity();
+    hapticWorkoutComplete();
     emitGritEarned(50, "WORKOUT COMPLETE", "quest");
     // Apple Health export (native iOS, user-enabled): rings + watch credit.
     if (getState().healthSync?.enabled && getState().healthSync?.exportWorkouts) {
@@ -961,6 +1387,8 @@ function LiveWorkoutPage() {
       sessions: st.sessions.filter((s) => s.id !== session!.id),
       activeSessionId: null,
     }));
+    void clearWatch();
+    void endWorkoutActivity();
     nav({ to: "/train" });
   }
 
@@ -970,7 +1398,11 @@ function LiveWorkoutPage() {
       style={{ background: "#0a0a0a", paddingTop: "env(safe-area-inset-top)" }}
     >
       <div className="flex items-center justify-between px-4 pt-3 pb-2">
-        <button onClick={discardWorkout} className="icon-btn text-grit-dim" aria-label="Exit workout">
+        <button
+          onClick={discardWorkout}
+          className="icon-btn text-grit-dim"
+          aria-label="Exit workout"
+        >
           <X size={22} />
         </button>
         <div className="text-center">
@@ -997,7 +1429,41 @@ function LiveWorkoutPage() {
         <Stat label="PRS" value={`${totals.prs}`} accent={totals.prs > 0} />
       </div>
 
-      <div className="grid grid-cols-3 gap-2 px-4 py-3 border-b border-grit">
+      {lastTime && (
+        <div className="border-b border-grit px-4 py-2.5">
+          <div className="flex items-baseline justify-between">
+            <span className="label-cap text-[9px] text-grit-dim">
+              VS LAST {session.label.toUpperCase()}
+            </span>
+            <span
+              className="display text-xs font-extrabold tabular-nums"
+              style={{ color: totals.vol >= lastTime.volume ? "#22c55e" : "#8a8a8a" }}
+            >
+              {totals.vol >= lastTime.volume
+                ? `AHEAD BY ${formatVolume(totals.vol - lastTime.volume, unit).toUpperCase()}`
+                : `${formatVolume(lastTime.volume - totals.vol, unit).toUpperCase()} TO GO`}
+            </span>
+          </div>
+          <div className="mt-1.5 h-1.5 rounded-full bg-[#1a1a1a] overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all"
+              style={{
+                width: `${Math.min(100, Math.round((totals.vol / lastTime.volume) * 100))}%`,
+                background: totals.vol >= lastTime.volume ? "#22c55e" : "#e63222",
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 overflow-x-auto px-4 py-3 border-b border-grit">
+        <button
+          onClick={() => setManaging(true)}
+          className="flex-shrink-0 flex h-8 w-8 items-center justify-center border border-grit text-grit-dim press"
+          aria-label="Edit session exercises"
+        >
+          <ListPlus size={15} />
+        </button>
         {session.exercises.map((e, i) => {
           const done = e.targetSets > 0 && completedWorkingSets(e.sets) >= e.targetSets;
           const active = i === activeIdx;
@@ -1053,10 +1519,7 @@ function LiveWorkoutPage() {
                 Superset · movement {currentSuperset.position} of {currentSuperset.total}
               </p>
             )}
-            {(current.targetRir != null ||
-              current.tempo ||
-              current.restSeconds ||
-              progressionLabel) && (
+            {(current.targetRir != null || current.tempo || progressionLabel) && (
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {progressionLabel && (
                   <span className="rounded-md border border-amber-300/25 bg-amber-300/[0.06] px-2 py-1 text-[9px] font-black uppercase text-amber-300">
@@ -1073,13 +1536,44 @@ function LiveWorkoutPage() {
                     {current.tempo} tempo
                   </span>
                 )}
-                {current.restSeconds != null && (
-                  <span className="rounded-md border border-grit px-2 py-1 text-[9px] font-black uppercase text-grit-dim">
-                    {current.restSeconds}s rest
-                  </span>
-                )}
               </div>
             )}
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <button
+                onClick={() => {
+                  // Cycle the common gym intervals; kept on the plan for next time.
+                  const options = [0, 60, 90, 120, 180];
+                  const now = current.restSeconds ?? restPref;
+                  const next = options[(options.indexOf(now) + 1) % options.length]!;
+                  setExerciseRest(next);
+                }}
+                className="flex items-center gap-1 rounded-md border border-grit px-2 py-1 text-[9px] font-black uppercase text-grit-dim press"
+                aria-label="Change rest for this exercise"
+              >
+                <Timer size={11} />
+                {(current.restSeconds ?? restPref) === 0
+                  ? "no rest"
+                  : `${current.restSeconds ?? restPref}s rest`}
+              </button>
+              {usesBarbell(current.name) && (
+                <button
+                  onClick={() => setPickingBar(true)}
+                  className="flex items-center gap-1 rounded-md border border-grit px-2 py-1 text-[9px] font-black uppercase text-grit-dim press"
+                  aria-label="Change the bar for this exercise"
+                >
+                  <Dumbbell size={11} />
+                  {barLabel(current.barKg)}
+                </button>
+              )}
+              <button
+                onClick={() => setNoting(true)}
+                className="flex items-center gap-1 rounded-md border border-grit px-2 py-1 text-[9px] font-black uppercase text-grit-dim press"
+                aria-label="Note for this exercise"
+              >
+                <StickyNote size={11} />
+                {current.note ? "edit note" : "note"}
+              </button>
+            </div>
           </div>
           <div className="flex flex-shrink-0 gap-2">
             <Link
@@ -1136,27 +1630,48 @@ function LiveWorkoutPage() {
           </div>
         )}
 
-        <SetLogger
-          key={`${session.id}:${activeIdx}`}
-          exercise={current}
-          defaultWeight={defaults.weight}
-          defaultReps={defaults.reps}
-          requiresWeight={
-            !(
-              getExercise(current.exerciseId, state.savedExercises)?.equipment.includes(
-                "BODYWEIGHT",
-              ) ?? false
-            )
-          }
-          history={evolution}
-          suggestion={suggestion}
-          ghost={ghost}
-          isProUser={isPro}
-          proLoading={proLoading}
-          onLog={logSet}
-          onUndo={undoLastSet}
-          onRpe={rpeLastSet}
-        />
+        {/* Form cues, collapsed: reachable between sets without leaving the workout. */}
+        <div className="mb-3">
+          <FormCoaching exerciseId={current.exerciseId} name={current.name} compact />
+        </div>
+
+        {current.tracking && current.tracking !== "WEIGHT" ? (
+          <TimedSetLogger
+            key={`${session.id}:${activeIdx}`}
+            exercise={current}
+            bests={timedBests}
+            unit={unit}
+            onLog={logSet}
+            onEditSet={editSet}
+            onDeleteSet={deleteSet}
+          />
+        ) : (
+          <SetLogger
+            key={`${session.id}:${activeIdx}`}
+            exercise={current}
+            defaultWeight={defaults.weight}
+            defaultReps={defaults.reps}
+            requiresWeight={
+              !(
+                getExercise(current.exerciseId, state.savedExercises)?.equipment.includes(
+                  "BODYWEIGHT",
+                ) ?? false
+              )
+            }
+            barKg={current.barKg ?? DEFAULT_BAR_KG}
+            unit={unit}
+            history={evolution}
+            suggestion={suggestion}
+            ghost={ghost}
+            isProUser={isPro}
+            proLoading={proLoading}
+            onLog={logSet}
+            onUndo={undoLastSet}
+            onRpe={rpeLastSet}
+            onEditSet={editSet}
+            onDeleteSet={deleteSet}
+          />
+        )}
       </div>
 
       <div
@@ -1191,6 +1706,42 @@ function LiveWorkoutPage() {
 
       {videoQuery && (
         <VideoModal query={videoQuery} title={videoTitle} onClose={() => setVideoQuery(null)} />
+      )}
+      {managing && (
+        <SessionExerciseSheet
+          exercises={session.exercises}
+          activeIndex={activeIdx}
+          saved={state.savedExercises}
+          onAdd={addExerciseLive}
+          onReplace={(exercise) => void replaceExerciseLive(exercise)}
+          onRemove={(index) => void removeExerciseLive(index)}
+          onMove={moveExerciseLive}
+          onSelect={setActiveIdx}
+          onClose={() => setManaging(false)}
+        />
+      )}
+      {pickingBar && (
+        <BarPickerSheet
+          name={current.name}
+          barKg={current.barKg ?? DEFAULT_BAR_KG}
+          unit={unit}
+          onPick={(kg) => {
+            setExerciseBar(kg);
+            setPickingBar(false);
+          }}
+          onClose={() => setPickingBar(false)}
+        />
+      )}
+      {noting && (
+        <NoteSheet
+          name={current.name}
+          note={current.note ?? ""}
+          onSave={(note) => {
+            setExerciseNote(note);
+            setNoting(false);
+          }}
+          onClose={() => setNoting(false)}
+        />
       )}
       {showSwap && (
         <LiveExerciseSwap
@@ -1273,7 +1824,10 @@ function LiveExerciseSwap({
         <div className="flex items-start justify-between gap-4 border-b border-white/10 p-4">
           <div className="min-w-0">
             <p className="label-cap text-[9px] text-pro">PRO SMART SWAP</p>
-            <h2 id="live-swap-title" className="display mt-1 text-2xl font-black uppercase text-grit">
+            <h2
+              id="live-swap-title"
+              className="display mt-1 text-2xl font-black uppercase text-grit"
+            >
               Keep the session moving
             </h2>
             <p className="mt-1 text-xs leading-relaxed text-grit-dim">
@@ -1310,9 +1864,12 @@ function LiveExerciseSwap({
                   <Dumbbell size={16} />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-bold text-grit">{exercise.name}</span>
+                  <span className="block truncate text-sm font-bold text-grit">
+                    {exercise.name}
+                  </span>
                   <span className="mt-0.5 block text-[10px] font-semibold uppercase text-grit-dim">
-                    {exercise.muscleGroup} · {exercise.equipmentLabel ?? exercise.equipment[0].replace("_", " ")}
+                    {exercise.muscleGroup} ·{" "}
+                    {exercise.equipmentLabel ?? exercise.equipment[0].replace("_", " ")}
                   </span>
                 </span>
                 <RefreshCw size={15} className="shrink-0 text-accent-red" />
@@ -1338,6 +1895,8 @@ function SetLogger({
   defaultWeight,
   defaultReps,
   requiresWeight,
+  barKg,
+  unit,
   history,
   suggestion,
   ghost,
@@ -1346,25 +1905,34 @@ function SetLogger({
   onLog,
   onUndo,
   onRpe,
+  onEditSet,
+  onDeleteSet,
 }: {
   exercise: WorkoutSessionExercise;
   defaultWeight: number;
   defaultReps: number;
   requiresWeight: boolean;
+  /** Bar this movement is loaded on, so plates and warm-ups match reality. */
+  barKg: number;
+  /** kg or lb — display only; every stored weight stays in kilograms. */
+  unit: WeightUnit;
   history: TopSet[];
   suggestion: Suggestion | null;
   ghost: GhostSet[];
   isProUser: boolean;
   proLoading: boolean;
-  onLog: (weight: number, reps: number, kind?: "warmup" | "drop") => void;
+  onLog: (entry: LoggedEntry) => void;
   onUndo: () => void;
   onRpe: (rpe: number) => void;
+  onEditSet: (setIndex: number, patch: LoggedEntry) => void;
+  onDeleteSet: (setIndex: number) => void;
 }) {
   // Pre-logged flow: every set arrives filled from the plan. In the gym you
   // just tick the row — no typing, no timers. Tap the pencil to adjust a
   // pending set if the day deviates from the plan.
   const [override, setOverride] = useState<{ weight: number; reps: number } | null>(null);
   const [editing, setEditing] = useState(false);
+  const [editingSet, setEditingSet] = useState<number | null>(null);
   const [weightError, setWeightError] = useState(false);
   const [extraSets, setExtraSets] = useState(0);
   const editWeightRef = useRef<HTMLInputElement>(null);
@@ -1373,17 +1941,19 @@ function SetLogger({
   const logged = exercise.sets.length;
   // Working rows keep their plan even when warm-up/drop sets are interleaved:
   // reserve targetSets working rows PLUS however many special sets are logged.
-  const loggedWorking = exercise.sets.filter((s) => !s.kind).length;
+  const loggedWorking = exercise.sets.filter(isWorkingSet).length;
   const plannedWorking = Math.max(exercise.targetSets + extraSets, loggedWorking);
   const planned = plannedWorking + (logged - loggedWorking);
   const nextWeight = override?.weight ?? defaultWeight;
   const nextReps = override?.reps ?? defaultReps;
   const progressionLocked = proLoading || !isProUser;
   const bodyweight = nextWeight <= 0;
-  const plates = !bodyweight && nextWeight >= 20 ? plateBreakdown(nextWeight) : null;
+  // Loaded from the movement's own bar: a trap bar is 5 kg heavier than the
+  // Olympic default, which is enough to hand out the wrong plates.
+  const plates = !bodyweight && barKg > 0 ? plateLoad(nextWeight, barKg, unit) : null;
   // Warm-up ramp stays available until the first working set is logged, so all
   // ramp steps can be ticked off (logging one warm-up shouldn't hide the rest).
-  const ramp = loggedWorking === 0 && nextWeight >= 30 ? warmupRamp(nextWeight) : [];
+  const ramp = loggedWorking === 0 && nextWeight >= barKg + 10 ? warmupRamp(nextWeight, barKg) : [];
 
   function applySuggestion() {
     if (progressionLocked) {
@@ -1395,7 +1965,9 @@ function SetLogger({
   }
 
   function saveEdit() {
-    const w = Number((editWeightRef.current?.value ?? "").replace(/[^0-9.]/g, ""));
+    // Typed in the athlete's units; every stored weight stays in kilograms.
+    const typed = Number((editWeightRef.current?.value ?? "").replace(/[^0-9.]/g, ""));
+    const w = Number.isFinite(typed) ? toKg(typed, unit) : Number.NaN;
     const r = Math.floor(Number((editRepsRef.current?.value ?? "").replace(/[^0-9]/g, "")));
     if (requiresWeight && (!Number.isFinite(w) || w <= 0)) {
       setWeightError(true);
@@ -1416,8 +1988,7 @@ function SetLogger({
     requestAnimationFrame(() => editWeightRef.current?.focus());
   }
 
-  const fmt = (w: number, r: number) =>
-    w > 0 ? `${w} kg × ${r}` : requiresWeight ? `Set weight · ${r} reps` : `${r} reps`;
+  const fmt = (w: number, r: number) => formatSet({ weight: w, reps: r }, requiresWeight);
 
   return (
     <div className="mt-5 bg-grit-card border border-grit rounded-2xl p-4">
@@ -1455,12 +2026,14 @@ function SetLogger({
                     (i === history.length - 1 ? "text-lg text-accent-red" : "text-sm text-grit")
                   }
                 >
-                  {h.weight}
+                  {formatWeightValue(h.weight, unit)}
                 </span>
                 {i < history.length - 1 && <span className="text-grit-dim text-[10px]">→</span>}
               </span>
             ))}
-            <span className="label-cap text-[8px] text-grit-dim ml-1">KG TOP SET</span>
+            <span className="label-cap text-[8px] text-grit-dim ml-1">
+              {unit.toUpperCase()} TOP SET
+            </span>
           </div>
         </button>
       )}
@@ -1505,7 +2078,9 @@ function SetLogger({
                     textDecoration: beaten ? "line-through" : undefined,
                   }}
                 >
-                  {g.weight > 0 ? `${g.weight}×${g.reps}` : `${g.reps} reps`}
+                  {g.weight > 0
+                    ? `${formatWeightValue(g.weight, unit)}×${g.reps}`
+                    : `${g.reps} reps`}
                 </span>
               );
             })}
@@ -1536,7 +2111,7 @@ function SetLogger({
                 "text-xs text-grit font-bold" + (progressionLocked ? " blur-[5px] select-none" : "")
               }
             >
-              {suggestion.weightKg}kg — {suggestion.reason}
+              {formatWeight(suggestion.weightKg, unit)} — {suggestion.reason}
             </span>
           </span>
           {progressionLocked ? (
@@ -1554,10 +2129,11 @@ function SetLogger({
             <button
               key={w.pct}
               type="button"
-              onClick={() => onLog(w.weight, w.reps, "warmup")}
+              onClick={() => onLog({ weight: w.weight, reps: w.reps, kind: "warmup" })}
               className="text-[10px] text-grit-dim border border-grit rounded-full px-2 py-0.5 press hover:border-accent-red hover:text-grit"
             >
-              {w.weight}kg×{w.reps}
+              {formatWeightValue(w.weight, unit)}
+              {unit}×{w.reps}
             </button>
           ))}
         </div>
@@ -1575,8 +2151,8 @@ function SetLogger({
               disabled={!done && !isNext}
               onClick={() => {
                 if (done) {
-                  // Only the most recent tick can be taken back.
-                  if (i === logged - 1) onUndo();
+                  // Every logged set stays correctable, not just the last tick.
+                  setEditingSet(i);
                   return;
                 }
                 if (isNext) {
@@ -1584,7 +2160,7 @@ function SetLogger({
                     openWeightEditor();
                     return;
                   }
-                  onLog(nextWeight, nextReps);
+                  onLog({ weight: nextWeight, reps: nextReps });
                 }
               }}
               className="w-full flex items-center justify-between border rounded-xl px-3 py-3 press text-left disabled:opacity-40"
@@ -1611,17 +2187,24 @@ function SetLogger({
                 </span>
                 <span
                   className="label-cap text-[10px]"
-                  style={{ color: doneSet?.kind === "drop" ? "#e63222" : "#8a8a8a" }}
+                  style={{
+                    color:
+                      doneSet?.kind === "drop" || doneSet?.kind === "failure"
+                        ? "#e63222"
+                        : "#8a8a8a",
+                  }}
                 >
                   {doneSet?.kind === "drop"
                     ? "DROP"
                     : doneSet?.kind === "warmup"
                       ? "WARM-UP"
-                      : `SET ${done ? exercise.sets.slice(0, i + 1).filter((s) => !s.kind).length : loggedWorking + (i - logged) + 1}`}
+                      : // Failure is a marker on a working set, so it keeps its
+                        // number — it is the set you planned, taken to the end.
+                        `SET ${done ? exercise.sets.slice(0, i + 1).filter(isWorkingSet).length : loggedWorking + (i - logged) + 1}${doneSet?.kind === "failure" ? " · TO FAILURE" : ""}`}
                 </span>
               </span>
               <span className="display text-lg font-extrabold text-grit leading-none flex items-center">
-                {done ? fmt(doneSet!.weight, doneSet!.reps) : fmt(nextWeight, nextReps)}
+                {done ? formatSet(doneSet!, requiresWeight, unit) : fmt(nextWeight, nextReps)}
                 {doneSet?.isPR && <Flame size={14} className="ml-2 text-accent-red" />}
                 {isNext && !editing && (
                   <Pencil
@@ -1678,10 +2261,10 @@ function SetLogger({
             <input
               ref={editWeightRef}
               inputMode="decimal"
-              defaultValue={nextWeight > 0 ? String(nextWeight) : ""}
-              placeholder="kg"
+              defaultValue={nextWeight > 0 ? formatWeightValue(nextWeight, unit) : ""}
+              placeholder={unit}
               className={`input-grit ${weightError ? "border-accent-red" : ""}`}
-              aria-label="Weight (kg)"
+              aria-label={`Weight (${unit})`}
             />
             <input
               ref={editRepsRef}
@@ -1708,7 +2291,7 @@ function SetLogger({
         </div>
       )}
 
-      <div className="mt-2 grid grid-cols-2 gap-2">
+      <div className="mt-2 grid grid-cols-3 gap-2">
         <button
           type="button"
           onClick={() => setExtraSets((n) => n + 1)}
@@ -1723,11 +2306,34 @@ function SetLogger({
               openWeightEditor();
               return;
             }
+            // Same load and reps as the working set, marked. It still counts
+            // toward the plan and can still set a record — you did the work.
+            onLog({ weight: nextWeight, reps: nextReps, kind: "failure" });
+          }}
+          className="w-full border border-dashed border-accent-red/40 rounded-xl py-2.5 label-cap text-[10px] text-accent-red press"
+        >
+          + To failure
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (requiresWeight && nextWeight <= 0) {
+              openWeightEditor();
+              return;
+            }
             // Drop set: ~20% off the working weight, logged straight away and
             // marked (never a PR, but counts as volume).
+            // Rounded to something the athlete's own gym can actually load:
+            // 2.5 kg steps in a kilo gym, 5 lb steps in a pound one.
+            const step = increment(unit);
             const dropW =
-              nextWeight > 0 ? Math.max(2.5, Math.round((nextWeight * 0.8) / 2.5) * 2.5) : 0;
-            onLog(dropW, nextReps, "drop");
+              nextWeight > 0
+                ? Math.max(
+                    toKg(step, unit),
+                    toKg(Math.round((toDisplay(nextWeight, unit) * 0.8) / step) * step, unit),
+                  )
+                : 0;
+            onLog({ weight: dropW, reps: nextReps, kind: "drop" });
           }}
           className="w-full border border-dashed border-accent-red/40 rounded-xl py-2.5 label-cap text-[10px] text-accent-red press"
         >
@@ -1750,18 +2356,602 @@ function SetLogger({
               </span>
             ))
           )}
-          <span className="label-cap text-[9px] text-grit-dim ml-auto">BAR {plates.barKg}KG</span>
-          {plates.remainderKg > 0 && (
+          <span className="label-cap text-[9px] text-grit-dim ml-auto">
+            BAR {trimNumber(plates.bar)}
+            {unit.toUpperCase()}
+          </span>
+          {plates.remainder > 0 && (
             <span className="text-[10px] text-accent-red w-full">
-              {plates.remainderKg}kg short of {nextWeight}kg — needs microplates
+              {trimNumber(plates.remainder)}
+              {unit} short of {formatWeight(nextWeight, unit)} — needs microplates
             </span>
           )}
         </div>
       )}
 
       <p className="text-xs text-grit-dim mt-3 leading-relaxed">
-        Tap a set to tick it off — swipe for the next exercise. PRs are detected automatically.
+        Tap a set to tick it off, or tap a logged one to fix it — swipe for the next exercise. PRs
+        are detected automatically.
       </p>
+
+      {editingSet !== null && exercise.sets[editingSet] && (
+        <SetEditorSheet
+          set={exercise.sets[editingSet]!}
+          index={editingSet}
+          requiresWeight={requiresWeight}
+          unit={unit}
+          onSave={(patch) => {
+            onEditSet(editingSet, patch);
+            setEditingSet(null);
+          }}
+          onDelete={() => {
+            onDeleteSet(editingSet);
+            setEditingSet(null);
+          }}
+          onClose={() => setEditingSet(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * A cue written on the gym floor. Saved onto the day's plan, so the thing you
+ * worked out mid-set is waiting for you the next time you do this movement.
+ */
+function NoteSheet({
+  name,
+  note,
+  onSave,
+  onClose,
+}: {
+  name: string;
+  note: string;
+  onSave: (note: string) => void;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end bg-black/70"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Note for ${name}`}
+      onClick={onClose}
+    >
+      <div
+        className="w-full rounded-t-2xl border-t border-grit bg-grit-card p-5"
+        style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <p className="label-cap text-[10px] text-accent-red">CUE — {name.toUpperCase()}</p>
+          <button onClick={onClose} className="icon-btn text-grit-dim" aria-label="Close">
+            <X size={18} />
+          </button>
+        </div>
+        <textarea
+          ref={ref}
+          defaultValue={note}
+          rows={3}
+          placeholder="Elbows tucked, pause on the chest…"
+          className="input-grit mt-3 w-full resize-none"
+          aria-label={`Note for ${name}`}
+        />
+        <p className="mt-2 text-[11px] leading-relaxed text-grit-dim">
+          Kept on your plan for this day — it shows up next time you train this movement.
+        </p>
+        <button onClick={() => onSave(ref.current?.value ?? "")} className="btn-grit mt-3 w-full">
+          Save cue
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Which bar this movement is loaded on.
+ *
+ * Setting it fixes two things at once: the plate breakdown stops assuming an
+ * Olympic bar, and the warm-up ramp stops suggesting weights lighter than the
+ * bar you are holding.
+ */
+function BarPickerSheet({
+  name,
+  barKg,
+  unit,
+  onPick,
+  onClose,
+}: {
+  name: string;
+  barKg: number;
+  unit: WeightUnit;
+  onPick: (kg: number) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end bg-black/70"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Bar for ${name}`}
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[80vh] w-full overflow-auto rounded-t-2xl border-t border-grit bg-grit-card p-5"
+        style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <p className="label-cap text-[10px] text-accent-red">BAR — {name.toUpperCase()}</p>
+          <button onClick={onClose} className="icon-btn text-grit-dim" aria-label="Close">
+            <X size={18} />
+          </button>
+        </div>
+        <ul className="mt-3 space-y-1.5">
+          {BAR_TYPES.map((bar) => {
+            const active = bar.kg === barKg;
+            return (
+              <li key={bar.id}>
+                <button
+                  onClick={() => onPick(bar.kg)}
+                  className="flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left press"
+                  style={{ borderColor: active ? "#e63222" : "#262626" }}
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-bold text-grit">{bar.name}</span>
+                    <span className="label-cap text-[9px] text-grit-dim">{bar.note}</span>
+                  </span>
+                  <span className="display text-sm font-extrabold text-grit">
+                    {bar.kg > 0 ? formatWeight(bar.kg, unit) : "—"}
+                  </span>
+                  {active && <Check size={15} className="text-accent-red" />}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        <p className="mt-3 text-[11px] leading-relaxed text-grit-dim">
+          Saved on your plan for this movement — plate maths and warm-ups use it from now on.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** mm:ss in, seconds out. Accepts a bare number of seconds too. */
+function parseClock(raw: string): number {
+  const text = raw.trim();
+  if (!text) return 0;
+  const parts = text.split(":");
+  if (parts.length === 2) {
+    const mins = Number(parts[0]!.replace(/[^0-9]/g, "")) || 0;
+    const secs = Number(parts[1]!.replace(/[^0-9]/g, "")) || 0;
+    return mins * 60 + secs;
+  }
+  return Math.max(0, Math.round(Number(text.replace(/[^0-9.]/g, "")) || 0));
+}
+
+/** Seconds as an editable mm:ss string. */
+function clockValue(seconds: number): string {
+  const total = Math.max(0, Math.round(seconds));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+}
+
+/**
+ * Correct or delete a set that was already logged. Opens over the logger so
+ * the athlete never has to unwind good sets to fix a bad one.
+ */
+function SetEditorSheet({
+  set: logged,
+  index,
+  requiresWeight,
+  unit,
+  onSave,
+  onDelete,
+  onClose,
+}: {
+  set: CompletedSet;
+  index: number;
+  requiresWeight: boolean;
+  unit: WeightUnit;
+  onSave: (patch: LoggedEntry) => void;
+  onDelete: () => void;
+  onClose: () => void;
+}) {
+  const weightRef = useRef<HTMLInputElement>(null);
+  const repsRef = useRef<HTMLInputElement>(null);
+  const timeRef = useRef<HTMLInputElement>(null);
+  const distanceRef = useRef<HTMLInputElement>(null);
+
+  function save() {
+    // Typed in the athlete's units, stored in kilograms — the conversion
+    // happens here so nothing downstream ever sees a pound value.
+    const typed = Number((weightRef.current?.value ?? "").replace(/[^0-9.]/g, ""));
+    const weight = Number.isFinite(typed) ? toKg(typed, unit) : Number.NaN;
+    const reps = Math.floor(Number((repsRef.current?.value ?? "").replace(/[^0-9]/g, "")));
+    const seconds = timeRef.current ? parseClock(timeRef.current.value) : undefined;
+    const meters = distanceRef.current
+      ? Math.round(Number(distanceRef.current.value.replace(/[^0-9.]/g, "")) || 0)
+      : undefined;
+    onSave({
+      weight: Number.isFinite(weight) && weight >= 0 ? weight : 0,
+      reps: logged.mode ? 0 : Number.isFinite(reps) && reps > 0 ? reps : logged.reps,
+      ...(logged.mode ? { mode: logged.mode } : {}),
+      ...(seconds ? { seconds } : {}),
+      ...(meters ? { meters } : {}),
+    });
+  }
+
+  const label =
+    logged.kind === "warmup"
+      ? "WARM-UP SET"
+      : logged.kind === "drop"
+        ? "DROP SET"
+        : `SET ${index + 1}`;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end bg-black/70"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Edit ${label.toLowerCase()}`}
+      onClick={onClose}
+    >
+      <div
+        className="w-full rounded-t-2xl border-t border-grit bg-grit-card p-5"
+        style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <p className="label-cap text-[10px] text-accent-red">EDIT {label}</p>
+          <button onClick={onClose} className="icon-btn text-grit-dim" aria-label="Close">
+            <X size={18} />
+          </button>
+        </div>
+
+        {logged.mode === "duration" ? (
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <label className="block">
+              <span className="label-cap text-[9px] text-grit-dim">TIME (MM:SS)</span>
+              <input
+                ref={timeRef}
+                inputMode="numeric"
+                defaultValue={clockValue(logged.seconds ?? 0)}
+                className="input-grit mt-1 w-full"
+                aria-label="Hold time"
+              />
+            </label>
+            <label className="block">
+              <span className="label-cap text-[9px] text-grit-dim">
+                ADDED LOAD ({unit.toUpperCase()})
+              </span>
+              <input
+                ref={weightRef}
+                inputMode="decimal"
+                defaultValue={logged.weight > 0 ? formatWeightValue(logged.weight, unit) : ""}
+                placeholder="0"
+                className="input-grit mt-1 w-full"
+                aria-label={`Added load in ${unit}`}
+              />
+            </label>
+          </div>
+        ) : logged.mode === "distance" ? (
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <label className="block">
+              <span className="label-cap text-[9px] text-grit-dim">DISTANCE (M)</span>
+              <input
+                ref={distanceRef}
+                inputMode="numeric"
+                defaultValue={logged.meters ? String(logged.meters) : ""}
+                className="input-grit mt-1 w-full"
+                aria-label="Distance in metres"
+              />
+            </label>
+            <label className="block">
+              <span className="label-cap text-[9px] text-grit-dim">TIME (MM:SS)</span>
+              <input
+                ref={timeRef}
+                inputMode="numeric"
+                defaultValue={logged.seconds ? clockValue(logged.seconds) : ""}
+                placeholder="0:00"
+                className="input-grit mt-1 w-full"
+                aria-label="Elapsed time"
+              />
+            </label>
+          </div>
+        ) : (
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <label className="block">
+              <span className="label-cap text-[9px] text-grit-dim">
+                {requiresWeight
+                  ? `WEIGHT (${unit.toUpperCase()})`
+                  : `ADDED LOAD (${unit.toUpperCase()})`}
+              </span>
+              <input
+                ref={weightRef}
+                inputMode="decimal"
+                defaultValue={logged.weight > 0 ? formatWeightValue(logged.weight, unit) : ""}
+                placeholder={requiresWeight ? unit : "0"}
+                className="input-grit mt-1 w-full"
+                aria-label={`Weight in ${unit}`}
+              />
+            </label>
+            <label className="block">
+              <span className="label-cap text-[9px] text-grit-dim">REPS</span>
+              <input
+                ref={repsRef}
+                inputMode="numeric"
+                defaultValue={String(logged.reps)}
+                className="input-grit mt-1 w-full"
+                aria-label="Reps"
+              />
+            </label>
+          </div>
+        )}
+
+        {logged.isPR && (
+          <p className="mt-3 text-[11px] leading-relaxed text-grit-dim">
+            This set is flagged as a PR. Editing it changes the numbers on the set, but the record
+            it already earned stands.
+          </p>
+        )}
+
+        <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
+          <button onClick={save} className="btn-grit">
+            Save set
+          </button>
+          <button
+            onClick={onDelete}
+            className="border border-accent-red/50 rounded-xl px-4 label-cap text-[10px] text-accent-red press"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Logger for movements measured in time or distance. A plank logged as reps
+ * poisons the rep history and hands out fake PRs, so holds, carries and
+ * conditioning get a stopwatch and their own records instead.
+ */
+function TimedSetLogger({
+  exercise,
+  bests,
+  unit,
+  onLog,
+  onEditSet,
+  onDeleteSet,
+}: {
+  exercise: WorkoutSessionExercise;
+  bests: { seconds: number; meters: number };
+  unit: WeightUnit;
+  onLog: (entry: LoggedEntry) => void;
+  onEditSet: (setIndex: number, patch: LoggedEntry) => void;
+  onDeleteSet: (setIndex: number) => void;
+}) {
+  const distance = exercise.tracking === "DISTANCE";
+  const target = exercise.targetSeconds ?? 45;
+  const [elapsed, setElapsed] = useState(0);
+  const [running, setRunning] = useState(false);
+  const [editingSet, setEditingSet] = useState<number | null>(null);
+  const startedAtRef = useRef<number | null>(null);
+  const loadRef = useRef<HTMLInputElement>(null);
+  const distanceRef = useRef<HTMLInputElement>(null);
+
+  // Wall-clock based, not tick-counted: a backgrounded phone throttles timers,
+  // and a hold that reads short because iOS paused the tab is worse than none.
+  useEffect(() => {
+    if (!running) return;
+    const id = window.setInterval(() => {
+      const startedAt = startedAtRef.current;
+      if (startedAt != null) setElapsed(Math.round((Date.now() - startedAt) / 1000));
+    }, 200);
+    return () => window.clearInterval(id);
+  }, [running]);
+
+  const logged = exercise.sets.length;
+  const planned = Math.max(exercise.targetSets, logged);
+  const addedLoad = () => {
+    const typed = Number((loadRef.current?.value ?? "").replace(/[^0-9.]/g, ""));
+    // Typed in the athlete's units; stored in kilograms like every other load.
+    return Number.isFinite(typed) && typed > 0 ? toKg(typed, unit) : 0;
+  };
+
+  function stopAndLog() {
+    const seconds = elapsed;
+    setRunning(false);
+    startedAtRef.current = null;
+    setElapsed(0);
+    if (seconds <= 0) return;
+    onLog({ weight: addedLoad(), reps: 0, mode: "duration", seconds });
+  }
+
+  function logDistance() {
+    const meters = Math.round(
+      Number((distanceRef.current?.value ?? "").replace(/[^0-9.]/g, "")) || 0,
+    );
+    if (meters <= 0) return;
+    onLog({
+      weight: 0,
+      reps: 0,
+      mode: "distance",
+      meters,
+      ...(elapsed ? { seconds: elapsed } : {}),
+    });
+    setRunning(false);
+    startedAtRef.current = null;
+    setElapsed(0);
+    if (distanceRef.current) distanceRef.current.value = "";
+  }
+
+  return (
+    <div className="mt-5 bg-grit-card border border-grit rounded-2xl p-4">
+      <div className="flex items-center justify-between">
+        <p className="label-cap text-accent-red text-[10px]">
+          {distance ? "DISTANCE EFFORT" : "TIMED HOLD"}
+        </p>
+        <p className="label-cap text-[10px] text-grit-dim">
+          {logged}/{planned} · {distance ? "PER SET" : formatDuration(target)}
+        </p>
+      </div>
+
+      {(distance ? bests.meters : bests.seconds) > 0 && (
+        <div className="mt-3 flex items-center gap-2 border border-grit rounded-xl px-3 py-2">
+          <Ghost size={11} className="ghost-live text-accent-red" />
+          <span className="label-cap text-[9px] text-grit-dim">BEST SO FAR</span>
+          <span className="display ml-auto text-sm font-extrabold text-grit">
+            {distance ? formatDistance(bests.meters) : formatDuration(bests.seconds)}
+          </span>
+        </div>
+      )}
+
+      <div className="mt-3 rounded-xl border border-grit px-4 py-5 text-center">
+        <p
+          className="display text-5xl font-extrabold tabular-nums leading-none"
+          style={{ color: !distance && elapsed >= target ? "#22c55e" : "#f5f5f5" }}
+          aria-live="off"
+        >
+          {formatDuration(elapsed)}
+        </p>
+        {!distance && (
+          <p className="label-cap mt-2 text-[9px] text-grit-dim">
+            {elapsed >= target ? "TARGET BEATEN" : `TARGET ${formatDuration(target)}`}
+          </p>
+        )}
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              if (running) {
+                setRunning(false);
+                startedAtRef.current = null;
+                return;
+              }
+              startedAtRef.current = Date.now() - elapsed * 1000;
+              setRunning(true);
+            }}
+            className="btn-ghost"
+          >
+            {running ? "Pause" : elapsed > 0 ? "Resume" : "Start"}
+          </button>
+          <button
+            type="button"
+            onClick={distance ? logDistance : stopAndLog}
+            disabled={!distance && elapsed <= 0}
+            className="btn-grit disabled:opacity-40"
+          >
+            <Check size={16} className="mr-2" />
+            Log set
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {distance ? (
+          <label className="block">
+            <span className="label-cap text-[9px] text-grit-dim">DISTANCE (M)</span>
+            <input
+              ref={distanceRef}
+              inputMode="numeric"
+              placeholder="1000"
+              className="input-grit mt-1 w-full"
+              aria-label="Distance in metres"
+            />
+          </label>
+        ) : (
+          <label className="block">
+            <span className="label-cap text-[9px] text-grit-dim">
+              ADDED LOAD ({unit.toUpperCase()})
+            </span>
+            <input
+              ref={loadRef}
+              inputMode="decimal"
+              placeholder="0"
+              className="input-grit mt-1 w-full"
+              aria-label={`Added load in ${unit}`}
+            />
+          </label>
+        )}
+        {!distance && (
+          <button
+            type="button"
+            onClick={() =>
+              onLog({ weight: addedLoad(), reps: 0, mode: "duration", seconds: target })
+            }
+            className="mt-[18px] border border-dashed border-grit rounded-xl py-2.5 label-cap text-[10px] text-grit-dim press"
+          >
+            Log {formatDuration(target)}
+          </button>
+        )}
+      </div>
+
+      <div className="mt-3 space-y-1.5">
+        {Array.from({ length: planned }, (_, i) => {
+          const doneSet = i < logged ? exercise.sets[i] : null;
+          return (
+            <button
+              key={i}
+              type="button"
+              disabled={!doneSet}
+              onClick={() => doneSet && setEditingSet(i)}
+              className="w-full flex items-center justify-between border rounded-xl px-3 py-3 press text-left disabled:opacity-40"
+              style={{
+                borderColor: doneSet
+                  ? doneSet.isPR
+                    ? "rgba(230,50,34,.6)"
+                    : "rgba(34,197,94,.4)"
+                  : "#262626",
+                background: doneSet ? "rgba(34,197,94,.05)" : undefined,
+              }}
+            >
+              <span className="flex items-center gap-2.5">
+                <span
+                  className="flex h-6 w-6 items-center justify-center rounded-full border"
+                  style={{
+                    borderColor: doneSet ? "#22c55e" : "#3a3a3a",
+                    background: doneSet ? "#22c55e" : "transparent",
+                  }}
+                >
+                  {doneSet && <Check size={14} className="text-black" strokeWidth={3} />}
+                </span>
+                <span className="label-cap text-[10px] text-[#8a8a8a]">SET {i + 1}</span>
+              </span>
+              <span className="display text-lg font-extrabold text-grit leading-none flex items-center">
+                {doneSet ? formatSet(doneSet, false) : "—"}
+                {doneSet?.isPR && <Flame size={14} className="ml-2 text-accent-red" />}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <p className="text-xs text-grit-dim mt-3 leading-relaxed">
+        {distance
+          ? "Log the distance you covered — time is optional. Distance efforts never count toward tonnage."
+          : "Time under tension, not reps. Holds never count toward tonnage, and your record is the longest one."}
+      </p>
+
+      {editingSet !== null && exercise.sets[editingSet] && (
+        <SetEditorSheet
+          set={exercise.sets[editingSet]!}
+          index={editingSet}
+          requiresWeight={false}
+          unit={unit}
+          onSave={(patch) => {
+            onEditSet(editingSet, patch);
+            setEditingSet(null);
+          }}
+          onDelete={() => {
+            onDeleteSet(editingSet);
+            setEditingSet(null);
+          }}
+          onClose={() => setEditingSet(null)}
+        />
+      )}
     </div>
   );
 }
@@ -1779,6 +2969,7 @@ function FinishedScreen({
   share: boolean;
   onCloseShare: () => void;
 }) {
+  const [state] = useAppState();
   const setsLogged = session.exercises.reduce((s, e) => s + e.sets.length, 0);
   const durationMin = Math.max(
     1,
@@ -1815,6 +3006,10 @@ function FinishedScreen({
           </div>
         )}
 
+        <div className="mt-3">
+          <SessionReflection sessionId={session.id} />
+        </div>
+
         <div className="mt-auto pt-6 grid grid-cols-2 gap-3">
           <button onClick={onClose} className="btn-ghost">
             Done
@@ -1825,7 +3020,14 @@ function FinishedScreen({
           </button>
         </div>
       </div>
-      {share && <ShareCard session={session} onClose={onCloseShare} />}
+      {share && (
+        <ShareCard
+          session={session}
+          displayName={state.profile?.displayName || state.profile?.username || undefined}
+          username={state.profile?.username}
+          onClose={onCloseShare}
+        />
+      )}
       <GritEarnedLayer />
     </div>
   );

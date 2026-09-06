@@ -12,8 +12,20 @@ function entry(date: string, ml: number): WaterEntry {
 describe("hydrationInsight", () => {
   it("returns null with no target or thin data", () => {
     const days = ["2026-07-27", "2026-07-28", "2026-07-29", "2026-07-30"];
-    expect(hydrationInsight(days.map((d) => entry(d, 3000)), 0, TODAY)).toBeNull();
-    expect(hydrationInsight(days.map((d) => entry(d, 3000)), 3000, TODAY)).toBeNull(); // 4 < 5
+    expect(
+      hydrationInsight(
+        days.map((d) => entry(d, 3000)),
+        0,
+        TODAY,
+      ),
+    ).toBeNull();
+    expect(
+      hydrationInsight(
+        days.map((d) => entry(d, 3000)),
+        3000,
+        TODAY,
+      ),
+    ).toBeNull(); // 4 < 5
   });
 
   it("computes hit rate and sums split entries within a day", () => {

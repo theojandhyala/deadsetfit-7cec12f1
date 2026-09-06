@@ -31,6 +31,8 @@
 	<string>DEADSET lets you choose progress photos and a profile picture from your photo library.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>DEADSET can save shareable rank and progress cards to your photo library.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>DEADSET can use your location once to fill in your city, so you can appear on nearby-athlete leaderboards. Only the city and country are saved — never your exact location — and you can type your city instead.</string>
 	<key>CFBundleDisplayName</key>
         <string>DEADSET</string>
 	<key>CFBundleExecutable</key>

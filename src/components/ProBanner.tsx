@@ -44,14 +44,14 @@ export function ProBanner() {
         </div>
         <Link
           to="/upgrade"
-          className="shrink-0 rounded bg-accent-red px-3 py-1.5 font-display text-[10px] uppercase tracking-widest text-white hover:bg-accent-red/90"
+          className="flex min-h-11 shrink-0 items-center rounded bg-accent-red px-3 font-display text-[10px] uppercase tracking-widest text-white hover:bg-accent-red/90"
         >
           Go Pro
         </Link>
         <button
           onClick={dismiss}
           aria-label="Dismiss"
-          className="icon-btn shrink-0 -mr-1 p-1 text-grit hover:text-grit-text"
+          className="icon-btn shrink-0 -mr-1 p-1 text-grit hover:text-grit-text tap-44"
         >
           <X size={14} />
         </button>

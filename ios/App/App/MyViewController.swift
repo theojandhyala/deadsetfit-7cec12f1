@@ -5,23 +5,26 @@ import Capacitor
 /// plugins shipped as packages, not classes living in the app target.
 class MyViewController: CAPBridgeViewController {
     private let deadsetBackground = UIColor(
-        red: 10.0 / 255.0,
-        green: 10.0 / 255.0,
-        blue: 10.0 / 255.0,
+        red: 7.0 / 255.0,
+        green: 7.0 / 255.0,
+        blue: 8.0 / 255.0,
         alpha: 1.0
     )
 
-    override var preferredStatusBarStyle: UIStatusBarStyle {
-        .lightContent
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        // WKWebView is white until its first HTML paint unless both layers are
+        // explicitly coloured. On a cold launch or a slow session restore that
+        // produced a bright flash between the native splash and DEADSET.
+        view.backgroundColor = deadsetBackground
+        webView?.isOpaque = false
+        webView?.backgroundColor = deadsetBackground
+        webView?.scrollView.backgroundColor = deadsetBackground
     }
 
-    override func viewDidLoad() {
-        // CAPBridgeViewController's default backing view is white. On a cold
-        // WebKit launch it can be visible between the storyboard splash and
-        // the first HTML paint, producing a bright flash for up to a second.
-        // Paint every native layer DEADSET black before WebKit is created.
-        super.viewDidLoad()
-        view.backgroundColor = deadsetBackground
+    override var preferredStatusBarStyle: UIStatusBarStyle {
+        .lightContent
     }
 
     override open func capacitorDidLoad() {
@@ -36,7 +39,10 @@ class MyViewController: CAPBridgeViewController {
         // Island and nothing anywhere reports an error.
         bridge?.registerPluginInstance(RestActivityPlugin())
         bridge?.registerPluginInstance(StoreKitPlugin())
+        bridge?.registerPluginInstance(WatchBridgePlugin())
+        bridge?.registerPluginInstance(HapticsPlugin())
+        bridge?.registerPluginInstance(WidgetBridgePlugin())
+        bridge?.registerPluginInstance(WorkoutActivityPlugin())
         bridge?.registerPluginInstance(AppReviewPlugin())
-        bridge?.registerPluginInstance(FeedbackPlugin())
     }
 }

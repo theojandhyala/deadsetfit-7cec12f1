@@ -65,11 +65,7 @@ describe("Pro review", () => {
 
   it("builds a target roadmap from real lift history and trend", () => {
     const appState = state({
-      sessions: [
-        session("2026-07-01", 80),
-        session("2026-07-08", 85),
-        session("2026-07-15", 90),
-      ],
+      sessions: [session("2026-07-01", 80), session("2026-07-08", 85), session("2026-07-15", 90)],
       strengthGoals: [
         {
           exerciseId: "bench-press",
@@ -79,10 +75,7 @@ describe("Pro review", () => {
       ],
     });
 
-    const [roadmap] = strengthGoalRoadmaps(
-      appState,
-      new Date("2026-07-16T12:00:00Z").getTime(),
-    );
+    const [roadmap] = strengthGoalRoadmaps(appState, new Date("2026-07-16T12:00:00Z").getTime());
     expect(roadmap).toMatchObject({
       exerciseId: "bench-press",
       name: "Bench Press",

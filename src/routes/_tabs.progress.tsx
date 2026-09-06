@@ -4,6 +4,7 @@ import {
   BrainCircuit,
   Camera,
   Flame,
+  Gauge,
   Image as ImageIcon,
   Lock,
   Scale,
@@ -22,6 +23,7 @@ import { TrainingHeatmap } from "@/components/TrainingHeatmap";
 import { RepZoneCard } from "@/components/RepZoneCard";
 import { LifetimeStatsCard } from "@/components/LifetimeStatsCard";
 import { SessionRecordsCard } from "@/components/SessionRecordsCard";
+import { SessionFeelCard } from "@/components/SessionFeelCard";
 import { TrainingRhythmCard } from "@/components/TrainingRhythmCard";
 import { FreshStimulusCard } from "@/components/FreshStimulusCard";
 import { DataFreshnessCard } from "@/components/DataFreshnessCard";
@@ -41,7 +43,7 @@ import { AppleFitnessCard } from "@/components/AppleFitnessCard";
 import { TrainingAutopilot } from "@/components/TrainingAutopilot";
 import { ProWeeklyReview } from "@/components/ProWeeklyReview";
 import { PRRoadmap } from "@/components/PRRoadmap";
-import { StrengthMapCard } from "@/components/StrengthMapCard";
+import { hapticFailure, hapticSaved, hapticSelection, hapticUndo } from "@/lib/haptics";
 
 export const Route = createFileRoute("/_tabs/progress")({
   head: () => ({ meta: [{ title: "DEADSET — Progress" }] }),
@@ -86,8 +88,12 @@ function ProgressPage() {
         ...s,
         checkIns: [...s.checkIns, { date: new Date().toISOString(), photoDataUrl: dataUrl }],
       }));
+      hapticSaved();
     };
-    img.onerror = () => URL.revokeObjectURL(url);
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      hapticFailure();
+    };
     img.src = url;
   }
 
@@ -96,9 +102,13 @@ function ProgressPage() {
       openPaywall("photos");
       return;
     }
-    setCompare((c) =>
-      c.includes(id) ? c.filter((x) => x !== id) : c.length < 2 ? [...c, id] : [c[1], id],
-    );
+    const next = compare.includes(id)
+      ? compare.filter((x) => x !== id)
+      : compare.length < 2
+        ? [...compare, id]
+        : [compare[1], id];
+    setCompare(next);
+    hapticSelection();
   }
 
   /** Bodyweight entry nearest to an ISO date (for photo comparisons). */
@@ -114,7 +124,10 @@ function ProgressPage() {
   }
   function logWeight() {
     const w = Number(weightRef.current?.value);
-    if (!w || w < 0) return;
+    if (!w || w < 0) {
+      hapticFailure();
+      return;
+    }
     // One entry per day: re-logging today replaces it (fixes typo re-entry and
     // the duplicate-key/delete-all collision on same-day rows).
     const today = isoDay();
@@ -123,6 +136,7 @@ function ProgressPage() {
       weights: [...s.weights.filter((x) => x.date !== today), { date: today, weight: w }],
     }));
     if (weightRef.current) weightRef.current.value = "";
+    hapticSaved();
   }
   function logMeasurements() {
     const chest = +(chestRef.current?.value ?? "") || 0;
@@ -130,8 +144,14 @@ function ProgressPage() {
     const arms = +(armsRef.current?.value ?? "") || 0;
     const legs = +(legsRef.current?.value ?? "") || 0;
     // Don't record an all-empty measurement row — it would pollute the chart.
-    if (!chest && !waist && !arms && !legs) return;
-    if (chest < 0 || waist < 0 || arms < 0 || legs < 0) return;
+    if (!chest && !waist && !arms && !legs) {
+      hapticFailure();
+      return;
+    }
+    if (chest < 0 || waist < 0 || arms < 0 || legs < 0) {
+      hapticFailure();
+      return;
+    }
     // One entry per day: re-logging today replaces it.
     const today = isoDay();
     set((s) => ({
@@ -144,12 +164,15 @@ function ProgressPage() {
     for (const r of [chestRef, waistRef, armsRef, legsRef]) {
       if (r.current) r.current.value = "";
     }
+    hapticSaved();
   }
   function deleteWeight(date: string) {
     set((s) => ({ ...s, weights: s.weights.filter((w) => w.date !== date) }));
+    hapticUndo();
   }
   function deleteMeasurement(date: string) {
     set((s) => ({ ...s, measurements: s.measurements.filter((m) => m.date !== date) }));
+    hapticUndo();
   }
   async function deleteCheckIn(date: string) {
     const ok = await askConfirm({
@@ -160,6 +183,7 @@ function ProgressPage() {
     if (!ok) return;
     set((s) => ({ ...s, checkIns: s.checkIns.filter((c) => c.date !== date) }));
     setCompare((c) => c.filter((d) => d !== date));
+    hapticUndo();
   }
 
   // PRs across both new sessions and legacy logs — enriched with reps, date, history, group
@@ -395,6 +419,9 @@ function ProgressPage() {
             <a
               key={href}
               href={href}
+              onClick={() => {
+                if (window.location.hash !== href) hapticSelection();
+              }}
               className="press flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-2xl border border-white/10 bg-grit-card px-1 text-center"
             >
               <Icon size={17} className="text-accent-red" />
@@ -407,10 +434,36 @@ function ProgressPage() {
       <ProWeeklyReview />
       <AppleFitnessCard />
       <TrainingAutopilot />
-      <StrengthMapCard state={state} setState={set} />
       <div id="progress-strength" className="scroll-mt-28">
         <PRRoadmap />
       </div>
+
+      {/* Strength Map — the "how strong am I actually" signature feature */}
+      <section className="px-5 mb-4 animate-slide-up delay-50">
+        <Link
+          to="/strength"
+          className="deadset-3d-panel deadset-lift block w-full p-4 press"
+          style={{
+            background: "linear-gradient(135deg, rgba(91,208,122,0.14), #141414)",
+            border: "1.5px solid rgba(91,208,122,0.4)",
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="min-w-0">
+              <p className="label-cap text-[10px]" style={{ color: "#5bd07a" }}>
+                Strength Map
+              </p>
+              <p className="display text-xl font-extrabold uppercase text-white leading-none mt-0.5">
+                See the body you're building
+              </p>
+              <p className="text-[11px] text-grit-dim mt-1">
+                Front and back, graded from your real lifts and bodyweight.
+              </p>
+            </div>
+            <Gauge size={26} style={{ color: "#5bd07a" }} />
+          </div>
+        </Link>
+      </section>
 
       {/* The Catalogue — visual journey (photos, PR wall, before/after) */}
       <section className="px-5 mb-6 animate-slide-up delay-50">
@@ -467,6 +520,7 @@ function ProgressPage() {
       <RepZoneCard state={state} />
 
       {/* Whole-workout records + weekday rhythm — each renders only with data */}
+      <SessionFeelCard state={state} />
       <SessionRecordsCard state={state} />
       <TrainingRhythmCard state={state} />
       <TimeOfDayCard state={state} />
@@ -513,7 +567,7 @@ function ProgressPage() {
             {/* Training Consistency Heatmap */}
             <div className="mb-6">
               <p className="label-cap mb-2">Training Consistency</p>
-              <div className="rounded-2xl p-4 overflow-x-auto">
+              <div className="min-w-0 overflow-hidden rounded-2xl p-4">
                 <ConsistencyHeatmap completedDates={state.completedDates} />
               </div>
             </div>
@@ -696,7 +750,7 @@ function ProgressPage() {
                 </p>
                 <button
                   onClick={() => openPaywall("advanced-analytics")}
-                  className="w-full rounded-lg py-2.5 font-display font-extrabold uppercase tracking-wide text-[#14110a] text-sm"
+                  className="min-h-11 w-full rounded-lg py-2.5 font-display text-sm font-extrabold uppercase tracking-wide text-[#14110a]"
                   style={{ background: "linear-gradient(180deg, #f8d566, #eab212)" }}
                 >
                   Unlock With Pro
@@ -770,7 +824,7 @@ function ProgressPage() {
                       <span className="font-bold text-grit">{w.weight} kg</span>
                       <button
                         onClick={() => deleteWeight(w.date)}
-                        className="text-[#8A8A8A] hover:text-[#e63222]"
+                        className="text-[#8A8A8A] hover:text-[#e63222] tap-44"
                         aria-label="Delete entry"
                       >
                         <Trash2 size={12} />
@@ -831,7 +885,7 @@ function ProgressPage() {
                     </span>
                     <button
                       onClick={() => deleteMeasurement(m.date)}
-                      className="text-[#8A8A8A] hover:text-[#e63222]"
+                      className="text-[#8A8A8A] hover:text-[#e63222] tap-44"
                       aria-label="Delete entry"
                     >
                       <Trash2 size={12} />
@@ -1027,61 +1081,33 @@ function ConsistencyHeatmap({ completedDates }: { completedDates: string[] }) {
     weeks.push(col);
   }
 
-  // Month labels: find first week of each month
-  const monthLabels: { label: string; weekIdx: number }[] = [];
-  for (let w = 0; w < WEEKS; w++) {
-    const firstDay = weeks[w][0].date;
-    const dt = new Date(firstDay);
-    // Show label if it's the first occurrence of this month
-    if (dt.getDate() <= 7) {
-      const prev = w > 0 ? new Date(weeks[w - 1][0].date).getMonth() : -1;
-      if (dt.getMonth() !== prev) {
-        monthLabels.push({
-          label: dt.toLocaleString("default", { month: "short" }).toUpperCase(),
-          weekIdx: w,
-        });
-      }
-    }
-  }
-
-  const CELL = 10;
-  const GAP = 2;
-  const totalW = WEEKS * (CELL + GAP) - GAP;
+  const timelineLabels = [0, 13, 26, 39, 51].map((weekIdx) =>
+    new Date(weeks[weekIdx][0].date).toLocaleString("default", { month: "short" }).toUpperCase(),
+  );
 
   return (
-    <div style={{ minWidth: totalW }}>
-      {/* Month labels */}
-      <div className="flex mb-1" style={{ gap: GAP }}>
-        {weeks.map((_, w) => {
-          const label = monthLabels.find((m) => m.weekIdx === w);
-          return (
-            <div key={w} style={{ width: CELL, flexShrink: 0 }}>
-              {label && (
-                <span
-                  className="text-[8px] label-cap text-[#8A8A8A]"
-                  style={{ whiteSpace: "nowrap" }}
-                >
-                  {label.label}
-                </span>
-              )}
-            </div>
-          );
-        })}
+    <div className="min-w-0 w-full">
+      <div className="mb-1 flex items-center justify-between">
+        {timelineLabels.map((label, index) => (
+          <span key={`${label}-${index}`} className="label-cap text-[7px] text-[#8A8A8A]">
+            {label}
+          </span>
+        ))}
       </div>
-      {/* Grid */}
-      <div className="flex" style={{ gap: GAP }}>
+      <div
+        className="grid min-w-0 w-full gap-px"
+        style={{ gridTemplateColumns: `repeat(${WEEKS}, minmax(0, 1fr))` }}
+      >
         {weeks.map((col, w) => (
-          <div key={w} className="flex flex-col" style={{ gap: GAP }}>
+          <div key={w} className="grid min-w-0 gap-px">
             {col.map((cell) => (
               <div
                 key={cell.date}
+                className="aspect-square min-w-0 rounded-[1px]"
                 title={`${cell.date}: ${cell.count} workout${cell.count !== 1 ? "s" : ""}`}
                 style={{
-                  width: CELL,
-                  height: CELL,
                   background:
                     cell.count === 0 ? "#0A0A0A" : cell.count === 1 ? "#7a1410" : "#e63222",
-                  flexShrink: 0,
                 }}
               />
             ))}
@@ -1092,7 +1118,7 @@ function ConsistencyHeatmap({ completedDates }: { completedDates: string[] }) {
       <div className="flex items-center gap-2 mt-2">
         <span className="text-[9px] label-cap text-[#8A8A8A]">Less</span>
         {["#0A0A0A", "#7a1410", "#e63222"].map((c) => (
-          <div key={c} style={{ width: CELL, height: CELL, background: c, flexShrink: 0 }} />
+          <div key={c} className="h-2.5 w-2.5 shrink-0" style={{ background: c }} />
         ))}
         <span className="text-[9px] label-cap text-[#8A8A8A]">More</span>
       </div>

@@ -1,4 +1,6 @@
 import { useEffect } from "react";
+
+import { hapticPersonalRecord } from "@/lib/haptics";
 import { Trophy, X } from "lucide-react";
 import { successFeedback } from "@/lib/haptics";
 
@@ -21,7 +23,7 @@ export function PRCelebration({
   const delta = prevBest > 0 ? Math.round((weight - prevBest) * 10) / 10 : 0;
 
   useEffect(() => {
-    void successFeedback();
+    hapticPersonalRecord();
     const t = setTimeout(onClose, 6500);
     return () => clearTimeout(t);
   }, [onClose]);

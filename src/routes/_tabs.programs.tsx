@@ -465,9 +465,9 @@ function ProgramsPage() {
         </Link>
       </div>
       <p className="text-xs text-grit-dim mb-5 leading-relaxed">
-        A program is a ready-made week you can swap in. Making one won't change
-        anything — it only takes over your training week once you set it active,
-        and you can switch back to your own schedule any time.
+        A program is a ready-made week you can swap in. Making one won't change anything — it only
+        takes over your training week once you set it active, and you can switch back to your own
+        schedule any time.
       </p>
 
       {state.programs.length === 0 && (
@@ -606,8 +606,7 @@ function ProgramsPage() {
       <p className="label-cap text-grit-dim text-xs mb-2">+ New from template</p>
       {locked && customProgramCount >= 1 && (
         <p className="text-[10px] text-grit-dim mb-2">
-          Free includes 1 custom program — <span className="text-accent-red">Pro</span> unlocks
-          unlimited.
+          Your membership unlocks unlimited custom programmes.
         </p>
       )}
       <ul className="space-y-2">

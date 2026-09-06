@@ -5,6 +5,8 @@ import { join } from "node:path";
 
 const root = process.cwd();
 const tempConfig = join(root, ".wrangler.worker.tmp.jsonc");
+const workerOnly = process.argv.includes("--worker-only");
+const dryRun = process.argv.includes("--dry-run");
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
@@ -83,23 +85,31 @@ try {
   );
   writeFileSync(tempConfig, config);
 
-  run("npx", ["wrangler", "deploy", "--config", tempConfig]);
-  run(
-    "npx",
-    [
-      "wrangler",
-      "pages",
-      "deploy",
-      join(root, "dist/client"),
-      "--project-name",
-      "deadsetfit",
-      "--branch",
-      "main",
-      "--commit-dirty=true",
-    ],
-    { cwd: "/tmp" },
-  );
-  await verifyCustomDomain();
+  run("npx", [
+    "wrangler",
+    "deploy",
+    "--config",
+    tempConfig,
+    ...(dryRun ? ["--dry-run"] : []),
+  ]);
+  if (!dryRun && !workerOnly) {
+    run(
+      "npx",
+      [
+        "wrangler",
+        "pages",
+        "deploy",
+        join(root, "dist/client"),
+        "--project-name",
+        "deadsetfit",
+        "--branch",
+        "main",
+        "--commit-dirty=true",
+      ],
+      { cwd: "/tmp" },
+    );
+    await verifyCustomDomain();
+  }
 } finally {
   rmSync(tempConfig, { force: true });
 }

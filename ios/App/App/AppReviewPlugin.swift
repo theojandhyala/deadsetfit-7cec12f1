@@ -8,7 +8,8 @@ public class AppReviewPlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "DeadSetReview"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "request", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "open", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "open", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "openSettings", returnType: CAPPluginReturnPromise)
     ]
 
     @objc func request(_ call: CAPPluginCall) {
@@ -43,6 +44,22 @@ public class AppReviewPlugin: CAPPlugin, CAPBridgedPlugin {
                     call.resolve()
                 } else {
                     call.reject("The App Store could not be opened")
+                }
+            }
+        }
+    }
+
+    @objc func openSettings(_ call: CAPPluginCall) {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else {
+            call.reject("Invalid iPhone Settings URL")
+            return
+        }
+        DispatchQueue.main.async {
+            UIApplication.shared.open(url, options: [:]) { opened in
+                if opened {
+                    call.resolve()
+                } else {
+                    call.reject("iPhone Settings could not be opened")
                 }
             }
         }

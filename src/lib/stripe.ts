@@ -8,7 +8,7 @@ function paymentsEnvironment(): StripeEnv {
   if (clientToken?.startsWith("pk_test_")) return "sandbox";
   if (clientToken?.startsWith("pk_live_")) return "live";
   throw new Error(
-    "Payments are not configured for this build. Add the Stripe publishable key to Cloudflare to enable checkout.",
+    "Secure web checkout is temporarily unavailable. Please subscribe in the DEADSET iPhone app.",
   );
 }
 

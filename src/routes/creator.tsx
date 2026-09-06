@@ -27,9 +27,13 @@ function CreatorPage() {
   return (
     <main className="min-h-screen bg-[#080808] px-5 py-10 text-[#f4f3ef] sm:px-8">
       <div className="mx-auto max-w-2xl">
-        <p className="display text-2xl font-bold">
-          DEAD<span className="text-accent-red">SET</span>
-        </p>
+        <img
+          src="/brand/deadset-lockup.png"
+          alt="DEADSET — Forge Your Body"
+          width={810}
+          height={360}
+          className="h-auto w-40"
+        />
         <div className="mt-16 rounded-3xl border border-accent-red/45 bg-[#121011] p-7 shadow-[0_22px_70px_rgba(0,0,0,.38)] sm:p-10">
           <Sparkles size={22} className="text-accent-red" />
           <p className="label-cap mt-5 text-[10px] text-accent-red">Creator access</p>

@@ -182,7 +182,7 @@ export function NutritionLogger({
                 {previous && !entries.length && (
                   <button
                     onClick={() => repeat(type)}
-                    className="press p-2 text-grit-dim"
+                    className="press p-2 text-grit-dim tap-44"
                     title={`Repeat ${mealLabel(type).toLowerCase()}`}
                     aria-label={`Repeat ${mealLabel(type).toLowerCase()}`}
                   >
@@ -191,7 +191,7 @@ export function NutritionLogger({
                 )}
                 <button
                   onClick={() => open("search", type)}
-                  className="press flex h-8 w-8 items-center justify-center rounded-full bg-accent-red text-white"
+                  className="press flex h-8 w-8 items-center justify-center rounded-full bg-accent-red text-white tap-44"
                   aria-label={`Add to ${mealLabel(type).toLowerCase()}`}
                 >
                   <Plus size={16} />
@@ -357,7 +357,11 @@ function Action({
       }`}
     >
       <Icon size={18} />
-      <span className="label-cap text-[8px] leading-tight">{label}</span>
+      {/* .label-cap hardcodes grey and outranks a utility class, so the colour
+          is set inline — grey on the red primary button fails contrast. */}
+      <span className="label-cap text-[8px] leading-tight" style={{ color: "inherit" }}>
+        {label}
+      </span>
     </button>
   );
 }

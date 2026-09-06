@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { createStripeClient, getStripeErrorMessage } from "../src/lib/stripe.server";
 import { supabaseAdmin } from "../src/integrations/supabase/client.server";
+import { generateInviteCode, rankCrews } from "../src/lib/crews";
 import { gritLevel, calculateGritScore } from "../src/lib/calc";
 import { buildPublicStats } from "../src/lib/fifa-stats";
 import {
@@ -9,11 +10,12 @@ import {
   rankable,
   type LeaderboardStats,
 } from "../src/lib/leaderboard-integrity";
-import { currentWeekStart } from "../src/lib/competition";
+import { currentWeekStart, type WeeklyCompetitionStats } from "../src/lib/competition";
 import { getRank } from "../src/lib/rank";
 import type { AppState } from "../src/lib/types";
 import type { Database } from "../src/integrations/supabase/types";
 import { revokeAppleRefreshToken } from "../src/lib/apple-oauth.server";
+import { athleteSearchRank, normalizeAthleteSearchQuery } from "../src/lib/athlete-search";
 
 interface AuthCtx {
   supabase: SupabaseClient<Database>;
@@ -149,7 +151,7 @@ type ProPriceConfig = {
 const PRO_PRICE_CONFIG: Record<string, ProPriceConfig> = {
   pro_monthly: {
     currency: "usd",
-    unitAmount: 499,
+    unitAmount: 599,
     interval: "month",
     nickname: "DEADSET Pro Monthly",
   },
@@ -161,7 +163,7 @@ const PRO_PRICE_CONFIG: Record<string, ProPriceConfig> = {
   },
   pro_monthly_gbp: {
     currency: "gbp",
-    unitAmount: 499,
+    unitAmount: 599,
     interval: "month",
     nickname: "DEADSET Pro Monthly GBP",
   },
@@ -219,11 +221,18 @@ async function resolveDeadsetProProduct(stripe: any): Promise<string> {
 }
 
 async function resolveOrCreateStripePrice(stripe: any, lookupKey: string): Promise<any> {
-  const prices = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 });
-  if (prices.data.length) return prices.data[0];
-
   const config = PRO_PRICE_CONFIG[lookupKey];
   if (!config) throw new Error("Price not found");
+
+  const prices = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 });
+  const lookedUp = prices.data[0];
+  if (
+    lookedUp?.currency === config.currency &&
+    lookedUp?.unit_amount === config.unitAmount &&
+    lookedUp?.recurring?.interval === config.interval
+  ) {
+    return lookedUp;
+  }
 
   const existingPrices = await stripe.prices.list({
     active: true,
@@ -243,7 +252,10 @@ async function resolveOrCreateStripePrice(stripe: any, lookupKey: string): Promi
   );
 
   if (exactExisting) {
-    return exactExisting;
+    return stripe.prices.update(exactExisting.id, {
+      lookup_key: lookupKey,
+      transfer_lookup_key: true,
+    });
   }
 
   const product = await resolveDeadsetProProduct(stripe);
@@ -253,6 +265,7 @@ async function resolveOrCreateStripePrice(stripe: any, lookupKey: string): Promi
     unit_amount: config.unitAmount,
     nickname: config.nickname,
     lookup_key: lookupKey,
+    transfer_lookup_key: true,
     recurring: { interval: config.interval },
     metadata: { app: "deadset", lookup_key: lookupKey },
   });
@@ -279,9 +292,19 @@ function isProSubscriptionStatus(
   currentPeriodEnd: string | null,
 ): boolean {
   const activeByStatus = status === "active";
+  const activeTrial =
+    status === "trialing" && !!currentPeriodEnd && new Date(currentPeriodEnd) > new Date();
   const activeCanceled =
     status === "canceled" && !!currentPeriodEnd && new Date(currentPeriodEnd) > new Date();
-  return activeByStatus || activeCanceled;
+  return activeByStatus || activeTrial || activeCanceled;
+}
+
+/** A current Stripe record in one of these states must not fall through to an
+ * old `profiles.pro_until` cache. That cache also represents referral rewards,
+ * so it is only a fallback when Stripe is not reporting an unpaid/current
+ * subscription for this customer. */
+function blocksProfileProFallback(status: string | null): boolean {
+  return ["past_due", "incomplete", "unpaid"].includes(status ?? "");
 }
 
 /** A current Stripe record in one of these states must not fall through to an
@@ -345,6 +368,7 @@ async function stripeSubscriptionStatus(
     const end = item?.current_period_end ?? sub.current_period_end ?? 0;
     return (
       sub.status === "active" ||
+      (sub.status === "trialing" && end > now) ||
       (sub.status === "canceled" && end > now)
     );
   });
@@ -361,7 +385,7 @@ async function requirePro(req: any): Promise<AuthCtx> {
     await syncProfileProUntil(ctx.userId, status);
     return ctx;
   }
-  // A trial or failed Stripe collection must never inherit stale paid access.
+  // Failed Stripe collection must never inherit stale paid access.
   if (blocksProfileProFallback(status.status)) {
     throw Object.assign(new Error("A successful payment is required for DEADSET Pro"), {
       status: 403,
@@ -379,10 +403,11 @@ async function requirePro(req: any): Promise<AuthCtx> {
 // Bidirectional block set: users this user blocked OR who blocked this user.
 // Their content must be hidden everywhere (App Store Guideline 1.2).
 async function blockedUserIds(supabase: any, userId: string): Promise<Set<string>> {
-  const { data: blocks } = await supabase
+  const { data: blocks, error } = await supabase
     .from("user_blocks")
     .select("blocker_id, blocked_id")
     .or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`);
+  if (error) throw new Error(error.message);
   const hidden = new Set<string>();
   (blocks ?? []).forEach((b: any) =>
     hidden.add(b.blocker_id === userId ? b.blocked_id : b.blocker_id),
@@ -433,6 +458,66 @@ async function duelScores(duel: {
     challenger: scoreOverWindow(c, duel.metric, startMs, endMs),
     opponent: scoreOverWindow(o, duel.metric, startMs, endMs),
   };
+}
+
+// ─── Crews ───────────────────────────────────────────────────────────────────
+
+async function crewMembershipOf(userId: string): Promise<{ crew_id: string; role: string } | null> {
+  const { data } = await (supabaseAdmin as any)
+    .from("crew_members")
+    .select("crew_id, role")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return (data as { crew_id: string; role: string } | null) ?? null;
+}
+
+/** Crew roster with the public profile fields, strongest first. */
+async function crewRoster(crewId: string, viewerId?: string) {
+  const { data: rows } = await (supabaseAdmin as any)
+    .from("crew_members")
+    .select("user_id, role, joined_at")
+    .eq("crew_id", crewId);
+  let members = (rows ?? []) as { user_id: string; role: string; joined_at: string }[];
+  if (!members.length) return [];
+  // Blocking has to hold inside a shared crew too, or the block is cosmetic.
+  if (viewerId) {
+    const hidden = await blockedUserIds(supabaseAdmin, viewerId);
+    members = members.filter((m) => m.user_id === viewerId || !hidden.has(m.user_id));
+  }
+
+  const { data: profiles } = await supabaseAdmin
+    .from("profiles")
+    .select("id, username, display_name, avatar_url, grit_points, public_stats")
+    .in(
+      "id",
+      members.map((m) => m.user_id),
+    );
+  const byId = new Map((profiles ?? []).map((p) => [p.id, p]));
+
+  // Only this week's stats count toward the crew week: a member's blob carries
+  // the week it was computed for, so a stale one contributes nothing rather
+  // than inflating the total with last week's work.
+  const thisWeek = currentWeekStart();
+  return members
+    .map((m) => {
+      const p = byId.get(m.user_id);
+      const weekly = (p?.public_stats as { weekly?: WeeklyCompetitionStats } | null)?.weekly;
+      const fresh = weekly && weekly.weekStart === thisWeek ? weekly : null;
+      return {
+        id: m.user_id,
+        role: m.role,
+        joinedAt: m.joined_at,
+        username: p?.username ?? null,
+        display_name: p?.display_name ?? null,
+        avatar_url: p?.avatar_url ?? null,
+        grit_points: p?.grit_points ?? 0,
+        level: gritLevel(p?.grit_points ?? 0),
+        weekVolumeKg: Math.round(fresh?.volumeKg ?? 0),
+        weekSessions: fresh?.sessions ?? 0,
+        weekPRs: fresh?.prs ?? 0,
+      };
+    })
+    .sort((a, b) => b.grit_points - a.grit_points);
 }
 
 // Flip any of a pair's expired active duels to completed (with final scores) so
@@ -507,6 +592,10 @@ const handlers: Record<string, Handler> = {
       const stripePrice = await resolveOrCreateStripePrice(stripe, d.priceId);
       const isRecurring = stripePrice.type === "recurring";
       const customerId = await resolveOrCreateCustomer(stripe, { email, userId });
+      const priorSubscriptions = isRecurring
+        ? await stripe.subscriptions.list({ customer: customerId, status: "all", limit: 1 })
+        : { data: [] };
+      const eligibleForTrial = isRecurring && priorSubscriptions.data.length === 0;
       const uiMode = d.uiMode ?? "embedded_page";
       const returnUrl = safeReturnUrl(d.returnUrl);
       const cancelUrl = new URL(returnUrl);
@@ -519,7 +608,12 @@ const handlers: Record<string, Handler> = {
         customer: customerId,
         allow_promotion_codes: true,
         metadata: { userId },
-        ...(isRecurring && { subscription_data: { metadata: { userId } } }),
+        ...(isRecurring && {
+          subscription_data: {
+            metadata: { userId },
+            ...(eligibleForTrial && { trial_period_days: 7 }),
+          },
+        }),
       };
       const session = await stripe.checkout.sessions.create({
         ...checkoutBase,
@@ -646,7 +740,7 @@ const handlers: Record<string, Handler> = {
       })
       .parse(data);
     const hidden = await blockedUserIds(supabase, userId);
-    const { data: allRows, error } = await supabase
+    const { data: allRows, error } = await supabaseAdmin
       .from("public_profiles")
       .select("id, username, display_name, avatar_url, level, grit_points, public_stats")
       .limit(500);
@@ -822,7 +916,7 @@ const handlers: Record<string, Handler> = {
     });
     const d = ProfileSchema.parse(data);
     if (d.username) {
-      const { data: existing } = await supabase
+      const { data: existing } = await supabaseAdmin
         .from("public_profiles")
         .select("id")
         .ilike("username", d.username)
@@ -892,8 +986,9 @@ const handlers: Record<string, Handler> = {
   // === Social: feed ===
   async getFeed(data, req) {
     const { supabase, userId } = await requireAuth(req);
+    const requested = (data as { scope?: string } | undefined)?.scope;
     const scope =
-      (data as { scope?: string } | undefined)?.scope === "following" ? "following" : "global";
+      requested === "following" ? "following" : requested === "crew" ? "crew" : "global";
     const { data: blocks } = await supabase
       .from("user_blocks")
       .select("blocker_id, blocked_id")
@@ -917,6 +1012,22 @@ const handlers: Record<string, Handler> = {
       const allowed = (follows ?? []).map((f) => f.following_id as string);
       allowed.push(userId);
       query = query.in("user_id", allowed);
+    } else if (scope === "crew") {
+      // Scope to the viewer's crew. Someone with no crew sees an empty feed
+      // rather than silently falling back to global, which would read as a
+      // broken filter.
+      const membership = await crewMembershipOf(userId);
+      const { data: mates } = membership
+        ? await (supabaseAdmin as any)
+            .from("crew_members")
+            .select("user_id")
+            .eq("crew_id", membership.crew_id)
+        : { data: [] };
+      const allowed = ((mates ?? []) as { user_id: string }[]).map((m) => m.user_id);
+      query = query.in(
+        "user_id",
+        allowed.length ? allowed : ["00000000-0000-0000-0000-000000000000"],
+      );
     }
     if (hidden.size > 0) query = query.not("user_id", "in", `(${Array.from(hidden).join(",")})`);
     const { data: posts, error } = await query;
@@ -925,7 +1036,7 @@ const handlers: Record<string, Handler> = {
     const postIds = (posts ?? []).map((p) => p.id);
     const [{ data: authors }, { data: likes }, { data: myLikes }, { data: commentCounts }] =
       await Promise.all([
-        supabase
+        supabaseAdmin
           .from("public_profiles")
           .select("id, display_name, username, avatar_url, grit_points")
           .in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]),
@@ -1057,7 +1168,7 @@ const handlers: Record<string, Handler> = {
     if (error) throw new Error(error.message);
     const rows = (allRows ?? []).filter((r: any) => !hidden.has(r.user_id));
     const ids = Array.from(new Set(rows.map((r: any) => r.user_id)));
-    const { data: authors } = await supabase
+    const { data: authors } = await supabaseAdmin
       .from("public_profiles")
       .select("id, display_name, username")
       .in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
@@ -1071,7 +1182,7 @@ const handlers: Record<string, Handler> = {
     const scope =
       (data as { scope?: string } | undefined)?.scope === "following" ? "following" : "global";
     const hidden = await blockedUserIds(supabase, userId);
-    let lbQuery = supabase
+    let lbQuery = supabaseAdmin
       .from("public_profiles")
       .select("id, display_name, username, avatar_url, grit_points")
       .order("grit_points", { ascending: false })
@@ -1157,7 +1268,7 @@ const handlers: Record<string, Handler> = {
     (followsRes.data ?? []).forEach((f) => actorIds.add(f.follower_id as string));
     (likesRes.data ?? []).forEach((l) => actorIds.add(l.user_id as string));
     (commentsRes.data ?? []).forEach((c) => actorIds.add(c.user_id as string));
-    const { data: profs } = await supabase
+    const { data: profs } = await supabaseAdmin
       .from("public_profiles")
       .select("id, username, display_name, avatar_url")
       .in("id", actorIds.size ? Array.from(actorIds) : ["00000000-0000-0000-0000-000000000000"]);
@@ -1225,6 +1336,161 @@ const handlers: Record<string, Handler> = {
     }
     await supabase.from("follows").insert({ follower_id: userId, following_id: d.userId });
     return { following: true };
+  },
+
+  async getFriendConnections(_data, req) {
+    const { supabase, userId } = await requireAuth(req);
+    const hidden = await blockedUserIds(supabase, userId);
+    const [{ data: outgoing, error: outgoingError }, { data: incoming, error: incomingError }] =
+      await Promise.all([
+        supabase
+          .from("follows")
+          .select("following_id, created_at")
+          .eq("follower_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(500),
+        supabase
+          .from("follows")
+          .select("follower_id, created_at")
+          .eq("following_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(500),
+      ]);
+    if (outgoingError) throw new Error(outgoingError.message);
+    if (incomingError) throw new Error(incomingError.message);
+
+    const outgoingAt = new Map(
+      (outgoing ?? []).map((row) => [row.following_id as string, row.created_at as string]),
+    );
+    const incomingAt = new Map(
+      (incoming ?? []).map((row) => [row.follower_id as string, row.created_at as string]),
+    );
+    const ids = [...new Set([...outgoingAt.keys(), ...incomingAt.keys()])].filter(
+      (id) => !hidden.has(id),
+    );
+    const { data: profiles, error: profilesError } = await supabaseAdmin
+      .from("public_profiles")
+      .select(
+        "id, username, display_name, avatar_url, bio, city, country, grit_points, public_stats",
+      )
+      .in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
+    if (profilesError) throw new Error(profilesError.message);
+    const profileById = new Map((profiles ?? []).map((profile) => [profile.id as string, profile]));
+    const connection = (
+      id: string,
+      status: "FRIEND" | "INCOMING" | "OUTGOING",
+      since: string | null,
+    ) => {
+      const profile = profileById.get(id);
+      if (!profile) return null;
+      return {
+        id,
+        username: profile.username,
+        display_name: profile.display_name,
+        avatar_url: profile.avatar_url,
+        grit_points: profile.grit_points ?? 0,
+        level: gritLevel(profile.grit_points ?? 0),
+        status,
+        since,
+        bio: profile.bio,
+        city: profile.city,
+        country: profile.country,
+        public_stats: profile.public_stats,
+      };
+    };
+
+    const friends = ids
+      .filter((id) => outgoingAt.has(id) && incomingAt.has(id))
+      .map((id) =>
+        connection(
+          id,
+          "FRIEND",
+          [outgoingAt.get(id), incomingAt.get(id)].filter(Boolean).sort().at(-1) ?? null,
+        ),
+      )
+      .filter(Boolean);
+    const incomingRequests = ids
+      .filter((id) => incomingAt.has(id) && !outgoingAt.has(id))
+      .map((id) => connection(id, "INCOMING", incomingAt.get(id) ?? null))
+      .filter(Boolean);
+    const outgoingRequests = ids
+      .filter((id) => outgoingAt.has(id) && !incomingAt.has(id))
+      .map((id) => connection(id, "OUTGOING", outgoingAt.get(id) ?? null))
+      .filter(Boolean);
+    return { friends, incoming: incomingRequests, outgoing: outgoingRequests };
+  },
+
+  async updateFriendship(data, req) {
+    const { userId } = await requireAuth(req);
+    const d = z
+      .object({
+        userId: z.string().uuid(),
+        action: z.enum(["send", "accept", "decline", "cancel", "remove"]),
+      })
+      .parse(data);
+    if (d.userId === userId) throw new Error("You can't add yourself");
+    const hidden = await blockedUserIds(supabaseAdmin, userId);
+    if (hidden.has(d.userId)) throw new Error("You can't add this athlete");
+
+    const deleteOutgoing = () =>
+      supabaseAdmin.from("follows").delete().eq("follower_id", userId).eq("following_id", d.userId);
+    const deleteIncoming = () =>
+      supabaseAdmin.from("follows").delete().eq("follower_id", d.userId).eq("following_id", userId);
+
+    if (d.action === "send") {
+      const { error } = await supabaseAdmin
+        .from("follows")
+        .upsert(
+          { follower_id: userId, following_id: d.userId },
+          { onConflict: "follower_id,following_id", ignoreDuplicates: true },
+        );
+      if (error) throw new Error(error.message);
+    } else if (d.action === "accept") {
+      const { data: request } = await supabaseAdmin
+        .from("follows")
+        .select("follower_id")
+        .eq("follower_id", d.userId)
+        .eq("following_id", userId)
+        .maybeSingle();
+      if (!request) throw new Error("This friend request is no longer available");
+      const { error } = await supabaseAdmin
+        .from("follows")
+        .upsert(
+          { follower_id: userId, following_id: d.userId },
+          { onConflict: "follower_id,following_id", ignoreDuplicates: true },
+        );
+      if (error) throw new Error(error.message);
+    } else if (d.action === "decline") {
+      const { error } = await deleteIncoming();
+      if (error) throw new Error(error.message);
+    } else if (d.action === "cancel") {
+      const { error } = await deleteOutgoing();
+      if (error) throw new Error(error.message);
+    } else {
+      const [outgoingResult, incomingResult] = await Promise.all([
+        deleteOutgoing(),
+        deleteIncoming(),
+      ]);
+      if (outgoingResult.error) throw new Error(outgoingResult.error.message);
+      if (incomingResult.error) throw new Error(incomingResult.error.message);
+    }
+
+    const [{ data: mine }, { data: theirs }] = await Promise.all([
+      supabaseAdmin
+        .from("follows")
+        .select("follower_id")
+        .eq("follower_id", userId)
+        .eq("following_id", d.userId)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("follows")
+        .select("follower_id")
+        .eq("follower_id", d.userId)
+        .eq("following_id", userId)
+        .maybeSingle(),
+    ]);
+    const status = mine && theirs ? "FRIEND" : mine ? "OUTGOING" : theirs ? "INCOMING" : "NONE";
+    return { ok: true, status };
   },
 
   async createDuel(data, req) {
@@ -1436,33 +1702,43 @@ const handlers: Record<string, Handler> = {
 
   async searchAthletes(data, req) {
     const { supabase, userId } = await requireAuth(req);
-    const d = z.object({ q: z.string().trim().min(1).max(40) }).parse(data);
-    // Strip PostgREST filter metacharacters (,().) as well as ilike wildcards
-    // (%_) so a crafted query can't inject extra clauses into the .or() below.
-    const q = d.q.replace(/[%_,().]/g, "").trim();
+    const d = z.object({ q: z.string().trim().min(1).max(80) }).parse(data);
+    const q = normalizeAthleteSearchQuery(d.q);
     if (!q) return [];
-    const { data: blocks } = await supabase
-      .from("user_blocks")
-      .select("blocker_id, blocked_id")
-      .or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`);
-    const hidden = new Set<string>();
-    (blocks ?? []).forEach((b) =>
-      hidden.add(b.blocker_id === userId ? b.blocked_id : b.blocker_id),
-    );
-    const { data: rows, error } = await supabase
-      .from("public_profiles")
-      .select("id, username, display_name, avatar_url, level")
-      .or(`username.ilike.%${q}%,display_name.ilike.%${q}%`)
-      .neq("id", userId)
-      .limit(20);
-    if (error) throw new Error(error.message);
-    const filtered = (rows ?? []).filter((r) => r.id && !hidden.has(r.id as string));
+    const hidden = await blockedUserIds(supabase, userId);
+    const columns =
+      "id, username, display_name, avatar_url, bio, city, country, level, grit_points, public_stats";
+    const pattern = `%${q}%`;
+    const [usernameResult, displayNameResult] = await Promise.all([
+      supabaseAdmin
+        .from("public_profiles")
+        .select(columns)
+        .ilike("username", pattern)
+        .neq("id", userId)
+        .limit(20),
+      supabaseAdmin
+        .from("public_profiles")
+        .select(columns)
+        .ilike("display_name", pattern)
+        .neq("id", userId)
+        .limit(20),
+    ]);
+    if (usernameResult.error) throw new Error(usernameResult.error.message);
+    if (displayNameResult.error) throw new Error(displayNameResult.error.message);
+    const unique = new Map<string, (typeof usernameResult.data)[number]>();
+    [...(usernameResult.data ?? []), ...(displayNameResult.data ?? [])].forEach((row) => {
+      if (row.id && !hidden.has(row.id as string)) unique.set(row.id as string, row);
+    });
+    const filtered = [...unique.values()]
+      .sort((a, b) => athleteSearchRank(a, q) - athleteSearchRank(b, q))
+      .slice(0, 20);
     const ids = filtered.map((r) => r.id).filter((x): x is string => !!x);
-    const { data: follows } = await supabase
+    const { data: follows, error: followsError } = await supabase
       .from("follows")
       .select("following_id")
       .eq("follower_id", userId)
       .in("following_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
+    if (followsError) throw new Error(followsError.message);
     const followingSet = new Set((follows ?? []).map((f) => f.following_id));
     return filtered.map((r) => ({
       ...r,
@@ -1474,17 +1750,21 @@ const handlers: Record<string, Handler> = {
   async getSuggestedAthletes(_data, req) {
     const { supabase, userId } = await requireAuth(req);
     const hidden = await blockedUserIds(supabase, userId);
-    const { data: follows } = await supabase
+    const { data: follows, error: followsError } = await supabase
       .from("follows")
       .select("following_id")
       .eq("follower_id", userId);
+    if (followsError) throw new Error(followsError.message);
     const followingSet = new Set((follows ?? []).map((f) => f.following_id));
-    const { data: rows } = await supabase
+    const { data: rows, error: rowsError } = await supabaseAdmin
       .from("public_profiles")
-      .select("id, username, display_name, avatar_url, grit_points")
+      .select(
+        "id, username, display_name, avatar_url, bio, city, country, grit_points, public_stats",
+      )
       .neq("id", userId)
       .order("grit_points", { ascending: false })
       .limit(30);
+    if (rowsError) throw new Error(rowsError.message);
     return (rows ?? [])
       .filter(
         (r): r is typeof r & { id: string } =>
@@ -1498,6 +1778,10 @@ const handlers: Record<string, Handler> = {
         avatar_url: r.avatar_url,
         level: gritLevel(r.grit_points ?? 0),
         grit_points: r.grit_points ?? 0,
+        bio: r.bio,
+        city: r.city,
+        country: r.country,
+        public_stats: r.public_stats,
         following: false,
       }));
   },
@@ -1520,9 +1804,11 @@ const handlers: Record<string, Handler> = {
   async getAthleteCard(data, req) {
     const { supabase, userId } = await requireAuth(req);
     const d = z.object({ userId: z.string().uuid() }).parse(data);
-    const { data: row, error } = await supabase
+    const { data: row, error } = await supabaseAdmin
       .from("public_profiles")
-      .select("id, username, display_name, avatar_url, bio, grit_points, public_stats")
+      .select(
+        "id, username, display_name, avatar_url, bio, city, country, grit_points, public_stats",
+      )
       .eq("id", d.userId)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -1558,7 +1844,7 @@ const handlers: Record<string, Handler> = {
         .eq("follower_id", d.userId),
       userId === d.userId
         ? Promise.resolve(null)
-        : supabase
+        : supabaseAdmin
             .from("public_profiles")
             .select("public_stats, grit_points")
             .eq("id", userId)
@@ -1661,17 +1947,20 @@ const handlers: Record<string, Handler> = {
     const { supabase, userId } = await requireAuth(req);
     const d = z
       .object({
-        city: z.string().trim().min(1).max(80),
+        city: z.string().trim().max(80),
         region: z.string().trim().max(80).optional().nullable(),
-        country: z.string().trim().min(1).max(80),
+        country: z.string().trim().max(80),
+      })
+      .refine((location) => Boolean(location.city) === Boolean(location.country), {
+        message: "City and country must be set together",
       })
       .parse(data);
     const { error } = await supabase
       .from("profiles")
       .update({
-        city: d.city,
-        region: d.region ?? null,
-        country: d.country,
+        city: d.city || null,
+        region: d.city ? (d.region ?? null) : null,
+        country: d.country || null,
         location_updated_at: new Date().toISOString(),
       })
       .eq("id", userId);
@@ -1681,11 +1970,12 @@ const handlers: Record<string, Handler> = {
 
   async getMyLocation(_data, req) {
     const { supabase, userId } = await requireAuth(req);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("profiles")
       .select("city, region, country")
       .eq("id", userId)
       .maybeSingle();
+    if (error) throw new Error(error.message);
     return {
       city: data?.city ?? null,
       region: data?.region ?? null,
@@ -1695,33 +1985,31 @@ const handlers: Record<string, Handler> = {
 
   async getNearbyAthletes(_data, req) {
     const { supabase, userId } = await requireAuth(req);
-    const { data: me } = await supabase
+    const { data: me, error: meError } = await supabase
       .from("profiles")
       .select("city, country")
       .eq("id", userId)
       .maybeSingle();
+    if (meError) throw new Error(meError.message);
     if (!me?.city || !me?.country) return { athletes: [], myCity: null, myCountry: null };
-    const { data: blocks } = await supabase
-      .from("user_blocks")
-      .select("blocker_id, blocked_id")
-      .or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`);
-    const hidden = new Set<string>();
-    (blocks ?? []).forEach((b) =>
-      hidden.add(b.blocker_id === userId ? b.blocked_id : b.blocker_id),
-    );
-    const { data: same } = await supabase
+    const hidden = await blockedUserIds(supabase, userId);
+    const { data: same, error: sameError } = await supabaseAdmin
       .from("public_profiles")
-      .select("id, username, display_name, avatar_url, level, grit_points, city, country")
+      .select(
+        "id, username, display_name, avatar_url, bio, level, grit_points, public_stats, city, country",
+      )
       .ilike("city", me.city)
       .ilike("country", me.country)
       .neq("id", userId)
       .limit(30);
+    if (sameError) throw new Error(sameError.message);
     const ids = (same ?? []).map((r) => r.id).filter((x): x is string => !!x);
-    const { data: follows } = await supabase
+    const { data: follows, error: followsError } = await supabase
       .from("follows")
       .select("following_id")
       .eq("follower_id", userId)
       .in("following_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
+    if (followsError) throw new Error(followsError.message);
     const fset = new Set((follows ?? []).map((f) => f.following_id));
     const athletes = (same ?? [])
       .filter((r) => r.id && !hidden.has(r.id as string))
@@ -2001,15 +2289,21 @@ const handlers: Record<string, Handler> = {
       .object({
         userId: z.string().uuid().optional(),
         postId: z.string().uuid().optional(),
+        // A crew name and tag are user-authored and public on the ladder, so a
+        // crew is reportable like any other content.
+        crewId: z.string().uuid().optional(),
         reason: z.string().min(1).max(500),
       })
       .parse(data);
-    if (!d.userId && !d.postId) throw new Error("Provide userId or postId");
+    if (!d.userId && !d.postId && !d.crewId) {
+      throw new Error("Provide userId, postId or crewId");
+    }
     if (d.userId === userId) throw new Error("Can't report yourself");
-    const { error } = await supabase.from("user_reports").insert({
+    const { error } = await (supabase as any).from("user_reports").insert({
       reporter_id: userId,
       reported_user_id: d.userId ?? null,
       reported_post_id: d.postId ?? null,
+      reported_crew_id: d.crewId ?? null,
       reason: d.reason,
     });
     if (error) throw new Error(error.message);
@@ -2146,6 +2440,180 @@ const handlers: Record<string, Handler> = {
         .sort((a, b) => b.count - a.count),
       engagement,
     };
+  },
+
+  // === Crews ===
+  // A crew is the gym or team an athlete trains with: joined by short code,
+  // ranked internally, and stacked against other crews.
+  async createCrew(data, req) {
+    const { userId } = await requireAuth(req);
+    const d = z
+      .object({
+        name: z.string().trim().min(2).max(30),
+        tag: z
+          .string()
+          .trim()
+          .toUpperCase()
+          .regex(/^[A-Z0-9]{2,6}$/, "Tag must be 2-6 letters or numbers"),
+      })
+      .parse(data);
+
+    const existing = await crewMembershipOf(userId);
+    if (existing) throw new Error("You're already in a crew. Leave it before starting another.");
+
+    // Retry on the unique index rather than trusting one random draw.
+    let lastError: unknown = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const invite = generateInviteCode();
+      const { data: crew, error } = await (supabaseAdmin as any)
+        .from("crews")
+        .insert({ name: d.name, tag: d.tag, invite_code: invite, owner_id: userId })
+        .select("id, name, tag, invite_code, owner_id, created_at")
+        .single();
+      if (!error && crew) {
+        const { error: joinError } = await (supabaseAdmin as any)
+          .from("crew_members")
+          .insert({ crew_id: crew.id, user_id: userId, role: "owner" });
+        if (joinError) {
+          // Never leave an ownerless crew behind if the membership fails.
+          await (supabaseAdmin as any).from("crews").delete().eq("id", crew.id);
+          throw new Error(joinError.message);
+        }
+        return { crew };
+      }
+      lastError = error;
+      const message = String((error as { message?: string } | null)?.message ?? "");
+      if (/tag/i.test(message)) throw new Error("That crew tag is taken. Pick another.");
+      if (!/invite_code/i.test(message)) break;
+    }
+    throw new Error(
+      (lastError as { message?: string } | null)?.message ?? "Could not create the crew",
+    );
+  },
+
+  async joinCrew(data, req) {
+    const { userId } = await requireAuth(req);
+    const d = z.object({ code: z.string().trim().toUpperCase().min(4).max(10) }).parse(data);
+
+    const existing = await crewMembershipOf(userId);
+    if (existing) throw new Error("You're already in a crew. Leave it before joining another.");
+
+    const { data: crew } = await (supabaseAdmin as any)
+      .from("crews")
+      .select("id, name, tag, invite_code, owner_id, created_at")
+      .ilike("invite_code", d.code)
+      .maybeSingle();
+    if (!crew) throw new Error("No crew with that code");
+
+    const { error } = await (supabaseAdmin as any)
+      .from("crew_members")
+      .insert({ crew_id: crew.id, user_id: userId, role: "member" });
+    if (error) throw new Error(error.message);
+    return { crew };
+  },
+
+  async leaveCrew(_data, req) {
+    const { userId } = await requireAuth(req);
+    const membership = await crewMembershipOf(userId);
+    if (!membership) return { left: false };
+
+    await (supabaseAdmin as any)
+      .from("crew_members")
+      .delete()
+      .eq("crew_id", membership.crew_id)
+      .eq("user_id", userId);
+
+    // An owner walking out must not strand the crew: hand it to the longest
+    // standing member, or retire it when nobody is left.
+    if (membership.role === "owner") {
+      const { data: remaining } = await (supabaseAdmin as any)
+        .from("crew_members")
+        .select("user_id")
+        .eq("crew_id", membership.crew_id)
+        .order("joined_at", { ascending: true })
+        .limit(1);
+      const heir = (remaining ?? [])[0]?.user_id as string | undefined;
+      if (heir) {
+        await (supabaseAdmin as any)
+          .from("crews")
+          .update({ owner_id: heir })
+          .eq("id", membership.crew_id);
+        await (supabaseAdmin as any)
+          .from("crew_members")
+          .update({ role: "owner" })
+          .eq("crew_id", membership.crew_id)
+          .eq("user_id", heir);
+      } else {
+        await (supabaseAdmin as any).from("crews").delete().eq("id", membership.crew_id);
+      }
+    }
+    return { left: true };
+  },
+
+  async getMyCrew(_data, req) {
+    const { userId } = await requireAuth(req);
+    const membership = await crewMembershipOf(userId);
+    if (!membership) return { crew: null, members: [] };
+
+    const { data: crew } = await (supabaseAdmin as any)
+      .from("crews")
+      .select("id, name, tag, invite_code, owner_id, created_at")
+      .eq("id", membership.crew_id)
+      .maybeSingle();
+    if (!crew) return { crew: null, members: [] };
+
+    const members = await crewRoster(membership.crew_id, userId);
+    const week = {
+      weekStart: currentWeekStart(),
+      volumeKg: members.reduce((sum, m) => sum + m.weekVolumeKg, 0),
+      sessions: members.reduce((sum, m) => sum + m.weekSessions, 0),
+      prs: members.reduce((sum, m) => sum + m.weekPRs, 0),
+      // Anyone who trained at all this week counts as showing up.
+      active: members.filter((m) => m.weekSessions > 0).length,
+    };
+    return { crew, role: membership.role, members, week };
+  },
+
+  // The crew ladder: crews ranked by the grit their members have banked.
+  async getCrewLadder(data, req) {
+    await requireAuth(req);
+    const d = z.object({ limit: z.number().int().min(1).max(50).optional() }).parse(data ?? {});
+    const { data: crews } = await (supabaseAdmin as any)
+      .from("crews")
+      .select("id, name, tag, created_at")
+      .limit(200);
+    if (!crews?.length) return { crews: [] };
+
+    const { data: memberships } = await (supabaseAdmin as any)
+      .from("crew_members")
+      .select("crew_id, user_id");
+    const byCrew = new Map<string, string[]>();
+    for (const m of (memberships ?? []) as { crew_id: string; user_id: string }[]) {
+      const list = byCrew.get(m.crew_id) ?? [];
+      list.push(m.user_id);
+      byCrew.set(m.crew_id, list);
+    }
+
+    const allIds: string[] = [
+      ...new Set(((memberships ?? []) as { user_id: string }[]).map((m) => m.user_id)),
+    ];
+    const gritById = new Map<string, number>();
+    if (allIds.length) {
+      const { data: profiles } = await supabaseAdmin
+        .from("profiles")
+        .select("id, grit_points")
+        .in("id", allIds);
+      for (const p of profiles ?? []) gritById.set(p.id, p.grit_points ?? 0);
+    }
+
+    const ranked = rankCrews(
+      crews as { id: string; name: string; tag: string }[],
+      byCrew,
+      gritById,
+      d.limit ?? 25,
+    );
+
+    return { crews: ranked };
   },
 };
 

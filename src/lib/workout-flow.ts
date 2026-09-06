@@ -1,9 +1,10 @@
+import { isWorkingSet } from "@/lib/set-tracking";
 import type { CompletedSet, ExercisePlan, WorkoutSessionExercise } from "@/lib/types";
 
 type ExerciseConfig = Record<string, ExercisePlan> | undefined;
 
 export function completedWorkingSets(sets: CompletedSet[]): number {
-  return sets.filter((set) => !set.kind).length;
+  return sets.filter(isWorkingSet).length;
 }
 
 /** Converts the schedule's visible, adjacent links into session-stable group ids. */
@@ -15,7 +16,8 @@ export function buildSupersetIds(
   let activeGroup: string | undefined;
 
   exerciseIds.forEach((exerciseId, index) => {
-    const linksNext = !!exerciseConfig?.[exerciseId]?.supersetWithNext && index < exerciseIds.length - 1;
+    const linksNext =
+      !!exerciseConfig?.[exerciseId]?.supersetWithNext && index < exerciseIds.length - 1;
     if (activeGroup) groups[index] = activeGroup;
     if (linksNext) {
       activeGroup ??= `superset-${index + 1}`;
@@ -45,6 +47,17 @@ export function supersetPosition(
 export interface WorkoutStep {
   nextIndex: number;
   shouldRest: boolean;
+}
+
+/** Timed, distance and bodyweight movements must never be forced to invent a load. */
+export function requiresWorkingWeight(
+  exercise: Pick<WorkoutSessionExercise, "tracking">,
+  equipment: string | string[] | undefined,
+): boolean {
+  const bodyweight = Array.isArray(equipment)
+    ? equipment.some((item) => item.toUpperCase().includes("BODYWEIGHT"))
+    : equipment?.toUpperCase().includes("BODYWEIGHT");
+  return (exercise.tracking ?? "WEIGHT") === "WEIGHT" && !bodyweight;
 }
 
 /**
@@ -77,8 +90,7 @@ export function nextStepAfterWorkingSet(
     );
     const afterGroup = members.length ? members[members.length - 1]! + 1 : currentIndex + 1;
     return {
-      nextIndex:
-        incomplete ?? (afterGroup < exercises.length ? afterGroup : currentIndex),
+      nextIndex: incomplete ?? (afterGroup < exercises.length ? afterGroup : currentIndex),
       shouldRest: true,
     };
   }

@@ -35,7 +35,11 @@ export function staleMuscles(
     if (!Number.isFinite(at) || at < since) continue;
     const groupsThisSession = new Set<MuscleGroup>();
     for (const ex of s.exercises) {
-      if (!ex.sets.some((set) => set.kind !== "warmup" && set.reps > 0)) continue;
+      // A hold or a carry is real work even though it logs no reps.
+      if (
+        !ex.sets.some((set) => set.kind !== "warmup" && (set.reps > 0 || set.mode !== undefined))
+      )
+        continue;
       for (const raw of ex.primary_muscles ?? []) {
         const g = toMuscleGroup(raw);
         if (!g) continue;

@@ -62,11 +62,7 @@ describe("supersetPairs", () => {
 
   it("returns nothing on same-direction days", () => {
     expect(
-      supersetPairs([
-        { name: "Bench Press" },
-        { name: "Incline Press" },
-        { name: "Cable Fly" },
-      ]),
+      supersetPairs([{ name: "Bench Press" }, { name: "Incline Press" }, { name: "Cable Fly" }]),
     ).toHaveLength(0);
   });
 });

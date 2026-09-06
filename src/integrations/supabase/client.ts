@@ -164,9 +164,9 @@ export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>,
   },
 });
 
-let sessionRestoreInFlight: Promise<void> | null = null;
+let sessionRestorePromise: Promise<void> | undefined;
 
-async function performSessionRestore() {
+async function restoreSessionFromBackup() {
   if (!isBrowser()) return;
   const {
     data: { session },
@@ -202,18 +202,13 @@ async function performSessionRestore() {
   }
 }
 
-/**
- * Coalesce startup callers onto one restore. The root route, authenticated
- * layout and background recovery can mount together on iOS; allowing all of
- * them to call setSession/refreshSession independently makes WebKit wait on
- * Supabase's auth lock and turns a quick launch into a multi-second loader.
- */
+/** One shared restore prevents startup routes from racing the same auth lock. */
 export function restoreSupabaseSession(): Promise<void> {
-  if (!isBrowser()) return Promise.resolve();
-  if (sessionRestoreInFlight) return sessionRestoreInFlight;
-
-  sessionRestoreInFlight = performSessionRestore().finally(() => {
-    sessionRestoreInFlight = null;
+  sessionRestorePromise ??= restoreSessionFromBackup().catch((error) => {
+    // A hard storage/network failure should not poison every later retry in
+    // this app process. Keep concurrent callers deduplicated, then re-arm.
+    sessionRestorePromise = undefined;
+    throw error;
   });
-  return sessionRestoreInFlight;
+  return sessionRestorePromise;
 }

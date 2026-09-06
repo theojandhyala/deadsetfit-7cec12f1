@@ -135,7 +135,7 @@ export function PRList({ prs }: { prs: PRRecord[] }) {
             <button
               type="button"
               onClick={() => setOpenGroups((s) => ({ ...s, [g]: !s[g] }))}
-              className="w-full flex items-center justify-between px-3 py-2 bg-grit-card border border-grit hover:border-accent-red transition-colors"
+              className="flex min-h-11 w-full items-center justify-between border border-grit bg-grit-card px-3 py-2 transition-colors hover:border-accent-red"
             >
               <span className="label-cap text-xs text-grit">
                 {GROUP_LABEL[g]} <span className="text-grit-dim ml-1">· {list.length}</span>

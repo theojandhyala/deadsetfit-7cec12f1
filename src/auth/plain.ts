@@ -1,13 +1,17 @@
 import { createClient, type Session } from "@supabase/supabase-js";
 import {
-  authRecoveryRedirectUrl,
+  authModeFromUrl,
   buildOAuthStartUrl,
   createOAuthState,
+  emailAuthRedirectUrl,
   hasOAuthResult,
+  NATIVE_AUTH_BRIDGE,
+  NATIVE_AUTH_CALLBACK,
   oauthProvidersUrl,
   parseOAuthCallback,
   type OAuthProvider,
 } from "./oauth";
+import { hapticFailure, hapticSelection } from "../lib/haptics";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const publishableKey = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
@@ -18,8 +22,6 @@ const sessionCookieAccess = "deadset_at";
 const sessionCookieRefresh = "deadset_rt";
 const supabaseCookiePrefix = "deadset_sb_";
 const cookieMaxAge = 60 * 60 * 24 * 180;
-const nativeAuthCallback = "org.deadsetfit.app://auth/callback";
-const nativeAuthBridge = "https://deadsetfit.org/auth/native-callback";
 const oauthStateKey = "deadset_oauth_state_v1";
 
 const form = document.getElementById("auth-form") as HTMLFormElement;
@@ -45,8 +47,18 @@ const togglePassword = document.getElementById("toggle-password") as HTMLButtonE
 const passwordHint = document.getElementById("password-hint") as HTMLParagraphElement | null;
 const freeNote = document.getElementById("free-note") as HTMLParagraphElement | null;
 const closeButton = document.getElementById("close") as HTMLButtonElement;
+const signupProgress = document.getElementById("signup-progress") as HTMLDivElement;
+const signupStepLabel = document.getElementById("signup-step-label") as HTMLSpanElement;
+const signupStepCount = document.getElementById("signup-step-count") as HTMLElement;
+const emailStage = document.getElementById("email-stage") as HTMLDivElement;
+const passwordStage = document.getElementById("password-stage") as HTMLDivElement;
+const emailSummary = document.getElementById("email-summary") as HTMLElement;
+const emailSummaryRow = document.getElementById("email-summary-row") as HTMLParagraphElement;
+const passwordLabel = document.getElementById("password-label") as HTMLLabelElement;
+const signupBack = document.getElementById("signup-back") as HTMLButtonElement;
 
 let mode: "signin" | "signup" = "signup";
+let signupStage: 1 | 2 = 1;
 // Landing from a Supabase email link (?code=...) — confirm or recovery.
 // The auth event (SIGNED_IN vs PASSWORD_RECOVERY) decides what happens.
 let recoveryMode = false;
@@ -63,7 +75,7 @@ function setMessage(text: string, tone: "neutral" | "error" | "success" = "neutr
 
 function updatePasswordHint() {
   if (!passwordHint) return;
-  passwordHint.hidden = mode !== "signup";
+  passwordHint.hidden = mode !== "signup" || signupStage !== 2;
   const ok = passwordInput.value.length >= 6;
   passwordHint.classList.toggle("ok", ok);
   passwordHint.textContent = ok ? "✓ At least 6 characters" : "At least 6 characters";
@@ -83,8 +95,78 @@ function setBusy(busy: boolean) {
       : recoveryCodeMode
         ? "Verify Code"
       : mode === "signup"
-        ? "Create Account"
+        ? signupStage === 1
+          ? "Continue"
+          : "Create Account"
         : "Log In";
+}
+
+function animateStage(element: HTMLElement) {
+  element.classList.remove("is-entering");
+  void element.offsetWidth;
+  element.classList.add("is-entering");
+}
+
+function renderAuthStage(focus = false) {
+  if (recoveryMode) {
+    signupProgress.hidden = true;
+    emailStage.hidden = true;
+    passwordStage.hidden = false;
+    signupBack.hidden = true;
+    emailInput.required = false;
+    passwordInput.required = true;
+    emailSummaryRow.hidden = true;
+    passwordLabel.textContent = "New password";
+    passwordInput.placeholder = "At least 6 characters";
+    return;
+  }
+
+  const signingUp = mode === "signup";
+  signupProgress.hidden = !signingUp;
+  if (!signingUp) {
+    emailStage.hidden = false;
+    passwordStage.hidden = false;
+    socialOptions.hidden = false;
+    emailDivider.hidden = false;
+    modeRow.hidden = false;
+    signupBack.hidden = true;
+    emailInput.required = true;
+    passwordInput.required = true;
+    emailSummaryRow.hidden = true;
+    passwordLabel.textContent = "Password";
+    passwordInput.placeholder = "Password";
+    submitButton.textContent = "Log In";
+    if (freeNote) freeNote.hidden = true;
+    if (focus) emailInput.focus();
+    return;
+  }
+
+  const enteringPassword = signupStage === 2;
+  signupProgress.dataset.stage = String(signupStage);
+  signupStepLabel.textContent = enteringPassword ? "ACCOUNT · PASSWORD" : "ACCOUNT · EMAIL";
+  signupStepCount.textContent = `${signupStage} / 2`;
+  emailStage.hidden = enteringPassword;
+  passwordStage.hidden = !enteringPassword;
+  socialOptions.hidden = enteringPassword;
+  emailDivider.hidden = enteringPassword;
+  modeRow.hidden = enteringPassword;
+  signupBack.hidden = !enteringPassword;
+  emailInput.required = !enteringPassword;
+  passwordInput.required = enteringPassword;
+  emailSummary.textContent = emailInput.value.trim().toLowerCase();
+  emailSummaryRow.hidden = !enteringPassword;
+  passwordLabel.textContent = "Create a password";
+  passwordInput.placeholder = "At least 6 characters";
+  authTitle.textContent = enteringPassword ? "Secure your account" : "Create your account";
+  authSubtitle.textContent = enteringPassword
+    ? "One strong password, then we build your training plan."
+    : "First, where should we send your account details?";
+  submitButton.textContent = enteringPassword ? "Create Account" : "Continue";
+  if (freeNote) freeNote.hidden = !enteringPassword;
+  updatePasswordHint();
+  const active = enteringPassword ? passwordStage : emailStage;
+  animateStage(active);
+  if (focus) (enteringPassword ? passwordInput : emailInput).focus();
 }
 
 function cookieAttributes(maxAge = cookieMaxAge) {
@@ -183,7 +265,7 @@ function isNativeShell() {
 }
 
 function emailRedirectUrl() {
-  return authRecoveryRedirectUrl(isNativeShell(), window.location.origin);
+  return emailAuthRedirectUrl(isNativeShell(), window.location.origin);
 }
 
 /** The broker sends the finished session to /auth/ on the web and to the
@@ -193,7 +275,7 @@ function oauthFlow(): "web" | "native" {
 }
 
 function oauthReturnOrigin() {
-  return isNativeShell() ? new URL(nativeAuthBridge).origin : window.location.origin;
+  return isNativeShell() ? new URL(NATIVE_AUTH_BRIDGE).origin : window.location.origin;
 }
 
 function saveOAuthState(state: string) {
@@ -272,6 +354,7 @@ function enterRecoveryMode(session: Session | null) {
   passwordInput.autocomplete = "new-password";
   submitButton.textContent = "Set New Password";
   setMessage("Choose a new password for your account.");
+  renderAuthStage();
   passwordInput.focus();
 }
 
@@ -380,7 +463,7 @@ async function setupNativeAuthCallback() {
   ]);
 
   const handleUrl = async (url: string) => {
-    if (!url.startsWith(nativeAuthCallback)) return;
+    if (!url.startsWith(NATIVE_AUTH_CALLBACK)) return;
     await Browser.close().catch(() => {});
     const callback = parseOAuthCallback(url);
     if (callback.error) {
@@ -415,30 +498,33 @@ async function setupNativeAuthCallback() {
 
 function switchMode(next: "signin" | "signup") {
   mode = next;
-  recoveryMode = false;
-  recoveryCodeMode = false;
-  requestedRecoveryEmail = "";
-  emailInput.disabled = false;
-  passwordField.hidden = false;
-  passwordInput.required = true;
-  recoveryCodeField.hidden = true;
-  recoveryCodeInput.required = false;
+  signupStage = 1;
   const signingUp = mode === "signup";
   authTitle.textContent = signingUp ? "Create your account" : "Welcome back";
   authSubtitle.textContent = signingUp
-    ? "Build your training plan and start logging in minutes."
+    ? "First, where should we send your account details?"
     : "Log in to continue your training.";
   modeQuestion.textContent = signingUp ? "Already have an account?" : "New to DEADSET?";
   modeSwitch.textContent = signingUp ? "Log in" : "Create an account";
   passwordInput.autocomplete = signingUp ? "new-password" : "current-password";
   forgotButton.hidden = signingUp;
-  submitButton.textContent = signingUp ? "Create Account" : "Log In";
-  if (freeNote) freeNote.hidden = !signingUp;
+  submitButton.textContent = signingUp ? "Continue" : "Log In";
   updatePasswordHint();
   setMessage("");
+  renderAuthStage();
 }
 
-modeSwitch.addEventListener("click", () => switchMode(mode === "signup" ? "signin" : "signup"));
+modeSwitch.addEventListener("click", () => {
+  hapticSelection();
+  switchMode(mode === "signup" ? "signin" : "signup");
+});
+
+signupBack.addEventListener("click", () => {
+  hapticSelection();
+  signupStage = 1;
+  setMessage("");
+  renderAuthStage(true);
+});
 
 /** Asks the broker whether the provider's credentials are live, so an
  *  unconfigured provider says so instead of bouncing through a broken redirect. */
@@ -460,6 +546,7 @@ async function providerConfigurationError(provider: OAuthProvider, providerName:
 }
 
 async function continueWithProvider(provider: OAuthProvider) {
+  hapticSelection();
   if (!supabase) {
     setMessage("Authentication is not configured.", "error");
     return;
@@ -495,6 +582,7 @@ googleButton.addEventListener("click", () => void continueWithProvider("google")
 appleButton.addEventListener("click", () => void continueWithProvider("apple"));
 
 togglePassword?.addEventListener("click", () => {
+  hapticSelection();
   const showing = passwordInput.type === "text";
   passwordInput.type = showing ? "password" : "text";
   togglePassword.classList.toggle("showing", !showing);
@@ -505,6 +593,7 @@ togglePassword?.addEventListener("click", () => {
 passwordInput.addEventListener("input", updatePasswordHint);
 
 closeButton.addEventListener("click", () => {
+  hapticSelection();
   window.location.assign("/");
 });
 
@@ -556,6 +645,23 @@ form.addEventListener("submit", async (event) => {
   event.preventDefault();
   const email = emailInput.value.trim().toLowerCase();
   const password = passwordInput.value;
+
+  if (!recoveryMode && mode === "signup" && signupStage === 1) {
+    emailInput.value = email;
+    if (!email || !emailInput.checkValidity()) {
+      hapticFailure();
+      setMessage("Enter a valid email address to continue.", "error");
+      emailInput.reportValidity();
+      emailInput.focus();
+      return;
+    }
+    hapticSelection();
+    signupStage = 2;
+    setMessage("");
+    renderAuthStage(true);
+    return;
+  }
+
   if (!supabase) {
     setMessage("Authentication is not configured.", "error");
     return;
@@ -590,6 +696,7 @@ form.addEventListener("submit", async (event) => {
 
   if (recoveryMode) {
     if (password.length < 6) {
+      hapticFailure();
       setMessage("Password needs at least 6 characters.", "error");
       return;
     }
@@ -612,6 +719,12 @@ form.addEventListener("submit", async (event) => {
   }
 
   if (!email || !password) return;
+  if (mode === "signup" && password.length < 6) {
+    hapticFailure();
+    setMessage("Password needs at least 6 characters.", "error");
+    passwordInput.focus();
+    return;
+  }
 
   setBusy(true);
   setMessage("");
@@ -652,9 +765,7 @@ form.addEventListener("submit", async (event) => {
   }
 });
 
-switchMode(
-  new URLSearchParams(window.location.search).get("mode") === "signin" ? "signin" : "signup",
-);
+switchMode(authModeFromUrl(window.location.href));
 void completeBrowserAuthCallback()
   .then((handled) => {
     if (!handled) return restoreExistingSession();

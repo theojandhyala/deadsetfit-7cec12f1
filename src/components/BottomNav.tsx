@@ -1,5 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Dumbbell, CalendarDays, User, TrendingUp, Plus } from "lucide-react";
+import { Dumbbell, CalendarDays, User, BicepsFlexed, Plus } from "lucide-react";
+
+import { hapticSelection } from "@/lib/haptics";
 
 const LEFT_TABS = [
   { to: "/train", label: "Train", Icon: Dumbbell },
@@ -7,7 +9,7 @@ const LEFT_TABS = [
 ] as const;
 
 const RIGHT_TABS = [
-  { to: "/progress", label: "Progress", Icon: TrendingUp },
+  { to: "/strength", label: "Strength", Icon: BicepsFlexed },
   { to: "/profile", label: "You", Icon: User },
 ] as const;
 
@@ -36,6 +38,7 @@ export function BottomNav() {
             <li key={to} className="flex-1">
               <Link
                 to={to}
+                onClick={active ? undefined : hapticSelection}
                 aria-current={active ? "page" : undefined}
                 className={`deadset-nav-item relative flex h-[70px] flex-col items-center justify-center gap-1.5 press ${
                   active ? "deadset-nav-item-active" : ""
@@ -67,6 +70,7 @@ export function BottomNav() {
           <Link
             to="/workout/live"
             search={{}}
+            onClick={isRecordActive ? undefined : hapticSelection}
             className={`deadset-record-link flex flex-col items-center justify-center gap-1 press ${
               isRecordActive ? "deadset-record-link-active" : ""
             }`}
@@ -103,6 +107,7 @@ export function BottomNav() {
             <li key={to} className="flex-1">
               <Link
                 to={to}
+                onClick={active ? undefined : hapticSelection}
                 aria-current={active ? "page" : undefined}
                 className={`deadset-nav-item relative flex h-[70px] flex-col items-center justify-center gap-1.5 press ${
                   active ? "deadset-nav-item-active" : ""

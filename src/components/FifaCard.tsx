@@ -96,14 +96,21 @@ export function FifaCard({
             {name || "Athlete"}
           </p>
           {username && <p className="text-[11px] text-grit-dim truncate">@{username}</p>}
-          <div className="text-[10px] text-grit-dim mt-1 flex gap-2 flex-wrap label-cap">
-            <span>{overall || "—"} OVR</span>
-            <span>· {badge}</span>
-            {goal && <span>{goal}</span>}
-            {experience && <span>· {experience}</span>}
-            {weightKg && <span>· {weightKg}kg</span>}
-            {heightCm && <span>· {heightCm}cm</span>}
-          </div>
+          {/* One wrapping string, not flex items: each separator is glued to the
+              word before it with a non-breaking space, so a line can never
+              begin with an orphaned "·". */}
+          <p className="label-cap mt-1 text-[10px] leading-relaxed text-grit-dim">
+            {[
+              `${overall || "—"} OVR`,
+              badge,
+              goal,
+              experience,
+              weightKg ? `${weightKg}kg` : null,
+              heightCm ? `${heightCm}cm` : null,
+            ]
+              .filter(Boolean)
+              .join("\u00A0· ")}
+          </p>
         </div>
       </div>
 

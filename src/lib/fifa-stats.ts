@@ -1,6 +1,9 @@
 import type { AppState, SetLog } from "./types";
 import { bestSetFor, maxRepsFor, calculateStreak, calculateGritScore } from "./calc";
 import { getWeeklyCompetitionStats, type WeeklyCompetitionStats } from "./competition";
+import { achievements } from "./achievements";
+import { allExercises } from "./exercises";
+import { strengthReport, type StrengthTier } from "./strength-grades";
 
 // === PR Catalog — used for the "Personal Records" editor + FIFA stat math ===
 export type PRKind = "1RM" | "REPS" | "TIME";
@@ -199,6 +202,9 @@ export function computeFifaStats(state: AppState): FifaStats {
   for (const session of state.sessions || []) {
     for (const ex of session.exercises) {
       for (const s of ex.sets) {
+        // Timed and distance efforts have no rep count: averaging their zero
+        // in would drag rep endurance down for anyone who planks.
+        if (s.mode) continue;
         // Cap a single set's contribution so one mis-logged 60-"rep" hold
         // can't peg the whole stat.
         repTotal += Math.min(s.reps, 20);
@@ -272,6 +278,28 @@ export interface PublicStats {
   weekly: WeeklyCompetitionStats;
   /** Big Three total divided by body weight. */
   strengthToWeight: number;
+  /** Public training history summary used by athlete profiles and friend rows. */
+  totalWorkouts: number;
+  totalWorkingSets: number;
+  lifetimeVolumeKg: number;
+  totalPRs: number;
+  /** Public, bodyweight-adjusted broad-muscle scores for friend comparisons. */
+  strengthMap?: {
+    score: number;
+    tier: StrengthTier;
+    muscles: Array<{
+      muscle: "CHEST" | "BACK" | "SHOULDERS" | "ARMS" | "LEGS" | "CORE";
+      score: number;
+      tier: StrengthTier;
+    }>;
+  };
+  /** Badge wall summary, so an athlete's card can show what they've earned. */
+  badges?: {
+    earned: number;
+    total: number;
+    /** The rarest few, for display on a card. */
+    top: { id: string; label: string; icon: string; rarity: string }[];
+  };
   goal?: string;
   experience?: string;
   weightKg?: number;
@@ -285,11 +313,40 @@ export interface PublicStats {
   };
 }
 
+const RARITY_RANK: Record<string, number> = {
+  LEGENDARY: 4,
+  EPIC: 3,
+  RARE: 2,
+  COMMON: 1,
+};
+
 export function buildPublicStats(state: AppState): PublicStats {
   const stats = computeFifaStats(state);
+  const allBadges = achievements(state);
+  const earned = allBadges.filter((b) => b.unlocked);
+  // Rarest first — a card has room for a handful, and they should be the ones
+  // worth bragging about.
+  const topBadges = [...earned]
+    .sort((a, b) => (RARITY_RANK[b.rarity] ?? 0) - (RARITY_RANK[a.rarity] ?? 0))
+    .slice(0, 6)
+    .map((b) => ({ id: b.id, label: b.label, icon: b.icon, rarity: b.rarity }));
   const topPRs = buildHeadlinePRs(state);
   const total = topPRs.reduce((sum, lift) => sum + lift.value, 0);
   const bodyWeight = state.profile?.weightKg ?? 0;
+  const totalWorkingSets = (state.sessions ?? []).reduce(
+    (total, session) =>
+      total +
+      session.exercises.reduce(
+        (exerciseTotal, exercise) =>
+          exerciseTotal + exercise.sets.filter((set) => set.kind !== "warmup").length,
+        0,
+      ),
+    0,
+  );
+  const lifetimeVolumeKg = Math.round(
+    (state.sessions ?? []).reduce((total, session) => total + (session.totalVolume || 0), 0),
+  );
+  const strength = strengthReport(state, allExercises(state.savedExercises));
   return {
     overall: stats.overall,
     STR: stats.STR,
@@ -302,6 +359,20 @@ export function buildPublicStats(state: AppState): PublicStats {
     topPRs,
     weekly: getWeeklyCompetitionStats(state),
     strengthToWeight: bodyWeight > 0 ? Math.round((total / bodyWeight) * 100) / 100 : 0,
+    totalWorkouts: state.sessions?.length ?? 0,
+    totalWorkingSets,
+    lifetimeVolumeKg,
+    totalPRs: (state.sessions ?? []).reduce((sum, session) => sum + (session.prCount || 0), 0),
+    strengthMap: {
+      score: strength.score,
+      tier: strength.tier,
+      muscles: strength.muscles.map(({ muscle, score, tier }) => ({
+        muscle: muscle as "CHEST" | "BACK" | "SHOULDERS" | "ARMS" | "LEGS" | "CORE",
+        score,
+        tier,
+      })),
+    },
+    badges: { earned: earned.length, total: allBadges.length, top: topBadges },
     goal: state.profile?.goal,
     experience: state.profile?.experience,
     weightKg: state.profile?.weightKg,
