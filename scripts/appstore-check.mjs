@@ -155,6 +155,19 @@ const revenueCatSync = existsSync("src/components/RevenueCatSync.tsx")
   ? read("src/components/RevenueCatSync.tsx")
   : "";
 const rootRoute = existsSync("src/routes/__root.tsx") ? read("src/routes/__root.tsx") : "";
+const mainEntry = existsSync("src/main.tsx") ? read("src/main.tsx") : "";
+const nativeAppShell = existsSync("src/components/NativeAppShell.tsx")
+  ? read("src/components/NativeAppShell.tsx")
+  : "";
+const deferredAppLayers = existsSync("src/components/DeferredAppLayers.tsx")
+  ? read("src/components/DeferredAppLayers.tsx")
+  : "";
+const trainPage = existsSync("src/routes/_tabs.train.tsx")
+  ? read("src/routes/_tabs.train.tsx")
+  : "";
+const trainInsightsPanel = existsSync("src/components/TrainInsightsPanel.tsx")
+  ? read("src/components/TrainInsightsPanel.tsx")
+  : "";
 const privacyPage = existsSync("src/routes/privacy.tsx") ? read("src/routes/privacy.tsx") : "";
 const landingPage = existsSync("src/components/Landing.tsx")
   ? read("src/components/Landing.tsx")
@@ -216,9 +229,25 @@ check(
 check(
   "1.3 update version",
   (xcodeProject.match(/MARKETING_VERSION = 1\.3;/g)?.length ?? 0) >= 6 &&
-    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 155;/g)?.length ?? 0) >= 6 &&
-    whatsNew.includes("WHATS_NEW_VERSION = 202609071"),
-  "The app, activity extension and watch targets are versioned as 1.3 (155), above shipped build 152.",
+    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 156;/g)?.length ?? 0) >= 6 &&
+    whatsNew.includes("WHATS_NEW_VERSION = 202609072"),
+  "The app, activity extension and watch targets are versioned as 1.3 (156), above shipped build 152.",
+);
+check(
+  "deferred native startup and insights",
+  rootRoute.includes('import("../components/NativeAppShell")') &&
+    rootRoute.includes('if (pathname === "/")') &&
+    mainEntry.includes('import("./integrations/supabase/client")') &&
+    nativeAppShell.includes("requestIdleCallback") &&
+    nativeAppShell.includes("DeferredAppLayers") &&
+    deferredAppLayers.includes("<AppReviewWatcher />") &&
+    deferredAppLayers.includes("<DeviceReminderSync />") &&
+    trainPage.includes('import("@/components/TrainInsightsPanel")') &&
+    trainPage.includes("<Suspense fallback={<InsightsLoading />}") &&
+    trainInsightsPanel.includes("<TrainingInsight />") &&
+    trainInsightsPanel.includes("<WeeklyReportCard />") &&
+    trainInsightsPanel.includes("<RankedArena"),
+  "First download stays lightweight, ambient app services wait for idle time, and full deterministic Insights load on demand.",
 );
 check(
   "full check script",
@@ -390,7 +419,7 @@ check(
 check(
   "App Store rating requests",
   existsSync("src/lib/app-review.test.ts") &&
-    rootRoute.includes("<AppReviewWatcher />") &&
+    deferredAppLayers.includes("<AppReviewWatcher />") &&
     appReviewWatcher.includes("deadset_native_review_state_v2") &&
     appReviewClient.includes("REVIEW_MILESTONES = [3, 10, 25]") &&
     appReviewClient.includes("action=write-review") &&
@@ -494,7 +523,7 @@ check(
   "RevenueCat identity and disclosure",
   revenueCatSync.includes("session.user.id") &&
     revenueCatSync.includes("deadset:explicit-logout") &&
-    rootRoute.includes("<RevenueCatSync />") &&
+    nativeAppShell.includes("<RevenueCatSync />") &&
     privacyPage.includes("RevenueCat") &&
     /subscription receipt and\s+entitlement/.test(privacyPage),
   "RevenueCat customers use account IDs, explicit logout is handled, and subscription processing is disclosed.",

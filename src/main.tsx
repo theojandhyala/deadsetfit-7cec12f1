@@ -1,7 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
 import { router } from "./router";
-import { restoreSupabaseSession } from "./integrations/supabase/client";
 import { capturePendingRef } from "./lib/referral";
 import "./styles.css";
 
@@ -75,6 +74,12 @@ try {
   renderBootFailure(error);
 }
 
-void restoreSupabaseSession().catch((error) => {
-  console.warn("Session restore failed; continuing app boot", error);
-});
+// Start auth recovery after React has been scheduled. Keeping the client behind
+// a dynamic import prevents the full Supabase SDK from delaying the first
+// branded paint; IndexRoute shares the same module/promise when it checks the
+// returning session.
+void import("./integrations/supabase/client")
+  .then(({ restoreSupabaseSession }) => restoreSupabaseSession())
+  .catch((error) => {
+    console.warn("Session restore failed; continuing app boot", error);
+  });

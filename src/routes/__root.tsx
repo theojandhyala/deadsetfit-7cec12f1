@@ -8,36 +8,21 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportAppError } from "../lib/error-reporting";
-import { StateSync } from "../components/StateSync";
-import { UsernameGate } from "../components/UsernameGate";
-import { PaywallSheet } from "../components/PaywallSheet";
-import { ConfirmSheet } from "../components/ConfirmSheet";
-import { CelebrationLayer } from "../components/CelebrationLayer";
 import { Toaster } from "../components/ui/sonner";
-import { ProProvider } from "../hooks/usePro";
-import { ProWelcome } from "../components/ProWelcome";
-import { UpgradeNudge } from "../components/UpgradeNudge";
-import { ReferralRedeemer } from "../components/ReferralRedeemer";
-import { CrewInviteRedeemer } from "../components/CrewInviteRedeemer";
-import { StreakMilestoneWatcher } from "../components/StreakMilestoneWatcher";
-import { AchievementWatcher } from "../components/AchievementWatcher";
-import { TonnageMilestoneWatcher } from "../components/TonnageMilestoneWatcher";
 import { captureAttribution } from "../lib/attribution";
 import { capturePendingCrew } from "../lib/crew-invite";
-import { WeeklyRecapNudge } from "../components/WeeklyRecapNudge";
-import { DeviceReminderSync } from "../components/DeviceReminderSync";
-import { RevenueCatSync } from "../components/RevenueCatSync";
-import { AppReviewWatcher } from "../components/AppReviewWatcher";
-import { FirstWeekActivationNudge } from "../components/FirstWeekActivationNudge";
-import { FeedbackPulse } from "../components/FeedbackPulse";
 import { isNativeIos } from "../lib/platform";
 import { WhopConsentBanner } from "../components/WhopConsent";
 import { finishAppBoot } from "../lib/app-boot";
 import { GritLogo } from "../components/GritLogo";
+
+const NativeAppShell = lazy(() =>
+  import("../components/NativeAppShell").then((module) => ({ default: module.NativeAppShell })),
+);
 
 function NotFoundComponent() {
   return (
@@ -225,32 +210,25 @@ function RootComponent() {
     );
   }
 
+  // First download is intentionally tiny: do not initialise purchases, cloud
+  // sync and ten engagement watchers behind a screen whose only job is to let
+  // the athlete choose Get Started or Log In.
+  if (pathname === "/") {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <Outlet />
+        <Toaster />
+      </QueryClientProvider>
+    );
+  }
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <ProProvider>
-        <RevenueCatSync />
-        {!isAuthRoute && <StateSync />}
+    <Suspense fallback={<div className="min-h-[100dvh] bg-[#080808]" aria-hidden="true" />}>
+      <NativeAppShell queryClient={queryClient} isAuthRoute={isAuthRoute}>
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
-        {!isAuthRoute && <UsernameGate />}
-        {!isAuthRoute && <PaywallSheet />}
-        {!isAuthRoute && <CelebrationLayer />}
-        {!isAuthRoute && <ProWelcome />}
-        {!isAuthRoute && <UpgradeNudge />}
-        {!isAuthRoute && <StreakMilestoneWatcher />}
-        {!isAuthRoute && <AchievementWatcher />}
-        {!isAuthRoute && <TonnageMilestoneWatcher />}
-        {!isAuthRoute && <WeeklyRecapNudge />}
-        {!isAuthRoute && <FirstWeekActivationNudge />}
-        {!isAuthRoute && <FeedbackPulse />}
-        {!isAuthRoute && <DeviceReminderSync />}
-        {!isAuthRoute && <AppReviewWatcher />}
-        <ReferralRedeemer />
-        <CrewInviteRedeemer />
-        <ConfirmSheet />
-        <Toaster />
-      </ProProvider>
-    </QueryClientProvider>
+      </NativeAppShell>
+    </Suspense>
   );
 }
 

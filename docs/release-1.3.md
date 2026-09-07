@@ -2,7 +2,7 @@
 
 Status: in development  
 Started: 6 September 2026  
-iOS version/build: 1.3 (155)
+iOS version/build: 1.3 (156)
 
 Production baseline: App Store version 1.2. This update is built directly on that shipped product;
 it is not based on the archived 1.1 build.
@@ -52,6 +52,19 @@ This is not a feature dump. Every addition must improve at least one of these mo
 - [x] Keep the iPhone as the sole source of truth; the Watch displays the bounded projection and
       never owns or merges workout history.
 - [x] Keep older phone payloads decodable during staggered iPhone/Watch updates.
+
+### 0.2 Startup and motion performance
+
+- [x] Keep first download behind a minimal native welcome shell without starting purchases, cloud
+      sync or engagement watchers before the athlete chooses an account action.
+- [x] Load the authenticated provider and sync shell only on routes that require it.
+- [x] Defer recap, achievement, review and reminder layers until the browser's idle window.
+- [x] Keep coaching, ranks, weekly analysis and reports data-rich while loading that bundle only
+      when the athlete opens Train Insights.
+- [x] Reduce the main production JavaScript entry from 152.06 kB to 41.38 kB (72.8%) and the Train
+      entry from 59.67 kB to 47.68 kB (20.1%) without removing 1.2 features.
+- [x] Tighten the DEADSET entrance and boot handoff timings while preserving Reduce Motion
+      equivalents and the persistent readiness screen.
 
 ### 1. Signature Strength Map
 
@@ -123,7 +136,7 @@ This is not a feature dump. Every addition must improve at least one of these mo
   and after reconnect.
 - No horizontal page scrolling, visible browser scrollbars inside the native shell, clipped controls,
   blank boot states, or keyboard-covered primary actions.
-- App Store screenshots and release notes describe only behaviour present in build 155.
+- App Store screenshots and release notes describe only behaviour present in build 156.
 
 ## Measurement
 

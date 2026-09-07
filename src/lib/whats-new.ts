@@ -2,7 +2,7 @@
 // ship. The card hides once dismissed at the current version, so stale
 // announcements never linger.
 
-export const WHATS_NEW_VERSION = 202609071;
+export const WHATS_NEW_VERSION = 202609072;
 export const WHATS_NEW_SEEN_KEY = "deadset_whats_new_seen";
 
 export interface WhatsNewEntry {
@@ -13,6 +13,11 @@ export interface WhatsNewEntry {
 }
 
 export const WHATS_NEW: WhatsNewEntry[] = [
+  {
+    title: "More depth, less waiting",
+    body: "DEADSET now opens through a lighter native shell, paints your plan and logger sooner, and loads the full coaching, ranks, reports and weekly analysis only when you ask for Insights.",
+    where: "Launch · Train · Insights",
+  },
   {
     title: "Your last four performances are now on your wrist",
     body: "Open a movement during a Watch workout to see recent top sets, working-set counts and whether performance moved up or down—without reaching for your phone.",

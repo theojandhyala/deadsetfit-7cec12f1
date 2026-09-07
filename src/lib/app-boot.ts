@@ -19,6 +19,7 @@ export function finishAppBoot(): void {
   appBootFinished = true;
 
   const revealApp = () => {
+    performance.mark?.("deadset-app-content-ready");
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => {
         const bootScreen = document.getElementById(BOOT_SCREEN_ID);
@@ -28,7 +29,7 @@ export function finishAppBoot(): void {
         bootScreen.classList.add("boot--finished");
         const remove = () => bootScreen.remove();
         bootScreen.addEventListener("transitionend", remove, { once: true });
-        window.setTimeout(remove, 650);
+        window.setTimeout(remove, 400);
       });
     });
   };

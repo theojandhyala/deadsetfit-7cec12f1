@@ -24,7 +24,7 @@ export function NativeWelcome() {
       setRevealed(true);
       return;
     }
-    const timer = window.setTimeout(() => setRevealed(true), 1050);
+    const timer = window.setTimeout(() => setRevealed(true), 680);
     return () => window.clearTimeout(timer);
   }, []);
 

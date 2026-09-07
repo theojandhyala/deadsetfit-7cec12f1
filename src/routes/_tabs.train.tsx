@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import {
   Apple,
   Flame,
@@ -17,27 +17,24 @@ import { GritSheet } from "@/components/GritSheet";
 import { TrainWorkoutBrief } from "@/components/TrainWorkoutBrief";
 import { Reminders } from "@/components/Reminders";
 import { DailyQuests } from "@/components/DailyQuests";
-import { Big3Card } from "@/components/Big3Card";
 import { FirstWinsCard } from "@/components/FirstWinsCard";
-import { WeeklyRecap } from "@/components/WeeklyRecap";
-import { RankedArena } from "@/components/RankedArena";
 import { TodayReadiness } from "@/components/TodayReadiness";
-import { TrainingInsight } from "@/components/TrainingInsight";
-import { WeeklyMission } from "@/components/WeeklyMission";
 import { useAppState } from "@/lib/storage";
 import { calculateGritScore, calculateStreak, defaultSchedule, isoDay, todayKey } from "@/lib/calc";
 import { hapticSelection, hapticWorkoutStart } from "@/lib/haptics";
-import { ProBanner } from "@/components/ProBanner";
 import { usePro } from "@/hooks/usePro";
 import { useCountUp } from "@/hooks/useCountUp";
-import { WeeklyReportCard } from "@/components/WeeklyReportCard";
 import { WhatsNewCard } from "@/components/WhatsNewCard";
-import { WeekPaceCard } from "@/components/WeekPaceCard";
-import { StreakChaseCard } from "@/components/StreakChaseCard";
 import { TrainingAutopilot } from "@/components/TrainingAutopilot";
 import { StrengthMapPulse } from "@/components/StrengthMapPulse";
 import { openPaywall } from "@/lib/paywall-events";
 import type { DayKey, Schedule, Program } from "@/lib/types";
+
+const TrainInsightsPanel = lazy(() =>
+  import("@/components/TrainInsightsPanel").then((module) => ({
+    default: module.TrainInsightsPanel,
+  })),
+);
 
 const DAY_KEYS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const DAY_SHORT: Record<DayKey, string> = {
@@ -445,34 +442,26 @@ function TrainPage() {
             <WhatsNewCard />
           </div>
         ) : (
-          <div
-            id="train-insights-panel"
-            key="insights"
-            role="tabpanel"
-            className="deadset-view-switch flex flex-col"
-          >
-            <div className="px-5">
-              <TrainingInsight />
-              <WeekPaceCard state={state} />
-              <StreakChaseCard state={state} />
-              <WeeklyMission state={state} />
-            </div>
-            <WeeklyReportCard />
-            <ProBanner />
-            <section className="deadset-section">
-              <RankedArena state={state} compact />
-            </section>
-            <div className="deadset-section">
-              <Big3Card state={state} />
-            </div>
-            <div className="deadset-section">
-              <WeeklyRecap state={state} />
-            </div>
-          </div>
+          <Suspense fallback={<InsightsLoading />}>
+            <TrainInsightsPanel key="insights" state={state} />
+          </Suspense>
         )}
       </div>
 
       {gritOpen && <GritSheet state={state} onClose={() => setGritOpen(false)} />}
+    </div>
+  );
+}
+
+function InsightsLoading() {
+  return (
+    <div className="deadset-section" role="status" aria-label="Loading training insights">
+      <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#111214] p-4">
+        <div className="h-2 w-24 rounded-full bg-accent-red/35 motion-safe:animate-pulse" />
+        <div className="mt-4 h-6 w-3/4 rounded-lg bg-white/10 motion-safe:animate-pulse" />
+        <div className="mt-3 h-3 w-full rounded-full bg-white/[0.07] motion-safe:animate-pulse" />
+        <div className="mt-2 h-3 w-5/6 rounded-full bg-white/[0.07] motion-safe:animate-pulse" />
+      </div>
     </div>
   );
 }
