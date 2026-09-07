@@ -2,7 +2,7 @@
 // ship. The card hides once dismissed at the current version, so stale
 // announcements never linger.
 
-export const WHATS_NEW_VERSION = 202609061;
+export const WHATS_NEW_VERSION = 202609071;
 export const WHATS_NEW_SEEN_KEY = "deadset_whats_new_seen";
 
 export interface WhatsNewEntry {
@@ -13,6 +13,11 @@ export interface WhatsNewEntry {
 }
 
 export const WHATS_NEW: WhatsNewEntry[] = [
+  {
+    title: "Your last four performances are now on your wrist",
+    body: "Open a movement during a Watch workout to see recent top sets, working-set counts and whether performance moved up or down—without reaching for your phone.",
+    where: "Apple Watch · Live workout",
+  },
   {
     title: "Your programmes now have a proper home",
     body: "Search every routine and exercise, create colour-coded folders, pin favourites, duplicate blocks safely, and archive old plans without losing them.",

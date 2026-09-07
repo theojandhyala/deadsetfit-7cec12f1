@@ -2,7 +2,7 @@
 
 Status: in development  
 Started: 6 September 2026  
-iOS version/build: 1.3 (154)
+iOS version/build: 1.3 (155)
 
 Production baseline: App Store version 1.2. This update is built directly on that shipped product;
 it is not based on the archived 1.1 build.
@@ -39,6 +39,19 @@ This is not a feature dump. Every addition must improve at least one of these mo
 - [x] Keep every 1.2 programme valid through optional, backwards-compatible fields.
 - [x] Provide distinct haptic feedback for pinning, filing, duplicating, archiving and restoring.
 - [x] Keep all filter controls in a wrapping grid with no horizontal carousel or sideways scroll.
+
+### 0.1 Apple Watch exercise history
+
+- [x] Carry the last four completed performances for every live movement from the phone to the
+      paired Watch.
+- [x] Show the best set, completed working-set count, session date and performance direction for
+      each recent session.
+- [x] Support load/reps, timed holds and distance efforts without converting seconds or metres into
+      repetitions or tonnage.
+- [x] Exclude warm-ups, drop sets, unfinished workouts and the current live workout from history.
+- [x] Keep the iPhone as the sole source of truth; the Watch displays the bounded projection and
+      never owns or merges workout history.
+- [x] Keep older phone payloads decodable during staggered iPhone/Watch updates.
 
 ### 1. Signature Strength Map
 
@@ -110,7 +123,7 @@ This is not a feature dump. Every addition must improve at least one of these mo
   and after reconnect.
 - No horizontal page scrolling, visible browser scrollbars inside the native shell, clipped controls,
   blank boot states, or keyboard-covered primary actions.
-- App Store screenshots and release notes describe only behaviour present in build 154.
+- App Store screenshots and release notes describe only behaviour present in build 155.
 
 ## Measurement
 

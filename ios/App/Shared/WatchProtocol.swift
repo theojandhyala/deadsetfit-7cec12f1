@@ -88,6 +88,29 @@ struct WatchSet: Codable, Equatable, Hashable {
     }
 }
 
+/// One completed performance of the movement. The phone sends at most four,
+/// newest first; the watch only renders them and never persists a second copy.
+struct WatchExerciseHistory: Codable, Equatable, Hashable {
+    var date: String
+    var sets: [WatchSet]
+
+    var bestSet: WatchSet? {
+        sets.max { performance($0) < performance($1) }
+    }
+
+    var performanceScore: Double {
+        bestSet.map(performance) ?? 0
+    }
+
+    var workingSetCount: Int { sets.count }
+
+    private func performance(_ set: WatchSet) -> Double {
+        if set.mode == "duration" { return Double(set.seconds ?? 0) }
+        if set.mode == "distance" { return Double(set.meters ?? 0) }
+        return set.weight * (1 + Double(max(0, set.reps)) / 30)
+    }
+}
+
 /// One movement in the live session.
 struct WatchExercise: Codable, Equatable, Hashable, Identifiable {
     var id: String
@@ -105,7 +128,12 @@ struct WatchExercise: Codable, Equatable, Hashable, Identifiable {
     /// What was done on this movement last time, so the target is on the wrist
     /// rather than only on the phone.
     var ghost: [WatchSet]
+    /// Last four completed performances, newest first. Optional keeps payloads
+    /// from an older paired phone decodable during a staggered app update.
+    var history: [WatchExerciseHistory]?
     var sets: [WatchSet]
+
+    var recentHistory: [WatchExerciseHistory] { history ?? [] }
 
     /// Working sets only — warm-ups and drops don't advance the plan.
     var workingSetCount: Int {

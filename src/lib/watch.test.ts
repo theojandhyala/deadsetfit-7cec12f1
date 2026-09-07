@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { projectSession } from "./watch";
+import { exerciseHistoryForWatch, projectSession } from "./watch";
 import type { AppState, WorkoutSession, WorkoutSessionExercise } from "./types";
 
 const state: Pick<AppState, "savedExercises" | "restTimerSeconds"> = {
@@ -166,5 +166,78 @@ describe("projectSession", () => {
     const live = session([bench]);
     const projected = projectSession({ ...state, sessions: [abandoned, live] }, live);
     expect(projected.exercises[0]!.ghost).toEqual([]);
+  });
+
+  it("sends the last four completed performances to the wrist, newest first", () => {
+    const history = [1, 2, 3, 4, 5].map((week) =>
+      session([{ ...bench, sets: [{ weight: 60 + week * 5, reps: 8 }] }], {
+        id: `history-${week}`,
+        date: `2026-08-${String(week).padStart(2, "0")}`,
+        endedAt: `2026-08-${String(week).padStart(2, "0")}T11:00:00.000Z`,
+      }),
+    );
+    const projected = projectSession({ ...state, sessions: [...history, session([bench])] }, session([bench]));
+
+    expect(projected.exercises[0]!.history).toHaveLength(4);
+    expect(projected.exercises[0]!.history.map((entry) => entry.date)).toEqual([
+      "2026-08-05",
+      "2026-08-04",
+      "2026-08-03",
+      "2026-08-02",
+    ]);
+  });
+
+  it("keeps only real working sets in watch history", () => {
+    const previous = session(
+      [
+        {
+          ...bench,
+          sets: [
+            { weight: 20, reps: 10, kind: "warmup" },
+            { weight: 80, reps: 8 },
+            { weight: 60, reps: 12, kind: "drop" },
+            { weight: 82.5, reps: 7, kind: "failure" },
+          ],
+        },
+      ],
+      { id: "previous", endedAt: "2026-08-26T11:00:00.000Z" },
+    );
+    const entries = exerciseHistoryForWatch([previous], "bench-press", "live");
+
+    expect(entries[0]!.sets).toEqual([
+      { weight: 80, reps: 8, isPR: false },
+      { weight: 82.5, reps: 7, kind: "failure", isPR: false },
+    ]);
+  });
+
+  it("excludes the live session and unfinished attempts from watch history", () => {
+    const live = session([{ ...bench, sets: [{ weight: 100, reps: 1 }] }]);
+    const abandoned = session([{ ...bench, sets: [{ weight: 999, reps: 1 }] }], {
+      id: "abandoned",
+    });
+
+    expect(exerciseHistoryForWatch([live, abandoned], "bench-press", live.id)).toEqual([]);
+  });
+
+  it("preserves timed history without turning seconds into repetitions", () => {
+    const plank: WorkoutSessionExercise = {
+      exerciseId: "plank",
+      name: "Plank",
+      primary_muscles: ["CORE"],
+      targetSets: 2,
+      targetReps: "45-60s",
+      tracking: "DURATION",
+      sets: [{ weight: 0, reps: 0, mode: "duration", seconds: 70 }],
+    };
+    const previous = session([plank], {
+      id: "plank-history",
+      endedAt: "2026-08-26T11:00:00.000Z",
+    });
+
+    expect(exerciseHistoryForWatch([previous], "plank", "live")[0]!.sets[0]).toMatchObject({
+      reps: 0,
+      mode: "duration",
+      seconds: 70,
+    });
   });
 });

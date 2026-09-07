@@ -85,6 +85,8 @@ struct ExerciseView: View {
 
                 GhostRow(exercise: exercise)
 
+                ExerciseHistoryPanel(exercise: exercise)
+
                 SetHistory(exercise: exercise) {
                     connector.undoLastSet(exercise: exercise)
                 }
@@ -122,6 +124,80 @@ struct ExerciseView: View {
     static func repsGuess(_ target: String) -> Int {
         let numbers = target.split(whereSeparator: { !$0.isNumber }).compactMap { Int($0) }
         return numbers.max() ?? 8
+    }
+}
+
+/// Four-session movement history, calculated by the phone and carried to the
+/// wrist. It gives the athlete useful context without making the watch a
+/// second source of truth.
+struct ExerciseHistoryPanel: View {
+    let exercise: WatchExercise
+
+    var body: some View {
+        let history = exercise.recentHistory
+        if !history.isEmpty {
+            VStack(spacing: 5) {
+                HStack {
+                    Text("RECENT HISTORY")
+                        .font(.system(size: 9, weight: .black))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text("LAST \(history.count)")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(DeadSetTheme.red)
+                }
+
+                ForEach(Array(history.enumerated()), id: \.offset) { index, entry in
+                    HistoryPerformanceRow(
+                        entry: entry,
+                        previous: history.indices.contains(index + 1) ? history[index + 1] : nil
+                    )
+                }
+            }
+            .padding(8)
+            .background(Color.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 10))
+            .padding(.top, 4)
+        }
+    }
+}
+
+private struct HistoryPerformanceRow: View {
+    let entry: WatchExerciseHistory
+    let previous: WatchExerciseHistory?
+
+    private var improved: Bool? {
+        guard let previous, previous.performanceScore > 0 else { return nil }
+        let change = entry.performanceScore - previous.performanceScore
+        if abs(change) < 0.01 { return nil }
+        return change > 0
+    }
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Text(shortDate(entry.date))
+                .font(.system(size: 9, weight: .black, design: .rounded))
+                .foregroundStyle(.secondary)
+                .frame(width: 39, alignment: .leading)
+            Text(entry.bestSet?.display ?? "—")
+                .font(.system(size: 11, weight: .semibold))
+                .lineLimit(1)
+            Spacer(minLength: 2)
+            Text("×\(entry.workingSetCount)")
+                .font(.system(size: 8, weight: .bold))
+                .foregroundStyle(.secondary)
+            if let improved {
+                Image(systemName: improved ? "arrow.up.right" : "arrow.down.right")
+                    .font(.system(size: 8, weight: .black))
+                    .foregroundStyle(improved ? DeadSetTheme.done : Color.orange)
+                    .accessibilityLabel(improved ? "Improved" : "Below previous")
+            }
+        }
+    }
+
+    private func shortDate(_ value: String) -> String {
+        let pieces = value.split(separator: "-")
+        guard pieces.count == 3 else { return value }
+        return "\(pieces[2])/\(pieces[1])"
     }
 }
 

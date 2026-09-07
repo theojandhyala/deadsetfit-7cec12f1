@@ -81,6 +81,8 @@ struct TimedExerciseView: View {
                             .font(.system(size: 13, weight: .bold))
                     }
                 }
+
+                ExerciseHistoryPanel(exercise: exercise)
             }
             .padding(.horizontal, 4)
         }
@@ -147,6 +149,8 @@ struct DistanceExerciseView: View {
                             .font(.system(size: 13, weight: .bold))
                     }
                 }
+
+                ExerciseHistoryPanel(exercise: exercise)
             }
             .padding(.horizontal, 4)
         }

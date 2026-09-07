@@ -112,6 +112,15 @@ public class WatchBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             restSeconds: intValue(raw["restSeconds"]) ?? 90,
             barKg: doubleValue(raw["barKg"]) ?? 20,
             ghost: ((raw["ghost"] as? [[String: Any]]) ?? []).map(set(from:)),
+            history: ((raw["history"] as? [[String: Any]]) ?? []).compactMap(history(from:)),
+            sets: ((raw["sets"] as? [[String: Any]]) ?? []).map(set(from:))
+        )
+    }
+
+    private static func history(from raw: [String: Any]) -> WatchExerciseHistory? {
+        guard let date = raw["date"] as? String else { return nil }
+        return WatchExerciseHistory(
+            date: date,
             sets: ((raw["sets"] as? [[String: Any]]) ?? []).map(set(from:))
         )
     }

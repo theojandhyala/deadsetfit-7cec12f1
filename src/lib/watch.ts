@@ -1,7 +1,7 @@
 import { registerPlugin } from "@capacitor/core";
 
 import { isNativeIos } from "./platform";
-import { trackingModeFor } from "./set-tracking";
+import { isWorkingSet, trackingModeFor } from "./set-tracking";
 import { getExercise } from "./exercises";
 import { DEFAULT_BAR_KG } from "./bars";
 import type { AppState, CompletedSet, WorkoutSession } from "./types";
@@ -20,6 +20,8 @@ export interface WatchExercisePayload {
   barKg: number;
   /** What was done last time, so the wrist knows the target too. */
   ghost: WatchSetPayload[];
+  /** The last four completed performances for this movement, newest first. */
+  history: WatchExerciseHistoryPayload[];
   sets: Array<{
     weight: number;
     reps: number;
@@ -29,6 +31,13 @@ export interface WatchExercisePayload {
     meters?: number;
     isPR: boolean;
   }>;
+}
+
+export interface WatchExerciseHistoryPayload {
+  /** Local workout date in YYYY-MM-DD form. */
+  date: string;
+  /** Working sets only; warm-ups and drop sets never become performance history. */
+  sets: WatchSetPayload[];
 }
 
 /** One set, as the watch draws it. */
@@ -144,6 +153,35 @@ function ghostFor(
   return [];
 }
 
+/**
+ * The four most recent completed performances for a movement.
+ *
+ * This is deliberately derived by the phone. The watch remains a display and
+ * remote control, never a second owner of training history. Ordering uses the
+ * completed timestamp when available so two workouts on one day still appear
+ * in the order they actually finished.
+ */
+export function exerciseHistoryForWatch(
+  sessions: WorkoutSession[],
+  exerciseId: string,
+  currentSessionId: string,
+): WatchExerciseHistoryPayload[] {
+  return [...sessions]
+    .filter((session) => session.endedAt && session.id !== currentSessionId)
+    .sort((a, b) => {
+      const aAt = a.endedAt ?? a.startedAt ?? a.date;
+      const bAt = b.endedAt ?? b.startedAt ?? b.date;
+      return bAt.localeCompare(aAt);
+    })
+    .flatMap((session) => {
+      const exercise = session.exercises.find((item) => item.exerciseId === exerciseId);
+      if (!exercise) return [];
+      const sets = exercise.sets.filter(isWorkingSet).map(projectSet);
+      return sets.length ? [{ date: session.date, sets }] : [];
+    })
+    .slice(0, 4);
+}
+
 export function projectSession(
   state: Pick<AppState, "savedExercises" | "restTimerSeconds"> & { sessions?: WorkoutSession[] },
   session: WorkoutSession | null | undefined,
@@ -177,6 +215,11 @@ export function projectSession(
         restSeconds: exercise.restSeconds ?? defaultRest,
         barKg: exercise.barKg ?? DEFAULT_BAR_KG,
         ghost: ghostFor(state.sessions ?? [], exercise.exerciseId, session.id),
+        history: exerciseHistoryForWatch(
+          state.sessions ?? [],
+          exercise.exerciseId,
+          session.id,
+        ),
         sets: exercise.sets.map(projectSet),
       };
     }),

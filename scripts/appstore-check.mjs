@@ -196,6 +196,16 @@ const programOrganizer = existsSync("src/components/ProgramOrganizer.tsx")
 const programOrganizerLogic = existsSync("src/lib/program-organizer.ts")
   ? read("src/lib/program-organizer.ts")
   : "";
+const watchClient = existsSync("src/lib/watch.ts") ? read("src/lib/watch.ts") : "";
+const watchProtocol = existsSync("ios/App/Shared/WatchProtocol.swift")
+  ? read("ios/App/Shared/WatchProtocol.swift")
+  : "";
+const watchExerciseView = existsSync("ios/App/DeadSetWatch/ExerciseView.swift")
+  ? read("ios/App/DeadSetWatch/ExerciseView.swift")
+  : "";
+const watchBridge = existsSync("ios/App/App/WatchBridgePlugin.swift")
+  ? read("ios/App/App/WatchBridgePlugin.swift")
+  : "";
 
 check("package.json exists", !!packageJson.name, "Project metadata is readable.");
 check(
@@ -206,9 +216,9 @@ check(
 check(
   "1.3 update version",
   (xcodeProject.match(/MARKETING_VERSION = 1\.3;/g)?.length ?? 0) >= 6 &&
-    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 154;/g)?.length ?? 0) >= 6 &&
-    whatsNew.includes("WHATS_NEW_VERSION = 202609061"),
-  "The app, activity extension and watch targets are versioned as 1.3 (154), above shipped build 152.",
+    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 155;/g)?.length ?? 0) >= 6 &&
+    whatsNew.includes("WHATS_NEW_VERSION = 202609071"),
+  "The app, activity extension and watch targets are versioned as 1.3 (155), above shipped build 152.",
 );
 check(
   "full check script",
@@ -225,6 +235,19 @@ check(
     existsSync("src/lib/rank.test.ts") &&
     existsSync("src/lib/device-reminders.test.ts"),
   "Schedule, progression, competition, rank, and reminder logic have automated coverage.",
+);
+check(
+  "Apple Watch exercise history",
+  existsSync("src/lib/watch.test.ts") &&
+    watchClient.includes("exerciseHistoryForWatch") &&
+    watchClient.includes(".filter(isWorkingSet)") &&
+    watchClient.includes(".slice(0, 4)") &&
+    watchProtocol.includes("struct WatchExerciseHistory") &&
+    watchProtocol.includes("var recentHistory") &&
+    watchBridge.includes('raw["history"]') &&
+    watchExerciseView.includes("ExerciseHistoryPanel") &&
+    watchExerciseView.includes("performanceScore"),
+  "The phone sends a tested, bounded working-set history and the Watch renders four recent performances with trend context.",
 );
 check(
   "weekly planned-set map",
