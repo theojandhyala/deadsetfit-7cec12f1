@@ -168,6 +168,15 @@ const trainPage = existsSync("src/routes/_tabs.train.tsx")
 const trainInsightsPanel = existsSync("src/components/TrainInsightsPanel.tsx")
   ? read("src/components/TrainInsightsPanel.tsx")
   : "";
+const muscleGrowthCoach = existsSync("src/components/MuscleGrowthCoach.tsx")
+  ? read("src/components/MuscleGrowthCoach.tsx")
+  : "";
+const musclePlaybookPanel = existsSync("src/components/MusclePlaybookPanel.tsx")
+  ? read("src/components/MusclePlaybookPanel.tsx")
+  : "";
+const musclePlaybook = existsSync("src/lib/muscle-playbook.ts")
+  ? read("src/lib/muscle-playbook.ts")
+  : "";
 const privacyPage = existsSync("src/routes/privacy.tsx") ? read("src/routes/privacy.tsx") : "";
 const landingPage = existsSync("src/components/Landing.tsx")
   ? read("src/components/Landing.tsx")
@@ -182,9 +191,6 @@ const weeklySetGrid = existsSync("src/components/WeeklySetGrid.tsx")
   : "";
 const plannedSetGrid = existsSync("src/lib/planned-set-grid.ts")
   ? read("src/lib/planned-set-grid.ts")
-  : "";
-const muscleGrowthCoach = existsSync("src/components/MuscleGrowthCoach.tsx")
-  ? read("src/components/MuscleGrowthCoach.tsx")
   : "";
 const strengthTutorial = existsSync("src/components/StrengthEngineTutorial.tsx")
   ? read("src/components/StrengthEngineTutorial.tsx")
@@ -229,9 +235,9 @@ check(
 check(
   "1.3 update version",
   (xcodeProject.match(/MARKETING_VERSION = 1\.3;/g)?.length ?? 0) >= 6 &&
-    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 156;/g)?.length ?? 0) >= 6 &&
-    whatsNew.includes("WHATS_NEW_VERSION = 202609072"),
-  "The app, activity extension and watch targets are versioned as 1.3 (156), above shipped build 152.",
+    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 157;/g)?.length ?? 0) >= 6 &&
+    whatsNew.includes("WHATS_NEW_VERSION = 202609081"),
+  "The app, activity extension and watch targets are versioned as 1.3 (157), above shipped build 152.",
 );
 check(
   "deferred native startup and insights",
@@ -248,6 +254,20 @@ check(
     trainInsightsPanel.includes("<WeeklyReportCard />") &&
     trainInsightsPanel.includes("<RankedArena"),
   "First download stays lightweight, ambient app services wait for idle time, and full deterministic Insights load on demand.",
+);
+check(
+  "deterministic Muscle Playbook",
+  existsSync("src/lib/muscle-playbook.test.ts") &&
+    muscleGrowthCoach.includes('import("@/components/MusclePlaybookPanel")') &&
+    muscleGrowthCoach.includes("<Suspense fallback={<PlaybookLoading />}") &&
+    musclePlaybookPanel.includes('role="tablist"') &&
+    musclePlaybookPanel.includes('role="tabpanel"') &&
+    muscleGrowthCoach.includes("motion-safe:animate-pulse") &&
+    musclePlaybook.includes("FOCUS_PRIORITY") &&
+    musclePlaybook.includes("EXPERIENCE_SCALE") &&
+    musclePlaybook.includes("Recovery is low") &&
+    musclePlaybook.includes("not a medical prescription"),
+  "All selectable muscle targets receive tested, goal-aware, recovery-aware local guidance loaded only when Muscle Lab opens.",
 );
 check(
   "full check script",

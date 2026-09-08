@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo, useState } from "react";
+import { lazy, Suspense, type ReactNode, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
@@ -59,6 +59,12 @@ const DAY_LABEL: Record<DayKey, string> = {
 };
 
 const BROAD_TARGET_OPTIONS = GROWTH_TARGET_OPTIONS.filter((option) => option.kind === "BROAD");
+
+const MusclePlaybookPanel = lazy(() =>
+  import("@/components/MusclePlaybookPanel").then((module) => ({
+    default: module.MusclePlaybookPanel,
+  })),
+);
 
 const TARGET_DIAGRAM_MUSCLES: Record<GrowthTarget, string[]> = {
   CHEST: ["chest"],
@@ -514,6 +520,16 @@ export function MuscleGrowthCoach({ selectedTarget, onTargetChange, open, onOpen
               </div>
             </div>
 
+            <Suspense fallback={<PlaybookLoading />}>
+              <MusclePlaybookPanel
+                target={selectedTarget}
+                goal={goal}
+                experience={state.profile?.experience}
+                currentWeeklySets={volume.sets}
+                recoveryPct={recovery.pct}
+              />
+            </Suspense>
+
             <LoadProgressionPanel entries={loadTargets} state={state} muscle={selectedMuscle} />
 
             <div className="mt-5 flex items-end justify-between gap-3">
@@ -703,6 +719,24 @@ export function MuscleGrowthCoach({ selectedTarget, onTargetChange, open, onOpen
         </SheetContent>
       </Sheet>
     </section>
+  );
+}
+
+function PlaybookLoading() {
+  return (
+    <div
+      className="mt-4 rounded-2xl border border-white/10 bg-[#111216] p-4"
+      role="status"
+      aria-label="Loading muscle playbook"
+    >
+      <div className="h-2 w-24 rounded-full bg-accent-red/30 motion-safe:animate-pulse" />
+      <div className="mt-3 h-5 w-4/5 rounded-lg bg-white/10 motion-safe:animate-pulse" />
+      <div className="mt-3 grid grid-cols-3 gap-1.5">
+        {[0, 1, 2].map((item) => (
+          <div key={item} className="h-12 rounded-xl bg-white/[0.06] motion-safe:animate-pulse" />
+        ))}
+      </div>
+    </div>
   );
 }
 

@@ -2,7 +2,7 @@
 
 Status: in development  
 Started: 6 September 2026  
-iOS version/build: 1.3 (156)
+iOS version/build: 1.3 (157)
 
 Production baseline: App Store version 1.2. This update is built directly on that shipped product;
 it is not based on the archived 1.1 build.
@@ -65,6 +65,19 @@ This is not a feature dump. Every addition must improve at least one of these mo
       entry from 59.67 kB to 47.68 kB (20.1%) without removing 1.2 features.
 - [x] Tighten the DEADSET entrance and boot handoff timings while preserving Reduce Motion
       equivalents and the persistent readiness screen.
+
+### 0.3 Muscle Playbook
+
+- [x] Cover all 28 broad and specific Muscle Lab targets with deterministic training knowledge.
+- [x] Adapt conservative weekly-set ranges to beginner, intermediate and advanced experience.
+- [x] Adapt rep and progression guidance to size, strength and balance goals.
+- [x] Put low recovery ahead of adding more volume and explain the current recommendation plainly.
+- [x] Include target priorities, movement roles, repeatable technique cues, common mistakes and
+      readiness checks without presenting the guidance as medical advice.
+- [x] Present the knowledge in four compact animated panels with haptics, VoiceOver tab semantics,
+      Reduce Motion support and no horizontal carousel.
+- [x] Lazy-load the 19.40 kB playbook only when Muscle Lab opens, keeping the 41.39 kB main entry
+      effectively unchanged.
 
 ### 1. Signature Strength Map
 
@@ -136,7 +149,7 @@ This is not a feature dump. Every addition must improve at least one of these mo
   and after reconnect.
 - No horizontal page scrolling, visible browser scrollbars inside the native shell, clipped controls,
   blank boot states, or keyboard-covered primary actions.
-- App Store screenshots and release notes describe only behaviour present in build 156.
+- App Store screenshots and release notes describe only behaviour present in build 157.
 
 ## Measurement
 
