@@ -33,6 +33,7 @@ import { defaultSchedule, todayKey, updateScheduleDay } from "@/lib/calc";
 import { currentWeekStart, getWeeklyCompetitionStats } from "@/lib/competition";
 import { allExercises, EXERCISES, getExercise } from "@/lib/exercises";
 import { libraryExerciseToExercise } from "@/lib/exercise-library";
+import { exerciseSearchScore } from "@/lib/exercise-finder";
 import {
   hapticFailure,
   hapticPlanUpdated,
@@ -228,11 +229,18 @@ function PlanPage() {
           exercise.equipment.includes(equipment) ||
           exercise.equipment.includes("BODYWEIGHT");
         const queryMatch =
-          !query ||
-          exercise.name.toLowerCase().includes(query) ||
-          exercise.muscleGroup.toLowerCase().includes(query) ||
-          exercise.equipmentLabel?.toLowerCase().includes(query) ||
-          exercise.secondaryMuscles?.some((muscle) => muscle.toLowerCase().includes(query));
+          exerciseSearchScore(
+            query,
+            exercise.name,
+            [
+              exercise.muscleGroup,
+              exercise.equipmentLabel,
+              ...(exercise.primaryMuscles ?? []),
+              ...(exercise.secondaryMuscles ?? []),
+            ]
+              .filter(Boolean)
+              .join(" "),
+          ) > 0;
         const muscleMatch = muscleFilter === "ALL" || exercise.muscleGroup === muscleFilter;
         const specificEquipmentMatch =
           equipmentFilter === "ALL" ||

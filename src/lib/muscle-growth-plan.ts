@@ -31,7 +31,7 @@ function saveExercise(state: AppState, prescription: GrowthPlanPrescription) {
   ];
 }
 
-function normalisedName(name: string) {
+export function normalisedPlanExerciseName(name: string) {
   return name
     .trim()
     .toLocaleLowerCase()
@@ -71,10 +71,11 @@ export function addGrowthRecommendationToDay(
   const active = state.programs.find((program) => program.id === state.activeProgramId);
   if (active) {
     const day = active.days[dayKey] ?? { label: "REST", items: [] };
-    const name = normalisedName(prescription.exercise.name);
+    const name = normalisedPlanExerciseName(prescription.exercise.name);
     if (
       day.items.some(
-        (item) => item.id === prescription.exercise.id || normalisedName(item.name) === name,
+        (item) =>
+          item.id === prescription.exercise.id || normalisedPlanExerciseName(item.name) === name,
       )
     ) {
       return { state, status: "ALREADY_ADDED", destination: "PROGRAM" };
@@ -112,11 +113,13 @@ export function addGrowthRecommendationToDay(
   const schedule = state.schedule ?? (state.profile ? defaultSchedule(state.profile) : null);
   if (!schedule) return { state, status: "NO_PLAN", destination: null };
   const day = schedule[dayKey] ?? { label: "REST", exerciseIds: [] };
-  const name = normalisedName(prescription.exercise.name);
+  const name = normalisedPlanExerciseName(prescription.exercise.name);
   if (
     day.exerciseIds.some((id) => {
       const existing = getExercise(id, state.savedExercises);
-      return id === prescription.exercise.id || normalisedName(existing?.name ?? id) === name;
+      return (
+        id === prescription.exercise.id || normalisedPlanExerciseName(existing?.name ?? id) === name
+      );
     })
   ) {
     return { state, status: "ALREADY_ADDED", destination: "SCHEDULE" };
@@ -161,12 +164,13 @@ export function growthExerciseIsOnDay(
   exerciseId: string,
   exerciseName?: string,
 ) {
-  const name = normalisedName(exerciseName ?? "");
+  const name = normalisedPlanExerciseName(exerciseName ?? "");
   const active = state.programs.find((program) => program.id === state.activeProgramId);
   if (active) {
     return (
       active.days[dayKey]?.items.some(
-        (item) => item.id === exerciseId || (name && normalisedName(item.name) === name),
+        (item) =>
+          item.id === exerciseId || (name && normalisedPlanExerciseName(item.name) === name),
       ) ?? false
     );
   }
@@ -174,7 +178,9 @@ export function growthExerciseIsOnDay(
   return (
     schedule?.[dayKey]?.exerciseIds.some((id) => {
       const existing = getExercise(id, state.savedExercises);
-      return id === exerciseId || (name && normalisedName(existing?.name ?? id) === name);
+      return (
+        id === exerciseId || (name && normalisedPlanExerciseName(existing?.name ?? id) === name)
+      );
     }) ?? false
   );
 }

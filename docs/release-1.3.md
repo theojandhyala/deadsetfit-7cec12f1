@@ -2,7 +2,7 @@
 
 Status: in development  
 Started: 6 September 2026  
-iOS version/build: 1.3 (158)
+iOS version/build: 1.3 (159)
 
 Production baseline: App Store version 1.2. This update is built directly on that shipped product;
 it is not based on the archived 1.1 build.
@@ -95,6 +95,26 @@ checks, with no uncaught browser errors. A forced catalogue failure left the bui
 usable; no catalogue request fired while the sheet was closed. This is scoped component QA,
 not verification of live purchases, social accounts or physical-device accessibility.
 
+### 0.5 Research-backed Exercise Finder
+
+- [x] Search locally with abbreviations, muscle aliases and conservative typo tolerance.
+- [x] Share forgiving search with Plan and live replacements without relaxing swap exclusions.
+- [x] Browse saved and built-in movements while the full catalogue loads or is unavailable.
+- [x] Combine muscle/equipment/beginner filters with Explore, In my week and Saved/custom views.
+- [x] Render results in batches and provide clear/reset/retry/empty-state controls.
+- [x] Open accessible anatomy and technique sheets with explicit external demonstration search.
+- [x] Add to the actual active programme or schedule, prevent duplicate entries and show true outcomes.
+- [x] Preserve known repeated loads and saved prescriptions through the existing plan update logic.
+- [x] Classify new catalogue additions from primary muscles before secondary support muscles.
+
+Chromium component checks passed at 320, 375, 393 and 430 px: offline catalogue fallback,
+abbreviation/typo search, combined filters, empty/reset states, active-programme updates,
+same-day duplicate protection and persistence across reload. No horizontal overflow or uncaught
+browser errors occurred. Typing and filtering sent no additional catalogue requests. Tests used
+local fixture data and intercepted network requests, not live customer accounts.
+
+Research and the separate proposed 24-package backlog: [competitor review](competitor-review-2026-09.md).
+
 ### 1. Signature Strength Map
 
 - [x] Prominent placement near the top of Progress.
@@ -165,7 +185,7 @@ not verification of live purchases, social accounts or physical-device accessibi
   and after reconnect.
 - No horizontal page scrolling, visible browser scrollbars inside the native shell, clipped controls,
   blank boot states, or keyboard-covered primary actions.
-- App Store screenshots and release notes describe only behaviour present in build 158.
+- App Store screenshots and release notes describe only behaviour present in build 159.
 
 ## Measurement
 

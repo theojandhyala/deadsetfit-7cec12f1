@@ -29,6 +29,15 @@ const library = [
 ];
 
 describe("liveExerciseSwapCandidates", () => {
+  it("accepts shorthand and a typo without relaxing reserved-exercise rules", () => {
+    const options = { currentExerciseId: "bench", targetMuscles: ["CHEST"], query: "db pres" };
+    expect(liveExerciseSwapCandidates(library, options).map((item) => item.id)).toEqual([
+      "incline-db",
+    ]);
+    expect(
+      liveExerciseSwapCandidates(library, { ...options, reservedExerciseIds: ["incline-db"] }),
+    ).toEqual([]);
+  });
   it("offers only same-muscle alternatives that fit the athlete's equipment", () => {
     const candidates = liveExerciseSwapCandidates(library, {
       currentExerciseId: "bench",

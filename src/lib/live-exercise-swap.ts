@@ -1,4 +1,5 @@
 import type { Equipment, Exercise } from "./types";
+import { exerciseSearchScore } from "./exercise-finder";
 
 export interface LiveSwapOptions {
   currentExerciseId: string;
@@ -41,10 +42,7 @@ export function liveExerciseSwapCandidates(
       )
         return false;
       if (!search) return true;
-      return (
-        exercise.name.toLowerCase().includes(search) ||
-        exercise.equipmentLabel?.toLowerCase().includes(search) === true
-      );
+      return exerciseSearchScore(search, exercise.name, exercise.equipmentLabel) > 0;
     })
     .sort((a, b) => a.name.localeCompare(b.name));
 }

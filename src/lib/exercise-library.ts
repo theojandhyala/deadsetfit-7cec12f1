@@ -3,21 +3,36 @@ import type { Equipment, Exercise, Experience } from "./types";
 
 const MUSCLE_ALIASES: Array<[Exercise["muscleGroup"], string[]]> = [
   ["CHEST", ["CHEST", "PECTORAL"]],
-  ["BACK", ["BACK", "LAT", "TRAP", "RHOMBOID", "ERECTOR"]],
-  ["LEGS", ["QUAD", "HAMSTRING", "GLUTE", "CALF", "ADDUCTOR", "ABDUCTOR", "LEG"]],
-  ["SHOULDERS", ["SHOULDER", "DELT", "ROTATOR"]],
+  ["BACK", ["BACK", "LAT", "LATISSIMUS", "TRAP", "TRAPEZIUS", "RHOMBOID", "ERECTOR"]],
+  [
+    "LEGS",
+    ["QUAD", "QUADRICEP", "HAMSTRING", "GLUTE", "CALF", "CALVES", "ADDUCTOR", "ABDUCTOR", "LEG"],
+  ],
+  ["SHOULDERS", ["SHOULDER", "DELT", "DELTOID", "ROTATOR"]],
   ["ARMS", ["BICEP", "TRICEP", "FOREARM", "BRACHIALIS", "ARM"]],
-  ["CORE", ["ABS", "ABDOMINAL", "CORE", "OBLIQUE"]],
+  ["CORE", ["ABS", "ABDOMINAL", "ABDOMINIS", "CORE", "OBLIQUE"]],
 ];
 
 function muscleGroup(exercise: LibraryExercise): Exercise["muscleGroup"] {
-  const haystack = [exercise.category, ...exercise.primary_muscles, ...exercise.secondary_muscles]
-    .join(" ")
-    .toUpperCase();
-  return (
-    MUSCLE_ALIASES.find(([, aliases]) => aliases.some((alias) => haystack.includes(alias)))?.[0] ??
-    "CORE"
-  );
+  // Primary anatomy must win over a supporting muscle or broad push/pull category.
+  for (const source of [
+    exercise.primary_muscles,
+    [exercise.category],
+    exercise.secondary_muscles,
+  ]) {
+    for (const raw of source) {
+      const label = raw.toUpperCase().replace(/[_-]+/g, " ");
+      const match = MUSCLE_ALIASES.find(([, aliases]) =>
+        aliases.some((alias) =>
+          new RegExp(`\\b${alias}${alias === "LAT" ? "(?:S|ISSIMUS)?\\b" : ""}`).test(
+            label,
+          ),
+        ),
+      );
+      if (match) return match[0];
+    }
+  }
+  return "CORE";
 }
 
 function equipmentAccess(label: string): Equipment[] {
