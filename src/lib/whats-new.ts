@@ -2,7 +2,7 @@
 // ship. The card hides once dismissed at the current version, so stale
 // announcements never linger.
 
-export const WHATS_NEW_VERSION = 202609081;
+export const WHATS_NEW_VERSION = 202609082;
 export const WHATS_NEW_SEEN_KEY = "deadset_whats_new_seen";
 
 export interface WhatsNewEntry {
@@ -13,6 +13,11 @@ export interface WhatsNewEntry {
 }
 
 export const WHATS_NEW: WhatsNewEntry[] = [
+  {
+    title: "A smoother Muscle Lab",
+    body: "Choose muscle areas without sideways scrolling, read the full rep guidance and move between your playbook panels with quicker transitions. The welcome screen gets you started sooner, with clear DEADSET loading states while the next screen opens.",
+    where: "Launch · Strength · Muscle Lab",
+  },
   {
     title: "Every muscle now has a playbook",
     body: "Open Muscle Lab for target-specific priorities, set and frequency guidance, technique cues, common mistakes, recovery checks and progression rules that adapt to your goal, experience and current week.",

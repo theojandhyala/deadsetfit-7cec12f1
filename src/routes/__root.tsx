@@ -19,6 +19,7 @@ import { isNativeIos } from "../lib/platform";
 import { WhopConsentBanner } from "../components/WhopConsent";
 import { finishAppBoot } from "../lib/app-boot";
 import { GritLogo } from "../components/GritLogo";
+import { AppLoading } from "../components/AppLoading";
 
 const NativeAppShell = lazy(() =>
   import("../components/NativeAppShell").then((module) => ({ default: module.NativeAppShell })),
@@ -223,7 +224,7 @@ function RootComponent() {
   }
 
   return (
-    <Suspense fallback={<div className="min-h-[100dvh] bg-[#080808]" aria-hidden="true" />}>
+    <Suspense fallback={<AppLoading />}>
       <NativeAppShell queryClient={queryClient} isAuthRoute={isAuthRoute}>
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />

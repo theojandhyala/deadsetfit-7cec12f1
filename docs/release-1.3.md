@@ -2,7 +2,7 @@
 
 Status: in development  
 Started: 6 September 2026  
-iOS version/build: 1.3 (157)
+iOS version/build: 1.3 (158)
 
 Production baseline: App Store version 1.2. This update is built directly on that shipped product;
 it is not based on the archived 1.1 build.
@@ -79,6 +79,22 @@ This is not a feature dump. Every addition must improve at least one of these mo
 - [x] Lazy-load the 19.40 kB playbook only when Muscle Lab opens, keeping the 41.39 kB main entry
       effectively unchanged.
 
+### 0.4 Muscle Lab interaction and loading polish
+
+- [x] Defer the exercise catalogue request until Muscle Lab is actually opened.
+- [x] Wrap specific muscle-area choices into a two-column grid instead of a sideways carousel.
+- [x] Show the complete rep guidance and clarify that weekly set ranges cover the broad muscle group.
+- [x] Use accessible playbook tabs with arrow-key navigation, focus indicators and unique panel IDs.
+- [x] Add lightweight DEADSET route-loading states with no artificial minimum wait or fake percentage.
+- [x] Remove the welcome action reveal timer while preserving its existing branding and animations.
+- [x] Tighten sheet transitions to 260 ms open / 180 ms close with reduced-motion alternatives.
+
+Local component QA for build 158: Chromium at 320, 375, 393 and 430 px passed welcome-link,
+horizontal-overflow, text-clipping, playbook keyboard/tab, sheet close/reopen and reduced-motion
+checks, with no uncaught browser errors. A forced catalogue failure left the built-in guidance
+usable; no catalogue request fired while the sheet was closed. This is scoped component QA,
+not verification of live purchases, social accounts or physical-device accessibility.
+
 ### 1. Signature Strength Map
 
 - [x] Prominent placement near the top of Progress.
@@ -149,7 +165,7 @@ This is not a feature dump. Every addition must improve at least one of these mo
   and after reconnect.
 - No horizontal page scrolling, visible browser scrollbars inside the native shell, clipped controls,
   blank boot states, or keyboard-covered primary actions.
-- App Store screenshots and release notes describe only behaviour present in build 157.
+- App Store screenshots and release notes describe only behaviour present in build 158.
 
 ## Measurement
 

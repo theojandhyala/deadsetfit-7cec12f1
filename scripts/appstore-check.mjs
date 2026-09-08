@@ -235,9 +235,9 @@ check(
 check(
   "1.3 update version",
   (xcodeProject.match(/MARKETING_VERSION = 1\.3;/g)?.length ?? 0) >= 6 &&
-    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 157;/g)?.length ?? 0) >= 6 &&
-    whatsNew.includes("WHATS_NEW_VERSION = 202609081"),
-  "The app, activity extension and watch targets are versioned as 1.3 (157), above shipped build 152.",
+    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 158;/g)?.length ?? 0) >= 6 &&
+    whatsNew.includes("WHATS_NEW_VERSION = 202609082"),
+  "The app, activity extension and watch targets are versioned as 1.3 (158), above shipped build 152.",
 );
 check(
   "deferred native startup and insights",
@@ -260,8 +260,9 @@ check(
   existsSync("src/lib/muscle-playbook.test.ts") &&
     muscleGrowthCoach.includes('import("@/components/MusclePlaybookPanel")') &&
     muscleGrowthCoach.includes("<Suspense fallback={<PlaybookLoading />}") &&
-    musclePlaybookPanel.includes('role="tablist"') &&
-    musclePlaybookPanel.includes('role="tabpanel"') &&
+    musclePlaybookPanel.includes("<Tabs.List") &&
+    musclePlaybookPanel.includes("<Tabs.Trigger") &&
+    musclePlaybookPanel.includes("<Tabs.Content") &&
     muscleGrowthCoach.includes("motion-safe:animate-pulse") &&
     musclePlaybook.includes("FOCUS_PRIORITY") &&
     musclePlaybook.includes("EXPERIENCE_SCALE") &&
@@ -394,7 +395,7 @@ check(
 );
 check(
   "signup-first native welcome",
-    nativeWelcome.includes('nativeAuthHref("signup")') &&
+  nativeWelcome.includes('nativeAuthHref("signup")') &&
     nativeWelcome.includes('nativeAuthHref("signin")') &&
     nativeWelcome.includes("Get started") &&
     nativeWelcome.includes("native-entry-wordmark") &&

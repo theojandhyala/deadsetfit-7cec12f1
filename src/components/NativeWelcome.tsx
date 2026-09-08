@@ -1,5 +1,4 @@
 import { ArrowRight, CalendarDays, Dumbbell, ScanLine } from "lucide-react";
-import { useEffect, useState } from "react";
 
 import { hapticSelection } from "@/lib/haptics";
 
@@ -16,22 +15,8 @@ function nativeAuthHref(mode: AuthMode) {
 }
 
 export function NativeWelcome() {
-  const [revealed, setRevealed] = useState(false);
-
-  useEffect(() => {
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduced) {
-      setRevealed(true);
-      return;
-    }
-    const timer = window.setTimeout(() => setRevealed(true), 680);
-    return () => window.clearTimeout(timer);
-  }, []);
-
   return (
-    <main
-      className={`native-entry min-h-[100dvh] overflow-hidden bg-[#050505] text-grit ${revealed ? "is-revealed" : ""}`}
-    >
+    <main className="native-entry is-revealed min-h-[100dvh] overflow-hidden bg-[#050505] text-grit">
       <div className="native-entry-grid" aria-hidden="true" />
       <div className="native-entry-aura" aria-hidden="true" />
       <div className="native-entry-scan" aria-hidden="true" />

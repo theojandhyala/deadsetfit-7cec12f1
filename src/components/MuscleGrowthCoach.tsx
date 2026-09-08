@@ -222,6 +222,7 @@ export function MuscleGrowthCoach({ selectedTarget, onTargetChange, open, onOpen
     queryFn: () => listExercises({ data: { limit: 2000 } }),
     staleTime: 30 * 60 * 1000,
     retry: 1,
+    enabled: open,
   });
 
   const rawById = useMemo(() => {
@@ -446,7 +447,7 @@ export function MuscleGrowthCoach({ selectedTarget, onTargetChange, open, onOpen
       <Sheet open={open} onOpenChange={changeOpen}>
         <SheetContent
           side="bottom"
-          className="mx-auto max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-3xl border-grit bg-[#0c0d0f] p-0 text-grit"
+          className="muscle-lab-sheet mx-auto max-h-[92dvh] w-full max-w-md overflow-x-hidden overflow-y-auto rounded-t-3xl border-grit bg-[#0c0d0f] p-0 text-grit"
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 20px)" }}
         >
           <SheetHeader className="border-b border-grit px-5 pb-4 pt-5 pr-12 text-left">
@@ -461,14 +462,14 @@ export function MuscleGrowthCoach({ selectedTarget, onTargetChange, open, onOpen
 
           <div className="px-5 pt-4">
             <p className="label-cap mb-2 text-[9px] text-grit-dim">1 · PICK THE AREA</p>
-            <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-2">
+            <div className="grid grid-cols-2 gap-2 pb-2" aria-label="Choose a specific muscle area">
               {subTargets.map((option) => (
                 <button
                   key={option.id}
                   type="button"
                   onClick={() => chooseTarget(option.id)}
                   aria-pressed={selectedTarget === option.id}
-                  className={`min-h-11 shrink-0 rounded-full border px-3 text-[9px] font-black uppercase tracking-[0.06em] press ${
+                  className={`min-h-11 min-w-0 rounded-xl border px-2 py-2 text-[10px] font-black uppercase tracking-[0.04em] press ${
                     selectedTarget === option.id
                       ? "border-accent-red bg-accent-red text-black"
                       : "border-grit bg-grit-card text-grit"
@@ -579,7 +580,7 @@ export function MuscleGrowthCoach({ selectedTarget, onTargetChange, open, onOpen
                             <p className="label-cap text-[8px] text-accent-red">
                               #{index + 1} · {recommendation.match} MATCH
                             </p>
-                            <h3 className="display mt-0.5 truncate text-lg font-extrabold uppercase text-grit">
+                            <h3 className="display mt-0.5 break-words text-lg font-extrabold uppercase text-grit">
                               {recommendation.name}
                             </h3>
                             <p className="mt-1 text-[10px] text-grit-dim">
@@ -657,7 +658,7 @@ export function MuscleGrowthCoach({ selectedTarget, onTargetChange, open, onOpen
                       {choosingDay && (
                         <div
                           id={`day-picker-${recommendation.id}`}
-                          className="border-t border-grit bg-black/35 p-3"
+                          className="deadset-view-switch border-t border-grit bg-black/35 p-3"
                         >
                           <p className="label-cap text-[8px] text-grit-dim">
                             {bestDay

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import * as Tabs from "@radix-ui/react-tabs";
 import {
   Activity,
   AlertTriangle,
@@ -13,6 +14,7 @@ import { hapticSelection } from "@/lib/haptics";
 import { buildMusclePlaybook } from "@/lib/muscle-playbook";
 import type { GrowthGoal, GrowthTarget } from "@/lib/muscle-growth-recommendations";
 import type { Experience } from "@/lib/types";
+import { growthTargetOption } from "@/lib/muscle-growth-recommendations";
 
 type PlaybookSection = "BUILD" | "TECHNIQUE" | "MISTAKES" | "RECOVERY";
 
@@ -41,9 +43,9 @@ export function MusclePlaybookPanel({
   recoveryPct: number;
 }) {
   const [section, setSection] = useState<PlaybookSection>("BUILD");
+  const volumeGroup = growthTargetOption(target).muscleGroup.toLowerCase();
   const playbook = useMemo(
-    () =>
-      buildMusclePlaybook({ target, goal, experience, currentWeeklySets, recoveryPct }),
+    () => buildMusclePlaybook({ target, goal, experience, currentWeeklySets, recoveryPct }),
     [currentWeeklySets, experience, goal, recoveryPct, target],
   );
 
@@ -64,16 +66,24 @@ export function MusclePlaybookPanel({
             </h3>
           </div>
           <span className="shrink-0 rounded-full border border-white/10 bg-black/35 px-2 py-1 text-[7px] font-black uppercase tracking-[0.08em] text-grit-dim">
-            No AI
+            Your guide
           </span>
         </div>
         <p className="mt-2 text-[10px] leading-relaxed text-grit-dim">{playbook.role}</p>
 
-        <div className="mt-3 grid grid-cols-3 gap-1.5">
-          <PlaybookMetric label="STARTING SETS" value={`${playbook.weeklySets.min}–${playbook.weeklySets.max}`} />
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <PlaybookMetric
+            label={`${volumeGroup} sets / week`}
+            value={`${playbook.weeklySets.min}–${playbook.weeklySets.max}`}
+          />
           <PlaybookMetric label="FREQUENCY" value={playbook.frequency.replace(" exposures", "×")} />
-          <PlaybookMetric label="REP FOCUS" value={playbook.repFocus.split(" · ")[0] ?? playbook.repFocus} />
+          <div className="col-span-2">
+            <PlaybookMetric label="REP FOCUS" value={playbook.repFocus} />
+          </div>
         </div>
+        <p className="mt-2 text-[10px] leading-relaxed text-grit-dim">
+          The set range covers your whole {volumeGroup} group, including the other areas you train.
+        </p>
 
         <div className="mt-3 rounded-xl border border-accent-red/25 bg-accent-red/[0.07] p-3">
           <p className="label-cap flex items-center gap-1.5 text-[8px] text-accent-red">
@@ -85,39 +95,43 @@ export function MusclePlaybookPanel({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-1.5 border-y border-white/[0.08] bg-black/25 p-2" role="tablist" aria-label={`${playbook.label} playbook sections`}>
-        {SECTIONS.map(({ id, label, Icon }) => {
-          const active = section === id;
-          return (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              id={`playbook-tab-${id.toLowerCase()}`}
-              aria-selected={active}
-              aria-controls="muscle-playbook-content"
-              onClick={() => chooseSection(id)}
-              className={`press flex min-h-11 items-center justify-center gap-1.5 rounded-lg border text-[8px] font-black uppercase tracking-[0.08em] ${
-                active
-                  ? "border-accent-red/60 bg-accent-red text-black"
-                  : "border-white/[0.08] bg-white/[0.03] text-grit-dim"
-              }`}
-            >
-              <Icon size={12} strokeWidth={2.4} /> {label}
-            </button>
-          );
-        })}
-      </div>
-
-      <div
-        id="muscle-playbook-content"
-        role="tabpanel"
-        aria-labelledby={`playbook-tab-${section.toLowerCase()}`}
-        className="deadset-view-switch p-4"
-        key={`${target}-${goal}-${section}`}
+      <Tabs.Root
+        value={section}
+        onValueChange={(value) => chooseSection(value as PlaybookSection)}
+        activationMode="automatic"
       >
-        <PlaybookContent section={section} playbook={playbook} />
-      </div>
+        <Tabs.List
+          className="grid grid-cols-2 gap-1.5 border-y border-white/[0.08] bg-black/25 p-2"
+          aria-label={`${playbook.label} playbook sections`}
+        >
+          {SECTIONS.map(({ id, label, Icon }) => {
+            const active = section === id;
+            return (
+              <Tabs.Trigger
+                key={id}
+                value={id}
+                type="button"
+                className={`press playbook-tab flex min-h-11 items-center justify-center gap-1.5 rounded-lg border text-[10px] font-black uppercase tracking-[0.04em] ${
+                  active
+                    ? "border-accent-red/60 bg-accent-red text-black"
+                    : "border-white/[0.08] bg-white/[0.03] text-grit-dim"
+                }`}
+              >
+                <Icon size={12} strokeWidth={2.4} /> {label}
+              </Tabs.Trigger>
+            );
+          })}
+        </Tabs.List>
+        {SECTIONS.map(({ id }) => (
+          <Tabs.Content
+            value={id}
+            key={id}
+            className="playbook-content p-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-red"
+          >
+            <PlaybookContent section={id} playbook={playbook} />
+          </Tabs.Content>
+        ))}
+      </Tabs.Root>
 
       <p className="border-t border-white/[0.08] px-4 py-3 text-[8px] leading-relaxed text-grit-dim">
         {playbook.evidenceNote}
@@ -129,8 +143,10 @@ export function MusclePlaybookPanel({
 function PlaybookMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0 rounded-xl border border-white/[0.08] bg-black/30 p-2 text-center">
-      <p className="display truncate text-sm font-black uppercase text-grit">{value}</p>
-      <p className="label-cap mt-1 text-[6px] text-grit-dim">{label}</p>
+      <p className="display break-words text-sm font-black uppercase leading-snug text-grit">
+        {value}
+      </p>
+      <p className="label-cap mt-1 text-[9px] text-grit-dim">{label}</p>
     </div>
   );
 }
@@ -214,10 +230,17 @@ function CheckList({ items, tone }: { items: readonly string[]; tone: "good" | "
   return (
     <ul className="mt-2 space-y-2">
       {items.map((item) => (
-        <li key={item} className="flex gap-2 rounded-xl border border-white/[0.07] bg-black/25 p-2.5 text-[10px] leading-relaxed text-grit">
+        <li
+          key={item}
+          className="flex gap-2 rounded-xl border border-white/[0.07] bg-black/25 p-2.5 text-[10px] leading-relaxed text-grit"
+        >
           <Icon
             size={13}
-            className={tone === "good" ? "mt-0.5 shrink-0 text-emerald-400" : "mt-0.5 shrink-0 text-amber-400"}
+            className={
+              tone === "good"
+                ? "mt-0.5 shrink-0 text-emerald-400"
+                : "mt-0.5 shrink-0 text-amber-400"
+            }
           />
           <span>{item}</span>
         </li>

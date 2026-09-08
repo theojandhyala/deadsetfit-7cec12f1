@@ -30,6 +30,7 @@ import { requiresPaidAccess } from "@/lib/paid-access";
 import { WeeklyStrengthCheckIn } from "@/components/WeeklyStrengthCheckIn";
 import { finishAppBoot } from "@/lib/app-boot";
 import { NotificationPermissionBanner } from "@/components/NotificationPermissionBanner";
+import { AppLoading } from "@/components/AppLoading";
 
 export const Route = createFileRoute("/_tabs")({
   component: TabsLayout,
@@ -234,7 +235,11 @@ function TabsLayout() {
   }, [ready, state]);
 
   if (!ready || paidAccessRequired) {
-    return <div className="min-h-[100dvh] bg-[#080808]" aria-hidden="true" />;
+    return (
+      <AppLoading
+        label={paidAccessRequired ? "Opening your membership" : "Restoring your training"}
+      />
+    );
   }
   return (
     <div
@@ -251,7 +256,9 @@ function TabsLayout() {
         <TopBar />
         <div key={pathname} className="deadset-route-shell">
           <NotificationPermissionBanner
-            active={pathname === "/train" && !!state.profile && !needsWeightSetup && !strengthCheckInOpen}
+            active={
+              pathname === "/train" && !!state.profile && !needsWeightSetup && !strengthCheckInOpen
+            }
           />
           <Outlet />
         </div>
