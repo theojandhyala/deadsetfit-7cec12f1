@@ -1,3 +1,4 @@
+import type { AttributionTouch } from "./attribution-values";
 export type Goal = "BULK" | "CUT" | "MAINTAIN" | "ATHLETIC";
 export type Experience = "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
 export type Equipment = "FULL_GYM" | "HOME_GYM" | "BODYWEIGHT";
@@ -370,10 +371,6 @@ export interface AppState {
   /** Pro PR Roadmap targets, derived from the athlete's logged lift history. */
   strengthGoals?: StrengthGoal[];
   /** Where this user came from, captured on their first visit (referrer/UTM). */
-  signupSource?: {
-    source: string;
-    referrer?: string;
-    landing?: string;
-    capturedAt: string;
-  };
+  signupSource?: AttributionTouch;
+  lastMarketingTouch?: AttributionTouch;
 }
