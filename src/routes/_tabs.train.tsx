@@ -15,6 +15,7 @@ import {
 
 import { GritSheet } from "@/components/GritSheet";
 import { TrainWorkoutBrief } from "@/components/TrainWorkoutBrief";
+import { TrainDayPicker } from "@/components/TrainDayPicker";
 import { Reminders } from "@/components/Reminders";
 import { DailyQuests } from "@/components/DailyQuests";
 import { FirstWinsCard } from "@/components/FirstWinsCard";
@@ -295,44 +296,17 @@ function TrainPage() {
               </Link>
             )}
 
-            <div className="mt-4 grid grid-cols-7 gap-1">
-              {DAY_KEYS.map((k) => {
-                const active = k === selectedDay;
-                const isToday = k === todayKey();
-                const lbl =
-                  (activeProgram ? activeProgram.days[k]?.label : schedule[k]?.label)?.split(
-                    " — ",
-                  )[0] || "REST";
-                return (
-                  <button
-                    key={k}
-                    onClick={() => {
-                      if (k === selectedDay) return;
-                      hapticSelection();
-                      setSelectedDay(k);
-                    }}
-                    aria-pressed={active}
-                    className={`deadset-day-chip flex-shrink-0 min-w-[74px] rounded-2xl px-3 py-2.5 border text-center press ${
-                      active ? "deadset-day-chip-active" : ""
-                    }`}
-                    style={{
-                      borderColor: active ? "#e63222" : "rgba(255,255,255,.10)",
-                      background: active ? "rgba(230,50,34,.16)" : "rgba(0,0,0,.30)",
-                    }}
-                  >
-                    <div
-                      className="label-cap text-[9px]"
-                      style={{ color: isToday ? "#e63222" : "#8a8a8a" }}
-                    >
-                      {DAY_SHORT[k]}
-                    </div>
-                    <div className="text-[11px] font-black uppercase mt-1 text-grit truncate">
-                      {lbl}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+            <TrainDayPicker
+              selectedDay={selectedDay}
+              today={todayKey()}
+              labels={Object.fromEntries(
+                DAY_KEYS.map((key) => [
+                  key,
+                  (activeProgram ? activeProgram.days[key]?.label : schedule[key]?.label) || "REST",
+                ]),
+              )}
+              onSelect={setSelectedDay}
+            />
           </div>
         </div>
       </header>

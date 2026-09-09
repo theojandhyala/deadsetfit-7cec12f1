@@ -2,7 +2,7 @@
 
 Status: in development  
 Started: 6 September 2026  
-iOS version/build: 1.3 (159)
+iOS version/build: 1.3 (160)
 
 Production baseline: App Store version 1.2. This update is built directly on that shipped product;
 it is not based on the archived 1.1 build.
@@ -115,6 +115,13 @@ local fixture data and intercepted network requests, not live customer accounts.
 
 Research and the separate proposed 24-package backlog: [competitor review](competitor-review-2026-09.md).
 
+### 0.6 Home day selector
+
+- [x] Replace the seven-column home grid with a contained swipeable day rail, as requested.
+- [x] Keep each day card 104 px wide, show a swipe hint, hide the rail scrollbar and bring the selected day into view.
+- [x] Preserve day-selection haptics, schedule/programme labels and reduced-motion behaviour.
+- [x] Confine sideways scrolling to this intentional control; the page itself does not overflow.
+
 ### 1. Signature Strength Map
 
 - [x] Prominent placement near the top of Progress.
@@ -185,7 +192,7 @@ Research and the separate proposed 24-package backlog: [competitor review](compe
   and after reconnect.
 - No horizontal page scrolling, visible browser scrollbars inside the native shell, clipped controls,
   blank boot states, or keyboard-covered primary actions.
-- App Store screenshots and release notes describe only behaviour present in build 159.
+- App Store screenshots and release notes describe only behaviour present in build 160.
 
 ## Measurement
 

@@ -2,7 +2,7 @@
 // ship. The card hides once dismissed at the current version, so stale
 // announcements never linger.
 
-export const WHATS_NEW_VERSION = 202609083;
+export const WHATS_NEW_VERSION = 202609091;
 export const WHATS_NEW_SEEN_KEY = "deadset_whats_new_seen";
 
 export interface WhatsNewEntry {
@@ -13,6 +13,11 @@ export interface WhatsNewEntry {
 }
 
 export const WHATS_NEW: WhatsNewEntry[] = [
+  {
+    title: "More room for your week",
+    body: "Swipe through spacious day cards on Train instead of squeezing all seven into one row. Your selected day stays in view while the rest of the page stays put.",
+    where: "Train · Your week",
+  },
   {
     title: "Find the right lift, faster",
     body: "The new Exercise Finder understands abbreviations and small typos. Browse by muscle, equipment or experience, see what's already in your week, and add movements straight to your active programme. Built-in and saved moves remain available without the full catalogue.",
