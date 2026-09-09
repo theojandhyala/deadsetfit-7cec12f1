@@ -13,7 +13,9 @@ describe("finishLocalAccountExit", () => {
       dispatchExplicitLogout,
       clearSessionBackup,
     });
-    expect(removeItem).not.toHaveBeenCalled();
+    expect(removeItem).not.toHaveBeenCalledWith("grit_app_state_v1");
+    expect(removeItem).toHaveBeenCalledWith("deadset_attribution_v1");
+    expect(removeItem).toHaveBeenCalledWith("deadset_attribution_last_v1");
     expect(dispatchExplicitLogout).toHaveBeenCalledOnce();
     expect(clearSessionBackup).toHaveBeenCalledOnce();
   });
