@@ -18,6 +18,13 @@ export function finishLocalAccountExit(cleanup: AccountExitCleanup): void {
       // Private storage modes can throw on removeItem.
     }
   }
+  for (const key of ["deadset_attribution_v1", "deadset_attribution_last_v1"]) {
+    try {
+      cleanup.removeItem(key);
+    } catch {
+      /* Cleanup remains best-effort. */
+    }
+  }
   try {
     cleanup.dispatchExplicitLogout();
   } catch {
