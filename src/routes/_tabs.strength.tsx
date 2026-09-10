@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { ChevronRight, Lock, Info, RefreshCw, Share2, TrendingUp } from "lucide-react";
 
 import { useAppState } from "@/lib/storage";
@@ -14,6 +14,7 @@ import { MuscleDiagram } from "@/components/MuscleDiagram";
 import { MuscleGrowthCoach } from "@/components/MuscleGrowthCoach";
 import { StrengthMapShareCard } from "@/components/StrengthMapShareCard";
 import { WeeklySetGrid } from "@/components/WeeklySetGrid";
+import type { PerformanceTab } from "@/components/PerformanceLab";
 import { openStrengthCheckIn } from "@/lib/strength-check-in-events";
 import type { GrowthTarget } from "@/lib/muscle-growth-recommendations";
 import { toMuscleGroup } from "@/lib/recovery";
@@ -36,11 +37,16 @@ export const Route = createFileRoute("/_tabs/strength")({
   component: StrengthPage,
 });
 
+const PerformanceLab = lazy(() =>
+  import("@/components/PerformanceLab").then((module) => ({ default: module.PerformanceLab })),
+);
+
 function StrengthPage() {
   const [state] = useAppState();
   const [growthTarget, setGrowthTarget] = useState<GrowthTarget>("BACK");
   const [growthOpen, setGrowthOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [performanceTab, setPerformanceTab] = useState<PerformanceTab | null>(null);
   const { isPro, loading: proLoading } = usePro();
   const unit = unitOf(state);
 
@@ -143,6 +149,46 @@ function StrengthPage() {
           All progress
         </Link>
       </header>
+
+      <div className="grid grid-cols-2 gap-2 px-5" aria-label="Strength tools">
+        {(["ROADMAP", "RECORDS"] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => {
+              hapticSelection();
+              if (locked) openPaywall("strength");
+              else setPerformanceTab(tab);
+            }}
+            className="press flex min-h-12 items-center justify-center gap-2 rounded-xl border border-accent-red/30 bg-accent-red/[.07] px-2 text-xs font-bold text-grit"
+          >
+            <TrendingUp size={14} className="shrink-0 text-accent-red" />
+            {tab === "ROADMAP" ? "Rank roadmap" : "Record book"}
+          </button>
+        ))}
+        {performanceTab && (
+          <Suspense
+            fallback={
+              <p role="status" className="px-5 py-3 text-xs text-grit-dim">
+                Opening Performance Lab…
+              </p>
+            }
+          >
+            <PerformanceLab
+              state={state}
+              report={report}
+              library={library}
+              unit={unit}
+              initialTab={performanceTab}
+              onClose={() => setPerformanceTab(null)}
+              onBuildMuscle={(muscle) => {
+                setPerformanceTab(null);
+                openGrowthPlan(muscle as GrowthTarget);
+              }}
+            />
+          </Suspense>
+        )}
+      </div>
 
       <StrengthBodyComparison
         baseline={needsStrengthProfile ? null : baseline}

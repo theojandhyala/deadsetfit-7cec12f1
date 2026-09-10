@@ -2,7 +2,7 @@
 // ship. The card hides once dismissed at the current version, so stale
 // announcements never linger.
 
-export const WHATS_NEW_VERSION = 202609101;
+export const WHATS_NEW_VERSION = 202609102;
 export const WHATS_NEW_SEEN_KEY = "deadset_whats_new_seen";
 
 export interface WhatsNewEntry {
@@ -13,6 +13,21 @@ export interface WhatsNewEntry {
 }
 
 export const WHATS_NEW: WhatsNewEntry[] = [
+  {
+    title: "See your route to the next rank",
+    body: "Open Rank roadmap beside your Strength Map to explore your closest milestones, understand each benchmark and preview a different performance without changing your saved records.",
+    where: "Strength · Rank roadmap",
+  },
+  {
+    title: "Every record has a story",
+    body: "Your searchable Record book separates loaded lifts, bodyweight reps, holds and distance. See the sets behind each best, recent workout comparisons and clearly labelled check-ins, then jump to the full lift history.",
+    where: "Strength · Record book",
+  },
+  {
+    title: "PR goals in your units",
+    body: "Set goals in kilograms or pounds with decimal-friendly input. New targets must beat your all-time best, not just your latest workout, and the compact form fits smaller screens.",
+    where: "Train · Insights · PR roadmap",
+  },
   {
     title: "Build momentum, keep your rest days",
     body: "Your new active-week streak lives on Train. See your current run, best run and next milestone, explore eight weeks of training and collect badges from 2 to 52 weeks. A rest day does not break this streak, and an unfinished week stays open.",

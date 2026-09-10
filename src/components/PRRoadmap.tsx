@@ -6,11 +6,15 @@ import { usePro } from "@/hooks/usePro";
 import { liftSeriesAll, strengthGoalRoadmaps } from "@/lib/pro-intelligence";
 import { openPaywall } from "@/lib/paywall-events";
 import { useAppState } from "@/lib/storage";
+import { strengthGoalInput } from "@/lib/strength-goal-input";
+import { formatWeight, unitOf } from "@/lib/units";
+import { hapticSaved, hapticSelection } from "@/lib/haptics";
 
 export function PRRoadmap() {
   const [state, setState] = useAppState();
   const { isPro, loading } = usePro();
   const locked = loading || !isPro;
+  const unit = unitOf(state);
   const exerciseRef = useRef<HTMLSelectElement>(null);
   const targetRef = useRef<HTMLInputElement>(null);
   const tracked = useMemo(() => liftSeriesAll(state, 1), [state]);
@@ -24,11 +28,11 @@ export function PRRoadmap() {
       return;
     }
     const exerciseId = exerciseRef.current?.value;
-    const targetKg = Number(targetRef.current?.value);
     const lift = tracked.find((item) => item.exerciseId === exerciseId);
-    const currentKg = lift?.points[lift.points.length - 1]?.e1rm ?? 0;
-    if (!exerciseId || !Number.isFinite(targetKg) || targetKg <= currentKg) {
-      toast.error(`Set a target above your current ${currentKg}kg estimated max.`);
+    const currentKg = Math.max(0, ...(lift?.points.map((point) => point.e1rm) ?? []));
+    const targetKg = strengthGoalInput(targetRef.current?.value ?? "", unit, currentKg);
+    if (!exerciseId || targetKg === null) {
+      toast.error(`Set a target above your best ${formatWeight(currentKg, unit)} estimated max.`);
       return;
     }
     setState((current) => ({
@@ -39,6 +43,7 @@ export function PRRoadmap() {
       ],
     }));
     if (targetRef.current) targetRef.current.value = "";
+    hapticSaved();
     toast.success("PR target added to your roadmap.");
   };
 
@@ -52,14 +57,21 @@ export function PRRoadmap() {
           <h2 className="display text-xl font-black uppercase text-grit">PR Roadmap</h2>
         </div>
         <p className="max-w-[155px] text-right text-[9px] leading-snug text-grit-dim">
-          Set a target e1RM. DEADSET tracks the gap and projects the date.
+          Your own target, beyond any rank. Projections are estimates, not promises.
         </p>
       </div>
 
       <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-grit-card p-4">
-        <div className={locked ? "pointer-events-none select-none blur-[5px] opacity-55" : undefined}>
-          <div className="grid grid-cols-[1fr_88px_44px] gap-2">
-            <select ref={exerciseRef} className="input-grit min-w-0" aria-label="Tracked lift">
+        <div
+          className={locked ? "pointer-events-none select-none blur-[5px] opacity-55" : undefined}
+        >
+          <div className="grid grid-cols-[minmax(0,1fr)_44px] gap-2">
+            <select
+              ref={exerciseRef}
+              disabled={locked}
+              className="input-grit col-span-2 min-w-0"
+              aria-label="Tracked lift"
+            >
               {tracked.map((lift) => (
                 <option key={lift.exerciseId} value={lift.exerciseId}>
                   {lift.name}
@@ -68,14 +80,17 @@ export function PRRoadmap() {
             </select>
             <input
               ref={targetRef}
+              disabled={locked}
+              key={unit}
               className="input-grit min-w-0"
               inputMode="decimal"
-              placeholder="Goal kg"
-              aria-label="Target estimated one-rep max in kilograms"
+              placeholder={`Goal ${unit}`}
+              aria-label={`Target estimated one-rep max in ${unit}`}
             />
             <button
               type="button"
               onClick={addGoal}
+              disabled={locked}
               className="btn-grit flex min-h-11 items-center justify-center rounded-xl px-0"
               aria-label="Add PR target"
             >
@@ -94,12 +109,16 @@ export function PRRoadmap() {
               </div>
             ) : (
               goals.map((goal) => (
-                <div key={goal.exerciseId} className="rounded-xl border border-white/10 bg-black/30 p-3">
+                <div
+                  key={goal.exerciseId}
+                  className="rounded-xl border border-white/10 bg-black/30 p-3"
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-xs font-bold text-grit">{goal.name}</p>
                       <p className="mt-0.5 text-[9px] text-grit-dim">
-                        {goal.currentKg}kg now · {goal.targetKg}kg target
+                        {formatWeight(goal.currentKg, unit)} now ·{" "}
+                        {formatWeight(goal.targetKg, unit)} target
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -111,15 +130,18 @@ export function PRRoadmap() {
                       </span>
                       <button
                         type="button"
-                        onClick={() =>
+                        onClick={() => {
+                          if (locked) return;
+                          hapticSelection();
                           setState((current) => ({
                             ...current,
                             strengthGoals: (current.strengthGoals ?? []).filter(
                               (item) => item.exerciseId !== goal.exerciseId,
                             ),
-                          }))
-                        }
-                        className="grid h-9 w-9 place-items-center rounded-lg text-grit-dim press"
+                          }));
+                        }}
+                        className="grid h-11 w-11 place-items-center rounded-lg text-grit-dim press"
+                        disabled={locked}
                         aria-label={`Remove ${goal.name} target`}
                       >
                         <Trash2 size={14} />
@@ -142,7 +164,7 @@ export function PRRoadmap() {
                           <Check size={10} /> Target reached
                         </span>
                       ) : (
-                        `${goal.remainingKg}kg remaining`
+                        `${formatWeight(goal.remainingKg, unit)} remaining`
                       )}
                     </span>
                     <span className="text-right text-grit-dim">

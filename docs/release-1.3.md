@@ -2,7 +2,7 @@
 
 Status: in development  
 Started: 6 September 2026  
-iOS version/build: 1.3 (161)
+iOS version/build: 1.3 (162)
 
 Production baseline: App Store version 1.2. This update is built directly on that shipped product;
 it is not based on the archived 1.1 build.
@@ -26,6 +26,33 @@ This is not a feature dump. Every addition must improve at least one of these mo
 5. Share or compare progress safely.
 
 ## Scope and status
+
+### Performance Lab and competitor review — build 162
+
+- [x] Research Stronger and Liftoff using their official product pages, App Store descriptions/reviews and Liftoff FAQ; distinguish marketing claims from verified usage.
+- [x] Add prominent Rank roadmap and Record book entry points beside the existing Strength Map without changing its artwork or formula.
+- [x] Sort next-rank opportunities by relative gap; show current/next tiers and exercise-specific versus approximate benchmark labels.
+- [x] Add searchable, muscle-filtered, paginated records for estimated max, bodyweight reps, holds and distance.
+- [x] Show best-set details, dated evidence, record age and clearly labelled self-reported check-ins.
+- [x] Compare the latest six completed training dates and show change against the preceding comparable date.
+- [x] Add a read-only, decimal-friendly kg/lb performance preview; no synthetic workout, PR or saved rank is created.
+- [x] Preserve timed-set `reps: 0`, exclude warm-ups/drop sets and unfinished workouts, reject invalid/future dates and avoid duplicated legacy mirrors.
+- [x] Explain missing/mismatched evidence and link missing muscle areas to the existing Muscle Lab.
+- [x] Fix PR goal input units, validate against the all-time best and disable locked form controls for keyboard users too.
+- [x] Preserve existing branding, motion, streaks, membership flows, social features and all recent additions; add no AI services or new purchases.
+- [x] Add 50 regression tests covering record integrity, calculator boundaries and goal input.
+- [x] Check actual components with isolated fixture state at 320/375/393/430px, including search/filtering, tabs, scroll reset, decimal input, preview immutability, pounds, dismissals, missing-data actions and goal add/remove/locked states.
+
+See the [detailed comparison and complete addition list](stronger-liftoff-review-2026-09-10.md).
+Browser checks use local fixture data and a mocked membership hook for the goal-editor tests;
+they do not establish live purchase, sync, social or notification delivery correctness.
+Build 162 release checks (10 September 2026): `npm run appstore:strict` passed with
+91 test files / 760 tests, TypeScript, ESLint, production compilation, CSS and Xcode-project checks,
+and readiness probes. Capacitor iOS sync passed. Performance Lab is a conditional chunk
+(16.90 kB / 5.50 kB gzip), not loaded during the initial app launch.
+The signed Debug iPhone/Watch Xcode build succeeded and its `CFBundleVersion` is 162.
+Build 162 was installed and launched successfully on Theo's physical iPhone 16 Pro. This is a development
+preview installation, not a TestFlight upload or App Store submission.
 
 ### Weekly momentum and honest daily goals — build 161
 
