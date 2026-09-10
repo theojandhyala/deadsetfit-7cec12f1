@@ -235,9 +235,9 @@ check(
 check(
   "1.3 update version",
   (xcodeProject.match(/MARKETING_VERSION = 1\.3;/g)?.length ?? 0) >= 6 &&
-    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 162;/g)?.length ?? 0) >= 6 &&
-    whatsNew.includes("WHATS_NEW_VERSION = 202609102"),
-  "The app, activity extension and watch targets are versioned as 1.3 (162), above shipped build 152.",
+    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 163;/g)?.length ?? 0) >= 6 &&
+    whatsNew.includes("WHATS_NEW_VERSION = 202609103"),
+  "The app, activity extension and watch targets are versioned as 1.3 (163), above shipped build 152.",
 );
 check(
   "deferred native startup and insights",

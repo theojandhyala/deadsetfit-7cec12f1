@@ -2,7 +2,7 @@
 // ship. The card hides once dismissed at the current version, so stale
 // announcements never linger.
 
-export const WHATS_NEW_VERSION = 202609102;
+export const WHATS_NEW_VERSION = 202609103;
 export const WHATS_NEW_SEEN_KEY = "deadset_whats_new_seen";
 
 export interface WhatsNewEntry {
@@ -13,6 +13,11 @@ export interface WhatsNewEntry {
 }
 
 export const WHATS_NEW: WhatsNewEntry[] = [
+  {
+    title: "Compare your training blocks",
+    body: "Compare the last 1, 4 or 12 weeks with the previous block. See completed days, sets, volume, holds and distance, filter movement-by-movement changes and open the records behind each number. Your chosen period stays with you when you return.",
+    where: "Strength · Compare training blocks",
+  },
   {
     title: "See your route to the next rank",
     body: "Open Rank roadmap beside your Strength Map to explore your closest milestones, understand each benchmark and preview a different performance without changing your saved records.",

@@ -2,7 +2,7 @@
 
 Status: in development  
 Started: 6 September 2026  
-iOS version/build: 1.3 (162)
+iOS version/build: 1.3 (163)
 
 Production baseline: App Store version 1.2. This update is built directly on that shipped product;
 it is not based on the archived 1.1 build.
@@ -26,6 +26,33 @@ This is not a feature dump. Every addition must improve at least one of these mo
 5. Share or compare progress safely.
 
 ## Scope and status
+
+### Training block comparison and panoramic store images — build 163
+
+- [x] Add Compare training blocks directly beneath the Strength Map's existing Performance Lab entry points.
+- [x] Compare equal, adjacent 1-, 4- and 12-week periods with exact date ranges.
+- [x] Compare training days, completed workouts, working sets, exercise coverage and actual lifting volume; keep timed holds and distance separate.
+- [x] Show exercise-by-exercise period-best changes, with improved, unchanged, lower, new and previous-only filters.
+- [x] Add exercise search, bounded pagination, evidence-day counts and limited-evidence guidance.
+- [x] Preserve comparison period, search and filters when opening a record and returning.
+- [x] Reuse semantic haptics, accessible tabs and reduced-motion-aware transitions without changing existing branding or membership flows.
+- [x] Exclude unfinished workouts, warm-ups/drop sets, invalid/future data, legacy mirrors and self-reported PRs from completed-work comparisons.
+- [x] Add 18 regression tests; preserve workout history and timed-set `reps: 0` conventions.
+- [x] Design six App Store images as three connected panoramic pairs, using actual app screens with fictional local demonstration data.
+- [x] Export ordered 6.9-inch and 6.5-inch PNG sets, preview spreads and a reproducible layout generator.
+- [x] Create the App Store Connect 1.3 draft without changing the live 1.2 listing.
+- [ ] Upload the new images: Chrome's file chooser is blocked by extension file-access permission; native file-picker fallback did not complete.
+- [ ] Install build 163 on the physical iPhone: device unavailable at the final build check.
+
+Verification on 10 September 2026: `npm run appstore:strict` passed with 92 test files / 778 tests,
+TypeScript, ESLint, production build, CSS and Xcode-project checks, and readiness probes. Capacitor
+iOS sync and the signed Debug iPhone/Watch Xcode build succeeded. Actual comparison components
+were browser-tested at 320/375/393/430px, including period switching, filtering, searching, record
+drill-down/back state, pagination/empty results, keyboard tab navigation, immutable fixture state
+and no horizontal overflow. These fixture-based checks do not establish live billing, social,
+sync or notification-delivery correctness. Build 163 has not been submitted for review.
+
+See [store-image handoff and upload status](app-store-panorama-1.3.md).
 
 ### Performance Lab and competitor review — build 162
 

@@ -1,0 +1,59 @@
+{
+  "version": "1.3",
+  "build": 163,
+  "source": "Actual React screens with fictional local demo data; no customer data or generated UI.",
+  "sets": {
+    "ios-6.9": [
+      1320,
+      2868
+    ],
+    "ios-6.5": [
+      1242,
+      2688
+    ]
+  },
+  "screenshots": [
+    {
+      "order": 1,
+      "filename": "01-strength.png",
+      "title": "EVERY MUSCLE.  MADE VISIBLE. ",
+      "source": "raw/strength.png",
+      "pair": 1
+    },
+    {
+      "order": 2,
+      "filename": "02-roadmap.png",
+      "title": "YOUR NEXT RANK.  WITHIN SIGHT. ",
+      "source": "raw/roadmap.png",
+      "pair": 1
+    },
+    {
+      "order": 3,
+      "filename": "03-plan.png",
+      "title": "BUILD YOUR WEEK.  OWN YOUR PLAN. ",
+      "source": "raw/plan.png",
+      "pair": 2
+    },
+    {
+      "order": 4,
+      "filename": "04-logger.png",
+      "title": "EVERY SET.  NOTHING LOST. ",
+      "source": "raw/logger.png",
+      "pair": 2
+    },
+    {
+      "order": 5,
+      "filename": "05-compare.png",
+      "title": "THEN VS NOW.  SEE THE CHANGE. ",
+      "source": "raw/compare.png",
+      "pair": 3
+    },
+    {
+      "order": 6,
+      "filename": "06-records.png",
+      "title": "YOUR RECORDS.  THE WHOLE STORY. ",
+      "source": "raw/records.png",
+      "pair": 3
+    }
+  ]
+}

@@ -151,7 +151,7 @@ function StrengthPage() {
       </header>
 
       <div className="grid grid-cols-2 gap-2 px-5" aria-label="Strength tools">
-        {(["ROADMAP", "RECORDS"] as const).map((tab) => (
+        {(["ROADMAP", "RECORDS", "COMPARE"] as const).map((tab) => (
           <button
             key={tab}
             type="button"
@@ -160,10 +160,14 @@ function StrengthPage() {
               if (locked) openPaywall("strength");
               else setPerformanceTab(tab);
             }}
-            className="press flex min-h-12 items-center justify-center gap-2 rounded-xl border border-accent-red/30 bg-accent-red/[.07] px-2 text-xs font-bold text-grit"
+            className={`press flex min-h-12 items-center justify-center gap-2 rounded-xl border border-accent-red/30 bg-accent-red/[.07] px-2 text-xs font-bold text-grit ${tab === "COMPARE" ? "col-span-2" : ""}`}
           >
             <TrendingUp size={14} className="shrink-0 text-accent-red" />
-            {tab === "ROADMAP" ? "Rank roadmap" : "Record book"}
+            {tab === "ROADMAP"
+              ? "Rank roadmap"
+              : tab === "COMPARE"
+                ? "Compare training blocks"
+                : "Record book"}
           </button>
         ))}
         {performanceTab && (

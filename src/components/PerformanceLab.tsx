@@ -3,6 +3,10 @@ import { Link } from "@tanstack/react-router";
 import * as Tabs from "@radix-ui/react-tabs";
 import { ArrowLeft, ChevronRight, FlaskConical, Search, Trophy } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import {
+  TrainingBlockComparison,
+  type ComparisonSettings,
+} from "@/components/TrainingBlockComparison";
 import { useToday } from "@/hooks/useToday";
 import { hapticSelection } from "@/lib/haptics";
 import { formatSet } from "@/lib/set-tracking";
@@ -31,7 +35,7 @@ import {
 } from "@/lib/performance-lab";
 import type { AppState, MuscleGroup } from "@/lib/types";
 
-export type PerformanceTab = "ROADMAP" | "RECORDS";
+export type PerformanceTab = "ROADMAP" | "RECORDS" | "COMPARE";
 const METRIC_LABEL: Record<PerformanceMetric, string> = {
   LOAD: "Estimated max",
   REPS: "Bodyweight reps",
@@ -82,6 +86,12 @@ export function PerformanceLab({
   const [query, setQuery] = useState("");
   const [limit, setLimit] = useState(12);
   const [selectedId, setSelectedId] = useState<string | null>(initialExerciseId ?? null);
+  const [comparisonSettings, setComparisonSettings] = useState<ComparisonSettings>({
+    days: 28,
+    filter: "ALL",
+    query: "",
+    limit: 10,
+  });
   const scrollRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
@@ -153,7 +163,8 @@ export function PerformanceLab({
                   setSelectedId(null);
                 }}
               >
-                <ArrowLeft size={15} /> Back to {tab === "ROADMAP" ? "roadmap" : "record book"}
+                <ArrowLeft size={15} /> Back to{" "}
+                {tab === "ROADMAP" ? "roadmap" : tab === "COMPARE" ? "comparison" : "record book"}
               </button>
               {selected ? (
                 <ExerciseEvidence
@@ -195,7 +206,7 @@ export function PerformanceLab({
               >
                 <Tabs.List
                   aria-label="Performance view"
-                  className="grid grid-cols-2 gap-2 rounded-2xl border border-grit p-1"
+                  className="grid grid-cols-3 gap-1 rounded-2xl border border-grit p-1"
                 >
                   <Tabs.Trigger
                     value="ROADMAP"
@@ -209,46 +220,67 @@ export function PerformanceLab({
                   >
                     Record book
                   </Tabs.Trigger>
+                  <Tabs.Trigger
+                    value="COMPARE"
+                    className="min-h-11 rounded-xl text-xs font-bold text-grit-dim data-[state=active]:bg-accent-red data-[state=active]:text-white"
+                  >
+                    Compare blocks
+                  </Tabs.Trigger>
                 </Tabs.List>
-                <div className="relative mt-3">
-                  <Search size={15} className="absolute left-3 top-4 text-grit-dim" />
-                  <input
-                    type="search"
-                    inputMode="search"
-                    defaultValue={query}
-                    aria-label="Search your lifts"
-                    placeholder="Search your lifts"
-                    className="input-grit min-h-11 w-full min-w-0 rounded-xl pl-10"
-                    style={{ paddingLeft: 40 }}
-                    onChange={(event) => {
-                      setQuery(event.currentTarget.value);
-                      setLimit(12);
-                    }}
-                  />
-                </div>
-                <div
-                  className="mt-2 flex flex-wrap gap-1.5"
-                  role="group"
-                  aria-label="Filter muscle group"
-                >
-                  {(["ALL", ...GRADED_MUSCLES] as const).map((group) => (
-                    <button
-                      key={group}
-                      type="button"
-                      aria-pressed={muscle === group}
-                      onClick={() => {
-                        hapticSelection();
-                        setMuscle(group);
-                        setLimit(12);
-                      }}
-                      className={`min-h-11 rounded-xl border px-3 text-[10px] font-bold ${muscle === group ? "border-accent-red bg-accent-red/10 text-grit" : "border-grit text-grit-dim"}`}
+                {tab !== "COMPARE" && (
+                  <>
+                    <div className="relative mt-3">
+                      <Search size={15} className="absolute left-3 top-4 text-grit-dim" />
+                      <input
+                        type="search"
+                        inputMode="search"
+                        defaultValue={query}
+                        aria-label="Search your lifts"
+                        placeholder="Search your lifts"
+                        className="input-grit min-h-11 w-full min-w-0 rounded-xl pl-10"
+                        style={{ paddingLeft: 40 }}
+                        onChange={(event) => {
+                          setQuery(event.currentTarget.value);
+                          setLimit(12);
+                        }}
+                      />
+                    </div>
+                    <div
+                      className="mt-2 flex flex-wrap gap-1.5"
+                      role="group"
+                      aria-label="Filter muscle group"
                     >
-                      {group === "ALL"
-                        ? "All muscles"
-                        : group.charAt(0) + group.slice(1).toLowerCase()}
-                    </button>
-                  ))}
-                </div>
+                      {(["ALL", ...GRADED_MUSCLES] as const).map((group) => (
+                        <button
+                          key={group}
+                          type="button"
+                          aria-pressed={muscle === group}
+                          onClick={() => {
+                            hapticSelection();
+                            setMuscle(group);
+                            setLimit(12);
+                          }}
+                          className={`min-h-11 rounded-xl border px-3 text-[10px] font-bold ${muscle === group ? "border-accent-red bg-accent-red/10 text-grit" : "border-grit text-grit-dim"}`}
+                        >
+                          {group === "ALL"
+                            ? "All muscles"
+                            : group.charAt(0) + group.slice(1).toLowerCase()}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+                <Tabs.Content value="COMPARE" className="mt-4">
+                  <TrainingBlockComparison
+                    settings={comparisonSettings}
+                    setSettings={setComparisonSettings}
+                    state={state}
+                    library={library}
+                    today={today}
+                    unit={unit}
+                    onOpenExercise={openExercise}
+                  />
+                </Tabs.Content>
                 <Tabs.Content value="ROADMAP" className="weekly-momentum-details mt-4">
                   <div className="rounded-2xl border border-accent-red/25 bg-accent-red/[.06] p-3">
                     <p className="text-sm font-bold text-grit">Your closest benchmarks</p>
@@ -393,7 +425,7 @@ export function PerformanceLab({
                   )}
                 </Tabs.Content>
               </Tabs.Root>
-              {resultCount > limit && (
+              {tab !== "COMPARE" && resultCount > limit && (
                 <button
                   type="button"
                   className="mt-3 min-h-11 w-full rounded-xl border border-grit text-xs font-bold text-grit"

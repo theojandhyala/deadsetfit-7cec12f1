@@ -45,7 +45,9 @@ function validDate(date: string, today: string): string | null {
   return age !== null && age >= 0 ? day : null;
 }
 
-function measured(set: CompletedSet): { metric: PerformanceMetric; value: number } | null {
+export function measurePerformanceSet(
+  set: CompletedSet,
+): { metric: PerformanceMetric; value: number } | null {
   if (!countsForRecords(set)) return null;
   if (!Number.isFinite(set.weight) || set.weight < 0) return null;
   if (set.mode === "duration") {
@@ -78,7 +80,7 @@ export function buildPerformanceLedger(
   const workoutSignatures = new Set<string>();
   function add(id: string, date: string, set: CompletedSet, source: EvidenceSource) {
     const day = validDate(date, today);
-    const measurement = measured(set);
+    const measurement = measurePerformanceSet(set);
     if (!day || !measurement) return;
     const signature = [
       id,
