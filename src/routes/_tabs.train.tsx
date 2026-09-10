@@ -16,6 +16,7 @@ import {
 import { GritSheet } from "@/components/GritSheet";
 import { TrainWorkoutBrief } from "@/components/TrainWorkoutBrief";
 import { TrainDayPicker } from "@/components/TrainDayPicker";
+import { WeeklyMission } from "@/components/WeeklyMission";
 import { Reminders } from "@/components/Reminders";
 import { DailyQuests } from "@/components/DailyQuests";
 import { FirstWinsCard } from "@/components/FirstWinsCard";
@@ -408,6 +409,9 @@ function TrainPage() {
             role="tabpanel"
             className="deadset-view-switch flex flex-col"
           >
+            <div className="px-5 mb-4">
+              <WeeklyMission state={state} />
+            </div>
             <TodayReadiness state={state} schedule={schedule} />
             <TrainingAutopilot compact />
             <DailyQuests />

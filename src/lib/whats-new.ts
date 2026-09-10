@@ -2,7 +2,7 @@
 // ship. The card hides once dismissed at the current version, so stale
 // announcements never linger.
 
-export const WHATS_NEW_VERSION = 202609091;
+export const WHATS_NEW_VERSION = 202609101;
 export const WHATS_NEW_SEEN_KEY = "deadset_whats_new_seen";
 
 export interface WhatsNewEntry {
@@ -13,6 +13,16 @@ export interface WhatsNewEntry {
 }
 
 export const WHATS_NEW: WhatsNewEntry[] = [
+  {
+    title: "Build momentum, keep your rest days",
+    body: "Your new active-week streak lives on Train. See your current run, best run and next milestone, explore eight weeks of training and collect badges from 2 to 52 weeks. A rest day does not break this streak, and an unfinished week stays open.",
+    where: "Train · Your momentum",
+  },
+  {
+    title: "Targets that reflect your real progress",
+    body: "Your weekly training target follows your active programme and counts each completed day once. Daily Quests now show live progress bars, mark nutrition and hydration goals complete only at the full target, and respond with subtle haptics.",
+    where: "Train · Daily Quests",
+  },
   {
     title: "More room for your week",
     body: "Swipe through spacious day cards on Train instead of squeezing all seven into one row. Your selected day stays in view while the rest of the page stays put.",

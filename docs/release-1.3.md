@@ -2,7 +2,7 @@
 
 Status: in development  
 Started: 6 September 2026  
-iOS version/build: 1.3 (160)
+iOS version/build: 1.3 (161)
 
 Production baseline: App Store version 1.2. This update is built directly on that shipped product;
 it is not based on the archived 1.1 build.
@@ -26,6 +26,29 @@ This is not a feature dump. Every addition must improve at least one of these mo
 5. Share or compare progress safely.
 
 ## Scope and status
+
+### Weekly momentum and honest daily goals — build 161
+
+- [x] Surface a compact active-week streak on Train Today with current/best runs and a next-milestone countdown.
+- [x] Keep the current Monday–Sunday week open; rest days do not break this new streak. Existing daily streaks remain separate.
+- [x] Add an interactive eight-week history with exact training dates and explicit empty/open-week states.
+- [x] Show earned 2/4/8/12/26/52-week milestones using the longest recorded run, retaining them after breaks.
+- [x] Derive the weekly target from actual active-programme days, falling back to the current schedule; respect empty programmes.
+- [x] Exclude malformed/future dates and count distinct training days, without rewriting workout history or adding synthetic sessions.
+- [x] Keep the onboarding goal-date countdown and provide direct links to Plan and workout history.
+- [x] Refresh weekly/daily streak views at local midnight and on return from background; use calendar arithmetic across DST.
+- [x] Add Daily Quest progress bars, semantic selection haptics, keyboard-accessible disclosure and reduced-motion-aware transitions.
+- [x] Fix protein/hydration quests being marked done before the full existing target; invalid values cannot earn completion.
+- [x] Add 31 regression cases covering calendar boundaries, rest-day grace, history integrity, programme targets and goal completion.
+- [x] Browser-test the new momentum component at 320/375/393/430px, history selection, keyboard, reduced motion, route links and midnight rollover.
+- [x] Browser-test Daily Quests at 320px, including 80%-versus-100% completion and keyboard disclosure.
+
+Verification scope: these browser checks isolate the real components with fixture state. They do not represent a fresh live-account, billing, social, or notification-delivery end-to-end audit.
+
+Build 161 verification (10 September 2026): `npm run appstore:strict` passed (89 test files,
+710 tests); Capacitor iOS sync and the signed Debug iPhone/Watch Xcode build succeeded. The built
+app reports `CFBundleVersion = 161`. Theo's iPhone was unavailable, so this build has not yet been
+installed on the physical device or submitted for review.
 
 ### 0. Routine Vault
 

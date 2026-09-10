@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Flame } from "lucide-react";
 
 import { streakChase } from "@/lib/streak-chase";
-import { isoDay } from "@/lib/calc";
+import { useToday } from "@/hooks/useToday";
 import type { AppState } from "@/lib/types";
 
 /**
@@ -11,9 +11,10 @@ import type { AppState } from "@/lib/types";
  * record not yet beaten.
  */
 export function StreakChaseCard({ state }: { state: AppState }) {
+  const today = useToday();
   const chase = useMemo(
-    () => streakChase(state.completedDates, isoDay()),
-    [state.completedDates],
+    () => streakChase(state.completedDates, today),
+    [state.completedDates, today],
   );
 
   if (!chase) return null;
