@@ -64,3 +64,13 @@ After access is enabled, upload the six ordered 6.9-inch files, replace the draf
 6.5-inch set with confirmation, and verify each image, ordering and saved state in Media Manager.
 Before review, select the matching 1.3 build and complete the release metadata/readiness checks.
 This document does not claim App Store publication, review acceptance or physical-device installation.
+
+## Follow-up — 12 September 2026
+
+The App Store Connect session has expired. Reloading recovered the Apple Account sign-in form;
+the user was asked to sign in and confirm extension file-URL access. Upload has not resumed,
+and the current remote draft contents have not been reverified behind the signed-out session.
+
+Build 1.3 (163) was installed successfully on Theo's connected iPhone 16 Pro using `devicectl`.
+The subsequent launch request was denied because the phone was locked. This confirms installation,
+not successful on-device runtime verification or an App Store/TestFlight release.

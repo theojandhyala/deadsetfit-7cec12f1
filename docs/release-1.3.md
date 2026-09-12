@@ -42,7 +42,7 @@ This is not a feature dump. Every addition must improve at least one of these mo
 - [x] Export ordered 6.9-inch and 6.5-inch PNG sets, preview spreads and a reproducible layout generator.
 - [x] Create the App Store Connect 1.3 draft without changing the live 1.2 listing.
 - [ ] Upload the new images: Chrome's file chooser is blocked by extension file-access permission; native file-picker fallback did not complete.
-- [ ] Install build 163 on the physical iPhone: device unavailable at the final build check.
+- [x] Install build 163 on the physical iPhone: installed successfully on 12 September 2026. Launch was blocked by the device lock; unlock and open DEADSET to inspect this development preview.
 
 Verification on 10 September 2026: `npm run appstore:strict` passed with 92 test files / 778 tests,
 TypeScript, ESLint, production build, CSS and Xcode-project checks, and readiness probes. Capacitor
@@ -51,6 +51,9 @@ were browser-tested at 320/375/393/430px, including period switching, filtering,
 drill-down/back state, pagination/empty results, keyboard tab navigation, immutable fixture state
 and no horizontal overflow. These fixture-based checks do not establish live billing, social,
 sync or notification-delivery correctness. Build 163 has not been submitted for review.
+
+12 September follow-up: App Store Connect had signed out. The user must sign back in before
+the prepared images can be uploaded; the extension file-access requirement remains unverified.
 
 See [store-image handoff and upload status](app-store-panorama-1.3.md).
 
