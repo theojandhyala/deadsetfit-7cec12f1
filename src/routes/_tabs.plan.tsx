@@ -27,6 +27,7 @@ import {
 import { toast } from "sonner";
 
 import { usePro } from "@/hooks/usePro";
+import { TrainingCalendar } from "@/components/TrainingCalendar";
 import { WeeklySetGrid } from "@/components/WeeklySetGrid";
 import { askConfirm } from "@/lib/confirm";
 import { defaultSchedule, todayKey, updateScheduleDay } from "@/lib/calc";
@@ -788,6 +789,19 @@ function PlanPage() {
       )}
 
       <section className="deadset-section">
+        <TrainingCalendar
+          state={state}
+          schedule={displaySchedule}
+          onEditDay={(day) => {
+            setSelectedDay(day);
+            document
+              .getElementById("weekly-plan-days")
+              ?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
+        />
+      </section>
+
+      <section className="deadset-section">
         <div className="deadset-section-title">
           <div>
             <p className="deadset-kicker">Volume at a glance</p>
@@ -809,7 +823,9 @@ function PlanPage() {
           <div>
             <p className="deadset-kicker">Seven-day map</p>
             <h2 className="display mt-2 text-2xl font-black uppercase text-grit">
-              {activeProgram ? "Current week" : "Your week"}
+              <span id="weekly-plan-days" className="scroll-mt-24">
+                {activeProgram ? "Current week" : "Your week"}
+              </span>
             </h2>
             <p className="mt-1 text-xs text-grit-dim">
               Open a day to see the full session and targets.
