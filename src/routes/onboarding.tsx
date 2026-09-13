@@ -11,11 +11,15 @@ import {
   Dumbbell,
   Minus,
   Plus,
+  ShieldCheck,
+  Sparkles,
+  Timer,
   Trash2,
   Zap,
 } from "lucide-react";
 import { GritLogo } from "@/components/GritLogo";
 import { SetupLivePreview } from "@/components/SetupLivePreview";
+import { WheelPicker } from "@/components/WheelPicker";
 import { StrengthEngineTutorial } from "@/components/StrengthEngineTutorial";
 import { getState, setLocalStateOwner, setState, waitForRemoteState } from "@/lib/storage";
 import { defaultSchedule, focusExerciseRecommendation, isoDay, WEEK } from "@/lib/calc";
@@ -38,8 +42,9 @@ import { WeekdayPicker } from "@/components/WeekdayPicker";
 import { daysPerWeekFor, describeDays, MIN_TRAINING_DAYS } from "@/lib/training-days";
 import { buildPublicStats } from "@/lib/fifa-stats";
 import { currencyForCountry, detectCountry, type SupportedCurrency } from "@/lib/currency";
-import { formatWeightValue, toKg, type WeightUnit } from "@/lib/units";
+import { toDisplay, toKg, trimNumber, type WeightUnit } from "@/lib/units";
 import {
+  ONBOARDING_CHAPTERS,
   onboardingOrder,
   onboardingStageLabel,
   type OnboardingActiveStep,
@@ -57,32 +62,10 @@ export const Route = createFileRoute("/onboarding")({
   component: Onboarding,
 });
 
-type Step =
-  | "mode"
-  | "goal"
-  | "why"
-  | "days"
-  | "equipment"
-  | "focus"
-  | "session"
-  | "preferences"
-  | "schedule"
-  | "notifications"
-  | "experience"
-  | "units"
-  | "about"
-  | "sleep"
-  | "target"
-  | "dream"
-  | "injuries"
-  | "weakness"
-  | "prs"
-  | "name"
-  | "username"
-  | "photo"
-  | "analyzing"
-  | "blueprint"
-  | "commit";
+// The walk is defined once, in the flow module. Aliasing it here keeps the
+// screen switch below exhaustive against the real order rather than against a
+// second list that can quietly drift out of step with it.
+type Step = OnboardingActiveStep;
 
 type Mode = OnboardingMode;
 
@@ -103,6 +86,21 @@ const REP_TARGETS = [
   "45-60s",
   "AMRAP",
 ] as const;
+
+/** How long a session runs, given how many exercises are in it. */
+function sessionMinutesFor(exercises: number): NonNullable<Profile["sessionMinutes"]> {
+  if (exercises <= 3) return 30;
+  if (exercises <= 4) return 45;
+  if (exercises <= 5) return 60;
+  return 90;
+}
+
+/** The name the athlete is addressed by on later screens. */
+function firstNameOf(draft: Partial<Profile>): string {
+  const raw = (draft.displayName ?? "").trim();
+  if (!raw) return "";
+  return raw.split(/\s+/)[0].slice(0, 18);
+}
 
 function scheduleInputsFingerprint(profile: Partial<Profile>): string {
   return JSON.stringify({
@@ -202,11 +200,12 @@ function Onboarding() {
       merged.trainingDays = ["MON", "WED", "FRI"];
       merged.daysPerWeek = 3;
     }
-    if (upcoming === "preferences") {
-      merged.experience ??= "BEGINNER";
-      merged.exercisesPerSession ??= 4;
-      merged.sessionMinutes ??= 45;
-      merged.focusMuscles ??= [];
+    if (upcoming === "focus") merged.focusMuscles ??= [];
+    // Session length is never asked directly — it follows from how many
+    // exercises the athlete wants, so it has to be recomputed here rather than
+    // left at whatever a previous answer implied.
+    if (patch.exercisesPerSession != null) {
+      merged.sessionMinutes = sessionMinutesFor(patch.exercisesPerSession);
     }
     setDirection("forward");
     hapticSelection();
@@ -311,82 +310,112 @@ function Onboarding() {
     setDraft(merged);
   }
 
+  const chapterOf = useMemo(() => {
+    // The rail shows named chapters rather than a raw step count, so "23 of 26"
+    // never lands as a wall of work. Each chapter fills as its own screens are
+    // answered, and the active one is partly filled rather than binary.
+    const counts = new Map<string, { total: number; done: number }>();
+    ORDER.forEach((entry, position) => {
+      const chapter = onboardingStageLabel(entry);
+      const bucket = counts.get(chapter) ?? { total: 0, done: 0 };
+      bucket.total += 1;
+      if (position < idx) bucket.done += 1;
+      counts.set(chapter, bucket);
+    });
+    return counts;
+  }, [ORDER, idx]);
+
+  const chapter = onboardingStageLabel(step);
+  const pct = idx === 0 ? 0 : Math.round((idx / Math.max(1, ORDER.length - 1)) * 100);
+  const name = firstNameOf(draft);
+  const showPreview =
+    idx >= ORDER.indexOf("days") &&
+    !["mode", "analyzing", "schedule", "notifications", "blueprint"].includes(step);
+
   return (
     <div
       className="deadset-onboarding min-h-[100dvh] bg-grit flex flex-col"
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
-      <div className="px-6 pt-10 pb-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {idx > 0 && (
-            <button
-              onClick={() => {
-                hapticSelection();
-                setDirection("back");
-                setIdx(idx - 1);
-              }}
-              aria-label="Back"
-              className="w-9 h-9 -ml-2 flex items-center justify-center rounded-full border border-grit bg-grit-card text-grit-dim press"
-            >
-              <ChevronLeft size={18} />
-            </button>
-          )}
-          <GritLogo className="w-32" />
+      <header className="px-6 pt-10 pb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {idx > 0 && (
+              <button
+                onClick={() => {
+                  hapticSelection();
+                  setDirection("back");
+                  setIdx(idx - 1);
+                }}
+                aria-label="Back"
+                className="w-9 h-9 -ml-2 flex items-center justify-center rounded-full border border-grit bg-grit-card text-grit-dim press"
+              >
+                <ChevronLeft size={18} />
+              </button>
+            )}
+            <GritLogo className="w-28" />
+          </div>
+          <span className="label-cap text-[9px]">
+            {idx === 0 ? "LIVE SETUP" : `${chapter} · ${idx} / ${ORDER.length - 1}`}
+          </span>
         </div>
-        <span className="label-cap">
-          {idx === 0
-            ? "LIVE SETUP"
-            : `${onboardingStageLabel(step as OnboardingActiveStep)} · ${idx} / ${ORDER.length - 1}`}
-        </span>
-      </div>
-      <div className="px-6">
+
         <div
-          className="h-1.5 bg-grit-card rounded-full overflow-hidden"
+          className="mt-4 flex items-center gap-1.5"
           role="progressbar"
           aria-label="Setup progress"
           aria-valuemin={0}
-          aria-valuemax={Math.max(1, ORDER.length - 1)}
-          aria-valuenow={idx}
+          aria-valuemax={100}
+          aria-valuenow={pct}
+          aria-valuetext={`${chapter}, ${pct}% complete`}
         >
-          <div
-            className="h-full bg-accent-red rounded-full transition-all"
-            style={{
-              width:
-                idx === 0 ? "0%" : `${Math.round((idx / Math.max(1, ORDER.length - 1)) * 100)}%`,
-            }}
-          />
+          {ONBOARDING_CHAPTERS.map((entry) => {
+            const bucket = chapterOf.get(entry);
+            const fill = bucket?.total ? Math.round((bucket.done / bucket.total) * 100) : 0;
+            const active = entry === chapter;
+            return (
+              <span
+                key={entry}
+                className={`deadset-setup-progress flex-1 ${active ? "deadset-chapter-active-track" : ""}`}
+              >
+                <span className="deadset-setup-progress-fill block" style={{ width: `${fill}%` }} />
+              </span>
+            );
+          })}
         </div>
-      </div>
-      {mode && !["mode", "schedule", "notifications", "blueprint", "analyzing"].includes(step) && (
-        <div className="px-6 pt-4">
-          <SetupLivePreview draft={draft} mode={mode} schedule={draftSchedule} compact />
+      </header>
+
+      {showPreview && (
+        <div className="px-6 pb-1">
+          <SetupLivePreview
+            draft={draft}
+            mode={mode ?? "GENERATE"}
+            schedule={draftSchedule}
+            compact
+          />
         </div>
       )}
+
       <div
         key={step}
-        className={`flex-1 px-6 pt-8 pb-10 flex flex-col ${
-          direction === "back" ? "animate-slide-down" : "animate-slide-up"
+        className={`flex-1 px-6 pt-6 pb-10 flex flex-col ${
+          direction === "back" ? "deadset-step-back" : "deadset-step"
         }`}
       >
-        {step === "mode" && (
-          <ModeStep
-            onPick={(m: Mode) => {
-              hapticSelection();
-              setDirection("forward");
-              if (m !== mode) setDraftSchedule(null);
-              setMode(m);
-              setIdx(1);
-            }}
-          />
+        {step === "welcome" && <WelcomeStep onStart={() => next({})} />}
+        {step === "name" && (
+          <NameStep initial={draft.displayName} onSubmit={(n) => next({ displayName: n })} />
         )}
         {step === "goal" && (
           <Choice
-            title="What's your goal?"
+            eyebrow={name ? `ALRIGHT ${name.toUpperCase()}` : undefined}
+            title="What are you here to do?"
+            sub="Everything after this — your split, your fuel targets, your rank — is built around this answer."
             options={[
-              { v: "BULK", l: "Bulk" },
-              { v: "CUT", l: "Cut" },
-              { v: "MAINTAIN", l: "Maintain" },
-              { v: "ATHLETIC", l: "Athletic Performance" },
+              { v: "BULK", l: "Bulk", sub: "Add size and strength. Eat for growth." },
+              { v: "CUT", l: "Cut", sub: "Strip fat, hold the muscle you built." },
+              { v: "MAINTAIN", l: "Maintain", sub: "Stay strong and sharp where you are." },
+              { v: "ATHLETIC", l: "Athletic performance", sub: "Power, speed and work capacity." },
             ]}
             onPick={(v) => next({ goal: v as Goal })}
           />
@@ -421,16 +450,25 @@ function Onboarding() {
             onPick={(v) => next({ motivation: v })}
           />
         )}
-        {step === "experience" && (
+        {step === "gender" && (
           <Choice
-            title="Experience level"
+            eyebrow="Strength reference"
+            title="Which standards should we grade you against?"
+            sub="Strength grades compare your lifts to a reference table. Picking the wrong one makes every grade wrong."
             options={[
-              { v: "BEGINNER", l: "Beginner" },
-              { v: "INTERMEDIATE", l: "Intermediate" },
-              { v: "ADVANCED", l: "Advanced" },
+              { v: "MALE", l: "Male standards" },
+              { v: "FEMALE", l: "Female standards" },
+              {
+                v: "OTHER",
+                l: "Rather not say",
+                sub: "Grades stay grey until you choose in Profile. We will not guess.",
+              },
             ]}
-            onPick={(v) => next({ experience: v as Experience })}
+            onPick={(v) => next({ gender: v as Gender })}
           />
+        )}
+        {step === "age" && (
+          <AgeStep name={name} initial={draft.age} onSubmit={(age) => next({ age })} />
         )}
         {step === "units" && (
           <UnitsStep
@@ -441,24 +479,39 @@ function Onboarding() {
             }}
           />
         )}
-        {step === "about" && (
-          <AboutYouStep unit={units} initial={draft} onSubmit={(patch) => next(patch)} />
+        {step === "weight" && (
+          <WeightStep
+            unit={units}
+            initial={draft.weightKg}
+            onSubmit={(weightKg) => next({ weightKg, startingWeightKg: weightKg })}
+          />
         )}
-        {step === "sleep" && (
+        {step === "height" && (
+          <HeightStep initial={draft.heightCm} onSubmit={(heightCm) => next({ heightCm })} />
+        )}
+        {step === "experience" && (
           <Choice
-            eyebrow="Recovery is where you actually grow"
-            title="How's your sleep?"
+            eyebrow="Be honest — it sets your starting loads"
+            title="How long have you been training?"
             options={[
-              { v: "LOW", l: "Under 6 hours", sub: "We'll build in extra recovery." },
-              { v: "OK", l: "6–7 hours", sub: "Workable — we'll help you protect it." },
-              { v: "GOOD", l: "7–8 hours", sub: "Solid foundation to build on." },
-              { v: "GREAT", l: "8+ hours", sub: "Elite recovery. Let's use it." },
+              {
+                v: "BEGINNER",
+                l: "Beginner",
+                sub: "Under a year, or coming back after a long break.",
+              },
+              {
+                v: "INTERMEDIATE",
+                l: "Intermediate",
+                sub: "One to three years of steady lifting.",
+              },
+              { v: "ADVANCED", l: "Advanced", sub: "Years under the bar. You know your numbers." },
             ]}
-            onPick={(v) => next({ sleepQuality: v as Profile["sleepQuality"] })}
+            onPick={(v) => next({ experience: v as Experience })}
           />
         )}
         {step === "days" && (
           <TrainingDaysStep
+            name={name}
             initial={draft.trainingDays}
             onPreview={(days) =>
               previewDraft({ trainingDays: days, daysPerWeek: daysPerWeekFor(days) })
@@ -468,22 +521,84 @@ function Onboarding() {
         )}
         {step === "equipment" && (
           <Choice
-            title="Equipment access"
+            title="What can you train with?"
+            sub="We only ever program exercises you can actually do."
             options={[
-              { v: "FULL_GYM", l: "Full Gym" },
-              { v: "HOME_GYM", l: "Home Gym" },
-              { v: "BODYWEIGHT", l: "Bodyweight Only" },
+              { v: "FULL_GYM", l: "Full gym", sub: "Racks, machines, full dumbbell range." },
+              { v: "HOME_GYM", l: "Home gym", sub: "Some plates, a bar or dumbbells." },
+              { v: "BODYWEIGHT", l: "Bodyweight only", sub: "No equipment needed." },
             ]}
             onPick={(v) => next({ equipment: v as Equipment })}
           />
         )}
-        {step === "preferences" && (
-          <TrainingPreferencesStep
-            initial={draft}
-            onPreview={previewDraft}
-            onSubmit={(patch) => next(patch)}
+        {step === "focus" && (
+          <FocusStep
+            initial={draft.focusMuscles}
+            onPreview={(muscles) => previewDraft({ focusMuscles: muscles })}
+            onSubmit={(muscles) => next({ focusMuscles: muscles })}
+            onSkip={() => next({ focusMuscles: [] })}
           />
         )}
+        {step === "session" && (
+          <Choice
+            eyebrow="You can change every day later"
+            title="How long should a session run?"
+            options={[
+              { v: "3", l: "About 30 minutes", sub: "3 exercises. In and out." },
+              { v: "4", l: "About 45 minutes", sub: "4 exercises. Main lifts plus accessories." },
+              { v: "5", l: "About an hour", sub: "5 exercises. Balanced — recommended." },
+              { v: "6", l: "Around 90 minutes", sub: "6 exercises. More volume and variety." },
+              { v: "7", l: "Long sessions", sub: "7 exercises. High volume." },
+            ]}
+            onPick={(v) =>
+              next({
+                exercisesPerSession: Number(v) as 3 | 4 | 5 | 6 | 7,
+                sessionMinutes: sessionMinutesFor(Number(v)),
+              })
+            }
+          />
+        )}
+        {step === "sleep" && (
+          <Choice
+            eyebrow="Recovery is where you actually grow"
+            title="How much do you sleep?"
+            options={[
+              { v: "LOW", l: "Under 6 hours", sub: "We'll build in extra recovery." },
+              { v: "OK", l: "6–7 hours", sub: "Workable — we'll help you protect it." },
+              { v: "GOOD", l: "7–8 hours", sub: "Solid foundation to build on." },
+              { v: "GREAT", l: "8+ hours", sub: "Elite recovery. Let's use it." },
+            ]}
+            onPick={(v) => next({ sleepQuality: v as Profile["sleepQuality"] })}
+          />
+        )}
+        {step === "weakness" && (
+          <Choice
+            eyebrow="Last one about you"
+            title="What has stopped you before?"
+            options={[
+              {
+                v: "CONSISTENCY",
+                l: "I stop showing up",
+                sub: "Streak alerts and rivals for you.",
+              },
+              { v: "STRENGTH", l: "My numbers stall", sub: "We'll drive progression harder." },
+              { v: "DIET", l: "Eating is the hard part", sub: "Fuel targets front and centre." },
+              { v: "RECOVERY", l: "I burn out", sub: "We'll protect your rest days." },
+            ]}
+            onPick={(v) => next({ weakness: v as Weakness })}
+          />
+        )}
+        {step === "mode" && (
+          <ModeStep
+            name={name}
+            onPick={(m: Mode) => {
+              if (m !== mode) setDraftSchedule(null);
+              setMode(m);
+              next({});
+            }}
+          />
+        )}
+        {step === "analyzing" && <AnalyzingStep draft={draft} onDone={() => next({})} />}
         {step === "schedule" && (
           <SchedulePreview
             draft={draft}
@@ -496,92 +611,13 @@ function Onboarding() {
           />
         )}
         {step === "notifications" && <NotificationStep onContinue={() => next({})} />}
-        {step === "injuries" && (
-          <Injuries
-            initial={draft.injuries}
-            onSubmit={(t) => next({ injuries: t })}
-            onSkip={() => next({ injuries: "" })}
-          />
-        )}
-        {step === "focus" && (
-          <FocusStep
-            initial={draft.focusMuscles}
-            onSubmit={(muscles) => next({ focusMuscles: muscles })}
-            onSkip={() => next({ focusMuscles: [] })}
-          />
-        )}
-        {step === "session" && (
-          <Choice
-            eyebrow="You can change every day later"
-            title="Exercises per workout"
-            options={[
-              { v: "3", l: "3 exercises", sub: "Short and focused." },
-              { v: "4", l: "4 exercises", sub: "Main lifts plus accessories." },
-              { v: "5", l: "5 exercises", sub: "Balanced — recommended." },
-              { v: "6", l: "6 exercises", sub: "More volume and variety." },
-              { v: "7", l: "7 exercises", sub: "High-volume sessions." },
-            ]}
-            onPick={(v) => next({ exercisesPerSession: Number(v) as 3 | 4 | 5 | 6 | 7 })}
-          />
-        )}
-        {step === "target" && (
-          <TargetStep
-            unit={units}
-            currentKg={draft.weightKg}
-            goal={draft.goal}
-            initial={draft.targetWeightKg}
-            onSubmit={(n) => next({ targetWeightKg: n })}
-            onSkip={() => next({ targetWeightKg: undefined })}
-          />
-        )}
-        {step === "dream" && (
-          <Choice
-            eyebrow="Picture 12 weeks from now"
-            title="What does winning look like?"
-            options={[
-              {
-                v: "PLATES",
-                l: "Plates I couldn't touch",
-                sub: "Bench, squat and deadlift up across the board.",
-              },
-              {
-                v: "MIRROR",
-                l: "The mirror hits different",
-                sub: "Visibly leaner, fuller, more defined.",
-              },
-              { v: "STREAK", l: "A streak I never break", sub: "Training is just who I am now." },
-              {
-                v: "RANK",
-                l: "Top of the rankings",
-                sub: "Elite rank, rivals beaten, respect earned.",
-              },
-            ]}
-            onPick={(v) => next({ dreamOutcome: v })}
-          />
-        )}
-        {step === "weakness" && (
-          <Choice
-            title="Your biggest weakness?"
-            options={[
-              { v: "STRENGTH", l: "Strength" },
-              { v: "CONSISTENCY", l: "Consistency" },
-              { v: "DIET", l: "Diet" },
-              { v: "RECOVERY", l: "Recovery" },
-            ]}
-            onPick={(v) => next({ weakness: v as Weakness })}
-          />
-        )}
-        {step === "prs" && <PRStep onContinue={() => next({})} />}
-        {step === "name" && (
-          <NameStep initial={draft.displayName} onSubmit={(n) => next({ displayName: n })} />
-        )}
         {step === "username" && (
-          <UsernameStep initial={draft.username} onSubmit={(u) => next({ username: u })} />
+          <UsernameStep
+            name={name}
+            initial={draft.username}
+            onSubmit={(u) => next({ username: u })}
+          />
         )}
-        {step === "photo" && (
-          <PhotoStep onSubmit={(url) => next({ avatarDataUrl: url })} onSkip={() => next({})} />
-        )}
-        {step === "analyzing" && <AnalyzingStep draft={draft} onDone={() => next({})} />}
         {step === "blueprint" && (
           <BlueprintStep
             draft={draft}
@@ -590,47 +626,169 @@ function Onboarding() {
             onEnter={() => next({})}
           />
         )}
-        {step === "commit" && (
-          <CommitStep
-            draft={draft}
-            onCommit={(commitmentDate) => next({ committed: true, commitmentDate })}
-          />
-        )}
       </div>
     </div>
   );
 }
 
+/**
+ * The opening screen.
+ *
+ * It asks for nothing. Setup that opens on a question reads as a form; setup
+ * that opens on a promise — and an honest estimate of how long it takes —
+ * reads as something worth finishing.
+ */
+function WelcomeStep({ onStart }: { onStart: () => void }) {
+  const promises = [
+    {
+      icon: <Sparkles size={15} />,
+      title: "A week built around you",
+      body: "Your days, your equipment, your priorities — not a template.",
+    },
+    {
+      icon: <ShieldCheck size={15} />,
+      title: "Graded against real standards",
+      body: "Strength is measured, never invented. Grey until you earn it.",
+    },
+    {
+      icon: <Timer size={15} />,
+      title: "One question at a time",
+      body: "No forms. Change any answer later in Settings.",
+    },
+  ];
+  return (
+    <div className="flex flex-1 flex-col">
+      <div className="deadset-setup-hero relative flex flex-1 flex-col items-center justify-center text-center">
+        {/*
+          The wordmark ships as a PNG with an opaque plate behind it, so a glow
+          centred on the logo is simply occluded — and the plate reads as a box.
+          Sitting the glow low, under the headline, lights the screen without
+          ever passing behind the artwork.
+        */}
+        <div
+          className="deadset-setup-glow pointer-events-none absolute bottom-0 h-44 w-72 rounded-full bg-accent-red/20 blur-3xl"
+          aria-hidden="true"
+        />
+        <GritLogo className="relative w-56" />
+        <h1 className="display relative mt-6 text-[2.6rem] font-black uppercase leading-[0.92] text-grit">
+          Let&apos;s build
+          <br />
+          your system
+        </h1>
+        <p className="relative mt-4 max-w-xs text-sm leading-relaxed text-grit-dim">
+          A handful of questions. Your first training week is waiting on the other side.
+        </p>
+      </div>
+
+      <div className="deadset-step-stagger mt-6 grid gap-2">
+        {promises.map((promise) => (
+          <div
+            key={promise.title}
+            className="flex items-start gap-3 rounded-2xl border border-white/10 bg-grit-card px-4 py-3"
+          >
+            <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full border border-accent-red/50 bg-accent-red/12 text-accent-red">
+              {promise.icon}
+            </span>
+            <span>
+              <span className="block text-xs font-extrabold text-grit">{promise.title}</span>
+              <span className="mt-0.5 block text-[11px] leading-relaxed text-grit-dim">
+                {promise.body}
+              </span>
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-6">
+        <button onClick={onStart} className="btn-grit w-full min-h-14 animate-subtle-pulse">
+          <Zap size={16} className="mr-2" />
+          Start setup
+        </button>
+        <p className="mt-2 text-center text-[10px] uppercase tracking-[0.12em] text-grit-dim">
+          About a minute
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A one-tap question.
+ *
+ * Tapping an answer advances the flow on its own — on a walk this long, a
+ * second tap on a Continue button for a decision the athlete has already made
+ * is the difference between it feeling quick and feeling like paperwork. The
+ * short pause before advancing is not padding: it is the beat in which the
+ * choice visibly lands, so nobody is left unsure which option they hit.
+ */
 function Choice({
   title,
   eyebrow,
+  sub,
   options,
   onPick,
 }: {
   title: string;
   eyebrow?: string;
+  sub?: string;
   options: { v: string; l: string; sub?: string }[];
   onPick: (v: string) => void;
 }) {
+  const [chosen, setChosen] = useState<string | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
+
+  function pick(value: string) {
+    // Locked after the first tap: a second answer mid-transition would advance
+    // twice and skip the following question entirely.
+    if (chosen) return;
+    setChosen(value);
+    hapticSelection();
+    timer.current = setTimeout(() => onPick(value), 250);
+  }
+
   return (
     <>
       {eyebrow && <p className="label-cap text-accent-red text-[10px] mb-1">{eyebrow}</p>}
-      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-8">{title}</h1>
-      <div className="flex flex-col gap-3">
-        {options.map((o) => (
-          <button
-            key={o.v}
-            onClick={() => onPick(o.v)}
-            className="bg-grit-card border border-grit p-5 text-left hover:border-accent-red transition-colors press"
-          >
-            <span className="display text-lg uppercase tracking-wide font-bold text-grit block">
-              {o.l}
-            </span>
-            {o.sub && (
-              <span className="text-[12px] text-grit-dim mt-1 block normal-case">{o.sub}</span>
-            )}
-          </button>
-        ))}
+      <h1 className="display text-[1.9rem] font-black uppercase leading-[1.02] text-grit">
+        {title}
+      </h1>
+      {sub && <p className="mt-2 text-sm leading-relaxed text-grit-dim">{sub}</p>}
+      <div className="mt-7 flex flex-col gap-2.5">
+        {options.map((o, i) => {
+          const isChosen = chosen === o.v;
+          return (
+            <button
+              key={o.v}
+              onClick={() => pick(o.v)}
+              aria-pressed={isChosen}
+              style={{ animationDelay: `${60 + i * 55}ms` }}
+              className={`deadset-option bg-grit-card border border-grit rounded-2xl p-5 text-left hover:border-accent-red press ${
+                isChosen ? "deadset-option-chosen" : chosen ? "deadset-option-dimmed" : ""
+              }`}
+            >
+              <span className="flex items-center justify-between gap-3">
+                <span className="display text-lg uppercase tracking-wide font-bold text-grit block">
+                  {o.l}
+                </span>
+                {isChosen && (
+                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-accent-red text-white">
+                    <Check size={14} />
+                  </span>
+                )}
+              </span>
+              {o.sub && (
+                <span className="text-[12px] text-grit-dim mt-1 block normal-case">{o.sub}</span>
+              )}
+            </button>
+          );
+        })}
       </div>
     </>
   );
@@ -652,29 +810,34 @@ function UnitsStep({
 }) {
   const [choice, setChoice] = useState<WeightUnit>(value);
   return (
-    <div className="stagger">
-      <h2 className="display text-3xl font-extrabold uppercase text-grit">Weight units</h2>
+    <div className="flex flex-1 flex-col">
+      <p className="label-cap text-accent-red text-[10px] mb-1">BEFORE WE WEIGH ANYTHING</p>
+      <h1 className="display text-[1.9rem] font-black uppercase leading-[1.02] text-grit">
+        Kilos or pounds?
+      </h1>
       <p className="mt-2 text-sm leading-relaxed text-grit-dim">
-        How do you measure weight? Everything in DEADSET follows this — plates, the bar, your
-        bodyweight, your strength grades.
+        Everything in DEADSET follows this — plates, the bar, your bodyweight, your strength grades.
       </p>
 
-      <div className="mt-6 grid grid-cols-2 gap-3">
+      <div className="mt-8 grid grid-cols-2 gap-3">
         {(["kg", "lb"] as const).map((option) => {
           const active = choice === option;
           return (
             <button
               key={option}
-              onClick={() => setChoice(option)}
+              onClick={() => {
+                hapticSelection();
+                setChoice(option);
+              }}
               aria-pressed={active}
-              className="rounded-2xl border py-6 press"
+              className="deadset-option rounded-2xl border py-8 press"
               style={{
                 borderColor: active ? "#e63222" : "rgba(255,255,255,.1)",
                 background: active ? "rgba(230,50,34,.1)" : "rgba(18,18,18,.9)",
               }}
             >
               <span
-                className="display block text-3xl font-extrabold uppercase"
+                className="display block text-4xl font-extrabold uppercase"
                 style={{ color: active ? "#e63222" : "#8a8a8a" }}
               >
                 {option}
@@ -687,376 +850,148 @@ function UnitsStep({
         })}
       </div>
 
-      <p className="mt-4 text-[11px] leading-relaxed text-grit-dim">
-        You can change this any time in Settings. Your history is stored in kilograms either way, so
-        switching never alters a logged set.
+      <p className="mt-5 text-[11px] leading-relaxed text-grit-dim">
+        Change it any time in Settings. Your history is stored in kilograms either way, so switching
+        never alters a logged set.
       </p>
 
-      <button onClick={() => onSubmit(choice)} className="btn-grit mt-6 w-full">
+      <button onClick={() => onSubmit(choice)} className="btn-grit mt-auto min-h-14 w-full">
         Continue
       </button>
     </div>
   );
 }
 
-function TrainingPreferencesStep({
+function AgeStep({
+  name,
   initial,
-  onPreview,
   onSubmit,
 }: {
-  initial?: Partial<Profile>;
-  onPreview: (patch: Partial<Profile>) => void;
-  onSubmit: (patch: Partial<Profile>) => void;
+  name: string;
+  initial?: number;
+  onSubmit: (age: number) => void;
 }) {
-  const [experience, setExperience] = useState<Experience>(initial?.experience ?? "BEGINNER");
-  const initialExerciseCount = initial?.exercisesPerSession;
-  const [exerciseCount, setExerciseCount] = useState<3 | 4 | 5 | 6 | 7>(
-    initialExerciseCount === 3 ||
-      initialExerciseCount === 4 ||
-      initialExerciseCount === 5 ||
-      initialExerciseCount === 6 ||
-      initialExerciseCount === 7
-      ? initialExerciseCount
-      : 4,
-  );
-  const [focus, setFocus] = useState<FocusMuscle[]>(initial?.focusMuscles ?? []);
-  const focusOptions: { value: FocusMuscle; label: string }[] = [
-    { value: "CHEST", label: "Chest" },
-    { value: "BACK", label: "Back" },
-    { value: "SHOULDERS", label: "Shoulders" },
-    { value: "ARMS", label: "Arms" },
-    { value: "LEGS", label: "Legs" },
-    { value: "CORE", label: "Core" },
-  ];
-
-  function toggleFocus(muscle: FocusMuscle) {
-    hapticSelection();
-    const next = focus.includes(muscle)
-      ? focus.filter((item) => item !== muscle)
-      : focus.length < 2
-        ? [...focus, muscle]
-        : [focus[1], muscle];
-    setFocus(next);
-    onPreview({ focusMuscles: next });
-  }
-
-  const sessionMinutes =
-    exerciseCount <= 3 ? 30 : exerciseCount <= 4 ? 45 : exerciseCount <= 5 ? 60 : 90;
-
+  const [age, setAge] = useState(initial && initial >= 13 ? initial : 24);
   return (
-    <>
-      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">Plan preferences</h1>
-      <p className="text-sm text-[#8a8a8a] mb-7">Set the training style for your first week.</p>
-
-      <section className="mb-6" aria-labelledby="experience-label">
-        <p id="experience-label" className="label-cap text-[10px] text-grit-dim mb-2">
-          Experience
-        </p>
-        <div className="grid grid-cols-3 gap-2">
-          {(["BEGINNER", "INTERMEDIATE", "ADVANCED"] as Experience[]).map((level) => {
-            const active = experience === level;
-            return (
-              <button
-                key={level}
-                type="button"
-                aria-pressed={active}
-                onClick={() => {
-                  hapticSelection();
-                  setExperience(level);
-                  onPreview({ experience: level });
-                }}
-                className="border rounded-2xl p-3 press"
-                style={{
-                  borderColor: active ? "#e63222" : "#262626",
-                  background: active ? "rgba(230,50,34,0.1)" : "#141414",
-                }}
-              >
-                <span className="display block text-sm uppercase font-extrabold text-grit">
-                  {level === "BEGINNER" ? "New" : level === "INTERMEDIATE" ? "Regular" : "Advanced"}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="mb-6" aria-labelledby="exercise-count-label">
-        <div className="flex items-baseline justify-between mb-2">
-          <p id="exercise-count-label" className="label-cap text-[10px] text-grit-dim">
-            Exercises per workout
-          </p>
-          <span className="label-cap text-[9px] text-accent-red">{sessionMinutes} min target</span>
-        </div>
-        <div className="grid grid-cols-5 gap-2">
-          {([3, 4, 5, 6, 7] as const).map((count) => {
-            const active = exerciseCount === count;
-            return (
-              <button
-                key={count}
-                type="button"
-                aria-label={`${count} exercises per workout`}
-                aria-pressed={active}
-                onClick={() => {
-                  hapticSelection();
-                  setExerciseCount(count);
-                  onPreview({
-                    exercisesPerSession: count,
-                    sessionMinutes: count <= 3 ? 30 : count <= 4 ? 45 : count <= 5 ? 60 : 90,
-                  });
-                }}
-                className="border rounded-2xl min-h-12 press"
-                style={{
-                  borderColor: active ? "#e63222" : "#262626",
-                  background: active ? "rgba(230,50,34,0.1)" : "#141414",
-                }}
-              >
-                <span className="display text-lg font-extrabold text-grit">{count}</span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      <section aria-labelledby="focus-label">
-        <div className="flex items-baseline justify-between mb-2">
-          <p id="focus-label" className="label-cap text-[10px] text-grit-dim">
-            Focus muscles
-          </p>
-          <span className="label-cap text-[9px] text-grit-dim">Optional, up to 2</span>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          {focusOptions.map((option) => {
-            const active = focus.includes(option.value);
-            return (
-              <button
-                key={option.value}
-                type="button"
-                aria-pressed={active}
-                onClick={() => toggleFocus(option.value)}
-                className="border rounded-2xl px-4 py-3 text-left press"
-                style={{
-                  borderColor: active ? "#e63222" : "#262626",
-                  background: active ? "rgba(230,50,34,0.1)" : "#141414",
-                }}
-              >
-                <span className="display text-base uppercase font-extrabold text-grit">
-                  {option.label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        {focus.length > 0 && (
-          <div className="mt-3 rounded-2xl border border-accent-red/30 bg-accent-red/[0.07] p-3">
-            <p className="label-cap text-[8px] text-accent-red">PINNED INTO YOUR WEEK</p>
-            <div className="mt-2 grid gap-1.5">
-              {focus.map((muscle) => {
-                const recommendation = focusExerciseRecommendation(
-                  muscle,
-                  initial?.equipment ?? "FULL_GYM",
-                );
-                return (
-                  <p key={muscle} className="text-[11px] font-semibold text-grit">
-                    <Check size={12} className="mr-1.5 inline text-accent-red" />
-                    {muscle.charAt(0) + muscle.slice(1).toLowerCase()}:{" "}
-                    {recommendation?.name ?? "targeted movement"}
-                  </p>
-                );
-              })}
-            </div>
-            <p className="mt-2 text-[9px] leading-relaxed text-grit-dim">
-              DEADSET keeps these movements when it trims the workout to your chosen length.
-            </p>
-          </div>
-        )}
-      </section>
-
-      <button
-        onClick={() =>
-          onSubmit({
-            experience,
-            exercisesPerSession: exerciseCount,
-            sessionMinutes,
-            focusMuscles: focus,
-          })
-        }
-        className="btn-grit mt-auto"
-      >
-        Preview my week
-      </button>
-    </>
-  );
-}
-
-function AboutYouStep({
-  initial,
-  unit,
-  onSubmit,
-}: {
-  initial?: Partial<Profile>;
-  unit: WeightUnit;
-  onSubmit: (patch: Partial<Profile>) => void;
-}) {
-  const [age, setAge] = useState(initial?.age != null ? String(initial.age) : "");
-  const [weight, setWeight] = useState(
-    initial?.weightKg != null ? formatWeightValue(initial.weightKg, unit) : "",
-  );
-  const [height, setHeight] = useState(initial?.heightCm != null ? String(initial.heightCm) : "");
-  const [gender, setGender] = useState<Gender | null>(initial?.gender ?? null);
-  const a = Number(age);
-  const w = Number(weight);
-  const h = Number(height);
-  const ageOk = age !== "" && a >= 13 && a <= 90;
-  // Bounds in the athlete's own units — 30 to 250 kg is a sane human range,
-  // but rejecting a 180 lb lifter for being "too heavy" is not.
-  const weightKg = toKg(w, unit);
-  const weightOk = weight !== "" && weightKg >= 30 && weightKg <= 250;
-  const heightOk = height !== "" && h >= 120 && h <= 230;
-  const valid = ageOk && weightOk && heightOk && gender !== null;
-
-  const fields = [
-    {
-      label: "AGE",
-      suffix: "yrs",
-      value: age,
-      set: setAge,
-      ok: ageOk,
-      placeholder: "24",
-      digitsOnly: true,
-    },
-    {
-      label: "WEIGHT",
-      suffix: unit,
-      value: weight,
-      set: setWeight,
-      ok: weightOk,
-      placeholder: "80",
-      digitsOnly: false,
-    },
-    {
-      label: "HEIGHT",
-      suffix: "cm",
-      value: height,
-      set: setHeight,
-      ok: heightOk,
-      placeholder: "180",
-      digitsOnly: false,
-    },
-  ];
-
-  return (
-    <>
-      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">
-        Strength calibration
-      </h1>
-      <p className="text-sm text-[#8a8a8a] mb-8">
-        Your bodyweight and reference table keep the Strength Map honest. Age and height tune fuel
-        targets. Never shown publicly.
+    <div className="flex flex-1 flex-col">
+      <p className="label-cap text-accent-red text-[10px] mb-1">
+        {name ? `ABOUT YOU, ${name.toUpperCase()}` : "ABOUT YOU"}
       </p>
-      <div className="grid grid-cols-3 gap-2 mb-6">
-        {fields.map((f, i) => (
-          <div key={f.label} className="bg-grit-card border border-grit rounded-2xl p-3">
-            <p className="label-cap text-[9px] text-grit-dim mb-1">{f.label}</p>
-            <div className="flex items-baseline gap-1">
-              <input
-                autoFocus={i === 0}
-                defaultValue={f.value}
-                onChange={(e) => {
-                  const cleaned = f.digitsOnly
-                    ? e.target.value.replace(/[^0-9]/g, "")
-                    : normaliseDecimalInput(e.target.value);
-                  e.target.value = cleaned;
-                  f.set(cleaned);
-                }}
-                inputMode="decimal"
-                placeholder={f.placeholder}
-                aria-label={`${f.label.toLowerCase()} in ${f.suffix}`}
-                className="bg-transparent outline-none w-full min-w-0 text-2xl font-display font-extrabold text-grit"
-                style={{ color: f.value && !f.ok ? "#e63222" : undefined }}
-              />
-              <span className="label-cap text-[9px] text-grit-dim">{f.suffix}</span>
-            </div>
-          </div>
-        ))}
+      <h1 className="display text-[1.9rem] font-black uppercase leading-[1.02] text-grit">
+        How old are you?
+      </h1>
+      <p className="mt-2 text-sm leading-relaxed text-grit-dim">
+        Age tunes your fuel targets and recovery spacing. Never shown publicly.
+      </p>
+      <div className="mt-8">
+        <WheelPicker
+          label="Age in years"
+          value={age}
+          onChange={setAge}
+          min={13}
+          max={90}
+          step={1}
+          suffix="yrs"
+        />
       </div>
-      <p className="label-cap text-[10px] text-grit-dim mb-2">STRENGTH REFERENCE</p>
-      <div className="grid grid-cols-3 gap-2 mb-6">
-        {(["MALE", "FEMALE", "OTHER"] as Gender[]).map((g) => {
-          const active = gender === g;
-          return (
-            <button
-              key={g}
-              aria-pressed={active}
-              onClick={() => {
-                hapticSelection();
-                setGender(g);
-              }}
-              className="border rounded-2xl p-3 press"
-              style={{
-                borderColor: active ? "#e63222" : "#262626",
-                background: active ? "rgba(230,50,34,0.1)" : "#141414",
-              }}
-            >
-              <span
-                className="display text-sm uppercase font-extrabold"
-                style={{ color: active ? "#f5f5f0" : "#8a8a8a" }}
-              >
-                {g === "MALE" ? "Male" : g === "FEMALE" ? "Female" : "Skip"}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-      {gender === "OTHER" && (
-        <p className="mb-4 text-[10px] leading-relaxed text-grit-dim">
-          Skip keeps strength grades grey until you choose a reference in Profile. DEADSET will not
-          silently use the wrong standard.
-        </p>
-      )}
-      <button
-        disabled={!valid}
-        onClick={() => gender && onSubmit({ age: a, weightKg, heightCm: h, gender })}
-        className="btn-grit mt-auto disabled:opacity-40"
-      >
-        Continue
+      <button onClick={() => onSubmit(age)} className="btn-grit mt-auto w-full min-h-14">
+        Continue — {age} yrs
       </button>
-    </>
+    </div>
   );
 }
 
-function Injuries({
+function WeightStep({
+  unit,
   initial,
   onSubmit,
-  onSkip,
 }: {
-  initial?: string;
-  onSubmit: (s: string) => void;
-  onSkip: () => void;
+  unit: WeightUnit;
+  initial?: number;
+  onSubmit: (weightKg: number) => void;
 }) {
-  const [v, setV] = useState(initial ?? "");
-  return (
-    <>
-      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">
-        Injuries or limits?
-      </h1>
-      <p className="text-sm text-[#8a8a8a] mb-8">Optional. Skip if none.</p>
-      <textarea
-        defaultValue={v}
-        onChange={(e) => setV(e.target.value)}
-        rows={5}
-        className="input-grit mb-4"
-        placeholder="e.g. lower back tweak, bad knee..."
-      />
-      <div className="mt-auto flex flex-col gap-3">
-        <button onClick={() => onSubmit(v)} className="btn-grit">
-          Continue
-        </button>
-        <button onClick={onSkip} className="btn-ghost">
-          Skip — no injuries
-        </button>
-      </div>
-    </>
+  // The wheel runs in the athlete's own units. Bounds are converted from the
+  // same 30–250 kg human range the typed field used to enforce, so a pound
+  // lifter is never told 400 lb is out of range.
+  const range = unit === "kg" ? { min: 30, max: 250, step: 0.5 } : { min: 66, max: 550, step: 1 };
+  const fallback = unit === "kg" ? 80 : 176;
+  const [value, setValue] = useState(() =>
+    initial ? Number(toDisplay(initial, unit).toFixed(unit === "kg" ? 1 : 0)) : fallback,
   );
+  const kg = toKg(value, unit);
+  return (
+    <div className="flex flex-1 flex-col">
+      <p className="label-cap text-accent-red text-[10px] mb-1">STRENGTH CALIBRATION</p>
+      <h1 className="display text-[1.9rem] font-black uppercase leading-[1.02] text-grit">
+        What do you weigh?
+      </h1>
+      <p className="mt-2 text-sm leading-relaxed text-grit-dim">
+        Bodyweight is the denominator of every strength grade you will earn. This is the number that
+        keeps the Strength Map honest.
+      </p>
+      <div className="mt-8">
+        <WheelPicker
+          label={`Bodyweight in ${unit === "kg" ? "kilograms" : "pounds"}`}
+          value={value}
+          onChange={setValue}
+          min={range.min}
+          max={range.max}
+          step={range.step}
+          suffix={unit}
+        />
+      </div>
+      <p className="mt-6 text-center text-[10px] leading-relaxed text-grit-dim">
+        Stored in kilograms, so switching units later never alters a logged set.
+      </p>
+      <button onClick={() => onSubmit(kg)} className="btn-grit mt-auto w-full min-h-14">
+        Continue — {trimNumber(value)} {unit}
+      </button>
+    </div>
+  );
+}
+
+function HeightStep({
+  initial,
+  onSubmit,
+}: {
+  initial?: number;
+  onSubmit: (heightCm: number) => void;
+}) {
+  const [cm, setCm] = useState(initial && initial >= 120 ? Math.round(initial) : 178);
+  return (
+    <div className="flex flex-1 flex-col">
+      <p className="label-cap text-accent-red text-[10px] mb-1">STRENGTH CALIBRATION</p>
+      <h1 className="display text-[1.9rem] font-black uppercase leading-[1.02] text-grit">
+        How tall are you?
+      </h1>
+      <p className="mt-2 text-sm leading-relaxed text-grit-dim">
+        Height sets your calorie baseline. It is the last thing we ask about your body.
+      </p>
+      <div className="mt-8">
+        <WheelPicker
+          label="Height in centimetres"
+          value={cm}
+          onChange={setCm}
+          min={120}
+          max={230}
+          step={1}
+          suffix="cm"
+          secondary={feetAndInches}
+        />
+      </div>
+      <button onClick={() => onSubmit(cm)} className="btn-grit mt-auto w-full min-h-14">
+        Continue — {cm} cm
+      </button>
+    </div>
+  );
+}
+
+/** The same height in feet and inches, for anyone who does not think in centimetres. */
+function feetAndInches(cm: number): string {
+  const totalInches = Math.round(cm / 2.54);
+  const feet = Math.floor(totalInches / 12);
+  const inches = totalInches % 12;
+  return `${feet}′ ${inches}″`;
 }
 
 function NameStep({ initial, onSubmit }: { initial?: string; onSubmit: (name: string) => void }) {
@@ -1065,36 +1000,50 @@ function NameStep({ initial, onSubmit }: { initial?: string; onSubmit: (name: st
   const [shadow, setShadow] = useState(initial ?? "");
   const valid = shadow.trim().length >= 1;
   return (
-    <>
-      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">
-        What&apos;s your name?
+    <div className="flex flex-1 flex-col">
+      <p className="label-cap text-accent-red text-[10px] mb-1">FIRST THINGS FIRST</p>
+      <h1 className="display text-[1.9rem] font-black uppercase leading-[1.02] text-grit">
+        What should we call you?
       </h1>
-      <p className="text-sm text-[#8a8a8a] mb-8">
-        Shown on your athlete card. Your public @username comes next.
+      <p className="mt-2 text-sm leading-relaxed text-grit-dim">
+        Shown on your athlete card and nowhere you have not put it. Your public @handle comes at the
+        end.
       </p>
       <input
         autoFocus
         defaultValue={initial ?? ""}
         onChange={(e) => setShadow(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && valid) onSubmit(shadow.trim());
+        }}
         maxLength={40}
         autoCapitalize="words"
         autoCorrect="off"
         spellCheck={false}
-        className="bg-transparent border-b-2 border-grit focus:border-accent-red outline-none text-3xl font-display font-extrabold text-grit w-full pb-2 mb-8"
+        enterKeyHint="next"
+        className="mt-9 w-full border-b-2 border-grit bg-transparent pb-2 font-display text-3xl font-extrabold text-grit outline-none focus:border-accent-red"
         placeholder="Your name"
       />
       <button
         disabled={!valid}
         onClick={() => onSubmit(shadow.trim())}
-        className="btn-grit mt-auto disabled:opacity-40"
+        className="btn-grit mt-auto min-h-14 w-full disabled:opacity-40"
       >
         Continue
       </button>
-    </>
+    </div>
   );
 }
 
-function UsernameStep({ initial, onSubmit }: { initial?: string; onSubmit: (u: string) => void }) {
+function UsernameStep({
+  name,
+  initial,
+  onSubmit,
+}: {
+  name: string;
+  initial?: string;
+  onSubmit: (u: string) => void;
+}) {
   const [v, setV] = useState(initial ?? "");
   const clean = v
     .toLowerCase()
@@ -1102,13 +1051,17 @@ function UsernameStep({ initial, onSubmit }: { initial?: string; onSubmit: (u: s
     .slice(0, 20);
   const valid = clean.length >= 3;
   return (
-    <>
-      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">Pick a username</h1>
-      <p className="text-sm text-[#8a8a8a] mb-8">
-        Your public @handle for leaderboards and the feed. Your name stays on your card.
+    <div className="flex flex-1 flex-col">
+      <p className="label-cap text-accent-red text-[10px] mb-1">ONE LAST THING</p>
+      <h1 className="display text-[1.9rem] font-black uppercase leading-[1.02] text-grit">
+        Claim your handle
+      </h1>
+      <p className="mt-2 text-sm leading-relaxed text-grit-dim">
+        This is how {name ? `${name} shows` : "you show"} up on leaderboards, duels and the feed.
+        Three characters or more.
       </p>
-      <div className="flex items-center gap-2 mb-8 border-b-2 border-grit focus-within:border-accent-red">
-        <span className="text-3xl font-display font-extrabold text-grit-dim pb-2">@</span>
+      <div className="mt-9 flex items-center gap-2 border-b-2 border-grit focus-within:border-accent-red">
+        <span className="pb-2 font-display text-3xl font-extrabold text-grit-dim">@</span>
         <input
           autoFocus
           defaultValue={clean}
@@ -1120,79 +1073,43 @@ function UsernameStep({ initial, onSubmit }: { initial?: string; onSubmit: (u: s
             e.target.value = c;
             setV(c);
           }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && valid) onSubmit(clean);
+          }}
           autoCapitalize="none"
           autoCorrect="off"
           spellCheck={false}
-          className="bg-transparent outline-none text-4xl font-display font-extrabold text-grit flex-1 pb-2"
+          enterKeyHint="done"
+          className="flex-1 bg-transparent pb-2 font-display text-4xl font-extrabold text-grit outline-none"
           placeholder="ironwolf"
         />
       </div>
+
+      {/* A read-back of the handle exactly where it will actually appear. */}
+      <div className="deadset-step-stagger mt-7">
+        <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-grit-card px-4 py-3">
+          <span className="display w-6 text-center text-sm font-black text-accent-red">1</span>
+          <span className="grid h-9 w-9 place-items-center rounded-full border border-accent-red/40 bg-accent-red/12 font-display text-sm font-black uppercase text-accent-red">
+            {(clean || name || "?").slice(0, 1)}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-xs font-extrabold text-grit">
+              {name || "Your name"}
+            </span>
+            <span className="block truncate text-[11px] text-grit-dim">@{clean || "ironwolf"}</span>
+          </span>
+          <span className="label-cap text-[9px] text-grit-dim">LEADERBOARD</span>
+        </div>
+      </div>
+
       <button
         disabled={!valid}
         onClick={() => onSubmit(clean)}
-        className="btn-grit mt-auto disabled:opacity-40"
+        className="btn-grit mt-auto min-h-14 w-full disabled:opacity-40"
       >
         Continue
       </button>
-    </>
-  );
-}
-
-function PhotoStep({ onSubmit, onSkip }: { onSubmit: (url: string) => void; onSkip: () => void }) {
-  const [preview, setPreview] = useState<string | null>(null);
-  const ref = useRef<HTMLInputElement>(null);
-  function pick(file: File) {
-    // Downscale to a bounded JPEG — raw camera photos overflow the server's
-    // 2MB payload cap and would block finishing onboarding.
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      const max = 512;
-      const scale = Math.min(1, max / Math.max(img.width, img.height));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
-      setPreview(canvas.toDataURL("image/jpeg", 0.82));
-      URL.revokeObjectURL(url);
-    };
-    img.onerror = () => URL.revokeObjectURL(url);
-    img.src = url;
-  }
-  return (
-    <>
-      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">Profile photo</h1>
-      <p className="text-sm text-[#8a8a8a] mb-8">One face. One brand. Optional.</p>
-      <div className="flex justify-center mb-8">
-        <button
-          onClick={() => ref.current?.click()}
-          className="w-40 h-40 rounded-full border-4 border-accent-red overflow-hidden bg-grit-card flex items-center justify-center"
-        >
-          {preview ? (
-            <img src={preview} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <span className="label-cap">Tap to upload</span>
-          )}
-        </button>
-        <input
-          ref={ref}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => e.target.files?.[0] && pick(e.target.files[0])}
-        />
-      </div>
-      <div className="mt-auto flex flex-col gap-3">
-        <button onClick={() => (preview ? onSubmit(preview) : onSkip())} className="btn-grit">
-          Continue
-        </button>
-        {preview && (
-          <button onClick={onSkip} className="btn-ghost">
-            Skip photo
-          </button>
-        )}
-      </div>
-    </>
+    </div>
   );
 }
 
@@ -1671,133 +1588,83 @@ function SchedulePreview({
   );
 }
 
-function ModeStep({ onPick }: { onPick: (m: Mode) => void }) {
-  return (
-    <>
-      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">
-        How do you want to start?
-      </h1>
-      <p className="text-sm text-[#8a8a8a] mb-8">Pick one. You can change everything later.</p>
-      <div className="flex flex-col gap-3">
-        <button
-          onClick={() => onPick("GENERATE")}
-          className="bg-grit-card border-2 border-accent-red rounded-3xl p-6 text-left hover:bg-[#1a0a08] transition-colors press"
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <Zap size={14} className="text-accent-red" />
-            <span className="label-cap text-accent-red">RECOMMENDED</span>
-          </div>
-          <span className="display text-2xl uppercase tracking-wide font-extrabold text-grit block">
-            Generate Schedule
-          </span>
-          <p className="text-xs text-[#8a8a8a] mt-1">
-            A short guided setup. We build your first week.
-          </p>
-        </button>
-        <button
-          onClick={() => onPick("BUILD")}
-          className="bg-grit-card border border-grit rounded-3xl p-6 text-left hover:border-accent-red transition-colors press"
-        >
-          <span className="display text-2xl uppercase tracking-wide font-extrabold text-grit block">
-            Build Your Own
-          </span>
-          <p className="text-xs text-[#8a8a8a] mt-1">
-            Start with a safe week, then replace anything — exercises, sets and reps.
-          </p>
-        </button>
-      </div>
-    </>
+function ModeStep({ name, onPick }: { name: string; onPick: (m: Mode) => void }) {
+  const [chosen, setChosen] = useState<Mode | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
   );
-}
 
-const ONBOARDING_PRS: Array<{
-  id: string;
-  label: string;
-  unit: string;
-  placeholder: string;
-}> = [
-  { id: "bench-press", label: "Bench Press", unit: "kg", placeholder: "80" },
-  { id: "squat", label: "Back Squat", unit: "kg", placeholder: "100" },
-  { id: "deadlift", label: "Deadlift", unit: "kg", placeholder: "120" },
-];
-
-function PRStep({ onContinue }: { onContinue: () => void }) {
-  const [vals, setVals] = useState<Record<string, string>>({});
-
-  function commit() {
-    const today = isoDay();
-    const manualPRs: Record<string, { value: number; reps?: number; date: string }> = {};
-    for (const pr of ONBOARDING_PRS) {
-      const n = Number(vals[pr.id]);
-      if (n > 0) {
-        manualPRs[pr.id] =
-          pr.unit === "kg" ? { value: n, reps: 1, date: today } : { value: n, date: today };
-      }
-    }
-    if (Object.keys(manualPRs).length) {
-      setState((s) => ({ ...s, manualPRs: { ...(s.manualPRs ?? {}), ...manualPRs } }));
-    }
-    onContinue();
+  function pick(mode: Mode) {
+    if (chosen) return;
+    setChosen(mode);
+    hapticSelection();
+    timer.current = setTimeout(() => onPick(mode), 250);
   }
 
   return (
-    <>
-      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">Your PRs</h1>
-      <p className="text-sm text-[#8a8a8a] mb-6">
-        Best single lift for each. Rough numbers are fine — leave blank to skip.
+    <div className="flex flex-1 flex-col">
+      <p className="label-cap text-accent-red text-[10px] mb-1">
+        {name ? `THAT'S EVERYTHING, ${name.toUpperCase()}` : "THAT'S EVERYTHING"}
       </p>
-      <div className="flex flex-col gap-3 mb-6">
-        {ONBOARDING_PRS.map((pr) => (
-          <div
-            key={pr.id}
-            className="bg-grit-card border border-grit rounded-xl p-4 flex items-center justify-between gap-4"
-          >
-            <div className="min-w-0">
-              <p className="display text-base font-extrabold uppercase text-grit truncate">
-                {pr.label}
-              </p>
-              <p className="label-cap text-[9px] text-grit-dim mt-0.5">1-rep max · optional</p>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <input
-                defaultValue={vals[pr.id] ?? ""}
-                onChange={(e) => {
-                  const clean = e.target.value.replace(/[^0-9.]/g, "");
-                  e.target.value = clean;
-                  setVals((v) => ({ ...v, [pr.id]: clean }));
-                }}
-                inputMode="decimal"
-                placeholder={pr.placeholder}
-                className="input-grit w-24 h-12 text-center text-xl font-display font-extrabold"
-                aria-label={`${pr.label} one-rep max in kilograms`}
-              />
-              <span className="label-cap text-[10px] text-grit-dim">{pr.unit}</span>
-            </div>
+      <h1 className="display text-[1.9rem] font-black uppercase leading-[1.02] text-grit">
+        How should we build your week?
+      </h1>
+      <p className="mt-2 text-sm leading-relaxed text-grit-dim">
+        Either way you review the week before anything is saved, and you can change every session
+        later.
+      </p>
+      <div className="mt-7 flex flex-col gap-2.5">
+        <button
+          onClick={() => pick("GENERATE")}
+          aria-pressed={chosen === "GENERATE"}
+          style={{ animationDelay: "60ms" }}
+          className={`deadset-option rounded-3xl border-2 border-accent-red bg-grit-card p-6 text-left press ${
+            chosen === "GENERATE" ? "deadset-option-chosen" : chosen ? "deadset-option-dimmed" : ""
+          }`}
+        >
+          <div className="mb-1 flex items-center gap-2">
+            <Zap size={14} className="text-accent-red" />
+            <span className="label-cap text-accent-red">RECOMMENDED</span>
           </div>
-        ))}
-      </div>
-      <div className="mt-auto flex flex-col gap-3">
-        <button onClick={commit} className="btn-grit">
-          Continue
+          <span className="display block text-2xl font-extrabold uppercase tracking-wide text-grit">
+            Generate it for me
+          </span>
+          <p className="mt-1 text-xs text-grit-dim">
+            We build your first week from everything you just told us.
+          </p>
         </button>
-        <button onClick={onContinue} className="btn-ghost">
-          Skip for now
+        <button
+          onClick={() => pick("BUILD")}
+          aria-pressed={chosen === "BUILD"}
+          style={{ animationDelay: "115ms" }}
+          className={`deadset-option rounded-3xl border border-grit bg-grit-card p-6 text-left hover:border-accent-red press ${
+            chosen === "BUILD" ? "deadset-option-chosen" : chosen ? "deadset-option-dimmed" : ""
+          }`}
+        >
+          <span className="display block text-2xl font-extrabold uppercase tracking-wide text-grit">
+            Build it myself
+          </span>
+          <p className="mt-1 text-xs text-grit-dim">
+            Start from a safe week, then replace anything — exercises, sets and reps.
+          </p>
         </button>
       </div>
-    </>
+    </div>
   );
 }
 
-/**
- * Asks which weekdays the lifter trains rather than only how many. The count
- * alone left `defaultSchedule` guessing — three days was always Mon/Wed/Fri,
- * whatever the lifter's week actually looked like.
- */
 function TrainingDaysStep({
+  name,
   initial,
   onPreview,
   onSubmit,
 }: {
+  name: string;
   initial?: DayKey[];
   onPreview: (days: DayKey[]) => void;
   onSubmit: (days: DayKey[]) => void;
@@ -1805,13 +1672,14 @@ function TrainingDaysStep({
   const [days, setDays] = useState<DayKey[]>(initial ?? ["MON", "WED", "FRI"]);
   const enough = days.length >= MIN_TRAINING_DAYS;
   return (
-    <>
-      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">
-        Which days do you train?
+    <div className="flex flex-1 flex-col">
+      <p className="label-cap text-accent-red text-[10px] mb-1">YOUR WEEK</p>
+      <h1 className="display text-[1.9rem] font-black uppercase leading-[1.02] text-grit">
+        {name ? `When do you train, ${name}?` : "Which days do you train?"}
       </h1>
-      <p className="text-sm text-[#8a8a8a] mb-6">
-        Tap the days that suit your week. We'll put your workouts on exactly those days and rest you
-        on the others.
+      <p className="mt-2 mb-6 text-sm leading-relaxed text-grit-dim">
+        Tap the days that suit your week. Workouts land on exactly those days and you rest on the
+        others.
       </p>
 
       <WeekdayPicker
@@ -1832,25 +1700,27 @@ function TrainingDaysStep({
         )}
       </p>
 
-      <div className="mt-auto flex flex-col gap-3">
+      <div className="mt-auto flex flex-col gap-3 pt-6">
         <button
           onClick={() => onSubmit(days)}
           disabled={!enough}
-          className="btn-grit disabled:opacity-40"
+          className="btn-grit min-h-14 disabled:opacity-40"
         >
           Continue
         </button>
       </div>
-    </>
+    </div>
   );
 }
 
 function FocusStep({
   initial,
+  onPreview,
   onSubmit,
   onSkip,
 }: {
   initial?: FocusMuscle[];
+  onPreview: (muscles: FocusMuscle[]) => void;
   onSubmit: (muscles: FocusMuscle[]) => void;
   onSkip: () => void;
 }) {
@@ -1864,26 +1734,36 @@ function FocusStep({
     { v: "CORE", l: "Core" },
   ];
   function toggle(m: FocusMuscle) {
-    setPicked((cur) =>
-      cur.includes(m) ? cur.filter((x) => x !== m) : cur.length < 2 ? [...cur, m] : [cur[1], m],
-    );
+    hapticSelection();
+    // Two priorities at most. A third pushes the oldest out rather than being
+    // ignored, so a tap always does something visible.
+    const next = picked.includes(m)
+      ? picked.filter((x) => x !== m)
+      : picked.length < 2
+        ? [...picked, m]
+        : [picked[1], m];
+    setPicked(next);
+    // The muscle map above this screen lights up as they choose.
+    onPreview(next);
   }
   return (
-    <>
-      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">
+    <div className="flex flex-1 flex-col">
+      <p className="label-cap text-accent-red text-[10px] mb-1">PICK UP TO TWO</p>
+      <h1 className="display text-[1.9rem] font-black uppercase leading-[1.02] text-grit">
         What do you want to grow?
       </h1>
-      <p className="text-sm text-[#8a8a8a] mb-6">
-        Pick up to two priority muscles. Your split gets extra volume where you want it.
+      <p className="mt-2 mb-6 text-sm leading-relaxed text-grit-dim">
+        Your split gets extra volume where you want it. Watch the map above change as you pick.
       </p>
-      <div className="grid grid-cols-2 gap-2 mb-6">
+      <div className="deadset-step-stagger mb-6 grid grid-cols-2 gap-2">
         {OPTIONS.map((o) => {
           const active = picked.includes(o.v);
           return (
             <button
               key={o.v}
               onClick={() => toggle(o.v)}
-              className="border rounded-2xl p-4 text-left press"
+              aria-pressed={active}
+              className="deadset-option rounded-2xl border p-4 text-left press"
               style={{
                 borderColor: active ? "#e63222" : "#262626",
                 background: active ? "rgba(230,50,34,0.1)" : "#141414",
@@ -1891,7 +1771,7 @@ function FocusStep({
             >
               <p className="display text-lg font-extrabold uppercase text-grit">{o.l}</p>
               <p
-                className="label-cap text-[9px] mt-0.5"
+                className="label-cap mt-0.5 text-[9px]"
                 style={{ color: active ? "#e63222" : "#8a8a8a" }}
               >
                 {active ? "PRIORITY" : "TAP TO PICK"}
@@ -1904,7 +1784,7 @@ function FocusStep({
         <button
           onClick={() => onSubmit(picked)}
           disabled={picked.length === 0}
-          className="btn-grit disabled:opacity-40"
+          className="btn-grit min-h-14 disabled:opacity-40"
         >
           Continue
         </button>
@@ -1912,70 +1792,7 @@ function FocusStep({
           No preference
         </button>
       </div>
-    </>
-  );
-}
-
-function TargetStep({
-  unit,
-  currentKg,
-  goal,
-  initial,
-  onSubmit,
-  onSkip,
-}: {
-  unit: WeightUnit;
-  currentKg?: number;
-  goal?: Goal;
-  initial?: number;
-  onSubmit: (n: number) => void;
-  onSkip: () => void;
-}) {
-  const [v, setV] = useState(initial != null ? formatWeightValue(initial, unit) : "");
-  const n = Number(v);
-  // Bounds are a human weight range in kilograms; the typed number is not.
-  const targetKg = toKg(n, unit);
-  const valid = Number.isFinite(n) && targetKg >= 30 && targetKg <= 250;
-  const hint =
-    goal === "BULK"
-      ? "Where do you want the scale in 6 months?"
-      : goal === "CUT"
-        ? "What weight are you cutting to?"
-        : "A number to aim at keeps the log honest.";
-  return (
-    <>
-      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-2">Target weight</h1>
-      <p className="text-sm text-[#8a8a8a] mb-6">
-        {hint}
-        {currentKg ? ` You're at ${formatWeightValue(currentKg, unit)}${unit} now.` : ""}
-      </p>
-      <div className="flex items-center gap-3 mb-6">
-        <input
-          defaultValue={v}
-          onChange={(e) => {
-            const c = e.target.value.replace(/[^0-9.]/g, "");
-            e.target.value = c;
-            setV(c);
-          }}
-          inputMode="decimal"
-          placeholder={currentKg ? formatWeightValue(currentKg, unit) : "80"}
-          className="input-grit text-2xl display font-extrabold"
-        />
-        <span className="label-cap text-grit-dim">{unit}</span>
-      </div>
-      <div className="mt-auto flex flex-col gap-3">
-        <button
-          onClick={() => valid && onSubmit(targetKg)}
-          disabled={!valid}
-          className="btn-grit disabled:opacity-40"
-        >
-          Continue
-        </button>
-        <button onClick={onSkip} className="btn-ghost">
-          Skip
-        </button>
-      </div>
-    </>
+    </div>
   );
 }
 
@@ -2150,16 +1967,18 @@ function NotificationStep({ onContinue }: { onContinue: () => void }) {
 // lines tick over with a filling progress bar, then auto-advances.
 function AnalyzingStep({ draft, onDone }: { draft: Partial<Profile>; onDone: () => void }) {
   const p = draft as Profile;
+  const name = firstNameOf(draft);
   const focus = (p.focusMuscles ?? []).join(" + ").toLowerCase();
   const lines = useMemo(
     () => [
-      "Reading your goals and your why",
+      "Reading your goal and your why",
       `Calibrating a ${p.daysPerWeek ?? 4}-day split${focus ? ` with extra ${focus}` : ""}`,
+      `Spacing recovery around ${p.sessionMinutes ?? 45}-minute sessions`,
       "Setting your calorie and protein targets",
       "Benchmarking your lifts against the standards",
       "Locking in your ranked starting point",
     ],
-    [p.daysPerWeek, focus],
+    [p.daysPerWeek, p.sessionMinutes, focus],
   );
   const [done, setDone] = useState(0);
   useEffect(() => {
@@ -2173,8 +1992,12 @@ function AnalyzingStep({ draft, onDone }: { draft: Partial<Profile>; onDone: () 
   const pct = Math.round((done / lines.length) * 100);
   return (
     <div className="flex-1 flex flex-col justify-center">
-      <p className="label-cap text-accent-red text-[10px] mb-1">Building your blueprint</p>
-      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-8">Locking you in…</h1>
+      <p className="label-cap text-accent-red text-[10px] mb-1">
+        {name ? `BUILDING ${name.toUpperCase()}'S WEEK` : "BUILDING YOUR WEEK"}
+      </p>
+      <h1 className="display mb-8 text-[2.1rem] font-black uppercase leading-[1.02] text-grit">
+        Locking you in…
+      </h1>
       <div className="flex flex-col gap-3 mb-8">
         {lines.map((line, i) => (
           <div
@@ -2201,79 +2024,6 @@ function AnalyzingStep({ draft, onDone }: { draft: Partial<Profile>; onDone: () 
         />
       </div>
       <p className="text-center label-cap text-grit-dim text-[10px] mt-3">{pct}%</p>
-    </div>
-  );
-}
-
-// The lock-in finale: a first-person pledge with a chosen horizon and target
-// date. Tapping "I'm locked in" is the final onboarding action (triggers save).
-function CommitStep({
-  draft,
-  onCommit,
-}: {
-  draft: Partial<Profile>;
-  onCommit: (commitmentDate: string) => void;
-}) {
-  const p = draft as Profile;
-  const name = p.displayName?.trim() || p.username || "Athlete";
-  const goalLine =
-    (
-      {
-        BULK: "build serious size",
-        CUT: "get lean and defined",
-        MAINTAIN: "stay strong and sharp",
-        ATHLETIC: "perform like an athlete",
-      } as Record<string, string>
-    )[p.goal] ?? "transform";
-  const [horizon, setHorizon] = useState(90);
-  const targetDate = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + horizon);
-    return d;
-  }, [horizon]);
-  const iso = targetDate.toISOString().slice(0, 10);
-  const pretty = targetDate.toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-  return (
-    <div className="flex-1 flex flex-col">
-      <p className="label-cap text-accent-red text-[10px] mb-1">The last step is a promise</p>
-      <h1 className="display text-3xl font-extrabold uppercase text-grit mb-5">Lock in.</h1>
-      <div className="deadset-3d-panel border border-accent-red/40 bg-[#0c0c0c] p-5 mb-6">
-        <p className="text-sm text-grit leading-relaxed">
-          I, <span className="font-extrabold text-white">{name}</span>, am done starting over. For
-          the next <span className="text-accent-red font-bold">{horizon} days</span> I show up, I
-          log every session, and I {goalLine}. No excuses.
-        </p>
-        <p className="label-cap text-[9px] text-grit-dim mt-4">Target date</p>
-        <p className="display text-xl font-extrabold text-white">{pretty}</p>
-      </div>
-      <p className="label-cap text-[10px] text-grit-dim mb-2">Choose your horizon</p>
-      <div className="grid grid-cols-3 gap-2 mb-auto">
-        {[30, 90, 180].map((d) => (
-          <button
-            key={d}
-            onClick={() => setHorizon(d)}
-            className="py-3 rounded-xl border press font-bold text-sm"
-            style={{
-              background: horizon === d ? "rgba(230,50,34,0.12)" : "#141414",
-              borderColor: horizon === d ? "#e63222" : "#262626",
-              color: horizon === d ? "#fff" : "#8A8A8A",
-            }}
-          >
-            {d} days
-          </button>
-        ))}
-      </div>
-      <button
-        onClick={() => onCommit(iso)}
-        className="btn-grit w-full mt-6 py-4 text-base animate-subtle-pulse"
-      >
-        <Zap size={16} className="mr-2" />
-        I&apos;m locked in
-      </button>
     </div>
   );
 }
