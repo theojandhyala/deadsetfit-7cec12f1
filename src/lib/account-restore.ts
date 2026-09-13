@@ -1,4 +1,13 @@
-import type { Equipment, Experience, FocusMuscle, Gender, Goal, Profile } from "./types";
+import type {
+  DayKey,
+  Equipment,
+  Experience,
+  FocusMuscle,
+  Gender,
+  Goal,
+  Profile,
+  Weakness,
+} from "./types";
 
 type AccountProfile = {
   onboarded?: boolean | null;
@@ -22,6 +31,13 @@ type AccountProfile = {
       sessionMinutes?: number;
       exercisesPerSession?: number;
       targetWeightKg?: number;
+      trainingDays?: string[];
+      injuries?: string;
+      weakness?: string;
+      motivation?: string;
+      sleepQuality?: string;
+      dreamOutcome?: string;
+      startingWeightKg?: number;
     };
   } | null;
 };
@@ -30,6 +46,9 @@ const goals = new Set<Goal>(["BULK", "CUT", "MAINTAIN", "ATHLETIC"]);
 const experiences = new Set<Experience>(["BEGINNER", "INTERMEDIATE", "ADVANCED"]);
 const genders = new Set<Gender>(["MALE", "FEMALE", "OTHER"]);
 const equipment = new Set<Equipment>(["FULL_GYM", "HOME_GYM", "BODYWEIGHT"]);
+const weaknesses = new Set<Weakness>(["STRENGTH", "CONSISTENCY", "DIET", "RECOVERY"]);
+const sleepBands = new Set(["LOW", "OK", "GOOD", "GREAT"]);
+const DAY_SET = new Set<DayKey>(["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]);
 
 export async function withTimeout<T>(
   promise: PromiseLike<T>,
@@ -79,7 +98,11 @@ export function profileFromAccount(row: AccountProfile | null | undefined): Prof
     bio: row.bio ?? undefined,
     city: row.city ?? undefined,
     country: row.country ?? undefined,
-    startingWeightKg: Number(row.weight_kg ?? 75),
+    // startingWeightKg is deliberately NOT defaulted to the current weight.
+    // Doing that told every rebuilt device the athlete had not moved a gram
+    // since day one, silently wiping the whole weight journey. It is restored
+    // from prefs when it was really recorded, and otherwise left absent — every
+    // reader already falls back to the current weight for that case.
     ...restorePrefs(row),
   };
 }
@@ -105,6 +128,31 @@ function restorePrefs(row: AccountProfile): Partial<Profile> {
   }
   if (typeof prefs.targetWeightKg === "number" && prefs.targetWeightKg > 0) {
     out.targetWeightKg = prefs.targetWeightKg;
+  }
+
+  // Which weekdays, not just how many. Without this a rebuilt device moves a
+  // Tue/Thu/Sat lifter onto a Mon-first spread and calls it their schedule.
+  const days = (prefs.trainingDays ?? []).filter((day): day is DayKey =>
+    DAY_SET.has(day as DayKey),
+  );
+  if (days.length) out.trainingDays = days;
+
+  // Answers that shape coaching and framing rather than the split. They were
+  // asked for and then dropped on every rebuild, which is worse than never
+  // asking: an injury the athlete declared quietly stopped being worked around.
+  if (typeof prefs.injuries === "string" && prefs.injuries.trim()) {
+    out.injuries = prefs.injuries.slice(0, 500);
+  }
+  if (weaknesses.has(prefs.weakness as Weakness)) out.weakness = prefs.weakness as Weakness;
+  if (typeof prefs.motivation === "string" && prefs.motivation) out.motivation = prefs.motivation;
+  if (sleepBands.has(prefs.sleepQuality ?? "")) {
+    out.sleepQuality = prefs.sleepQuality as Profile["sleepQuality"];
+  }
+  if (typeof prefs.dreamOutcome === "string" && prefs.dreamOutcome) {
+    out.dreamOutcome = prefs.dreamOutcome;
+  }
+  if (typeof prefs.startingWeightKg === "number" && prefs.startingWeightKg > 0) {
+    out.startingWeightKg = prefs.startingWeightKg;
   }
   return out;
 }

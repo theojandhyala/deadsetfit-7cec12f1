@@ -42,14 +42,24 @@ import { WeekdayPicker } from "@/components/WeekdayPicker";
 import { daysPerWeekFor, describeDays, MIN_TRAINING_DAYS } from "@/lib/training-days";
 import { buildPublicStats } from "@/lib/fifa-stats";
 import { currencyForCountry, detectCountry, type SupportedCurrency } from "@/lib/currency";
-import { toDisplay, toKg, trimNumber, type WeightUnit } from "@/lib/units";
+import { formatWeight, toDisplay, toKg, trimNumber, type WeightUnit } from "@/lib/units";
 import {
+  DEEPER_QUESTION_COUNT,
   ONBOARDING_CHAPTERS,
   onboardingOrder,
   onboardingStageLabel,
   type OnboardingActiveStep,
+  type OnboardingDepth,
   type OnboardingMode,
 } from "@/lib/onboarding-flow";
+import {
+  applyStartingLifts,
+  parseStartingLift,
+  STARTING_LIFTS,
+  startingLiftOneRm,
+  type StartingLift,
+  type StartingLiftDraft,
+} from "@/lib/starting-lifts";
 import { hapticFailure, hapticSaved, hapticSelection } from "@/lib/haptics";
 import { deriveLiveSetupBlueprint } from "@/lib/setup-blueprint";
 import { normaliseDecimalInput } from "@/lib/programme-weight-setup";
@@ -128,6 +138,10 @@ function Onboarding() {
   const [idx, setIdx] = useState(0);
   const [direction, setDirection] = useState<"forward" | "back">("forward");
   const [mode, setMode] = useState<Mode | null>(null);
+  // Chosen at the `depth` fork. Until then setup is the express walk, so the
+  // header never promises more screens than the athlete has agreed to.
+  const [depth, setDepth] = useState<OnboardingDepth | null>(null);
+  const [startingLifts, setStartingLifts] = useState<StartingLift[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Partial<Profile>>({});
   // Not part of Profile — it lives on app state — but it has to be chosen here,
@@ -138,7 +152,7 @@ function Onboarding() {
   const save = saveProfile;
   const saveFullState = saveUserState;
   const getProfile = getMyProfile;
-  const ORDER = useMemo(() => onboardingOrder(mode) as Step[], [mode]);
+  const ORDER = useMemo(() => onboardingOrder(depth), [depth]);
   const step = ORDER[idx];
 
   useEffect(() => {
@@ -258,7 +272,16 @@ function Onboarding() {
       // BUILD starts in edit mode, but it must still finish with a usable first
       // week. Saving an empty schedule strands the athlete on Train.
       const sched = draftSchedule ?? defaultSchedule(p);
-      const publicStats = buildPublicStats({ ...getState(), profile: p, schedule: sched });
+      // Declared lifts become records AND day-one working weights, so the
+      // Strength Map is live on the first open and the first session opens with
+      // real numbers instead of blanks. Applied before public stats are built
+      // so the card and grades reflect them immediately.
+      const seeded = applyStartingLifts(
+        { ...getState(), profile: p, schedule: sched, units },
+        startingLifts,
+        units,
+      );
+      const publicStats = buildPublicStats(seeded);
       save({
         data: {
           username: p.username,
@@ -278,7 +301,7 @@ function Onboarding() {
       })
         .then(async () => {
           setLocalStateOwner(userId);
-          const nextState = { ...getState(), profile: p, schedule: sched, units };
+          const nextState = { ...seeded, profile: p, schedule: seeded.schedule ?? sched, units };
           setState(() => nextState);
           await saveFullState({ data: { data: JSON.stringify(nextState) } }).catch(() => {
             toast.warning("Setup saved locally. We'll keep trying to sync it.");
@@ -338,8 +361,8 @@ function Onboarding() {
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
       <header className="px-6 pt-10 pb-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-3">
             {idx > 0 && (
               <button
                 onClick={() => {
@@ -353,10 +376,11 @@ function Onboarding() {
                 <ChevronLeft size={18} />
               </button>
             )}
-            <GritLogo className="w-28" />
+            <GritLogo className="w-24 shrink-0 sm:w-28" />
           </div>
-          <span className="label-cap text-[9px]">
-            {idx === 0 ? "LIVE SETUP" : `${chapter} · ${idx} / ${ORDER.length - 1}`}
+          {/* Shrink-proof: at 320px the wordmark and this label used to collide. */}
+          <span className="label-cap shrink-0 whitespace-nowrap text-[9px]">
+            {idx === 0 ? "LIVE SETUP" : `${chapter} · ${idx}/${ORDER.length - 1}`}
           </span>
         </div>
 
@@ -418,36 +442,6 @@ function Onboarding() {
               { v: "ATHLETIC", l: "Athletic performance", sub: "Power, speed and work capacity." },
             ]}
             onPick={(v) => next({ goal: v as Goal })}
-          />
-        )}
-        {step === "why" && (
-          <Choice
-            eyebrow="No wrong answer — be honest"
-            title="Why are you really here?"
-            options={[
-              {
-                v: "STRONGER",
-                l: "Get seriously strong",
-                sub: "Move real weight. Numbers that shut people up.",
-              },
-              { v: "PHYSIQUE", l: "Build the physique", sub: "Look like you lift. Head-turning." },
-              {
-                v: "CONFIDENCE",
-                l: "Feel confident again",
-                sub: "In my own skin, in the mirror, everywhere.",
-              },
-              {
-                v: "DISCIPLINE",
-                l: "Prove I can commit",
-                sub: "No more starting and quitting. This time it sticks.",
-              },
-              {
-                v: "COMPETE",
-                l: "Compete and win",
-                sub: "Rank up, beat rivals, top the leaderboard.",
-              },
-            ]}
-            onPick={(v) => next({ motivation: v })}
           />
         )}
         {step === "gender" && (
@@ -558,6 +552,45 @@ function Onboarding() {
             }
           />
         )}
+        {step === "depth" && (
+          <DepthStep
+            name={name}
+            onPick={(chosen) => {
+              setDepth(chosen);
+              next({});
+            }}
+          />
+        )}
+        {step === "why" && (
+          <Choice
+            eyebrow="No wrong answer — be honest"
+            title="Why are you really here?"
+            options={[
+              {
+                v: "STRONGER",
+                l: "Get seriously strong",
+                sub: "Move real weight. Numbers that shut people up.",
+              },
+              { v: "PHYSIQUE", l: "Build the physique", sub: "Look like you lift. Head-turning." },
+              {
+                v: "CONFIDENCE",
+                l: "Feel confident again",
+                sub: "In my own skin, in the mirror, everywhere.",
+              },
+              {
+                v: "DISCIPLINE",
+                l: "Prove I can commit",
+                sub: "No more starting and quitting. This time it sticks.",
+              },
+              {
+                v: "COMPETE",
+                l: "Compete and win",
+                sub: "Rank up, beat rivals, top the leaderboard.",
+              },
+            ]}
+            onPick={(v) => next({ motivation: v })}
+          />
+        )}
         {step === "sleep" && (
           <Choice
             eyebrow="Recovery is where you actually grow"
@@ -586,6 +619,27 @@ function Onboarding() {
               { v: "RECOVERY", l: "I burn out", sub: "We'll protect your rest days." },
             ]}
             onPick={(v) => next({ weakness: v as Weakness })}
+          />
+        )}
+        {step === "injuries" && (
+          <InjuriesStep
+            initial={draft.injuries}
+            onSubmit={(text) => next({ injuries: text })}
+            onSkip={() => next({ injuries: "" })}
+          />
+        )}
+        {step === "lifts" && (
+          <StartingLiftsStep
+            unit={units}
+            initial={startingLifts}
+            onSubmit={(lifts) => {
+              setStartingLifts(lifts);
+              next({});
+            }}
+            onSkip={() => {
+              setStartingLifts([]);
+              next({});
+            }}
           />
         )}
         {step === "mode" && (
@@ -801,6 +855,300 @@ function Choice({
  * athlete's own bodyweight, every load, every strength grade computed against
  * that bodyweight — is meaningless until the number has a unit attached.
  */
+/**
+ * The fork between a fast setup and a thorough one.
+ *
+ * Everything before this screen shapes the first week and cannot be skipped.
+ * Everything after it sharpens that week, so forcing it on someone who wants to
+ * train today is how a good setup loses people at screen fifteen. The count is
+ * stated plainly: nobody should have to find out how long "go deeper" is by
+ * walking it.
+ */
+function DepthStep({ name, onPick }: { name: string; onPick: (depth: OnboardingDepth) => void }) {
+  const [chosen, setChosen] = useState<OnboardingDepth | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
+
+  function pick(depth: OnboardingDepth) {
+    if (chosen) return;
+    setChosen(depth);
+    hapticSelection();
+    timer.current = setTimeout(() => onPick(depth), 250);
+  }
+
+  const extras = [
+    "What is actually driving you",
+    "How much you sleep",
+    "What has stopped you before",
+    "Injuries to train around",
+    "Lifts you can already do",
+  ];
+
+  return (
+    <div className="flex flex-1 flex-col">
+      <p className="label-cap text-accent-red text-[10px] mb-1">
+        {name ? `GOT THE BASICS, ${name.toUpperCase()}` : "GOT THE BASICS"}
+      </p>
+      <h1 className="display text-[1.9rem] font-black uppercase leading-[1.02] text-grit">
+        Build it now, or go deeper?
+      </h1>
+      <p className="mt-2 text-sm leading-relaxed text-grit-dim">
+        We have enough to build your week. {DEEPER_QUESTION_COUNT} more questions would sharpen it —
+        and you can answer them later in Settings either way.
+      </p>
+
+      <div className="mt-7 flex flex-col gap-2.5">
+        <button
+          onClick={() => pick("FULL")}
+          aria-pressed={chosen === "FULL"}
+          style={{ animationDelay: "60ms" }}
+          className={`deadset-option rounded-3xl border-2 border-accent-red bg-grit-card p-5 text-left press ${
+            chosen === "FULL" ? "deadset-option-chosen" : chosen ? "deadset-option-dimmed" : ""
+          }`}
+        >
+          <div className="mb-1 flex items-center gap-2">
+            <Sparkles size={14} className="text-accent-red" />
+            <span className="label-cap text-accent-red">SHARPER PLAN</span>
+          </div>
+          <span className="display block text-2xl font-extrabold uppercase tracking-wide text-grit">
+            Go deeper
+          </span>
+          <p className="mt-1 text-xs text-grit-dim">
+            {DEEPER_QUESTION_COUNT} more questions, about thirty seconds.
+          </p>
+        </button>
+        <button
+          onClick={() => pick("EXPRESS")}
+          aria-pressed={chosen === "EXPRESS"}
+          style={{ animationDelay: "115ms" }}
+          className={`deadset-option rounded-3xl border border-grit bg-grit-card p-5 text-left hover:border-accent-red press ${
+            chosen === "EXPRESS" ? "deadset-option-chosen" : chosen ? "deadset-option-dimmed" : ""
+          }`}
+        >
+          <span className="display block text-2xl font-extrabold uppercase tracking-wide text-grit">
+            Build it now
+          </span>
+          <p className="mt-1 text-xs text-grit-dim">
+            Straight to your week. Nothing is missing that stops you training.
+          </p>
+        </button>
+      </div>
+
+      <div className="deadset-step-stagger mt-6">
+        <p className="label-cap text-[9px] text-grit-dim">GOING DEEPER ADDS</p>
+      </div>
+      <ul className="mt-2 grid gap-1.5">
+        {extras.map((extra) => (
+          <li key={extra} className="flex items-center gap-2.5 text-[11px] text-grit-dim">
+            <span className="h-1 w-1 shrink-0 rounded-full bg-accent-red" aria-hidden="true" />
+            {extra}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * Anything that hurts.
+ *
+ * Free text rather than a checklist: a knee that only complains on deep squats
+ * is not a checkbox, and a list of common injuries teaches people to pick the
+ * nearest wrong one.
+ */
+function InjuriesStep({
+  initial,
+  onSubmit,
+  onSkip,
+}: {
+  initial?: string;
+  onSubmit: (text: string) => void;
+  onSkip: () => void;
+}) {
+  const [shadow, setShadow] = useState(initial ?? "");
+  const text = shadow.trim().slice(0, 500);
+  return (
+    <div className="flex flex-1 flex-col">
+      <p className="label-cap text-accent-red text-[10px] mb-1">OPTIONAL</p>
+      <h1 className="display text-[1.9rem] font-black uppercase leading-[1.02] text-grit">
+        Anything we should train around?
+      </h1>
+      <p className="mt-2 text-sm leading-relaxed text-grit-dim">
+        Old injuries, a dodgy shoulder, a knee that hates deep squats. Kept private — it never
+        appears on your card or the feed.
+      </p>
+      <textarea
+        defaultValue={initial ?? ""}
+        onChange={(e) => setShadow(e.target.value)}
+        maxLength={500}
+        rows={4}
+        className="input-grit mt-8 resize-none text-base leading-relaxed"
+        placeholder="Left shoulder clicks on overhead pressing…"
+        aria-label="Injuries or limitations"
+      />
+      <p className="mt-2 text-right text-[10px] text-grit-dim">{text.length}/500</p>
+      <div className="mt-auto flex flex-col gap-3 pt-6">
+        <button
+          onClick={() => (text ? onSubmit(text) : onSkip())}
+          className="btn-grit min-h-14 w-full"
+        >
+          Continue
+        </button>
+        <button onClick={onSkip} className="btn-ghost">
+          Nothing to flag
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Lifts already in the bank.
+ *
+ * The single highest-value optional question in setup: it turns a grey Strength
+ * Map into a graded one before the first session, and fills the first week's
+ * working weights so nobody opens Train to a column of blanks. Each row is a
+ * set the athlete says they can genuinely do — not a one-rep max they are
+ * guessing at — because the weight they name is used as the starting load
+ * directly, and a guessed max would become a bar nobody can lift.
+ */
+function StartingLiftsStep({
+  unit,
+  initial,
+  onSubmit,
+  onSkip,
+}: {
+  unit: WeightUnit;
+  initial: StartingLift[];
+  onSubmit: (lifts: StartingLift[]) => void;
+  onSkip: () => void;
+}) {
+  const [drafts, setDrafts] = useState<Record<string, StartingLiftDraft>>(() =>
+    Object.fromEntries(
+      initial.map((lift) => [
+        lift.exerciseId,
+        { weight: trimNumber(toDisplay(lift.weightKg, unit)), reps: String(lift.reps) },
+      ]),
+    ),
+  );
+
+  const parsed = STARTING_LIFTS.map((entry) =>
+    parseStartingLift(entry.id, drafts[entry.id], unit),
+  ).filter((lift): lift is StartingLift => lift !== null);
+
+  function set(id: string, patch: Partial<StartingLiftDraft>) {
+    setDrafts((current) => ({
+      ...current,
+      [id]: { weight: current[id]?.weight ?? "", reps: current[id]?.reps ?? "", ...patch },
+    }));
+  }
+
+  return (
+    <div className="flex flex-1 flex-col">
+      <p className="label-cap text-accent-red text-[10px] mb-1">OPTIONAL — SKIP ANY</p>
+      <h1 className="display text-[1.9rem] font-black uppercase leading-[1.02] text-grit">
+        What can you already lift?
+      </h1>
+      <p className="mt-2 text-sm leading-relaxed text-grit-dim">
+        A set you know you can do — not a max you are guessing at. We start your week at these
+        weights and grade your Strength Map from day one.
+      </p>
+
+      {/*
+        grid-cols-1 is load-bearing: an implicit grid column sizes to its widest
+        item, so without it this column stretches to the row's max-content width
+        and every card overflows the screen.
+      */}
+      <div className="deadset-step-stagger mt-7 grid grid-cols-1 gap-2">
+        {STARTING_LIFTS.map((entry) => {
+          const draft = drafts[entry.id];
+          const lift = parseStartingLift(entry.id, draft, unit);
+          return (
+            <div
+              key={entry.id}
+              className="min-w-0 rounded-2xl border p-3.5"
+              style={{
+                borderColor: lift ? "#e63222" : "#262626",
+                background: lift ? "rgba(230,50,34,0.07)" : "#141414",
+              }}
+            >
+              {/*
+                Label above the controls rather than beside them. Sharing one
+                line means the name, the weight, the unit and the reps all have
+                to fit in 390px, and the name is what loses.
+              */}
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="display min-w-0 truncate text-base font-extrabold uppercase text-grit">
+                  {entry.label}
+                </p>
+                <span className="label-cap shrink-0 text-[9px] text-grit-dim">
+                  {lift ? "LOGGED" : "OPTIONAL"}
+                </span>
+              </div>
+              <div className="mt-2.5 flex items-center gap-1.5">
+                <input
+                  defaultValue={draft?.weight ?? ""}
+                  onChange={(e) => {
+                    const clean = normaliseDecimalInput(e.target.value);
+                    e.target.value = clean;
+                    set(entry.id, { weight: clean });
+                  }}
+                  inputMode="decimal"
+                  placeholder={entry.hint}
+                  aria-label={`${entry.label} weight in ${unit}`}
+                  className="deadset-lift-input min-w-0 flex-1"
+                />
+                <span className="label-cap w-5 shrink-0 text-[9px] text-grit-dim">{unit}</span>
+                <span className="shrink-0 text-grit-dim" aria-hidden="true">
+                  &times;
+                </span>
+                <input
+                  defaultValue={draft?.reps ?? ""}
+                  onChange={(e) => {
+                    const clean = e.target.value.replace(/[^0-9]/g, "").slice(0, 2);
+                    e.target.value = clean;
+                    set(entry.id, { reps: clean });
+                  }}
+                  inputMode="numeric"
+                  placeholder="5"
+                  aria-label={`${entry.label} repetitions`}
+                  className="deadset-lift-input w-14 shrink-0"
+                />
+                <span className="label-cap shrink-0 text-[9px] text-grit-dim">reps</span>
+              </div>
+              {lift && (
+                <p className="label-cap mt-2 text-[9px] text-accent-red">
+                  ≈ {formatWeight(startingLiftOneRm(lift), unit)} ONE-REP MAX
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-auto flex flex-col gap-3 pt-6">
+        <button
+          onClick={() => (parsed.length ? onSubmit(parsed) : onSkip())}
+          className="btn-grit min-h-14 w-full"
+        >
+          {parsed.length
+            ? `Continue — ${parsed.length} lift${parsed.length === 1 ? "" : "s"} logged`
+            : "Continue"}
+        </button>
+        <button onClick={onSkip} className="btn-ghost">
+          I&apos;ll log these later
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function UnitsStep({
   value,
   onSubmit,

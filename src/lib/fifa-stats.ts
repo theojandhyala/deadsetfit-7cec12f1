@@ -310,6 +310,13 @@ export interface PublicStats {
     sessionMinutes?: number;
     exercisesPerSession?: number;
     targetWeightKg?: number;
+    trainingDays?: string[];
+    injuries?: string;
+    weakness?: string;
+    motivation?: string;
+    sleepQuality?: string;
+    dreamOutcome?: string;
+    startingWeightKg?: number;
   };
 }
 
@@ -379,11 +386,22 @@ export function buildPublicStats(state: AppState): PublicStats {
     heightCm: state.profile?.heightCm,
     // Blob-only preferences mirrored to the account row so a fresh-device
     // restore via the profile row can't erase them.
+    // Everything setup asks for that has no column of its own. The profile row
+    // only stores a handful of fields, so anything not mirrored here is lost
+    // the moment the athlete rebuilds on a new device — which is how declared
+    // injuries and the real starting bodyweight used to disappear.
     prefs: {
       focusMuscles: state.profile?.focusMuscles,
       sessionMinutes: state.profile?.sessionMinutes,
       exercisesPerSession: state.profile?.exercisesPerSession,
       targetWeightKg: state.profile?.targetWeightKg,
+      trainingDays: state.profile?.trainingDays,
+      injuries: state.profile?.injuries,
+      weakness: state.profile?.weakness,
+      motivation: state.profile?.motivation,
+      sleepQuality: state.profile?.sleepQuality,
+      dreamOutcome: state.profile?.dreamOutcome,
+      startingWeightKg: state.profile?.startingWeightKg,
     },
   };
 }
