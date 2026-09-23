@@ -14,11 +14,13 @@ import { useState } from "react";
 import { isoDay, todayKey } from "@/lib/calc";
 import { getExercise } from "@/lib/exercises";
 import { hapticSelection } from "@/lib/haptics";
+import { buildSupersetIds } from "@/lib/workout-flow";
 import type { AppState, DayKey, Program, Schedule } from "@/lib/types";
 import { formatWeight, unitOf } from "@/lib/units";
 
 import { RestDayRecovery } from "./RestDayRecovery";
 import { SupersetHint } from "./SupersetHint";
+import { TimeFitPlanner } from "./TimeFitPlanner";
 
 const DAY_FULL: Record<DayKey, string> = {
   MON: "Monday",
@@ -39,6 +41,8 @@ interface BriefRow {
   weightKg?: number;
   restSeconds?: number;
   superset: boolean;
+  supersetId?: string;
+  targetSets: number;
   bestKg: number | null;
 }
 
@@ -57,6 +61,9 @@ export function TrainWorkoutBrief({
   const day = schedule[selectedDay];
   const programDay = activeProgram?.days[selectedDay];
   const unit = unitOf(state);
+  const scheduleSupersetIds = !activeProgram
+    ? buildSupersetIds(day?.exerciseIds ?? [], day?.exerciseConfig)
+    : [];
   const rows: BriefRow[] = activeProgram
     ? (programDay?.items ?? []).map((item) => ({
         id: item.id,
@@ -67,9 +74,10 @@ export function TrainWorkoutBrief({
         weightKg: item.weightKg,
         restSeconds: item.restSeconds,
         superset: false,
+        targetSets: item.sets,
         bestKg: bestSet(state.logs, item.id),
       }))
-    : (day?.exerciseIds ?? []).flatMap((id) => {
+    : (day?.exerciseIds ?? []).flatMap((id, index) => {
         const exercise = getExercise(id, state.savedExercises);
         if (!exercise) return [];
         const config = day?.exerciseConfig?.[id];
@@ -85,6 +93,8 @@ export function TrainWorkoutBrief({
             weightKg: config?.weightKg,
             restSeconds: config?.restSeconds,
             superset: Boolean(config?.supersetWithNext),
+            supersetId: scheduleSupersetIds[index],
+            targetSets: config?.sets ?? day?.sets ?? exercise.sets,
             bestKg: bestSet(state.logs, id),
           },
         ];
@@ -238,6 +248,17 @@ export function TrainWorkoutBrief({
             <div className="px-4 pb-4">
               <SupersetHint
                 exercises={rows.map((row) => ({ name: row.name, muscle: row.muscle }))}
+              />
+              <TimeFitPlanner
+                exercises={rows.map((row) => ({
+                  exerciseId: row.id,
+                  name: row.name,
+                  targetSets: row.targetSets,
+                  restSeconds: row.restSeconds,
+                  supersetId: row.supersetId,
+                }))}
+                day={selectedDay}
+                source={activeProgram ? "program" : "schedule"}
               />
               {activeProgram && (
                 <Link

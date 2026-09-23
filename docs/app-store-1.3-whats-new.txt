@@ -1,5 +1,11 @@
 Your training. Clearer, smoother and easier to follow.
 
+TIME FIT
+Turn today's full plan into a transparent 20, 30 or 45 minute workout. See every reduced set and omitted movement before starting, while your saved programme stays untouched.
+
+SESSION RECEIPT
+Finish with a movement-by-movement comparison of planned and completed working sets, plan adherence and recorded effort.
+
 SESSION FLOW
 A new workout overview shows every movement, completed sets and unfinished work. Search your session, jump to the next unfinished exercise, and keep an eye on your elapsed time. Minimize the rest timer without stopping it, and move between exercises without resetting your countdown.
 

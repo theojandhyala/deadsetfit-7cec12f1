@@ -18,6 +18,7 @@ export type PaywallFeature =
   | "autopilot"
   | "weekly-review"
   | "pr-roadmap"
+  | "time-fit"
   | "strength";
 
 export type PaywallEvent = {

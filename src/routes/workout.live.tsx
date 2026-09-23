@@ -96,8 +96,10 @@ import { RestTimer } from "@/components/RestTimer";
 import { SessionNavigator } from "@/components/SessionNavigator";
 import { FormCoaching } from "@/components/FormCoaching";
 import { SessionReflection } from "@/components/SessionReflection";
+import { SessionPlanReview } from "@/components/SessionPlanReview";
 import { SessionExerciseSheet } from "@/components/SessionExerciseSheet";
 import { notifyRivalWorkout } from "@/lib/push-notifications.functions";
+import { fitSessionToTimeBudget, type WorkoutTimeBudget } from "@/lib/time-budget-workout";
 import type {
   AppState,
   Exercise,
@@ -124,6 +126,7 @@ type LoggedEntry = {
 type LiveWorkoutSearch = {
   day?: DayKey;
   source?: Exclude<WorkoutSource, "auto">;
+  budget?: WorkoutTimeBudget;
 };
 
 const DAY_KEYS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
@@ -134,6 +137,10 @@ export const Route = createFileRoute("/workout/live")({
     source:
       search.source === "schedule" || search.source === "program"
         ? (search.source as LiveWorkoutSearch["source"])
+        : undefined,
+    budget:
+      search.budget === 20 || search.budget === 30 || search.budget === 45
+        ? search.budget
         : undefined,
   }),
   head: () => ({ meta: [{ title: "DEADSET — Live Workout" }] }),
@@ -165,6 +172,7 @@ function buildSession(
   state: ReturnType<typeof useAppState>[0],
   dayKey: DayKey,
   source: WorkoutSource = "auto",
+  budget?: WorkoutTimeBudget,
 ): WorkoutSession | null {
   const active = state.programs.find((p) => p.id === state.activeProgramId);
   const autopilot = state.trainingAutopilot?.enabled
@@ -186,27 +194,30 @@ function buildSession(
   if (active && source !== "schedule") {
     const d = active.days[dayKey];
     if (d?.items.length) {
-      return {
-        ...base,
-        label: d.label,
-        exercises: d.items.map<WorkoutSessionExercise>((it) => {
-          const prescription = autopilotByExercise.get(it.id);
-          return {
-            exerciseId: it.id,
-            name: it.name,
-            primary_muscles: it.primary_muscles,
-            targetSets: prescription?.reduceSets ? Math.max(2, it.sets - 1) : it.sets,
-            targetReps: it.reps,
-            plannedWeightKg:
-              prescription && prescription.prescribedWeightKg > 0
-                ? prescription.prescribedWeightKg
-                : it.weightKg,
-            restSeconds: it.restSeconds,
-            ...resolveTracking(state, it.id, it.name, it.reps),
-            sets: [],
-          };
-        }),
-      };
+      return fitSessionToTimeBudget(
+        {
+          ...base,
+          label: d.label,
+          exercises: d.items.map<WorkoutSessionExercise>((it) => {
+            const prescription = autopilotByExercise.get(it.id);
+            return {
+              exerciseId: it.id,
+              name: it.name,
+              primary_muscles: it.primary_muscles,
+              targetSets: prescription?.reduceSets ? Math.max(2, it.sets - 1) : it.sets,
+              targetReps: it.reps,
+              plannedWeightKg:
+                prescription && prescription.prescribedWeightKg > 0
+                  ? prescription.prescribedWeightKg
+                  : it.weightKg,
+              restSeconds: it.restSeconds,
+              ...resolveTracking(state, it.id, it.name, it.reps),
+              sets: [],
+            };
+          }),
+        },
+        budget,
+      );
     }
     if (source === "program") return null;
     // If the active programme has a rest day, fall through to the user's own
@@ -216,38 +227,46 @@ function buildSession(
   const d = sched?.[dayKey];
   if (!d || d.exerciseIds.length === 0) return null;
   const supersetIds = buildSupersetIds(d.exerciseIds, d.exerciseConfig);
-  return {
-    ...base,
-    label: d.label,
-    programId: null,
-    exercises: d.exerciseIds.map<WorkoutSessionExercise>((eid, index) => {
-      const ex = getExercise(eid, state.savedExercises);
-      const cfg = d.exerciseConfig?.[eid];
-      const prescription = autopilotByExercise.get(eid);
-      return {
-        exerciseId: eid,
-        name: ex?.name ?? eid,
-        primary_muscles: ex?.muscleGroup ? [ex.muscleGroup] : [],
-        targetSets: prescription?.reduceSets
-          ? Math.max(2, (cfg?.sets ?? d.sets ?? ex?.sets ?? 3) - 1)
-          : (cfg?.sets ?? d.sets ?? ex?.sets ?? 3),
-        targetReps: cfg?.reps ?? d.reps ?? ex?.reps ?? "8-12",
-        plannedWeightKg:
-          prescription && prescription.prescribedWeightKg > 0
-            ? prescription.prescribedWeightKg
-            : cfg?.weightKg,
-        restSeconds: cfg?.restSeconds,
-        targetRir: cfg?.targetRir,
-        progression: cfg?.progression,
-        tempo: cfg?.tempo,
-        note: cfg?.note,
-        barKg: cfg?.barKg,
-        supersetId: supersetIds[index],
-        ...resolveTracking(state, eid, ex?.name ?? eid, cfg?.reps ?? d.reps ?? ex?.reps ?? "8-12"),
-        sets: [],
-      };
-    }),
-  };
+  return fitSessionToTimeBudget(
+    {
+      ...base,
+      label: d.label,
+      programId: null,
+      exercises: d.exerciseIds.map<WorkoutSessionExercise>((eid, index) => {
+        const ex = getExercise(eid, state.savedExercises);
+        const cfg = d.exerciseConfig?.[eid];
+        const prescription = autopilotByExercise.get(eid);
+        return {
+          exerciseId: eid,
+          name: ex?.name ?? eid,
+          primary_muscles: ex?.muscleGroup ? [ex.muscleGroup] : [],
+          targetSets: prescription?.reduceSets
+            ? Math.max(2, (cfg?.sets ?? d.sets ?? ex?.sets ?? 3) - 1)
+            : (cfg?.sets ?? d.sets ?? ex?.sets ?? 3),
+          targetReps: cfg?.reps ?? d.reps ?? ex?.reps ?? "8-12",
+          plannedWeightKg:
+            prescription && prescription.prescribedWeightKg > 0
+              ? prescription.prescribedWeightKg
+              : cfg?.weightKg,
+          restSeconds: cfg?.restSeconds,
+          targetRir: cfg?.targetRir,
+          progression: cfg?.progression,
+          tempo: cfg?.tempo,
+          note: cfg?.note,
+          barKg: cfg?.barKg,
+          supersetId: supersetIds[index],
+          ...resolveTracking(
+            state,
+            eid,
+            ex?.name ?? eid,
+            cfg?.reps ?? d.reps ?? ex?.reps ?? "8-12",
+          ),
+          sets: [],
+        };
+      }),
+    },
+    budget,
+  );
 }
 
 /**
@@ -545,6 +564,7 @@ function LiveWorkoutPage() {
           repairedState,
           requested.day,
           requested.source ?? "auto",
+          requested.budget,
         );
         if (!requestedSession) return repairedState;
         return {
@@ -565,7 +585,7 @@ function LiveWorkoutPage() {
         activeSessionId: s.id,
       };
     });
-  }, [requested.day, requested.source, set]);
+  }, [requested.budget, requested.day, requested.source, set]);
 
   const session = state.sessions.find((s) => s.id === state.activeSessionId);
 
@@ -1401,6 +1421,18 @@ function LiveWorkoutPage() {
         <Stat label="WORK SETS" value={`${completedPlanSets}/${plannedSets}`} />
         <Stat label="PRS" value={`${totals.prs}`} accent={totals.prs > 0} />
       </div>
+
+      {session.timeBudgetMinutes && (
+        <div className="flex items-center justify-between gap-3 border-b border-accent-red/25 bg-accent-red/[.07] px-4 py-2.5">
+          <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[.14em] text-accent-red">
+            <Timer size={12} /> Time Fit · {session.timeBudgetMinutes} min
+          </span>
+          <span className="text-right text-[9px] font-bold text-grit-dim">
+            {session.exercises.length}/{session.originalExerciseCount ?? session.exercises.length}{" "}
+            movements · {plannedSets}/{session.originalPlannedSets ?? plannedSets} sets
+          </span>
+        </div>
+      )}
 
       {lastTime && (
         <div className="border-b border-grit px-4 py-2.5">
@@ -2272,20 +2304,18 @@ function SetLogger({
           </div>
 
           <div className="mt-3 grid grid-cols-3 gap-1.5" aria-label={`${scratchField} keypad`}>
-            {["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "delete"].map(
-              (key) => (
-                <button
-                  key={key}
-                  type="button"
-                  disabled={key === "." && scratchField === "reps"}
-                  onClick={() => typeScratch(key)}
-                  className="flex min-h-11 items-center justify-center rounded-xl border border-grit bg-grit-card display text-lg font-extrabold text-grit press disabled:opacity-20"
-                  aria-label={key === "delete" ? "Delete digit" : key === "." ? "Decimal point" : key}
-                >
-                  {key === "delete" ? "⌫" : key}
-                </button>
-              ),
-            )}
+            {["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "delete"].map((key) => (
+              <button
+                key={key}
+                type="button"
+                disabled={key === "." && scratchField === "reps"}
+                onClick={() => typeScratch(key)}
+                className="flex min-h-11 items-center justify-center rounded-xl border border-grit bg-grit-card display text-lg font-extrabold text-grit press disabled:opacity-20"
+                aria-label={key === "delete" ? "Delete digit" : key === "." ? "Decimal point" : key}
+              >
+                {key === "delete" ? "⌫" : key}
+              </button>
+            ))}
           </div>
 
           {weightError && (
@@ -2454,7 +2484,9 @@ function ScratchValue({
       >
         <span className="label-cap block text-[9px] text-grit-dim">{label}</span>
         <span className="mt-1 flex min-w-0 items-baseline justify-center gap-1 overflow-hidden">
-          <span className="display truncate text-3xl font-black leading-none text-grit">{value}</span>
+          <span className="display truncate text-3xl font-black leading-none text-grit">
+            {value}
+          </span>
           {suffix && <span className="label-cap shrink-0 text-[9px] text-grit-dim">{suffix}</span>}
         </span>
       </button>
@@ -3092,6 +3124,8 @@ function FinishedScreen({
             </p>
           </div>
         )}
+
+        <SessionPlanReview session={session} />
 
         <div className="mt-3">
           <SessionReflection sessionId={session.id} />

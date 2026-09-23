@@ -27,6 +27,22 @@ This is not a feature dump. Every addition must improve at least one of these mo
 
 ## Scope and status
 
+### Post-submission candidate — Time Fit and session receipt
+
+- [x] Add a deterministic 20, 30 and 45 minute workout adapter to the Train session brief.
+- [x] Preview every retained movement, reduced set and same-day omission before the live session starts.
+- [x] Preserve exercise order and keep linked superset partners together.
+- [x] Apply the adaptation only to the new live session; never mutate the saved programme or future targets.
+- [x] Mark express sessions in the live logger with original-versus-active movement and set counts.
+- [x] Add a completion receipt comparing genuine planned and completed working sets per movement.
+- [x] Exclude warm-ups and drop sets from plan adherence while retaining their existing volume behaviour.
+- [x] Show adjusted, skipped, on-plan and extra-work states plus recorded average RPE.
+- [x] Add 7 regression cases; full checks pass with 100 test files / 833 tests.
+- [x] Verify real components at 320/375/393/430px with 44px minimum controls, hidden vertical scrollbar and zero horizontal overflow.
+
+This package is source for the next candidate after build 165. It has not been uploaded or submitted,
+and its Pro purchase path has not been freshly exercised against StoreKit sandbox in this pass.
+
 ### Training calendar — build 165
 
 - [x] Add Week, Month, Year and All time views to Plan and Progress, with date navigation, drill-down and day details.

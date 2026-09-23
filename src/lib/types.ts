@@ -292,6 +292,11 @@ export interface WorkoutSession {
   restEndsAt?: number;
   /** Movement selected when the persisted rest period finishes. */
   restNextExerciseIndex?: number;
+  /** Express-session target applied to this one workout only. */
+  timeBudgetMinutes?: 20 | 30 | 45;
+  /** Original plan shape retained for a truthful post-session summary. */
+  originalExerciseCount?: number;
+  originalPlannedSets?: number;
 }
 
 export interface StateSyncMeta {

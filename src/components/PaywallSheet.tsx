@@ -21,6 +21,7 @@ import {
   Gauge,
   ClipboardCheck,
   Flag,
+  Clock3,
 } from "lucide-react";
 import { onPaywall, type PaywallFeature } from "@/lib/paywall-events";
 import {
@@ -35,6 +36,16 @@ const FEATURE_PITCH: Record<
   PaywallFeature,
   { title: string; tagline: string; bullets: string[]; icon: typeof Shield }
 > = {
+  "time-fit": {
+    title: "Time Fit",
+    tagline: "Keep the training effect. Lose the wasted minutes.",
+    bullets: [
+      "Build a 20, 30 or 45 minute version before you start",
+      "See every reduced set and omitted movement before committing",
+      "Your real programme stays untouched for the next session",
+    ],
+    icon: Clock3,
+  },
   autopilot: {
     title: "Training Autopilot",
     tagline: "Your programme updates itself.",

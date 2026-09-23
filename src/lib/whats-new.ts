@@ -2,7 +2,7 @@
 // ship. The card hides once dismissed at the current version, so stale
 // announcements never linger.
 
-export const WHATS_NEW_VERSION = 202609121;
+export const WHATS_NEW_VERSION = 202609231;
 export const WHATS_NEW_SEEN_KEY = "deadset_whats_new_seen";
 
 export interface WhatsNewEntry {
@@ -13,6 +13,16 @@ export interface WhatsNewEntry {
 }
 
 export const WHATS_NEW: WhatsNewEntry[] = [
+  {
+    title: "Make the workout fit the time you actually have",
+    body: "Time Fit builds a transparent 20, 30 or 45 minute version of today's workout. Preview every reduced set and omitted movement, keep supersets together, and start without changing the saved programme.",
+    where: "Train · Session brief · Time Fit",
+  },
+  {
+    title: "Leave with a session receipt",
+    body: "The finish screen now compares planned and completed working sets movement by movement, separates adjusted or skipped work, and summarises adherence and effort without counting warm-ups or drop sets as plan completion.",
+    where: "Live workout · Session complete",
+  },
   {
     title: "A smoother session, set by set",
     body: "Open your session overview, search movements and jump to unfinished work. Follow your session clock, minimize rest between sets and browse without resetting the countdown. Working-set totals now stay consistent with your plan.",
