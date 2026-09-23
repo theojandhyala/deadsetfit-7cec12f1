@@ -14,6 +14,11 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    title: "Come back without pretending the break never happened",
+    body: "After a real training gap, Return Protocol offers one conservative session with fewer sets, lighter planned loads and more reps in reserve. The saved programme is never rewritten.",
+    where: "Train · Return protocol",
+  },
+  {
     title: "Make the workout fit the time you actually have",
     body: "Time Fit builds a transparent 20, 30 or 45 minute version of today's workout. Preview every reduced set and omitted movement, keep supersets together, and start without changing the saved programme.",
     where: "Train · Session brief · Time Fit",

@@ -62,6 +62,13 @@ export function SessionPlanReview({ session }: { session: WorkoutSession }) {
         </div>
       )}
 
+      {session.returnRampGapDays && (
+        <div className="border-b border-sky-300/20 bg-sky-300/[.055] px-4 py-2.5 text-[10px] leading-relaxed text-grit-dim">
+          Return protocol applied after {session.returnRampGapDays} days away: today's set and load
+          targets were eased without changing the saved programme.
+        </div>
+      )}
+
       <ol className="divide-y divide-white/[.065] px-4">
         {visibleRows.map((row) => (
           <li key={row.exerciseId} className="flex min-h-12 items-center gap-2.5 py-2">

@@ -29,6 +29,7 @@ import { useCountUp } from "@/hooks/useCountUp";
 import { WhatsNewCard } from "@/components/WhatsNewCard";
 import { TrainingAutopilot } from "@/components/TrainingAutopilot";
 import { StrengthMapPulse } from "@/components/StrengthMapPulse";
+import { ReturnToTrainingCard } from "@/components/ReturnToTrainingCard";
 import { openPaywall } from "@/lib/paywall-events";
 import type { DayKey, Schedule, Program } from "@/lib/types";
 
@@ -137,6 +138,9 @@ function TrainPage() {
   const [selectedTitle, ...selectedDetails] = selectedLabel.split(" — ");
   const selectedDetail = selectedDetails.join(" — ");
   const selectedHype = dayHype(selectedDay, selectedLabel, selectedDay === todayKey());
+  const selectedItemCount = activeProgram
+    ? (activeProgram.days[selectedDay]?.items.length ?? 0)
+    : (schedule[selectedDay]?.exerciseIds?.length ?? 0);
   const todayFood = state.foodLog.filter((item) => item.date === isoDay());
   const todayNutrition = todayFood.reduce(
     (total, item) => ({
@@ -318,6 +322,12 @@ function TrainPage() {
           selectedDay={selectedDay}
           schedule={schedule}
           activeProgram={activeProgram}
+        />
+        <ReturnToTrainingCard
+          state={state}
+          day={selectedDay}
+          source={activeProgram ? "program" : "schedule"}
+          hasWorkout={selectedItemCount > 0}
         />
         {/* DEADSET's differentiator belongs in the daily loop, not buried in
             Progress. This always points to the next map action after the plan

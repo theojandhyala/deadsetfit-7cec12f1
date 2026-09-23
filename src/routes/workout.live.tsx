@@ -100,6 +100,7 @@ import { SessionPlanReview } from "@/components/SessionPlanReview";
 import { SessionExerciseSheet } from "@/components/SessionExerciseSheet";
 import { notifyRivalWorkout } from "@/lib/push-notifications.functions";
 import { fitSessionToTimeBudget, type WorkoutTimeBudget } from "@/lib/time-budget-workout";
+import { applyReturnRamp, eligibleReturnGap } from "@/lib/return-to-training";
 import type {
   AppState,
   Exercise,
@@ -127,6 +128,7 @@ type LiveWorkoutSearch = {
   day?: DayKey;
   source?: Exclude<WorkoutSource, "auto">;
   budget?: WorkoutTimeBudget;
+  ramp?: "return";
 };
 
 const DAY_KEYS: DayKey[] = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
@@ -142,6 +144,7 @@ export const Route = createFileRoute("/workout/live")({
       search.budget === 20 || search.budget === 30 || search.budget === 45
         ? search.budget
         : undefined,
+    ramp: search.ramp === "return" ? "return" : undefined,
   }),
   head: () => ({ meta: [{ title: "DEADSET — Live Workout" }] }),
   component: LiveWorkoutPage,
@@ -173,6 +176,7 @@ function buildSession(
   dayKey: DayKey,
   source: WorkoutSource = "auto",
   budget?: WorkoutTimeBudget,
+  returnGapDays?: number | null,
 ): WorkoutSession | null {
   const active = state.programs.find((p) => p.id === state.activeProgramId);
   const autopilot = state.trainingAutopilot?.enabled
@@ -194,29 +198,32 @@ function buildSession(
   if (active && source !== "schedule") {
     const d = active.days[dayKey];
     if (d?.items.length) {
-      return fitSessionToTimeBudget(
-        {
-          ...base,
-          label: d.label,
-          exercises: d.items.map<WorkoutSessionExercise>((it) => {
-            const prescription = autopilotByExercise.get(it.id);
-            return {
-              exerciseId: it.id,
-              name: it.name,
-              primary_muscles: it.primary_muscles,
-              targetSets: prescription?.reduceSets ? Math.max(2, it.sets - 1) : it.sets,
-              targetReps: it.reps,
-              plannedWeightKg:
-                prescription && prescription.prescribedWeightKg > 0
-                  ? prescription.prescribedWeightKg
-                  : it.weightKg,
-              restSeconds: it.restSeconds,
-              ...resolveTracking(state, it.id, it.name, it.reps),
-              sets: [],
-            };
-          }),
-        },
-        budget,
+      return applyReturnRamp(
+        fitSessionToTimeBudget(
+          {
+            ...base,
+            label: d.label,
+            exercises: d.items.map<WorkoutSessionExercise>((it) => {
+              const prescription = autopilotByExercise.get(it.id);
+              return {
+                exerciseId: it.id,
+                name: it.name,
+                primary_muscles: it.primary_muscles,
+                targetSets: prescription?.reduceSets ? Math.max(2, it.sets - 1) : it.sets,
+                targetReps: it.reps,
+                plannedWeightKg:
+                  prescription && prescription.prescribedWeightKg > 0
+                    ? prescription.prescribedWeightKg
+                    : it.weightKg,
+                restSeconds: it.restSeconds,
+                ...resolveTracking(state, it.id, it.name, it.reps),
+                sets: [],
+              };
+            }),
+          },
+          budget,
+        ),
+        returnGapDays,
       );
     }
     if (source === "program") return null;
@@ -227,45 +234,48 @@ function buildSession(
   const d = sched?.[dayKey];
   if (!d || d.exerciseIds.length === 0) return null;
   const supersetIds = buildSupersetIds(d.exerciseIds, d.exerciseConfig);
-  return fitSessionToTimeBudget(
-    {
-      ...base,
-      label: d.label,
-      programId: null,
-      exercises: d.exerciseIds.map<WorkoutSessionExercise>((eid, index) => {
-        const ex = getExercise(eid, state.savedExercises);
-        const cfg = d.exerciseConfig?.[eid];
-        const prescription = autopilotByExercise.get(eid);
-        return {
-          exerciseId: eid,
-          name: ex?.name ?? eid,
-          primary_muscles: ex?.muscleGroup ? [ex.muscleGroup] : [],
-          targetSets: prescription?.reduceSets
-            ? Math.max(2, (cfg?.sets ?? d.sets ?? ex?.sets ?? 3) - 1)
-            : (cfg?.sets ?? d.sets ?? ex?.sets ?? 3),
-          targetReps: cfg?.reps ?? d.reps ?? ex?.reps ?? "8-12",
-          plannedWeightKg:
-            prescription && prescription.prescribedWeightKg > 0
-              ? prescription.prescribedWeightKg
-              : cfg?.weightKg,
-          restSeconds: cfg?.restSeconds,
-          targetRir: cfg?.targetRir,
-          progression: cfg?.progression,
-          tempo: cfg?.tempo,
-          note: cfg?.note,
-          barKg: cfg?.barKg,
-          supersetId: supersetIds[index],
-          ...resolveTracking(
-            state,
-            eid,
-            ex?.name ?? eid,
-            cfg?.reps ?? d.reps ?? ex?.reps ?? "8-12",
-          ),
-          sets: [],
-        };
-      }),
-    },
-    budget,
+  return applyReturnRamp(
+    fitSessionToTimeBudget(
+      {
+        ...base,
+        label: d.label,
+        programId: null,
+        exercises: d.exerciseIds.map<WorkoutSessionExercise>((eid, index) => {
+          const ex = getExercise(eid, state.savedExercises);
+          const cfg = d.exerciseConfig?.[eid];
+          const prescription = autopilotByExercise.get(eid);
+          return {
+            exerciseId: eid,
+            name: ex?.name ?? eid,
+            primary_muscles: ex?.muscleGroup ? [ex.muscleGroup] : [],
+            targetSets: prescription?.reduceSets
+              ? Math.max(2, (cfg?.sets ?? d.sets ?? ex?.sets ?? 3) - 1)
+              : (cfg?.sets ?? d.sets ?? ex?.sets ?? 3),
+            targetReps: cfg?.reps ?? d.reps ?? ex?.reps ?? "8-12",
+            plannedWeightKg:
+              prescription && prescription.prescribedWeightKg > 0
+                ? prescription.prescribedWeightKg
+                : cfg?.weightKg,
+            restSeconds: cfg?.restSeconds,
+            targetRir: cfg?.targetRir,
+            progression: cfg?.progression,
+            tempo: cfg?.tempo,
+            note: cfg?.note,
+            barKg: cfg?.barKg,
+            supersetId: supersetIds[index],
+            ...resolveTracking(
+              state,
+              eid,
+              ex?.name ?? eid,
+              cfg?.reps ?? d.reps ?? ex?.reps ?? "8-12",
+            ),
+            sets: [],
+          };
+        }),
+      },
+      budget,
+    ),
+    returnGapDays,
   );
 }
 
@@ -565,6 +575,7 @@ function LiveWorkoutPage() {
           requested.day,
           requested.source ?? "auto",
           requested.budget,
+          requested.ramp === "return" ? eligibleReturnGap(repairedState.sessions) : null,
         );
         if (!requestedSession) return repairedState;
         return {
@@ -585,7 +596,7 @@ function LiveWorkoutPage() {
         activeSessionId: s.id,
       };
     });
-  }, [requested.budget, requested.day, requested.source, set]);
+  }, [requested.budget, requested.day, requested.ramp, requested.source, set]);
 
   const session = state.sessions.find((s) => s.id === state.activeSessionId);
 
@@ -1430,6 +1441,17 @@ function LiveWorkoutPage() {
           <span className="text-right text-[9px] font-bold text-grit-dim">
             {session.exercises.length}/{session.originalExerciseCount ?? session.exercises.length}{" "}
             movements · {plannedSets}/{session.originalPlannedSets ?? plannedSets} sets
+          </span>
+        </div>
+      )}
+
+      {session.returnRampGapDays && (
+        <div className="flex items-center justify-between gap-3 border-b border-sky-300/20 bg-sky-300/[.06] px-4 py-2.5">
+          <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[.14em] text-sky-300">
+            <RefreshCw size={12} /> Return ramp
+          </span>
+          <span className="text-right text-[9px] font-bold text-grit-dim">
+            {session.returnRampGapDays} days away · lighter today only
           </span>
         </div>
       )}

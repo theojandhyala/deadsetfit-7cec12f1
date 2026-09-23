@@ -43,6 +43,19 @@ This is not a feature dump. Every addition must improve at least one of these mo
 This package is source for the next candidate after build 165. It has not been uploaded or submitted,
 and its Pro purchase path has not been freshly exercised against StoreKit sandbox in this pass.
 
+### Post-submission candidate — Return protocol
+
+- [x] Detect a genuine 10-day-or-longer gap from completed sessions with logged work, ignoring unfinished, empty and future-dated records.
+- [x] Offer a visible comeback session from Train when the selected day contains a workout.
+- [x] Reduce planned loaded movements by approximately 10%, rounded to a loadable 2.5 kg boundary.
+- [x] Remove one set only from prescriptions above two sets and set a conservative 3 RIR floor.
+- [x] Preserve bodyweight targets and keep every change inside the single new session.
+- [x] Label the return ramp in the live logger and explain it again in the completion receipt.
+- [x] Add three focused regression cases covering gap evidence, normal rhythms, future data and immutable source sessions.
+
+This is not medical or injury rehabilitation advice. An athlete with pain or an injury still needs an
+appropriate professional; the protocol only avoids forcing stale training targets after time away.
+
 ### Training calendar — build 165
 
 - [x] Add Week, Month, Year and All time views to Plan and Progress, with date navigation, drill-down and day details.

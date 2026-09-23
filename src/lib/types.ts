@@ -297,6 +297,8 @@ export interface WorkoutSession {
   /** Original plan shape retained for a truthful post-session summary. */
   originalExerciseCount?: number;
   originalPlannedSets?: number;
+  /** Days since the previous completed session when a one-off comeback ramp was chosen. */
+  returnRampGapDays?: number;
 }
 
 export interface StateSyncMeta {
