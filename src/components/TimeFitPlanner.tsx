@@ -83,6 +83,9 @@ export function TimeFitPlanner({
                 <p className="mt-2 max-w-sm text-xs leading-relaxed text-grit-dim">
                   A one-session adaptation. Your programme, weights and next workout stay untouched.
                 </p>
+                <p className="mt-2 text-[10px] leading-relaxed text-grit-dim">
+                  Estimated work and rest time. Allow extra for warm-ups and busy equipment.
+                </p>
               </div>
               <button
                 type="button"
@@ -136,9 +139,7 @@ export function TimeFitPlanner({
               </div>
               <ol className="mt-2.5 divide-y divide-white/[.065]">
                 {plan.exercises.map((exercise, index) => {
-                  const change = plan.reduced.find(
-                    (item) => item.exerciseId === exercise.exerciseId,
-                  );
+                  const change = plan.reduced.find((item) => item.position === index);
                   return (
                     <li
                       key={`${exercise.exerciseId}-${index}`}
@@ -166,6 +167,17 @@ export function TimeFitPlanner({
               </div>
             )}
 
+            {plan.estimatedMinutes > budget && (
+              <p
+                className="mt-3 rounded-xl border border-amber-300/25 bg-amber-300/5 p-3 text-xs text-amber-200"
+                role="status"
+              >
+                Even one round of your opening movement group needs about {plan.estimatedMinutes}{" "}
+                minutes. Choose more time or edit the session; this plan exceeds your {budget}
+                -minute target.
+              </p>
+            )}
+
             <div className="mt-3 flex items-start gap-2 rounded-xl border border-emerald-400/15 bg-emerald-400/[.035] px-3 py-2.5">
               <ShieldCheck size={15} className="mt-0.5 shrink-0 text-emerald-400" />
               <p className="text-[10px] leading-relaxed text-grit-dim">
@@ -187,7 +199,10 @@ export function TimeFitPlanner({
               <button
                 type="button"
                 disabled={loading}
-                onClick={() => openPaywall("time-fit")}
+                onClick={() => {
+                  setOpen(false);
+                  openPaywall("time-fit");
+                }}
                 className="btn-grit mt-4 flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl text-sm disabled:opacity-60"
               >
                 <Sparkles size={17} /> {loading ? "Checking Pro…" : "Unlock Time Fit"}

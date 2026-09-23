@@ -16,6 +16,58 @@ const exercises = [
 ];
 
 describe("time-budget workout", () => {
+  it("counts prescribed duration instead of treating long holds as forty seconds", () => {
+    const holds = [
+      { exerciseId: "hold", name: "Plank", targetSets: 3, targetReps: "5 min", restSeconds: 60 },
+    ];
+    expect(estimateWorkoutMinutes(holds)).toBe(20);
+    expect(estimateWorkoutMinutes([{ ...holds[0]!, targetSeconds: 600 }])).toBe(35);
+  });
+
+  it("rejects non-finite set counts and falls back from invalid rest intervals", () => {
+    const invalid = [NaN, Infinity, -1, 0].map((targetSets) => ({
+      exerciseId: "invalid",
+      name: "Invalid",
+      targetSets,
+    }));
+    expect(buildTimeBudgetPlan(invalid, 20).exercises).toEqual([]);
+    const plan = buildTimeBudgetPlan([{ ...exercises[0]!, restSeconds: NaN }, ...exercises], 20);
+    expect(Number.isFinite(plan.estimatedMinutes)).toBe(true);
+    expect(plan.estimatedMinutes).toBeLessThanOrEqual(20);
+  });
+
+  it("keeps repeat occurrences tied to their own original prescription", () => {
+    const repeated = [
+      { exerciseId: "bench", name: "Bench heavy", targetSets: 2, restSeconds: 120 },
+      { exerciseId: "bench", name: "Bench backoff", targetSets: 8, restSeconds: 60 },
+      ...exercises,
+    ];
+    const plan = buildTimeBudgetPlan(repeated, 20);
+    for (const row of plan.reduced) {
+      const original = repeated.find((exercise) => exercise.name === row.name)!;
+      expect(row.from).toBe(original.targetSets);
+      expect(row.to).toBe(plan.exercises[row.position]!.targetSets);
+    }
+    expect(plan.exercises[0]!.targetSets).toBeLessThanOrEqual(2);
+    expect(plan.estimatedMinutes).toBeLessThanOrEqual(20);
+  });
+
+  it("reports an impossible budget honestly rather than shortening the timed effort", () => {
+    const plan = buildTimeBudgetPlan(
+      [
+        {
+          exerciseId: "bike",
+          name: "Bike",
+          targetSets: 1,
+          tracking: "DISTANCE",
+          targetSeconds: 3600,
+        },
+      ],
+      20,
+    );
+    expect(plan.estimatedMinutes).toBeGreaterThan(20);
+    expect(plan.exercises[0]!.targetSeconds).toBe(3600);
+  });
   it("returns the unchanged plan when it already fits", () => {
     const short = exercises.slice(0, 1).map((exercise) => ({ ...exercise, targetSets: 2 }));
     const plan = buildTimeBudgetPlan(short, 45);

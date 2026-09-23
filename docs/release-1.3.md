@@ -27,6 +27,27 @@ This is not a feature dump. Every addition must improve at least one of these mo
 
 ## Scope and status
 
+### Post-submission candidate — Guided setup and workout integrity (23 September)
+
+- Three stable setup chapters, transform-based progress animation, staggered choice cards, selected-answer styling, and existing Reduce Motion support.
+- Clearer goal/equipment explanations, a 44px Back control, screen-heading focus management, and a width-constrained labelled username field.
+- Expandable final answer review with direct editing. Changed plan inputs require another review of the regenerated week; unchanged personal answers remain in the draft.
+- Visible saving state and disabled final controls. Development previews do not save an account, change notification preferences, or start a purchase.
+- Session completion credits each planned movement separately: extra sets cannot disguise a skipped exercise. Invalid RPE values are excluded.
+- Return-session loads cannot rise through rounding, become zero, or fall below an explicitly configured bar. Pound increments are supported; already-started/finished sessions remain untouched. Gap detection rejects invalid calendar dates and warmup-only records while accepting timed working sets.
+- Time Fit handles repeat occurrences independently, validates set counts/rest values, accounts for prescribed timed efforts, and explicitly warns when the smallest retained group cannot fit the requested time. Existing logged sessions cannot be adapted retroactively.
+- The Time Fit unlock button closes its preview before opening membership options, preventing the paywall being covered.
+- Release checks accept newer release-note revisions while requiring consistent app/widget/watch builds; strict read-only Google/Apple provider-start checks pass.
+
+Verification: `npm run check` passes (101 files / 848 tests), including TypeScript, lint,
+production bundle, CSS and Xcode project validation. Browser walkthrough covered generated setup,
+final review, goal editing and mandatory week re-review; checked username, review and week-editor
+horizontal containment at 320px, plus the 393px choice layout. Strict App Store checks pass.
+This is local source for the next candidate, **not** a newly installed, uploaded or submitted build.
+Native keyboard/haptics, on-device purchase/restore and production account-save still require a
+fresh release-candidate device test. Existing branding, entry animations and subscription products
+are preserved.
+
 ### Post-submission candidate — Time Fit and session receipt
 
 - [x] Add a deterministic 20, 30 and 45 minute workout adapter to the Train session brief.

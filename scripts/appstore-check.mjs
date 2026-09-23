@@ -233,12 +233,19 @@ check(
   packageJson.scripts?.build?.includes("vite build"),
   "Build script runs Vite.",
 );
+const nativeBuilds = [...xcodeProject.matchAll(/CURRENT_PROJECT_VERSION = (\d+);/g)].map((match) =>
+  Number(match[1]),
+);
+const whatsNewVersion = Number(/WHATS_NEW_VERSION = (\d+)/.exec(whatsNew)?.[1]);
 check(
   "1.3 update version",
   (xcodeProject.match(/MARKETING_VERSION = 1\.3;/g)?.length ?? 0) >= 6 &&
-    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 165;/g)?.length ?? 0) >= 6 &&
-    whatsNew.includes("WHATS_NEW_VERSION = 202609121"),
-  "The app, activity extension and watch targets are versioned as 1.3 (164), above shipped build 152.",
+    nativeBuilds.length >= 6 &&
+    new Set(nativeBuilds).size === 1 &&
+    nativeBuilds[0] >= 165 &&
+    Number.isSafeInteger(whatsNewVersion) &&
+    whatsNewVersion >= 202609121,
+  `The app, activity extension and watch must share a 1.3 build at least 165, with current release notes. Found builds: ${[...new Set(nativeBuilds)].join(", ")}; notes: ${whatsNewVersion}. This does not verify upload or submission.`,
 );
 check(
   "deferred native startup and insights",

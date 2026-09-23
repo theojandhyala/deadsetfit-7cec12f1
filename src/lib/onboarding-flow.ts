@@ -35,3 +35,19 @@ export function onboardingStageLabel(step: OnboardingActiveStep): string {
   if (step === "username") return "IDENTITY";
   return "READY";
 }
+
+/** Editing a plan input must pass through the real schedule review again. */
+export function onboardingReviewDestination(
+  step: OnboardingActiveStep,
+  scheduleNeedsReview: boolean,
+): "schedule" | "blueprint" {
+  return step !== "schedule" && scheduleNeedsReview ? "schedule" : "blueprint";
+}
+
+export const SETUP_CHAPTERS = ["YOU", "YOUR PLAN", "READY"] as const;
+
+export function onboardingChapter(step: OnboardingActiveStep): number {
+  if (["mode", "goal", "about"].includes(step)) return 0;
+  if (["days", "equipment", "preferences", "schedule"].includes(step)) return 1;
+  return 2;
+}

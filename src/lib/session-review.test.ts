@@ -50,6 +50,35 @@ function session(): WorkoutSession {
 }
 
 describe("session plan review", () => {
+  it("does not let extra sets hide a missed exercise", () => {
+    const value = session();
+    value.exercises = [
+      {
+        ...value.exercises[0]!,
+        targetSets: 2,
+        sets: Array.from({ length: 4 }, () => ({ weight: 80, reps: 8 })),
+      },
+      { ...value.exercises[1]!, targetSets: 2, sets: [] },
+    ];
+    expect(buildSessionPlanReview(value)).toMatchObject({
+      adherencePercent: 50,
+      completedSets: 4,
+      extraSets: 2,
+    });
+  });
+
+  it("excludes invalid effort ratings from averages", () => {
+    const value = session();
+    value.exercises = [
+      {
+        ...value.exercises[0]!,
+        sets: [8, NaN, Infinity, 0, 11].map((rpe) => ({ weight: 80, reps: 8, rpe })),
+      },
+    ];
+    const review = buildSessionPlanReview(value);
+    expect(review.averageRpe).toBe(8);
+    expect(review.rows[0]!.averageRpe).toBe(8);
+  });
   it("compares genuine working sets without counting warmups or drops", () => {
     const review = buildSessionPlanReview(session());
     expect(review.plannedSets).toBe(8);

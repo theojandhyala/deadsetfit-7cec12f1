@@ -15,6 +15,7 @@ import { isoDay, todayKey } from "@/lib/calc";
 import { getExercise } from "@/lib/exercises";
 import { hapticSelection } from "@/lib/haptics";
 import { buildSupersetIds } from "@/lib/workout-flow";
+import { trackingModeFor, type TrackingMode } from "@/lib/set-tracking";
 import type { AppState, DayKey, Program, Schedule } from "@/lib/types";
 import { formatWeight, unitOf } from "@/lib/units";
 
@@ -43,6 +44,8 @@ interface BriefRow {
   superset: boolean;
   supersetId?: string;
   targetSets: number;
+  targetReps: string;
+  tracking: TrackingMode;
   bestKg: number | null;
 }
 
@@ -75,6 +78,11 @@ export function TrainWorkoutBrief({
         restSeconds: item.restSeconds,
         superset: false,
         targetSets: item.sets,
+        targetReps: item.reps,
+        tracking: trackingModeFor(
+          getExercise(item.id, state.savedExercises) ?? { name: item.name },
+          item.reps,
+        ),
         bestKg: bestSet(state.logs, item.id),
       }))
     : (day?.exerciseIds ?? []).flatMap((id, index) => {
@@ -95,6 +103,8 @@ export function TrainWorkoutBrief({
             superset: Boolean(config?.supersetWithNext),
             supersetId: scheduleSupersetIds[index],
             targetSets: config?.sets ?? day?.sets ?? exercise.sets,
+            targetReps: config?.reps ?? day?.reps ?? exercise.reps,
+            tracking: trackingModeFor(exercise, config?.reps ?? day?.reps ?? exercise.reps),
             bestKg: bestSet(state.logs, id),
           },
         ];
@@ -254,6 +264,8 @@ export function TrainWorkoutBrief({
                   exerciseId: row.id,
                   name: row.name,
                   targetSets: row.targetSets,
+                  targetReps: row.targetReps,
+                  tracking: row.tracking,
                   restSeconds: row.restSeconds,
                   supersetId: row.supersetId,
                 }))}

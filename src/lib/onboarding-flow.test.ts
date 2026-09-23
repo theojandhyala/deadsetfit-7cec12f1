@@ -1,8 +1,26 @@
 import { describe, expect, it } from "vitest";
 
-import { onboardingOrder, onboardingStageLabel } from "./onboarding-flow";
+import {
+  onboardingChapter,
+  onboardingOrder,
+  onboardingReviewDestination,
+  onboardingStageLabel,
+} from "./onboarding-flow";
 
 describe("onboardingOrder", () => {
+  it("keeps chapters monotonic across the full setup", () => {
+    expect(onboardingOrder("GENERATE").map(onboardingChapter)).toEqual([
+      0, 0, 0, 1, 1, 1, 1, 2, 2, 2,
+    ]);
+  });
+
+  it("requires a fresh week review after changing plan inputs", () => {
+    expect(onboardingReviewDestination("goal", true)).toBe("schedule");
+    expect(onboardingReviewDestination("preferences", true)).toBe("schedule");
+    expect(onboardingReviewDestination("about", false)).toBe("blueprint");
+    expect(onboardingReviewDestination("username", false)).toBe("blueprint");
+    expect(onboardingReviewDestination("schedule", true)).toBe("blueprint");
+  });
   it("keeps generated setup concise while requiring real body data and a week review", () => {
     expect(onboardingOrder("GENERATE")).toEqual([
       "mode",

@@ -1,5 +1,16 @@
 import { completedWorkingSets } from "./workout-flow";
-import type { WorkoutSession } from "./types";
+import { isWorkingSet } from "./set-tracking";
+import type { CompletedSet, WorkoutSession } from "./types";
+
+function workingRpes(sets: CompletedSet[]): number[] {
+  return sets
+    .filter(isWorkingSet)
+    .flatMap((set) =>
+      typeof set.rpe === "number" && Number.isFinite(set.rpe) && set.rpe >= 1 && set.rpe <= 10
+        ? [set.rpe]
+        : [],
+    );
+}
 
 export type SessionReviewStatus = "HIT" | "ABOVE" | "SHORT" | "SKIPPED";
 
@@ -26,9 +37,7 @@ export interface SessionPlanReview {
 export function buildSessionPlanReview(session: WorkoutSession): SessionPlanReview {
   const rows = session.exercises.map<SessionReviewRow>((exercise) => {
     const completedSets = completedWorkingSets(exercise.sets);
-    const rpes = exercise.sets
-      .filter((set) => set.kind !== "warmup" && set.kind !== "drop" && set.rpe != null)
-      .map((set) => set.rpe as number);
+    const rpes = workingRpes(exercise.sets);
     const status: SessionReviewStatus =
       completedSets === 0
         ? "SKIPPED"
@@ -50,17 +59,17 @@ export function buildSessionPlanReview(session: WorkoutSession): SessionPlanRevi
   });
   const plannedSets = rows.reduce((sum, row) => sum + row.plannedSets, 0);
   const completedSets = rows.reduce((sum, row) => sum + row.completedSets, 0);
-  const allRpes = session.exercises.flatMap((exercise) =>
-    exercise.sets
-      .filter((set) => set.kind !== "warmup" && set.kind !== "drop" && set.rpe != null)
-      .map((set) => set.rpe as number),
+  const fulfilledSets = rows.reduce(
+    (sum, row) => sum + Math.min(row.completedSets, row.plannedSets),
+    0,
   );
+  const allRpes = session.exercises.flatMap((exercise) => workingRpes(exercise.sets));
   return {
     rows,
     plannedSets,
     completedSets,
     adherencePercent: plannedSets
-      ? Math.min(100, Math.round((completedSets / plannedSets) * 100))
+      ? Math.min(100, Math.round((fulfilledSets / plannedSets) * 100))
       : 0,
     exercisesHit: rows.filter((row) => row.status === "HIT" || row.status === "ABOVE").length,
     exercisesPlanned: rows.length,

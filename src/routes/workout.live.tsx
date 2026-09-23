@@ -224,6 +224,7 @@ function buildSession(
           budget,
         ),
         returnGapDays,
+        unitOf(state),
       );
     }
     if (source === "program") return null;
@@ -276,6 +277,7 @@ function buildSession(
       budget,
     ),
     returnGapDays,
+    unitOf(state),
   );
 }
 
