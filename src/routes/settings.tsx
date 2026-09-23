@@ -42,6 +42,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { resetFeatureTour } from "@/lib/feature-tour";
 import { openAppStoreReviewPage, openIosAppSettings } from "@/lib/app-review";
+import { parseWorkoutCsv, type WorkoutImportResult } from "@/lib/import-workouts";
+import { mergeWorkoutImport } from "@/lib/workout-import-merge";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "DEADSET — Settings" }] }),
@@ -52,6 +54,8 @@ function SettingsPage() {
   const [state, set] = useAppState();
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
+  const workoutImportRef = useRef<HTMLInputElement>(null);
+  const [pendingWorkoutImport, setPendingWorkoutImport] = useState<WorkoutImportResult | null>(null);
   const [sessionLogs, setSessionLogs] = useState(() => readSessionLogs());
   const [appInfo, setAppInfo] = useState<{ version: string; build: string } | null>(null);
   const [notificationPermission, setNotificationPermission] =
@@ -301,6 +305,47 @@ function SettingsPage() {
       }
     };
     r.readAsText(file);
+  }
+
+  function previewWorkoutImport(file: File) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const result = parseWorkoutCsv(String(reader.result), state.savedExercises);
+        setPendingWorkoutImport(result);
+        hapticSelection();
+      } catch (error) {
+        hapticFailure();
+        toast.error(error instanceof Error ? error.message : "Couldn't read that workout export");
+      } finally {
+        if (workoutImportRef.current) workoutImportRef.current.value = "";
+      }
+    };
+    reader.onerror = () => {
+      hapticFailure();
+      toast.error("Couldn't open that file");
+    };
+    reader.readAsText(file);
+  }
+
+  function commitWorkoutImport() {
+    if (!pendingWorkoutImport) return;
+    let summary = { addedSessions: 0, duplicateSessions: 0, addedSets: 0 };
+    set((current) => {
+      const merged = mergeWorkoutImport(current, pendingWorkoutImport.sessions);
+      summary = merged;
+      return merged.state;
+    });
+    setPendingWorkoutImport(null);
+    if (summary.addedSessions === 0) {
+      hapticSelection();
+      toast("Those workouts are already in DEADSET");
+      return;
+    }
+    hapticSaved();
+    toast.success(
+      `${summary.addedSessions} workout${summary.addedSessions === 1 ? "" : "s"} and ${summary.addedSets} sets imported`,
+    );
   }
 
   async function copySessionLogs() {
@@ -751,6 +796,87 @@ function SettingsPage() {
           <Download size={12} className="text-accent-red" /> Your Data
         </p>
         <div className="bg-grit-card border border-grit p-4 flex flex-col gap-4">
+          <div className="overflow-hidden rounded-2xl border border-accent-red/40 bg-[linear-gradient(135deg,rgba(230,50,34,.18),rgba(8,8,9,.96)_58%)] p-4">
+            <div className="flex items-start gap-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent-red text-white shadow-[0_8px_24px_rgba(230,50,34,.28)]">
+                <Upload size={17} strokeWidth={2.6} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="label-cap block text-[9px] text-accent-red">SWITCH TO DEADSET</span>
+                <span className="display mt-1 block text-lg font-black uppercase leading-none text-grit">
+                  Bring your lifting history
+                </span>
+                <span className="mt-1.5 block text-[10px] leading-relaxed text-grit-dim">
+                  Import a DEADSET, Hevy or Strong CSV. Processing stays on this iPhone and existing
+                  workouts are never replaced.
+                </span>
+              </span>
+            </div>
+
+            {pendingWorkoutImport ? (
+              <div className="mt-3 rounded-xl border border-white/10 bg-black/35 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span>
+                    <span className="label-cap block text-[8px] text-accent-red">
+                      {pendingWorkoutImport.source} EXPORT READY
+                    </span>
+                    <span className="mt-1 block text-sm font-black text-grit">
+                      {pendingWorkoutImport.sessions.length} workouts ·{" "}
+                      {pendingWorkoutImport.sessions.reduce(
+                        (total, session) =>
+                          total +
+                          session.exercises.reduce(
+                            (exerciseTotal, exercise) => exerciseTotal + exercise.sets.length,
+                            0,
+                          ),
+                        0,
+                      )}{" "}
+                      sets
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPendingWorkoutImport(null)}
+                    className="tap-44 shrink-0 text-xs font-bold text-grit-dim"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                <p className="mt-2 text-[10px] text-grit-dim">
+                  {pendingWorkoutImport.sessions[0]?.date} →{" "}
+                  {pendingWorkoutImport.sessions.at(-1)?.date}
+                  {pendingWorkoutImport.skippedRows > 0
+                    ? ` · ${pendingWorkoutImport.skippedRows} incomplete rows skipped`
+                    : " · every row recognised"}
+                </p>
+                <button
+                  type="button"
+                  onClick={commitWorkoutImport}
+                  className="btn-grit mt-3 min-h-12 w-full rounded-xl text-xs"
+                >
+                  Add history to my Strength Map
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => workoutImportRef.current?.click()}
+                className="btn-grit mt-3 min-h-12 w-full rounded-xl text-xs"
+              >
+                Choose workout CSV
+              </button>
+            )}
+            <input
+              ref={workoutImportRef}
+              type="file"
+              accept=".csv,text/csv,text/comma-separated-values"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) previewWorkoutImport(file);
+              }}
+            />
+          </div>
           <div>
             <button
               onClick={handleExportJson}

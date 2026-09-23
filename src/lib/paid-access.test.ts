@@ -11,8 +11,8 @@ describe("requiresPaidAccess", () => {
     pathname: "/train",
   };
 
-  it("gates the training app after onboarding when there is no entitlement", () => {
-    expect(requiresPaidAccess(base)).toBe(true);
+  it("keeps the core training app usable on the free tier", () => {
+    expect(requiresPaidAccess(base)).toBe(false);
   });
 
   it("never traps an athlete away from account controls", () => {

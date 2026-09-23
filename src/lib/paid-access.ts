@@ -1,22 +1,21 @@
 export const DEADSET_TRIAL_DAYS = 7;
 export const DEADSET_MONTHLY_PRICE_GBP = "£5.99";
 
-const ACCOUNT_ESCAPE_ROUTES = new Set(["/profile"]);
-
 /**
- * The subscription wall must cover the training product without trapping an
- * athlete away from purchase recovery, logout, or account deletion.
+ * DEADSET has a usable free training tier. Entitlements are enforced at the
+ * individual feature boundary (analytics, Autopilot, advanced programming,
+ * leagues, etc.), never as a blanket lock around the athlete's own plan and
+ * workout log. Keeping this predicate makes the shell's intent explicit and
+ * prevents a future billing refactor from accidentally trapping free members.
  */
-export function requiresPaidAccess(options: {
+export function requiresPaidAccess(_options: {
   ready: boolean;
   hasProfile: boolean;
   entitlementLoading: boolean;
   hasEntitlement: boolean;
   pathname: string;
 }): boolean {
-  if (!options.ready || !options.hasProfile || options.entitlementLoading) return false;
-  if (options.hasEntitlement) return false;
-  return !ACCOUNT_ESCAPE_ROUTES.has(options.pathname);
+  return false;
 }
 
 export function isSevenDayFreeTrial(

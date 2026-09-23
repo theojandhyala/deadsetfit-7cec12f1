@@ -38,6 +38,7 @@ export function BottomNav() {
             <li key={to} className="flex-1">
               <Link
                 to={to}
+                preload="intent"
                 onClick={active ? undefined : hapticSelection}
                 aria-current={active ? "page" : undefined}
                 className={`deadset-nav-item relative flex h-[70px] flex-col items-center justify-center gap-1.5 press ${
@@ -69,6 +70,7 @@ export function BottomNav() {
         <li className="flex-shrink-0 px-2">
           <Link
             to="/workout/live"
+            preload="intent"
             search={{}}
             onClick={isRecordActive ? undefined : hapticSelection}
             className={`deadset-record-link flex flex-col items-center justify-center gap-1 press ${
@@ -107,6 +109,7 @@ export function BottomNav() {
             <li key={to} className="flex-1">
               <Link
                 to={to}
+                preload="intent"
                 onClick={active ? undefined : hapticSelection}
                 aria-current={active ? "page" : undefined}
                 className={`deadset-nav-item relative flex h-[70px] flex-col items-center justify-center gap-1.5 press ${

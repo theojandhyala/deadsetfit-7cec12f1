@@ -8,6 +8,7 @@ import { PaywallSheet } from "./PaywallSheet";
 import { ReferralRedeemer } from "./ReferralRedeemer";
 import { RevenueCatSync } from "./RevenueCatSync";
 import { StateSync } from "./StateSync";
+import { PushRegistration } from "./PushRegistration";
 import { Toaster } from "./ui/sonner";
 import { UsernameGate } from "./UsernameGate";
 import { ProProvider } from "../hooks/usePro";
@@ -54,6 +55,7 @@ export function NativeAppShell({
       <ProProvider>
         <RevenueCatSync />
         {!isAuthRoute ? <StateSync /> : null}
+        {!isAuthRoute ? <PushRegistration /> : null}
         {children}
         {!isAuthRoute ? <UsernameGate /> : null}
         {!isAuthRoute ? <PaywallSheet /> : null}

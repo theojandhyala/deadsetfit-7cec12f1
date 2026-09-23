@@ -27,7 +27,7 @@ export const Route = createFileRoute("/privacy")({
 
 function PrivacyPage() {
   return (
-    <LegalShell title="Privacy Policy" updated="August 24, 2026">
+    <LegalShell title="Privacy Policy" updated="September 23, 2026">
       <p>
         DEADSET ("we", "us") provides a fitness tracking and social training app. This policy
         explains what we collect, why, and your rights.
@@ -46,6 +46,11 @@ function PrivacyPage() {
         </li>
         <li>
           <b>Social:</b> posts, comments, likes, follows, reports you file, users you block.
+        </li>
+        <li>
+          <b>Location & gym:</b> optional city, country, and the gym name you choose to share for
+          nearby discovery and gym leaderboards. If you use the GPS shortcut, precise coordinates
+          are used on-device only to look up your city and are not saved by DEADSET.
         </li>
         <li>
           <b>Technical:</b> device type, OS, app version, IP address, crash logs, referral and
@@ -105,8 +110,9 @@ function PrivacyPage() {
       <H>6. Public data</H>
       <p>
         Your username, display name, avatar, public stats, posts, and comments are visible to other
-        DEADSET users. Sensitive fields (email, weight history, injuries, goal, body measurements)
-        stay private to your account.
+        DEADSET users. If you opt in to nearby discovery, your city and selected gym are also
+        visible to athletes in that community. Sensitive fields (email, weight history, injuries,
+        goal, body measurements, and precise coordinates) stay private to your account.
       </p>
 
       <H>7. Your rights and controls</H>

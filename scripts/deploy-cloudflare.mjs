@@ -90,6 +90,7 @@ try {
     "deploy",
     "--config",
     tempConfig,
+    "--keep-vars",
     ...(dryRun ? ["--dry-run"] : []),
   ]);
   if (!dryRun && !workerOnly) {

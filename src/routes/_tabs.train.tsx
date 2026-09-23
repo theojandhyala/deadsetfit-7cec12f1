@@ -319,6 +319,10 @@ function TrainPage() {
           schedule={schedule}
           activeProgram={activeProgram}
         />
+        {/* DEADSET's differentiator belongs in the daily loop, not buried in
+            Progress. This always points to the next map action after the plan
+            preview and before secondary nutrition/social destinations. */}
+        <StrengthMapPulse state={state} />
         <section className="deadset-section" aria-labelledby="daily-hub-title">
           <div className="mb-2.5 flex items-center justify-between">
             <h2 id="daily-hub-title" className="label-cap text-[10px] text-grit-dim">

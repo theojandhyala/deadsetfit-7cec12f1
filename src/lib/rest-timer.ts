@@ -81,18 +81,32 @@ function restActivityPlugin(): RestActivityPlugin | undefined {
     ?.Plugins?.RestActivity as RestActivityPlugin | undefined;
 }
 
+// Native scheduling is asynchronous. Serialize mutations so a slow permission
+// check cannot schedule an obsolete alert after Skip/unmount already cancelled it.
+let restOperations: Promise<void> = Promise.resolve();
+function restOperation(operation: () => Promise<void>): Promise<void> {
+  restOperations = restOperations.then(operation).catch(() => {
+    /* keep the next command usable */
+  });
+  return restOperations;
+}
+
 /** Fire-and-forget: a notification that fails to schedule must never break the
  *  in-app timer, which is still the primary experience. */
 export async function scheduleRestAlert(endsAt: number, exerciseName?: string): Promise<void> {
   if (!isNativeIos()) return;
-  try {
-    const permission = await LocalNotifications.checkPermissions();
-    if (permission.display !== "granted") return;
-    await LocalNotifications.cancel({ notifications: [{ id: REST_NOTIFICATION_ID }] });
-    await LocalNotifications.schedule({ notifications: [restNotification(endsAt, exerciseName)] });
-  } catch {
-    /* the on-screen timer is unaffected */
-  }
+  return restOperation(async () => {
+    try {
+      const permission = await LocalNotifications.checkPermissions();
+      if (permission.display !== "granted") return;
+      await LocalNotifications.cancel({ notifications: [{ id: REST_NOTIFICATION_ID }] });
+      await LocalNotifications.schedule({
+        notifications: [restNotification(endsAt, exerciseName)],
+      });
+    } catch {
+      /* the on-screen timer is unaffected */
+    }
+  });
 }
 
 /** Shows rest on the Dynamic Island and Lock Screen. The system counts down to
@@ -105,18 +119,20 @@ export async function startRestActivity(
 ): Promise<void> {
   const plugin = restActivityPlugin();
   if (!plugin) return;
-  try {
-    await plugin.start({
-      endsAt,
-      totalSeconds,
-      exerciseName: exerciseName ?? "Next set",
-    });
-  } catch {
-    /* the on-screen timer is unaffected */
-  }
+  return restOperation(async () => {
+    try {
+      await plugin.start({
+        endsAt,
+        totalSeconds,
+        exerciseName: exerciseName ?? "Next set",
+      });
+    } catch {
+      /* the on-screen timer is unaffected */
+    }
+  });
 }
 
-export async function endRestActivity(): Promise<void> {
+async function endNativeRestActivity(): Promise<void> {
   const plugin = restActivityPlugin();
   if (!plugin) return;
   try {
@@ -126,13 +142,19 @@ export async function endRestActivity(): Promise<void> {
   }
 }
 
+export function endRestActivity(): Promise<void> {
+  return restOperation(endNativeRestActivity);
+}
+
 /** Rest is over or was skipped: clear both the pending alert and the island. */
 export async function cancelRestAlert(): Promise<void> {
-  await endRestActivity();
-  if (!isNativeIos()) return;
-  try {
-    await LocalNotifications.cancel({ notifications: [{ id: REST_NOTIFICATION_ID }] });
-  } catch {
-    /* nothing to cancel */
-  }
+  return restOperation(async () => {
+    await endNativeRestActivity();
+    if (!isNativeIos()) return;
+    try {
+      await LocalNotifications.cancel({ notifications: [{ id: REST_NOTIFICATION_ID }] });
+    } catch {
+      /* nothing to cancel */
+    }
+  });
 }

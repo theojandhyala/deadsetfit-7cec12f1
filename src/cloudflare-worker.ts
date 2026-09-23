@@ -18,6 +18,11 @@ interface Env extends OAuthBrokerEnv, TikTokEnv {
   PAYMENTS_LIVE_WEBHOOK_SECRET?: string;
   PAYMENTS_SANDBOX_WEBHOOK_SECRET?: string;
   VITE_PAYMENTS_CLIENT_TOKEN?: string;
+  APNS_TEAM_ID?: string;
+  APNS_KEY_ID?: string;
+  APNS_PRIVATE_KEY?: string;
+  APNS_TOPIC?: string;
+  APNS_ENVIRONMENT?: string;
 }
 
 type StripeEvent = { type: string; data: { object: any } };
@@ -34,6 +39,11 @@ const RUNTIME_ENV_KEYS = [
   "APPLE_TEAM_ID",
   "APPLE_KEY_ID",
   "APPLE_PRIVATE_KEY",
+  "APNS_TEAM_ID",
+  "APNS_KEY_ID",
+  "APNS_PRIVATE_KEY",
+  "APNS_TOPIC",
+  "APNS_ENVIRONMENT",
 ] as const;
 
 const RUNTIME_ENV_GLOBAL = "__DEADSET_RUNTIME_ENV__";

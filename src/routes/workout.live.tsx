@@ -13,13 +13,12 @@ import {
   Ghost,
   Pencil,
   Link2,
-  ListPlus,
   Timer,
   StickyNote,
   RefreshCw,
   Dumbbell,
 } from "lucide-react";
-import { useAppState, getState } from "@/lib/storage";
+import { useAppState, getState, flushRemoteState } from "@/lib/storage";
 import { allExercises, getExercise } from "@/lib/exercises";
 import { defaultSchedule, isoDay, todayKey, plateBreakdown, warmupRamp } from "@/lib/calc";
 import {
@@ -43,6 +42,7 @@ import { liveExerciseSwapCandidates } from "@/lib/live-exercise-swap";
 import {
   buildSupersetIds,
   completedWorkingSets,
+  effectiveRestSeconds,
   nextStepAfterWorkingSet,
   supersetPosition,
 } from "@/lib/workout-flow";
@@ -93,9 +93,11 @@ import { VideoModal } from "@/components/VideoModal";
 import { ShareCard } from "@/components/ShareCard";
 import { GritEarnedLayer } from "@/components/GritEarnedLayer";
 import { RestTimer } from "@/components/RestTimer";
+import { SessionNavigator } from "@/components/SessionNavigator";
 import { FormCoaching } from "@/components/FormCoaching";
 import { SessionReflection } from "@/components/SessionReflection";
 import { SessionExerciseSheet } from "@/components/SessionExerciseSheet";
+import { notifyRivalWorkout } from "@/lib/push-notifications.functions";
 import type {
   AppState,
   Exercise,
@@ -567,7 +569,9 @@ function LiveWorkoutPage() {
 
   const session = state.sessions.find((s) => s.id === state.activeSessionId);
 
-  const [activeIdx, setActiveIdx] = useState(0);
+  const [requestedIdx, setActiveIdx] = useState(0);
+  // Remote edits/removals can shorten a live session while it is on screen.
+  const activeIdx = Math.max(0, Math.min(requestedIdx, (session?.exercises.length ?? 1) - 1));
   const swipeRef = useRef<{ x: number; y: number } | null>(null);
   const prAwardedRef = useRef<Set<string>>(new Set());
   const [videoQuery, setVideoQuery] = useState<string | null>(null);
@@ -577,7 +581,13 @@ function LiveWorkoutPage() {
   const [finished, setFinished] = useState(false);
   const [finishedSessionId, setFinishedSessionId] = useState<string | null>(null);
   const [share, setShare] = useState(false);
-  const [rest, setRest] = useState<{ seconds: number; nextIndex: number } | null>(null);
+  const [rest, setRest] = useState<{
+    id: number;
+    endsAt: number;
+    seconds: number;
+    nextIndex: number;
+  } | null>(null);
+  const restSequence = useRef(0);
   const [managing, setManaging] = useState(false);
   const [noting, setNoting] = useState(false);
   const [pickingBar, setPickingBar] = useState(false);
@@ -772,7 +782,7 @@ function LiveWorkoutPage() {
     }
   }
 
-  if (!session) {
+  if (!session || session.exercises.length === 0) {
     const active = state.programs.find((p) => p.id === state.activeProgramId);
     const schedule = getScheduleForState(state);
     const today = todayKey();
@@ -962,7 +972,7 @@ function LiveWorkoutPage() {
     // Superset movements rotate immediately and rest only after a full round.
     // Warm-ups stay on the current movement; drops keep the normal rest flow.
     if (kind === "warmup") return;
-    const exerciseRest = ex.restSeconds ?? restPref;
+    const exerciseRest = effectiveRestSeconds(restPref, ex.restSeconds);
     const step =
       kind === "drop"
         ? { nextIndex: index, shouldRest: true }
@@ -971,7 +981,12 @@ function LiveWorkoutPage() {
       setActiveIdx(step.nextIndex);
       return;
     }
-    setRest({ seconds: exerciseRest, nextIndex: step.nextIndex });
+    setRest({
+      id: ++restSequence.current,
+      endsAt: Date.now() + exerciseRest * 1000,
+      seconds: exerciseRest,
+      nextIndex: step.nextIndex,
+    });
   }
 
   /**
@@ -1068,6 +1083,9 @@ function LiveWorkoutPage() {
     if (!ex) return;
     mutateExercise(activeIdx, (e) => ({ ...e, restSeconds: seconds }));
     persistToPlan(ex.exerciseId, { restSeconds: seconds });
+    // Explicitly choosing a positive interval turns the global off switch back on.
+    if (seconds > 0 && restPref === 0) set((st) => ({ ...st, restTimerSeconds: seconds }));
+    hapticSelection();
   }
 
   /** Which bar this movement is loaded on — drives plate and warm-up maths. */
@@ -1178,6 +1196,9 @@ function LiveWorkoutPage() {
     const lengthBefore = session!.exercises.length;
     mutateSession((s) => ({ ...s, exercises: s.exercises.filter((_, i) => i !== index) }));
     setActiveIdx((i) => indexAfterRemoval(i, index, lengthBefore));
+    setRest((r) =>
+      r ? { ...r, nextIndex: indexAfterRemoval(r.nextIndex, index, lengthBefore) } : r,
+    );
   }
 
   /** Reorder the session when the gym floor doesn't match the plan. */
@@ -1186,6 +1207,7 @@ function LiveWorkoutPage() {
     if (target < 0 || target >= session!.exercises.length) return;
     mutateSession((s) => ({ ...s, exercises: moveItem(s.exercises, index, direction) }));
     setActiveIdx((i) => indexAfterMove(i, index, direction));
+    setRest((r) => (r ? { ...r, nextIndex: indexAfterMove(r.nextIndex, index, direction) } : r));
   }
 
   /**
@@ -1314,6 +1336,12 @@ function LiveWorkoutPage() {
       const finished = getState().sessions.find((s) => s.id === session!.id);
       if (finished) void shareWorkoutToFeed(finished);
     }
+    // A remote rival notification must be based on the server's verified
+    // finished session, never on an untrusted score from the phone. Flush the
+    // state first, then let the authenticated backend fan out through APNs.
+    void flushRemoteState()
+      .then(() => notifyRivalWorkout(session!.id))
+      .catch((error) => console.warn("rival push dispatch failed", error));
   }
 
   async function discardWorkout() {
@@ -1356,18 +1384,21 @@ function LiveWorkoutPage() {
         <div className="text-right">
           <p className="label-cap text-[10px] text-grit-dim">DONE</p>
           <p className="display text-2xl font-extrabold text-grit tabular-nums leading-none">
-            {totals.sets}/{plannedSets}
+            {completedPlanSets}/{plannedSets}
           </p>
         </div>
       </div>
 
       <div className="h-1 bg-[#1a1a1a]">
-        <div className="h-full bg-accent-red transition-all" style={{ width: `${progress}%` }} />
+        <div
+          className="h-full origin-left bg-accent-red transition-transform duration-300 motion-reduce:transition-none"
+          style={{ transform: `scaleX(${progress / 100})` }}
+        />
       </div>
 
       <div className="grid grid-cols-3 border-b border-grit bg-grit-card">
         <Stat label="EXERCISES" value={`${totalEx}`} />
-        <Stat label="SETS" value={`${totals.sets}/${plannedSets}`} />
+        <Stat label="WORK SETS" value={`${completedPlanSets}/${plannedSets}`} />
         <Stat label="PRS" value={`${totals.prs}`} accent={totals.prs > 0} />
       </div>
 
@@ -1398,38 +1429,25 @@ function LiveWorkoutPage() {
         </div>
       )}
 
-      <div className="flex items-center gap-2 overflow-x-auto px-4 py-3 border-b border-grit">
-        <button
-          onClick={() => setManaging(true)}
-          className="flex-shrink-0 flex h-8 w-8 items-center justify-center border border-grit text-grit-dim press"
-          aria-label="Edit session exercises"
-        >
-          <ListPlus size={15} />
-        </button>
-        {session.exercises.map((e, i) => {
-          const done = e.targetSets > 0 && completedWorkingSets(e.sets) >= e.targetSets;
-          const active = i === activeIdx;
-          return (
-            <button
-              key={i}
-              onClick={() => setActiveIdx(i)}
-              className="flex-shrink-0 px-3 py-1.5 border text-xs font-bold uppercase tracking-wider"
-              style={{
-                borderColor: active ? "#e63222" : done ? "#3a8a3a" : "#262626",
-                color: active ? "#e63222" : done ? "#7acc7a" : "#8a8a8a",
-                background: active ? "#1a0606" : "transparent",
-              }}
-            >
-              {done && <Check size={10} className="inline mr-1 -mt-0.5" />}
-              {i + 1}. {e.name.slice(0, 18)}
-            </button>
-          );
-        })}
-      </div>
+      <SessionNavigator
+        exercises={session.exercises}
+        activeIndex={activeIdx}
+        startedAt={session.startedAt}
+        onSelect={(index) => {
+          setActiveIdx(index);
+          setRest((r) => (r ? { ...r, nextIndex: index } : r));
+        }}
+        onManage={() => setManaging(true)}
+      />
 
       <div
         className="flex-1 px-5 py-4 overflow-auto"
         onTouchStart={(e) => {
+          // Editing a field or scrolling an inner control is not an exercise swipe.
+          if ((e.target as HTMLElement).closest("input, textarea, button, a, [role='slider']")) {
+            swipeRef.current = null;
+            return;
+          }
           swipeRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         }}
         onTouchEnd={(e) => {
@@ -1443,11 +1461,11 @@ function LiveWorkoutPage() {
         }}
       >
         <div className="flex items-start justify-between gap-3 mb-2">
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="label-cap text-grit-dim text-[10px]">
               EXERCISE {activeIdx + 1}/{totalEx}
             </p>
-            <h1 className="display text-2xl uppercase font-extrabold text-grit leading-tight">
+            <h1 className="display break-words text-2xl uppercase font-extrabold text-grit leading-tight">
               {current.name}
             </h1>
             <p className="text-xs text-[#8a8a8a] mt-1">
@@ -1483,7 +1501,7 @@ function LiveWorkoutPage() {
                 onClick={() => {
                   // Cycle the common gym intervals; kept on the plan for next time.
                   const options = [0, 60, 90, 120, 180];
-                  const now = current.restSeconds ?? restPref;
+                  const now = effectiveRestSeconds(restPref, current.restSeconds);
                   const next = options[(options.indexOf(now) + 1) % options.length]!;
                   setExerciseRest(next);
                 }}
@@ -1491,9 +1509,9 @@ function LiveWorkoutPage() {
                 aria-label="Change rest for this exercise"
               >
                 <Timer size={11} />
-                {(current.restSeconds ?? restPref) === 0
+                {effectiveRestSeconds(restPref, current.restSeconds) === 0
                   ? "no rest"
-                  : `${current.restSeconds ?? restPref}s rest`}
+                  : `${effectiveRestSeconds(restPref, current.restSeconds)}s rest`}
               </button>
               {usesBarbell(current.name) && (
                 <button
@@ -1698,8 +1716,9 @@ function LiveWorkoutPage() {
       )}
       {rest && rest.seconds > 0 && (
         <RestTimer
-          key={session.exercises[activeIdx]?.sets.length ?? 0}
+          key={rest.id}
           seconds={rest.seconds}
+          initialEndsAt={rest.endsAt}
           nextExercise={session.exercises[rest.nextIndex]?.name}
           onDone={() => {
             setActiveIdx(rest.nextIndex);
@@ -1868,8 +1887,9 @@ function SetLogger({
   const [editingSet, setEditingSet] = useState<number | null>(null);
   const [weightError, setWeightError] = useState(false);
   const [extraSets, setExtraSets] = useState(0);
-  const editWeightRef = useRef<HTMLInputElement>(null);
-  const editRepsRef = useRef<HTMLInputElement>(null);
+  const [scratchField, setScratchField] = useState<"weight" | "reps">("weight");
+  const [scratchWeight, setScratchWeight] = useState("");
+  const [scratchReps, setScratchReps] = useState("");
 
   const logged = exercise.sets.length;
   // Working rows keep their plan even when warm-up/drop sets are interleaved:
@@ -1898,13 +1918,13 @@ function SetLogger({
   }
 
   function saveEdit() {
-    // Typed in the athlete's units; every stored weight stays in kilograms.
-    const typed = Number((editWeightRef.current?.value ?? "").replace(/[^0-9.]/g, ""));
+    // Entered in the athlete's units; every stored weight stays in kilograms.
+    const typed = Number(scratchWeight);
     const w = Number.isFinite(typed) ? toKg(typed, unit) : Number.NaN;
-    const r = Math.floor(Number((editRepsRef.current?.value ?? "").replace(/[^0-9]/g, "")));
+    const r = Math.floor(Number(scratchReps));
     if (requiresWeight && (!Number.isFinite(w) || w <= 0)) {
       setWeightError(true);
-      editWeightRef.current?.focus();
+      setScratchField("weight");
       return;
     }
     setOverride({
@@ -1917,8 +1937,39 @@ function SetLogger({
 
   function openWeightEditor() {
     setWeightError(false);
+    setScratchWeight(nextWeight > 0 ? formatWeightValue(nextWeight, unit) : "");
+    setScratchReps(String(nextReps));
+    setScratchField(requiresWeight ? "weight" : "reps");
     setEditing(true);
-    requestAnimationFrame(() => editWeightRef.current?.focus());
+  }
+
+  function adjustScratch(field: "weight" | "reps", delta: number) {
+    hapticSelection();
+    if (field === "weight") {
+      const current = Number(scratchWeight) || 0;
+      setScratchWeight(trimNumber(Math.max(0, current + delta)));
+      setWeightError(false);
+      return;
+    }
+    const current = Math.floor(Number(scratchReps)) || 0;
+    setScratchReps(String(Math.min(99, Math.max(1, current + delta))));
+  }
+
+  function typeScratch(key: string) {
+    hapticSelection();
+    const value = scratchField === "weight" ? scratchWeight : scratchReps;
+    let next = value;
+    if (key === "delete") next = value.slice(0, -1);
+    else if (key === ".") {
+      if (scratchField === "weight" && !value.includes(".")) next = value ? `${value}.` : "0.";
+    } else {
+      const maxLength = scratchField === "weight" ? 6 : 2;
+      if (value.length < maxLength) next = value === "0" ? key : `${value}${key}`;
+    }
+    if (scratchField === "weight") {
+      setScratchWeight(next);
+      setWeightError(false);
+    } else setScratchReps(next);
   }
 
   const fmt = (w: number, r: number) => formatSet({ weight: w, reps: r }, requiresWeight);
@@ -2141,7 +2192,7 @@ function SetLogger({
                     className="ml-2.5 text-grit-dim"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setEditing(true);
+                      openWeightEditor();
                     }}
                   />
                 )}
@@ -2184,39 +2235,72 @@ function SetLogger({
       )}
 
       {editing && (
-        <div className="mt-2 border border-accent-red/40 rounded-xl p-3">
-          <p className="label-cap text-[9px] text-accent-red mb-2">ADJUST NEXT SET</p>
-          <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
-            <input
-              ref={editWeightRef}
-              inputMode="decimal"
-              defaultValue={nextWeight > 0 ? formatWeightValue(nextWeight, unit) : ""}
-              placeholder={unit}
-              className={`input-grit ${weightError ? "border-accent-red" : ""}`}
-              aria-label={`Weight (${unit})`}
-            />
-            <input
-              ref={editRepsRef}
-              inputMode="numeric"
-              defaultValue={String(nextReps)}
-              placeholder="reps"
-              className="input-grit"
-              aria-label="Reps"
-            />
+        <div className="mt-2 min-w-0 overflow-hidden border border-accent-red/50 bg-black/40 rounded-2xl p-3 shadow-[0_0_28px_rgba(230,50,34,.08)]">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="label-cap text-[10px] text-accent-red">ADJUST NEXT SET</p>
             <button
               type="button"
-              onClick={saveEdit}
-              aria-label="Save set weight and reps"
-              className="btn-grit px-4"
+              onClick={() => setEditing(false)}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-grit text-grit-dim press"
+              aria-label="Close set editor"
             >
-              <Check size={16} />
+              <X size={15} />
             </button>
           </div>
+
+          <div className="grid min-w-0 grid-cols-2 gap-2">
+            <ScratchValue
+              label="WEIGHT"
+              value={scratchWeight || "—"}
+              suffix={unit.toUpperCase()}
+              active={scratchField === "weight"}
+              error={weightError}
+              disabled={!requiresWeight}
+              onSelect={() => setScratchField("weight")}
+              onDown={() => adjustScratch("weight", -increment(unit))}
+              onUp={() => adjustScratch("weight", increment(unit))}
+            />
+            <ScratchValue
+              label="REPS"
+              value={scratchReps || "—"}
+              suffix=""
+              active={scratchField === "reps"}
+              onSelect={() => setScratchField("reps")}
+              onDown={() => adjustScratch("reps", -1)}
+              onUp={() => adjustScratch("reps", 1)}
+            />
+          </div>
+
+          <div className="mt-3 grid grid-cols-3 gap-1.5" aria-label={`${scratchField} keypad`}>
+            {["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "delete"].map(
+              (key) => (
+                <button
+                  key={key}
+                  type="button"
+                  disabled={key === "." && scratchField === "reps"}
+                  onClick={() => typeScratch(key)}
+                  className="flex min-h-11 items-center justify-center rounded-xl border border-grit bg-grit-card display text-lg font-extrabold text-grit press disabled:opacity-20"
+                  aria-label={key === "delete" ? "Delete digit" : key === "." ? "Decimal point" : key}
+                >
+                  {key === "delete" ? "⌫" : key}
+                </button>
+              ),
+            )}
+          </div>
+
           {weightError && (
             <p className="mt-2 text-xs font-semibold text-accent-red">
-              Enter the working weight before logging this set.
+              Add a working weight before saving this set.
             </p>
           )}
+          <button
+            type="button"
+            onClick={saveEdit}
+            aria-label="Save set weight and reps"
+            className="mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-accent-red px-4 label-cap text-sm text-white shadow-[0_10px_30px_rgba(230,50,34,.28)] press"
+          >
+            <Check size={18} strokeWidth={3} /> SAVE SET
+          </button>
         </div>
       )}
 
@@ -2320,6 +2404,80 @@ function SetLogger({
           onClose={() => setEditingSet(null)}
         />
       )}
+    </div>
+  );
+}
+
+/**
+ * A glove-friendly set value control. The entire card selects the field while
+ * its edge buttons provide the two adjustments lifters make most often. It is
+ * deliberately rendered without an input element so iOS never raises a
+ * keyboard over the active workout or widens the viewport.
+ */
+function ScratchValue({
+  label,
+  value,
+  suffix,
+  active,
+  error = false,
+  disabled = false,
+  onSelect,
+  onDown,
+  onUp,
+}: {
+  label: string;
+  value: string;
+  suffix: string;
+  active: boolean;
+  error?: boolean;
+  disabled?: boolean;
+  onSelect: () => void;
+  onDown: () => void;
+  onUp: () => void;
+}) {
+  return (
+    <div
+      className="min-w-0 overflow-hidden rounded-xl border bg-grit-card"
+      style={{
+        borderColor: error ? "#e63222" : active ? "rgba(230,50,34,.75)" : "#2d2d2d",
+        opacity: disabled ? 0.42 : 1,
+      }}
+    >
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => {
+          hapticSelection();
+          onSelect();
+        }}
+        className="block min-h-[76px] w-full min-w-0 px-2 py-2 text-center press disabled:cursor-default"
+      >
+        <span className="label-cap block text-[9px] text-grit-dim">{label}</span>
+        <span className="mt-1 flex min-w-0 items-baseline justify-center gap-1 overflow-hidden">
+          <span className="display truncate text-3xl font-black leading-none text-grit">{value}</span>
+          {suffix && <span className="label-cap shrink-0 text-[9px] text-grit-dim">{suffix}</span>}
+        </span>
+      </button>
+      <div className="grid grid-cols-2 border-t border-grit">
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={onDown}
+          className="min-h-11 border-r border-grit text-xl font-black text-grit press disabled:opacity-30"
+          aria-label={`Decrease ${label.toLowerCase()}`}
+        >
+          −
+        </button>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={onUp}
+          className="min-h-11 text-xl font-black text-grit press disabled:opacity-30"
+          aria-label={`Increase ${label.toLowerCase()}`}
+        >
+          +
+        </button>
+      </div>
     </div>
   );
 }

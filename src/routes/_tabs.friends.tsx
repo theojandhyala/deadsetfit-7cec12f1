@@ -26,6 +26,8 @@ import {
   Flag,
   Ban,
   X,
+  Building2,
+  Lock,
 } from "lucide-react";
 import { restoreSupabaseSession, supabase } from "@/integrations/supabase/client";
 import { withTimeout } from "@/lib/account-restore";
@@ -52,12 +54,20 @@ import {
   updateMyLocation,
   getMyLocation,
   getNearbyAthletes,
+  searchLocalGyms,
+  updateMyGym,
+  getGymHub,
+  type GymAthlete,
+  type GymHub,
+  type LocalGymOption,
   type FriendAction,
   type FriendConnections,
   type FriendStatus,
   type FeedScope,
 } from "@/lib/social.functions";
 import { hapticFailure, hapticPlanUpdated, hapticSelection } from "@/lib/haptics";
+import { usePro } from "@/hooks/usePro";
+import { openPaywall } from "@/lib/paywall-events";
 import { RankShareCard } from "@/components/RankShareCard";
 import { toast } from "sonner";
 
@@ -1162,7 +1172,7 @@ function Invite() {
 // ============ FRIENDS ============
 type SearchHit = Awaited<ReturnType<typeof searchAthletes>>[number];
 type Suggested = Awaited<ReturnType<typeof getSuggestedAthletes>>[number];
-type FriendView = "CREW" | "REQUESTS" | "DISCOVER";
+type FriendView = "CREW" | "REQUESTS" | "DISCOVER" | "GYM";
 
 const COUNTRY_ALIASES: Record<string, string> = {
   "united kingdom of great britain and northern ireland": "United Kingdom",
@@ -1202,6 +1212,10 @@ function Friends() {
   const _nearby = getNearbyAthletes;
   const _getLoc = getMyLocation;
   const _setLoc = updateMyLocation;
+  const _searchGyms = searchLocalGyms;
+  const _setGym = updateMyGym;
+  const _gymHub = getGymHub;
+  const { isPro, loading: proLoading } = usePro();
 
   const [q, setQ] = useState("");
   const [results, setResults] = useState<SearchHit[] | null>(null);
@@ -1217,12 +1231,18 @@ function Friends() {
   const [locBusy, setLocBusy] = useState(false);
   const [cityInput, setCityInput] = useState("");
   const [countryInput, setCountryInput] = useState("");
+  const [gymInput, setGymInput] = useState("");
+  const [gymHub, setGymHub] = useState<GymHub | null>(null);
+  const [localGyms, setLocalGyms] = useState<LocalGymOption[]>([]);
+  const [gymBusy, setGymBusy] = useState(false);
+  const [gymError, setGymError] = useState<string | null>(null);
   const [view, setView] = useState<FriendView>("CREW");
   // These DOM-owned fields are also set programmatically (initial load, GPS,
   // normalize-on-save), so their .value must be synced imperatively — a
   // defaultValue alone only applies at mount.
   const cityRef = useRef<HTMLInputElement>(null);
   const countryRef = useRef<HTMLInputElement>(null);
+  const gymRef = useRef<HTMLInputElement>(null);
 
   const loadFriendsHome = useCallback(() => {
     setFriendsError(null);
@@ -1258,7 +1278,20 @@ function Friends() {
       .catch((error) => {
         setLocationError(error instanceof Error ? error.message : "Couldn't load nearby athletes");
       });
-  }, [_connections, _getLoc, _nearby, _suggest]);
+    _gymHub()
+      .then((hub) => {
+        setGymHub(hub);
+        const gymName = hub.gymName ?? "";
+        setGymInput(gymName);
+        if (gymRef.current) gymRef.current.value = gymName;
+      })
+      .catch((error) => {
+        setGymError(error instanceof Error ? error.message : "Couldn't load your gym");
+      });
+    _searchGyms({ data: {} })
+      .then((result) => setLocalGyms(result.gyms))
+      .catch(() => setLocalGyms([]));
+  }, [_connections, _getLoc, _gymHub, _nearby, _searchGyms, _suggest]);
 
   useEffect(() => {
     loadFriendsHome();
@@ -1406,6 +1439,11 @@ function Friends() {
       toast.success(`Set to ${city}, ${country}`);
       setMyLoc({ city, country });
       setNearby(await _nearby());
+      const [nextGymHub, gymOptions] = await Promise.all([_gymHub(), _searchGyms({ data: {} })]);
+      setGymHub(nextGymHub);
+      setLocalGyms(gymOptions.gyms);
+      setGymInput(nextGymHub.gymName ?? "");
+      if (gymRef.current) gymRef.current.value = nextGymHub.gymName ?? "";
     } catch (e) {
       hapticFailure();
       const geolocationCode =
@@ -1444,6 +1482,11 @@ function Friends() {
       hapticPlanUpdated();
       toast.success("Saved");
       setNearby(await _nearby());
+      const [nextGymHub, gymOptions] = await Promise.all([_gymHub(), _searchGyms({ data: {} })]);
+      setGymHub(nextGymHub);
+      setLocalGyms(gymOptions.gyms);
+      setGymInput(nextGymHub.gymName ?? "");
+      if (gymRef.current) gymRef.current.value = nextGymHub.gymName ?? "";
     } catch (e) {
       hapticFailure();
       const message = e instanceof Error ? e.message : "Couldn't save your city";
@@ -1451,6 +1494,64 @@ function Friends() {
       toast.error(message);
     } finally {
       setLocBusy(false);
+    }
+  }
+
+  async function saveGym(name = gymInput) {
+    const gymName = name.trim();
+    if (!myLoc?.city || !myLoc?.country) {
+      setView("DISCOVER");
+      toast.error("Set your city first, then choose your gym");
+      return;
+    }
+    if (gymName.length < 2) {
+      toast.error("Enter your gym name");
+      return;
+    }
+    setGymBusy(true);
+    setGymError(null);
+    try {
+      await _setGym({ data: { gymName } });
+      const [nextHub, gymOptions] = await Promise.all([_gymHub(), _searchGyms({ data: {} })]);
+      setGymHub(nextHub);
+      setLocalGyms(gymOptions.gyms);
+      setGymInput(nextHub.gymName ?? gymName);
+      if (gymRef.current) gymRef.current.value = nextHub.gymName ?? gymName;
+      hapticPlanUpdated();
+      toast.success(`Joined ${nextHub.gymName ?? gymName}`);
+    } catch (error) {
+      hapticFailure();
+      const message = error instanceof Error ? error.message : "Couldn't save your gym";
+      setGymError(message);
+      toast.error(message);
+    } finally {
+      setGymBusy(false);
+    }
+  }
+
+  async function leaveGym() {
+    const confirmed = await askConfirm({
+      title: "Leave this gym?",
+      message:
+        "You will disappear from its local board. Your friends and training data stay intact.",
+      confirmLabel: "Leave gym",
+      danger: true,
+    });
+    if (!confirmed) return;
+    setGymBusy(true);
+    try {
+      await _setGym({ data: { gymName: "" } });
+      const nextHub = await _gymHub();
+      setGymHub(nextHub);
+      setGymInput("");
+      if (gymRef.current) gymRef.current.value = "";
+      hapticPlanUpdated();
+      toast.success("Gym removed");
+    } catch (error) {
+      hapticFailure();
+      toast.error(error instanceof Error ? error.message : "Couldn't leave the gym");
+    } finally {
+      setGymBusy(false);
     }
   }
 
@@ -1507,15 +1608,16 @@ function Friends() {
       </div>
 
       <div
-        className="mb-4 grid grid-cols-3 gap-1 rounded-2xl border border-white/10 bg-black/30 p-1"
+        className="mb-4 grid grid-cols-4 gap-1 rounded-2xl border border-white/10 bg-black/30 p-1"
         role="tablist"
         aria-label="Friend sections"
       >
         {(
           [
-            ["CREW", "Crew", connections?.friends.length ?? 0, Users],
+            ["CREW", "Friends", connections?.friends.length ?? 0, Users],
             ["REQUESTS", "Requests", connections?.incoming.length ?? 0, UserPlus],
-            ["DISCOVER", "Discover", null, Search],
+            ["DISCOVER", "Nearby", null, Search],
+            ["GYM", "Gym", gymHub?.athletes.length ?? null, Building2],
           ] as const
         ).map(([id, label, count, Icon]) => {
           const active = view === id;
@@ -1529,7 +1631,7 @@ function Friends() {
                 hapticSelection();
                 setView(id);
               }}
-              className={`relative flex min-h-12 items-center justify-center gap-1.5 rounded-xl px-2 text-[9px] font-black uppercase tracking-[0.09em] transition-colors ${
+              className={`relative flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-[8px] font-black uppercase tracking-[0.05em] transition-colors ${
                 active ? "bg-accent-red text-white shadow-lg" : "text-grit-dim"
               }`}
             >
@@ -1555,7 +1657,11 @@ function Friends() {
         >
           <p className="text-xs font-bold text-grit">Friends couldn't refresh</p>
           <p className="mt-1 text-[10px] leading-relaxed text-grit-dim">{friendsError}</p>
-          <button type="button" onClick={loadFriendsHome} className="btn-ghost mt-3 min-h-10 px-4 text-[10px]">
+          <button
+            type="button"
+            onClick={loadFriendsHome}
+            className="btn-ghost mt-3 min-h-10 px-4 text-[10px]"
+          >
             Try again
           </button>
         </div>
@@ -1652,6 +1758,188 @@ function Friends() {
           >
             Discover athletes
           </button>
+        </div>
+      )}
+
+      {view === "GYM" && (
+        <div className="space-y-4">
+          <section className="relative overflow-hidden rounded-2xl border border-accent-red/45 bg-[linear-gradient(135deg,rgba(230,50,34,.2),rgba(12,12,13,.98)_62%)] p-4">
+            <div className="absolute -right-8 -top-10 h-28 w-28 rounded-full bg-accent-red/20 blur-2xl" />
+            <p className="label-cap flex items-center gap-1.5 text-[9px] text-accent-red">
+              <Building2 size={12} /> LOCAL GYM HUB
+            </p>
+            <h3 className="display mt-1 text-2xl font-black uppercase leading-none text-white">
+              {gymHub?.gymName ?? "Find your floor"}
+            </h3>
+            <p className="mt-2 text-xs leading-relaxed text-grit-dim">
+              {myLoc?.city
+                ? `See lifters and the weekly activity board at your gym in ${myLoc.city}.`
+                : "Set your city first, then join your gym. DEADSET stores city-level location only."}
+            </p>
+            {gymHub?.gymName && (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="rounded-full border border-white/10 bg-black/30 px-2.5 py-1 label-cap text-[7px] text-white">
+                  {gymHub.athletes.length} {gymHub.athletes.length === 1 ? "member" : "members"}
+                </span>
+                <span className="rounded-full border border-white/10 bg-black/30 px-2.5 py-1 label-cap text-[7px] text-white">
+                  Resets Monday
+                </span>
+              </div>
+            )}
+          </section>
+
+          {!myLoc?.city ? (
+            <button
+              type="button"
+              onClick={() => {
+                hapticSelection();
+                setView("DISCOVER");
+              }}
+              className="btn-grit min-h-12 w-full"
+            >
+              <MapPin size={14} className="mr-2 inline" /> Set my city
+            </button>
+          ) : (
+            <section className="rounded-2xl border border-white/10 bg-grit-card p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <p className="label-cap text-[9px] text-grit">
+                    {gymHub?.gymName ? "CHANGE GYM" : "CHOOSE YOUR GYM"}
+                  </p>
+                  <p className="mt-1 text-[10px] text-grit-dim">
+                    Public to athletes in {myLoc.city}; exact location is never shared.
+                  </p>
+                </div>
+                {gymHub?.gymName && (
+                  <button
+                    type="button"
+                    onClick={() => void leaveGym()}
+                    disabled={gymBusy}
+                    className="shrink-0 label-cap text-[8px] text-grit-dim"
+                  >
+                    Leave
+                  </button>
+                )}
+              </div>
+              <div className="grid min-w-0 grid-cols-[1fr_auto] gap-2">
+                <input
+                  ref={gymRef}
+                  defaultValue={gymInput}
+                  onChange={(event) => setGymInput(event.target.value)}
+                  placeholder="e.g. PureGym Cheltenham"
+                  className="input-grit min-w-0"
+                  maxLength={80}
+                  autoCapitalize="words"
+                />
+                <button
+                  type="button"
+                  onClick={() => void saveGym()}
+                  disabled={gymBusy}
+                  className="btn-grit min-h-11 px-4 text-[9px]"
+                >
+                  {gymBusy ? <Loader2 size={13} className="animate-spin" /> : "JOIN"}
+                </button>
+              </div>
+              {gymError && (
+                <p role="alert" className="mt-2 text-[10px] leading-relaxed text-accent-red">
+                  {gymError}
+                </p>
+              )}
+              {localGyms.length > 0 && (
+                <div className="mt-3">
+                  <p className="label-cap mb-2 text-[7px] text-grit-dim">
+                    GYMS ATHLETES USE NEARBY
+                  </p>
+                  <div className="grid grid-cols-1 gap-2">
+                    {localGyms
+                      .filter((gym) => gym.name !== gymHub?.gymName)
+                      .slice(0, 4)
+                      .map((gym) => (
+                        <button
+                          key={gym.key}
+                          type="button"
+                          onClick={() => {
+                            setGymInput(gym.name);
+                            if (gymRef.current) gymRef.current.value = gym.name;
+                            void saveGym(gym.name);
+                          }}
+                          disabled={gymBusy}
+                          className="press flex min-h-11 items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 text-left"
+                        >
+                          <span className="truncate text-xs font-bold text-grit">{gym.name}</span>
+                          <span className="shrink-0 label-cap text-[7px] text-grit-dim">
+                            {gym.memberCount} {gym.memberCount === 1 ? "lifter" : "lifters"}
+                          </span>
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
+          {gymHub?.gymName && (
+            <section>
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <div>
+                  <p className="label-cap flex items-center gap-1.5 text-grit">
+                    <Trophy size={11} className="text-accent-red" /> THIS WEEK
+                  </p>
+                  <p className="mt-1 text-[9px] text-grit-dim">
+                    Ranked by verified workout activity, not likes.
+                  </p>
+                </div>
+                {!isPro && !proLoading && (
+                  <button
+                    type="button"
+                    onClick={() => openPaywall("leagues")}
+                    className="label-cap flex items-center gap-1 text-[8px] text-pro"
+                  >
+                    <Crown size={10} /> Full board
+                  </button>
+                )}
+              </div>
+              {gymHub.athletes.length === 0 ? (
+                <div className="rounded-2xl border border-white/10 bg-grit-card p-5 text-center">
+                  <Dumbbell size={22} className="mx-auto text-accent-red" />
+                  <p className="display mt-3 text-lg font-black uppercase text-grit">
+                    Log the first session
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-grit-dim">
+                    Your gym board wakes up when a verified workout is saved this week.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {(isPro ? gymHub.athletes : gymHub.athletes.slice(0, 3)).map((athlete) => (
+                    <GymRankingRow
+                      key={athlete.id}
+                      athlete={athlete}
+                      status={
+                        statusById.get(athlete.id) ?? (athlete.following ? "OUTGOING" : "NONE")
+                      }
+                      busy={busy === athlete.id}
+                      onToggle={() =>
+                        changeConnection(
+                          athlete.id,
+                          statusById.get(athlete.id) ?? (athlete.following ? "OUTGOING" : "NONE"),
+                        )
+                      }
+                    />
+                  ))}
+                  {!isPro && !proLoading && gymHub.athletes.length > 3 && (
+                    <button
+                      type="button"
+                      onClick={() => openPaywall("leagues")}
+                      className="press flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl border border-pro/30 bg-pro/10 label-cap text-[9px] text-pro"
+                    >
+                      <Lock size={12} /> Unlock all {gymHub.athletes.length} gym ranks
+                    </button>
+                  )}
+                </div>
+              )}
+            </section>
+          )}
         </div>
       )}
 
@@ -1758,9 +2046,18 @@ function Friends() {
           </div>
 
           {searchError && (
-            <div role="alert" className="mb-4 rounded-xl border border-accent-red/40 bg-accent-red/10 p-3">
-              <p className="text-xs text-grit">Search couldn't load. Check your connection and try again.</p>
-              <button type="button" onClick={() => void retrySearch()} className="mt-2 text-[10px] font-black uppercase tracking-wider text-accent-red">
+            <div
+              role="alert"
+              className="mb-4 rounded-xl border border-accent-red/40 bg-accent-red/10 p-3"
+            >
+              <p className="text-xs text-grit">
+                Search couldn't load. Check your connection and try again.
+              </p>
+              <button
+                type="button"
+                onClick={() => void retrySearch()}
+                className="mt-2 text-[10px] font-black uppercase tracking-wider text-accent-red"
+              >
                 Retry search
               </button>
             </div>
@@ -1928,6 +2225,105 @@ function AthleteRow({
           )}
         </button>
       </div>
+    </div>
+  );
+}
+
+function GymRankingRow({
+  athlete,
+  status,
+  busy,
+  onToggle,
+}: {
+  athlete: GymAthlete;
+  status: FriendStatus;
+  busy: boolean;
+  onToggle: () => void;
+}) {
+  const medal =
+    athlete.gymRank === 1
+      ? "#f4c33a"
+      : athlete.gymRank === 2
+        ? "#c8cbd2"
+        : athlete.gymRank === 3
+          ? "#c27a43"
+          : null;
+  return (
+    <div
+      className={`flex min-w-0 items-center gap-3 rounded-2xl border p-3 ${
+        athlete.isMe ? "border-accent-red/45 bg-accent-red/[.08]" : "border-white/10 bg-grit-card"
+      }`}
+    >
+      <div
+        className="display grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/10 bg-black/30 text-lg font-black"
+        style={{ color: medal ?? "#8a8a8a" }}
+        aria-label={`Rank ${athlete.gymRank}`}
+      >
+        {athlete.gymRank}
+      </div>
+      <Link
+        to="/athlete/$id"
+        params={{ id: athlete.id }}
+        className="flex min-w-0 flex-1 items-center gap-2.5"
+      >
+        <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-[#1a1a1a] display font-black text-grit">
+          {athlete.avatar_url ? (
+            <img src={athlete.avatar_url} alt="" className="h-full w-full object-cover" />
+          ) : (
+            (athlete.display_name || athlete.username || "A")[0]
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-bold text-grit">
+            {athlete.display_name || athlete.username || "Athlete"}
+            {athlete.isMe ? " · You" : ""}
+          </p>
+          <p className="mt-0.5 truncate text-[8px] font-bold uppercase tracking-wider text-grit-dim">
+            {athlete.weeklyVolumeKg.toLocaleString()} kg · {athlete.weeklyPrs} PR
+            {athlete.weeklyPrs === 1 ? "" : "s"}
+          </p>
+        </div>
+      </Link>
+      <div className="shrink-0 text-right">
+        <p className="display text-lg font-black leading-none text-accent-red">
+          {athlete.weeklyScore}
+        </p>
+        <p className="label-cap mt-0.5 text-[6px] text-grit-dim">WEEK PTS</p>
+      </div>
+      {!athlete.isMe && (
+        <button
+          type="button"
+          onClick={() => {
+            hapticSelection();
+            onToggle();
+          }}
+          disabled={busy}
+          className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
+            status === "NONE" || status === "INCOMING"
+              ? "bg-accent-red text-white"
+              : "border border-white/10 text-grit-dim"
+          }`}
+          aria-label={
+            status === "FRIEND"
+              ? "Remove friend"
+              : status === "INCOMING"
+                ? "Accept friend request"
+                : status === "OUTGOING"
+                  ? "Cancel friend request"
+                  : "Add friend"
+          }
+        >
+          {busy ? (
+            <Loader2 size={13} className="animate-spin" />
+          ) : status === "FRIEND" ? (
+            <UserCheck size={14} />
+          ) : status === "OUTGOING" ? (
+            <Check size={14} />
+          ) : (
+            <UserPlus size={14} />
+          )}
+        </button>
+      )}
     </div>
   );
 }

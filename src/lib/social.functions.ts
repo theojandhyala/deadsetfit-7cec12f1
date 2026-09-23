@@ -139,3 +139,47 @@ export const getNearbyAthletes = () =>
   callRpc<{ athletes: any[]; myCity: string | null; myCountry: string | null }>(
     "getNearbyAthletes",
   );
+
+export interface LocalGymOption {
+  name: string;
+  key: string;
+  memberCount: number;
+}
+
+export interface GymAthlete {
+  id: string;
+  username: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+  level: string | null;
+  grit_points: number | null;
+  public_stats: Record<string, unknown> | null;
+  city: string | null;
+  country: string | null;
+  gym_name: string | null;
+  following: boolean;
+  isMe: boolean;
+  weeklyScore: number;
+  weeklyVolumeKg: number;
+  weeklyPrs: number;
+  gymRank: number;
+}
+
+export interface GymHub {
+  gymName: string | null;
+  city: string | null;
+  country: string | null;
+  athletes: GymAthlete[];
+}
+
+export const searchLocalGyms = ({ data }: { data: { q?: string } }) =>
+  callRpc<{ gyms: LocalGymOption[]; city: string | null; country: string | null }>(
+    "searchLocalGyms",
+    data,
+  );
+
+export const updateMyGym = ({ data }: { data: { gymName: string } }) =>
+  callRpc<{ ok: boolean; gymName: string | null }>("updateMyGym", data);
+
+export const getGymHub = () => callRpc<GymHub>("getGymHub");

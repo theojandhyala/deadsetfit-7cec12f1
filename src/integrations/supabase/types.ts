@@ -190,6 +190,9 @@ export type Database = {
           gender: Database["public"]["Enums"]["gender_type"];
           goal: Database["public"]["Enums"]["training_goal"];
           grit_points: number;
+          gym_key: string | null;
+          gym_name: string | null;
+          gym_updated_at: string | null;
           height_cm: number;
           id: string;
           level: string;
@@ -223,6 +226,9 @@ export type Database = {
           gender?: Database["public"]["Enums"]["gender_type"];
           goal?: Database["public"]["Enums"]["training_goal"];
           grit_points?: number;
+          gym_key?: string | null;
+          gym_name?: string | null;
+          gym_updated_at?: string | null;
           height_cm?: number;
           id: string;
           level?: string;
@@ -256,6 +262,9 @@ export type Database = {
           gender?: Database["public"]["Enums"]["gender_type"];
           goal?: Database["public"]["Enums"]["training_goal"];
           grit_points?: number;
+          gym_key?: string | null;
+          gym_name?: string | null;
+          gym_updated_at?: string | null;
           height_cm?: number;
           id?: string;
           level?: string;
@@ -468,6 +477,8 @@ export type Database = {
           country: string | null;
           display_name: string | null;
           grit_points: number | null;
+          gym_key: string | null;
+          gym_name: string | null;
           id: string | null;
           level: string | null;
           public_stats: Json | null;
@@ -481,6 +492,8 @@ export type Database = {
           country?: string | null;
           display_name?: string | null;
           grit_points?: number | null;
+          gym_key?: string | null;
+          gym_name?: string | null;
           id?: string | null;
           level?: string | null;
           public_stats?: Json | null;
@@ -494,6 +507,8 @@ export type Database = {
           country?: string | null;
           display_name?: string | null;
           grit_points?: number | null;
+          gym_key?: string | null;
+          gym_name?: string | null;
           id?: string | null;
           level?: string | null;
           public_stats?: Json | null;

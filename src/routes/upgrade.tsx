@@ -499,6 +499,17 @@ function UpgradePage() {
           : `Seven days free for eligible new members, then ${selectedPrice}/${selectedPeriod}. Cancel anytime.`}
       </p>
 
+      <Link
+        to="/train"
+        className="mt-3 flex min-h-12 w-full items-center justify-center rounded-xl border border-white/10 bg-white/[.025] px-4 text-center label-cap text-[9px] text-grit-dim press"
+      >
+        Continue with Free
+      </Link>
+      <p className="mt-2 text-center text-[9px] leading-relaxed text-grit-dim">
+        Free includes your plan, workout logging, basic progress and finding friends. Pro unlocks
+        coaching intelligence, advanced analytics, unlimited programme tools and competition.
+      </p>
+
       <div className="mt-5 grid grid-cols-2 gap-2">
         <Link to="/profile" className="btn-ghost min-h-11 text-center text-[10px]">
           <UserRoundCog size={14} className="mr-1.5 inline" /> Account & privacy
@@ -674,13 +685,7 @@ function TrialHero({
   );
 }
 
-function OfferCodeCard({
-  loading,
-  onRedeem,
-}: {
-  loading: boolean;
-  onRedeem: () => void;
-}) {
+function OfferCodeCard({ loading, onRedeem }: { loading: boolean; onRedeem: () => void }) {
   return (
     <section className="mt-3 overflow-hidden rounded-2xl border border-emerald-400/25 bg-emerald-400/[0.055] p-4">
       <div className="flex items-start gap-3">

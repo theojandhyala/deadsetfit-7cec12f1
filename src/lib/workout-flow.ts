@@ -7,6 +7,13 @@ export function completedWorkingSets(sets: CompletedSet[]): number {
   return sets.filter(isWorkingSet).length;
 }
 
+/** The global off switch wins over exercise-specific rest prescriptions. */
+export function effectiveRestSeconds(preference: number, exerciseSeconds?: number): number {
+  if (preference === 0) return 0;
+  const seconds = exerciseSeconds ?? preference;
+  return Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
+}
+
 /** Converts the schedule's visible, adjacent links into session-stable group ids. */
 export function buildSupersetIds(
   exerciseIds: string[],

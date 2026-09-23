@@ -61,6 +61,7 @@ import { emitGritEarned } from "@/lib/grit-events";
 import { saveProfile } from "@/lib/profile.functions";
 import { deleteMyAccount } from "@/lib/account.functions";
 import { finishLocalAccountExit } from "@/lib/account-exit";
+import { unregisterPushTokens } from "@/lib/push-notifications.functions";
 import { hapticFailure, hapticSaved, hapticSelection, hapticUndo } from "@/lib/haptics";
 import { usePro } from "@/hooks/usePro";
 import { isNativeIos } from "@/lib/platform";
@@ -394,6 +395,7 @@ function ProfilePage() {
             await persist({ data: { public_stats: buildPublicStats(state) } }).catch(() => {});
           }
           await flushRemoteState();
+          await unregisterPushTokens().catch(() => {});
         })(),
         5000,
       );

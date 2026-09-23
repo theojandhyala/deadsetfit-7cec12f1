@@ -16,6 +16,7 @@ import type { AppState } from "../src/lib/types";
 import type { Database } from "../src/integrations/supabase/types";
 import { revokeAppleRefreshToken } from "../src/lib/apple-oauth.server";
 import { athleteSearchRank, normalizeAthleteSearchQuery } from "../src/lib/athlete-search";
+import { apnsConfigured, sendApns } from "../src/lib/apns.server";
 
 interface AuthCtx {
   supabase: SupabaseClient<Database>;
@@ -76,6 +77,18 @@ function slugify(s: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 60);
+}
+
+function normalizeGymKey(name: string): string {
+  return name
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ")
+    .slice(0, 80);
 }
 
 async function resolveOrCreateCustomer(
@@ -556,6 +569,152 @@ async function finalizeExpiredDuelsForPair(a: string, b: string): Promise<void> 
 type Handler = (data: any, req: any) => Promise<unknown>;
 
 const handlers: Record<string, Handler> = {
+  async registerPushToken(data, req) {
+    const { userId } = await requireAuth(req);
+    const d = z
+      .object({
+        token: z.string().regex(/^[a-fA-F0-9]{64}$/),
+        rivalAlertsEnabled: z.boolean(),
+      })
+      .parse(data);
+    const { error } = await (supabaseAdmin as any).from("device_tokens").upsert(
+      {
+        token: d.token.toLowerCase(),
+        user_id: userId,
+        platform: "ios",
+        rival_alerts_enabled: d.rivalAlertsEnabled,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "token" },
+    );
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  },
+
+  async updatePushPreference(data, req) {
+    const { userId } = await requireAuth(req);
+    const d = z.object({ rivalAlertsEnabled: z.boolean() }).parse(data);
+    const { error } = await (supabaseAdmin as any)
+      .from("device_tokens")
+      .update({
+        rival_alerts_enabled: d.rivalAlertsEnabled,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", userId);
+    if (error && error.code !== "42P01") throw new Error(error.message);
+    return { ok: true };
+  },
+
+  async unregisterPushTokens(_data, req) {
+    const { userId } = await requireAuth(req);
+    const { error } = await (supabaseAdmin as any)
+      .from("device_tokens")
+      .delete()
+      .eq("user_id", userId);
+    if (error && error.code !== "42P01") throw new Error(error.message);
+    return { ok: true };
+  },
+
+  async notifyRivalWorkout(data, req) {
+    const { userId } = await requireAuth(req);
+    const { sessionId } = z.object({ sessionId: z.string().min(1).max(100) }).parse(data);
+    if (!apnsConfigured(process.env)) return { delivered: 0, suppressed: 1 };
+
+    // Verify the workout against the server copy. The caller flushes cloud
+    // state before invoking this handler, so a fabricated id cannot notify.
+    const state = await loadUserStateBlob(userId);
+    const session = state?.sessions?.find((candidate) => candidate.id === sessionId);
+    if (!session?.endedAt) throw new Error("Finished workout not found");
+
+    const now = new Date();
+    const { data: duelRows, error: duelError } = await (supabaseAdmin as any)
+      .from("duels")
+      .select("id, challenger_id, opponent_id, metric, start_at, end_at")
+      .eq("status", "active")
+      .lte("start_at", now.toISOString())
+      .gt("end_at", now.toISOString())
+      .or(`challenger_id.eq.${userId},opponent_id.eq.${userId}`);
+    if (duelError) throw new Error(duelError.message);
+    if (!duelRows?.length) return { delivered: 0, suppressed: 0 };
+
+    const { data: senderProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("username, display_name")
+      .eq("id", userId)
+      .maybeSingle();
+    const senderName = senderProfile?.display_name || senderProfile?.username || "Your rival";
+    let delivered = 0;
+    let suppressed = 0;
+
+    for (const duel of duelRows as Array<{
+      id: string;
+      challenger_id: string;
+      opponent_id: string;
+      metric: string;
+      start_at: string | null;
+      end_at: string | null;
+    }>) {
+      const recipientId = duel.challenger_id === userId ? duel.opponent_id : duel.challenger_id;
+      const cutoff = new Date(now.getTime() - 6 * 60 * 60 * 1000).toISOString();
+      const { data: recent } = await (supabaseAdmin as any)
+        .from("rival_push_log")
+        .select("id")
+        .eq("duel_id", duel.id)
+        .eq("recipient_id", recipientId)
+        .gte("sent_at", cutoff)
+        .limit(1);
+      if (recent?.length) {
+        suppressed += 1;
+        continue;
+      }
+
+      const { data: tokens } = await (supabaseAdmin as any)
+        .from("device_tokens")
+        .select("token")
+        .eq("user_id", recipientId)
+        .eq("rival_alerts_enabled", true);
+      if (!tokens?.length) {
+        suppressed += 1;
+        continue;
+      }
+
+      // Reserve this session before delivery. The unique constraint makes a
+      // double-tap or retry idempotent across Worker instances.
+      const { error: reserveError } = await (supabaseAdmin as any).from("rival_push_log").insert({
+        duel_id: duel.id,
+        sender_id: userId,
+        recipient_id: recipientId,
+        session_id: sessionId,
+      });
+      if (reserveError) {
+        suppressed += 1;
+        continue;
+      }
+
+      const scores = await duelScores(duel);
+      const senderScore = duel.challenger_id === userId ? scores.challenger : scores.opponent;
+      const recipientScore = duel.challenger_id === userId ? scores.opponent : scores.challenger;
+      const difference = Math.abs(senderScore - recipientScore).toLocaleString("en-GB");
+      const unit = duel.metric === "volume" ? " kg" : "";
+      const position =
+        senderScore > recipientScore ? `${difference}${unit} ahead` : `${difference}${unit} behind`;
+
+      for (const row of tokens as Array<{ token: string }>) {
+        const result = await sendApns(process.env, row.token, {
+          title: `${senderName} just trained`,
+          body: `${senderName} moved to ${position}. Open the duel.`,
+          path: "/challenges",
+          duelId: duel.id,
+        });
+        if (result.delivered) delivered += 1;
+        if (result.deadToken) {
+          await (supabaseAdmin as any).from("device_tokens").delete().eq("token", row.token);
+        }
+      }
+    }
+    return { delivered, suppressed };
+  },
+
   // === Payments: createCheckoutSession ===
   async createCheckoutSession(data, req) {
     const { userId, email } = await requireAuth(req);
@@ -1947,6 +2106,14 @@ const handlers: Record<string, Handler> = {
         message: "City and country must be set together",
       })
       .parse(data);
+    const { data: previousLocation } = await supabase
+      .from("profiles")
+      .select("city, country")
+      .eq("id", userId)
+      .maybeSingle();
+    const moved =
+      (previousLocation?.city ?? "").trim().toLowerCase() !== d.city.trim().toLowerCase() ||
+      (previousLocation?.country ?? "").trim().toLowerCase() !== d.country.trim().toLowerCase();
     const { error } = await supabase
       .from("profiles")
       .update({
@@ -1954,6 +2121,7 @@ const handlers: Record<string, Handler> = {
         region: d.city ? (d.region ?? null) : null,
         country: d.country || null,
         location_updated_at: new Date().toISOString(),
+        ...(moved ? { gym_name: null, gym_key: null, gym_updated_at: null } : {}),
       })
       .eq("id", userId);
     if (error) throw new Error(error.message);
@@ -2007,6 +2175,143 @@ const handlers: Record<string, Handler> = {
       .filter((r) => r.id && !hidden.has(r.id as string))
       .map((r) => ({ ...r, id: r.id as string, following: fset.has(r.id as string) }));
     return { athletes, myCity: me.city, myCountry: me.country };
+  },
+
+  async searchLocalGyms(data, req) {
+    const { supabase, userId } = await requireAuth(req);
+    const d = z.object({ q: z.string().trim().max(80).default("") }).parse(data ?? {});
+    const { data: me, error: meError } = await supabase
+      .from("profiles")
+      .select("city, country")
+      .eq("id", userId)
+      .maybeSingle();
+    if (meError) throw new Error(meError.message);
+    if (!me?.city || !me?.country) return { gyms: [], city: null, country: null };
+
+    let query = supabaseAdmin
+      .from("public_profiles")
+      .select("gym_name, gym_key")
+      .ilike("city", me.city)
+      .ilike("country", me.country)
+      .not("gym_key", "is", null)
+      .limit(250);
+    if (d.q.length >= 2) query = query.ilike("gym_name", `%${d.q.replace(/[%_]/g, "")}%`);
+    const { data: rows, error } = await query;
+    if (error) throw new Error(error.message);
+    const counts = new Map<string, { name: string; key: string; memberCount: number }>();
+    for (const row of rows ?? []) {
+      if (!row.gym_name || !row.gym_key) continue;
+      const current = counts.get(row.gym_key);
+      if (current) current.memberCount += 1;
+      else counts.set(row.gym_key, { name: row.gym_name, key: row.gym_key, memberCount: 1 });
+    }
+    return {
+      gyms: [...counts.values()]
+        .sort((a, b) => b.memberCount - a.memberCount || a.name.localeCompare(b.name))
+        .slice(0, 20),
+      city: me.city,
+      country: me.country,
+    };
+  },
+
+  async updateMyGym(data, req) {
+    const { supabase, userId } = await requireAuth(req);
+    const d = z.object({ gymName: z.string().trim().max(80) }).parse(data);
+    const { data: me, error: meError } = await supabase
+      .from("profiles")
+      .select("city, country")
+      .eq("id", userId)
+      .maybeSingle();
+    if (meError) throw new Error(meError.message);
+    if (d.gymName && (!me?.city || !me?.country)) {
+      throw Object.assign(new Error("Set your city before choosing a gym"), { status: 400 });
+    }
+    if (d.gymName && d.gymName.length < 2) {
+      throw Object.assign(new Error("Enter a valid gym name"), { status: 400 });
+    }
+    const gymKey = d.gymName ? normalizeGymKey(d.gymName) : null;
+    if (d.gymName && !gymKey) {
+      throw Object.assign(new Error("Enter a valid gym name"), { status: 400 });
+    }
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        gym_name: d.gymName || null,
+        gym_key: gymKey,
+        gym_updated_at: d.gymName ? new Date().toISOString() : null,
+      })
+      .eq("id", userId);
+    if (error) throw new Error(error.message);
+    return { ok: true, gymName: d.gymName || null };
+  },
+
+  async getGymHub(_data, req) {
+    const { supabase, userId } = await requireAuth(req);
+    const { data: me, error: meError } = await supabase
+      .from("profiles")
+      .select("city, country, gym_name, gym_key")
+      .eq("id", userId)
+      .maybeSingle();
+    if (meError) throw new Error(meError.message);
+    if (!me?.city || !me?.country || !me.gym_key) {
+      return {
+        gymName: me?.gym_name ?? null,
+        city: me?.city ?? null,
+        country: me?.country ?? null,
+        athletes: [],
+      };
+    }
+
+    const hidden = await blockedUserIds(supabase, userId);
+    const { data: rows, error } = await supabaseAdmin
+      .from("public_profiles")
+      .select(
+        "id, username, display_name, avatar_url, bio, level, grit_points, public_stats, city, country, gym_name",
+      )
+      .eq("gym_key", me.gym_key)
+      .ilike("city", me.city)
+      .ilike("country", me.country)
+      .limit(100);
+    if (error) throw new Error(error.message);
+    const visible = (rows ?? []).filter(
+      (row): row is typeof row & { id: string } =>
+        typeof row.id === "string" && (row.id === userId || !hidden.has(row.id)),
+    );
+    const otherIds = visible.map((row) => row.id).filter((id) => id !== userId);
+    const { data: follows, error: followsError } = await supabase
+      .from("follows")
+      .select("following_id")
+      .eq("follower_id", userId)
+      .in("following_id", otherIds.length ? otherIds : ["00000000-0000-0000-0000-000000000000"]);
+    if (followsError) throw new Error(followsError.message);
+    const following = new Set((follows ?? []).map((row) => row.following_id));
+    const weekStart = currentWeekStart();
+    const athletes = visible
+      .filter((row) => rankable(row.public_stats))
+      .map((row) => {
+        const stats = (row.public_stats ?? {}) as {
+          overall?: number;
+          streak?: number;
+          weekly?: { weekStart?: string; score?: number; volumeKg?: number; prs?: number };
+        };
+        const weekly = stats.weekly?.weekStart === weekStart ? stats.weekly : undefined;
+        return {
+          ...row,
+          following: following.has(row.id),
+          isMe: row.id === userId,
+          weeklyScore: Math.max(0, Math.round(Number(weekly?.score ?? 0))),
+          weeklyVolumeKg: Math.max(0, Math.round(Number(weekly?.volumeKg ?? 0))),
+          weeklyPrs: Math.max(0, Math.round(Number(weekly?.prs ?? 0))),
+        };
+      })
+      .sort(
+        (a, b) =>
+          b.weeklyScore - a.weeklyScore ||
+          Number(b.grit_points ?? 0) - Number(a.grit_points ?? 0) ||
+          (a.display_name ?? a.username ?? "").localeCompare(b.display_name ?? b.username ?? ""),
+      )
+      .map((row, index) => ({ ...row, gymRank: index + 1 }));
+    return { gymName: me.gym_name, city: me.city, country: me.country, athletes };
   },
 
   // === Library ===

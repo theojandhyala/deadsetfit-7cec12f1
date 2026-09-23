@@ -1,8 +1,8 @@
 # DEADSET 1.3 — Strength You Can See
 
-Status: in development  
+Status: submitted — Waiting for Review
 Started: 6 September 2026  
-iOS version/build: 1.3 (163)
+iOS version/build: 1.3 (165)
 
 Production baseline: App Store version 1.2. This update is built directly on that shipped product;
 it is not based on the archived 1.1 build.
@@ -26,6 +26,50 @@ This is not a feature dump. Every addition must improve at least one of these mo
 5. Share or compare progress safely.
 
 ## Scope and status
+
+### Training calendar — build 165
+
+- [x] Add Week, Month, Year and All time views to Plan and Progress, with date navigation, drill-down and day details.
+- [x] Distinguish recurring upcoming plans from actual completed history and connect Plan to the weekly editor.
+- [x] Validate calendar boundaries and record integrity; full release checks passed with 821 tests on 12 September.
+- [x] Upload and submit build 165. Apple reports WAITING_FOR_REVIEW, with automatic release after approval. Submitted 12 September 2026 at approximately 22:18 Europe/London.
+
+See [calendar implementation and QA](training-calendar-2026-09-12.md).
+
+### Session Flow — build 164
+
+- [x] Replace the narrow horizontal exercise strip with a collapsible Session overview that shows full movement names, set counts and completion states.
+- [x] Add movement search and an unfinished-only filter; preserve both when closing and reopening the overview.
+- [x] Jump directly to the next unfinished movement, including earlier skipped work, without reordering the workout.
+- [x] Show remaining working sets, completed movement totals and superset labels.
+- [x] Add an isolated wall-clock session timer; its second-by-second updates do not rerender the parent workout or recalculate history.
+- [x] Minimize/expand the rest timer without stopping it, keeping +15 seconds and Skip available with 44px controls.
+- [x] Fix rest resetting when switching movements: each rest period has its own identity and initial absolute deadline.
+- [x] Respect the manually selected movement at rest completion, and adjust the pending target when exercises are moved or removed.
+- [x] Serialize native alert mutations so a delayed schedule cannot resurrect an already-cancelled rest alert.
+- [x] Stop unnecessary timer state updates within the same visible second; avoid background polling renders and reconcile immediately on return.
+- [x] Animate live/rest progress using transforms rather than width, respecting reduced-motion preferences.
+- [x] Fix the global auto-rest off switch being overridden by an exercise's saved interval; explicitly choosing a new positive interval re-enables it.
+- [x] Align header and workout totals with authoritative working-set counts, excluding warm-up/drop sets while retaining timed/distance conventions.
+- [x] Prevent form controls from starting accidental exercise swipes; contain long exercise headings and stale active indices.
+- [x] Restore keyboard focus after picking a movement and add accessible elapsed/rest/progress descriptions.
+- [x] Preload bottom-navigation destinations on intent, without eagerly loading the entire app at startup.
+- [x] Keep the 1.2/1.3 branding, cinematic opening, Strength Map, Performance Lab, onboarding, StoreKit, friends and all other recent features unchanged.
+- [x] Add 38 regression cases for progress, navigation, time, native scheduling order and auto-rest preferences.
+
+Browser checks used the real Live Workout route inside an isolated local fixture (no live account,
+no Pro provider, no customer data or remote sync). Confirmed search, unfinished filtering,
+empty search state, filter retention, record-set logging, timed-exercise navigation, focus return,
+rest continuity across exercise changes, compact mode, +15-second extension and Skip.
+Page/navigator/rest widths matched 320/375/393/430px; the tested paths had no horizontal overflow.
+The fixture's initial setter mistake was corrected before exercising the app; no subsequent app
+runtime errors were captured. Preview: `artifacts/qa/build-164/session-overview.png`.
+
+Release/native verification and physical-device installation: pending final checks below.
+This is a local development candidate, not an App Store upload or submission. Live billing,
+remote social flows, notification delivery on a locked physical device and subjective haptic
+feel have not been freshly end-to-end tested in this pass. Store screenshot 04 (live workout)
+should be refreshed for the final listing because the session navigation has changed.
 
 ### Training block comparison and panoramic store images — build 163
 

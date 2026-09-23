@@ -67,6 +67,7 @@ const activeCapacitorConfig = capacitorConfig
   .filter((line) => !line.trimStart().startsWith("//"))
   .join("\n");
 const upgradePage = existsSync("src/routes/upgrade.tsx") ? read("src/routes/upgrade.tsx") : "";
+const paidAccess = existsSync("src/lib/paid-access.ts") ? read("src/lib/paid-access.ts") : "";
 const weeklyStrengthCheckIn = existsSync("src/components/WeeklyStrengthCheckIn.tsx")
   ? read("src/components/WeeklyStrengthCheckIn.tsx")
   : "";
@@ -235,9 +236,9 @@ check(
 check(
   "1.3 update version",
   (xcodeProject.match(/MARKETING_VERSION = 1\.3;/g)?.length ?? 0) >= 6 &&
-    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 163;/g)?.length ?? 0) >= 6 &&
-    whatsNew.includes("WHATS_NEW_VERSION = 202609103"),
-  "The app, activity extension and watch targets are versioned as 1.3 (163), above shipped build 152.",
+    (xcodeProject.match(/CURRENT_PROJECT_VERSION = 165;/g)?.length ?? 0) >= 6 &&
+    whatsNew.includes("WHATS_NEW_VERSION = 202609121"),
+  "The app, activity extension and watch targets are versioned as 1.3 (164), above shipped build 152.",
 );
 check(
   "deferred native startup and insights",
@@ -516,6 +517,25 @@ check(
   "The paywall presents both approved StoreKit products, purchases the selected identifier, and discloses both renewal prices.",
 );
 check(
+  "usable free tier with feature-level Pro gates",
+  paidAccess.includes("return false") &&
+    upgradePage.includes("Continue with Free") &&
+    upgradePage.includes('to="/train"') &&
+    paywallSheet.includes("Not now"),
+  "Free athletes can plan and log without a blanket subscription wall; Pro remains gated at high-value feature boundaries.",
+);
+check(
+  "opt-in local gym community",
+  friendsPage.includes("getGymHub") &&
+    friendsPage.includes("searchLocalGyms") &&
+    friendsPage.includes("LOCAL GYM HUB") &&
+    friendsPage.includes("city-level location only") &&
+    rpcServer.includes("async updateMyGym") &&
+    rpcServer.includes("async getGymHub") &&
+    rpcServer.includes("rankable(row.public_stats)"),
+  "Friends supports city-level discovery, opt-in gyms and integrity-filtered weekly gym boards without storing exact coordinates.",
+);
+check(
   "strength setup horizontal containment",
   weeklyStrengthCheckIn.includes('data-no-horizontal-overflow="true"') &&
     weeklyStrengthCheckIn.includes("max-w-[100dvw]") &&
@@ -610,6 +630,7 @@ for (const type of [
   "Fitness",
   "PhotosorVideos",
   "OtherUserContent",
+  "CoarseLocation",
   "PurchaseHistory",
 ]) {
   check(

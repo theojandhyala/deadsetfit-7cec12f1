@@ -1,6 +1,6 @@
 # Training calendar
 
-Implemented in the actual Deadset app on 12 September 2026. This is source code for the next app release; no App Store submission, device installation or deployment was performed as part of this change.
+Implemented in the actual Deadset app on 12 September 2026. Included in version 1.3 build 165, submitted to Apple on 12 September 2026. Status: Waiting for Review, automatic release after approval. This is not public availability; calendar promotion remains on hold until the release is verified.
 
 ## Behaviour
 
