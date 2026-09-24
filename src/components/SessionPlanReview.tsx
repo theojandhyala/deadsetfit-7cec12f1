@@ -1,5 +1,5 @@
 import { Check, ChevronDown, ChevronUp, Gauge, Minus, Plus, Target, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 
 import { hapticSelection } from "@/lib/haptics";
 import { buildSessionPlanReview, type SessionReviewStatus } from "@/lib/session-review";
@@ -8,18 +8,19 @@ import type { WorkoutSession } from "@/lib/types";
 export function SessionPlanReview({ session }: { session: WorkoutSession }) {
   const [expanded, setExpanded] = useState(false);
   const review = useMemo(() => buildSessionPlanReview(session), [session]);
+  const title = useId();
   const visibleRows = expanded ? review.rows : review.rows.slice(0, 4);
 
   return (
     <section
       className="mt-3 overflow-hidden rounded-2xl border border-white/10 bg-[#111214]"
-      aria-labelledby="plan-review-title"
+      aria-labelledby={title}
     >
       <div className="flex items-start justify-between gap-3 border-b border-white/8 px-4 py-3.5">
         <div>
           <p className="label-cap text-[9px] text-accent-red">Plan vs completed</p>
           <h2
-            id="plan-review-title"
+            id={title}
             className="display mt-1 text-xl font-black uppercase leading-none text-grit"
           >
             Session receipt
@@ -33,6 +34,20 @@ export function SessionPlanReview({ session }: { session: WorkoutSession }) {
             Plan hit
           </p>
         </div>
+      </div>
+
+      <div
+        role="progressbar"
+        aria-label="Planned working sets completed"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={review.adherencePercent}
+        className="h-1.5 overflow-hidden bg-white/5"
+      >
+        <div
+          className="h-full w-full origin-left bg-accent-red transition-transform duration-500 motion-reduce:transition-none"
+          style={{ transform: `scaleX(${review.adherencePercent / 100})` }}
+        />
       </div>
 
       <div className="grid grid-cols-3 gap-px bg-white/8">
@@ -58,7 +73,7 @@ export function SessionPlanReview({ session }: { session: WorkoutSession }) {
           Time Fit kept {session.exercises.length} of{" "}
           {session.originalExerciseCount ?? session.exercises.length} movements and{" "}
           {review.plannedSets} of {session.originalPlannedSets ?? review.plannedSets} planned sets
-          inside today's {session.timeBudgetMinutes}-minute target.
+          for today's {session.timeBudgetMinutes}-minute target. Actual session time is shown above.
         </div>
       )}
 
@@ -70,10 +85,20 @@ export function SessionPlanReview({ session }: { session: WorkoutSession }) {
       )}
 
       <ol className="divide-y divide-white/[.065] px-4">
-        {visibleRows.map((row) => (
-          <li key={row.exerciseId} className="flex min-h-12 items-center gap-2.5 py-2">
+        {visibleRows.map((row, index) => (
+          <li
+            key={`${row.exerciseId}-${index}`}
+            className="flex min-h-12 items-center gap-2.5 py-2"
+          >
             <StatusIcon status={row.status} />
-            <span className="min-w-0 flex-1 truncate text-xs font-bold text-grit">{row.name}</span>
+            <span className="min-w-0 flex-1 break-words text-xs font-bold text-grit">
+              {row.name}
+              {row.averageRpe != null && (
+                <span className="mt-1 block text-[9px] font-normal text-grit-dim">
+                  Avg RPE {row.averageRpe.toFixed(1)}
+                </span>
+              )}
+            </span>
             <span className="shrink-0 text-right">
               <span className="block text-[10px] font-black text-grit">
                 {row.completedSets}/{row.plannedSets} sets

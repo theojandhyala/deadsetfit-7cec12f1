@@ -178,9 +178,9 @@ These cannot be completed only in the repository:
   only when the selected product's offer and account eligibility confirm it, purchase, restore and
   open Apple's subscription-management screen in the submitted build. Stripe must remain unavailable
   inside the iOS app.
-- Refresh the Apple provisioning profiles with Push Notifications support before physical-device
-  installation or archiving. On September 24, Xcode reported no signed-in account and the cached
-  DEADSET development profile lacked `aps-environment`. Do not strip that entitlement to bypass signing.
+- Physical-preview signing was resolved on September 24: build 167 passed a signed Release build,
+  installed and launched on Theo’s iPhone with Push Notifications entitlements preserved. Recheck
+  distribution signing when archiving; this preview install does not verify production push delivery.
 - Complete App Store Connect privacy answers, age rating, category, support URL, screenshots, review
   account, and export-compliance questions.
 - Confirm Cloudflare production secrets for Supabase, Stripe, and webhooks.

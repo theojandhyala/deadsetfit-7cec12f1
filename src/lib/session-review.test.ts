@@ -50,6 +50,17 @@ function session(): WorkoutSession {
 }
 
 describe("session plan review", () => {
+  it("keeps receipt percentages finite for malformed historical targets", () => {
+    const value = session();
+    value.exercises = [NaN, Infinity, -3, 2.9].map((targetSets) => ({
+      ...value.exercises[0]!,
+      targetSets,
+    }));
+    const result = buildSessionPlanReview(value);
+    expect(result.plannedSets).toBe(2);
+    expect(result.adherencePercent).toBe(100);
+    expect(result.rows.map((row) => row.plannedSets)).toEqual([0, 0, 0, 2]);
+  });
   it("does not let extra sets hide a missed exercise", () => {
     const value = session();
     value.exercises = [

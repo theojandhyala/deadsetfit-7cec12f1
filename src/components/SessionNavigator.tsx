@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, ChevronRight, Clock3, Link2, ListPlus, Search } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Clock3, Link2, ListPlus, Search, X } from "lucide-react";
 import type { WorkoutSessionExercise } from "@/lib/types";
 import { hapticSelection } from "@/lib/haptics";
 import {
@@ -55,6 +55,7 @@ export function SessionNavigator({
   const [unfinished, setUnfinished] = useState(false);
   const panelId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const summary = useMemo(() => sessionNavigator(exercises), [exercises]);
   const next = useMemo(
     () => nextUnfinishedExercise(exercises, activeIndex),
@@ -133,12 +134,23 @@ export function SessionNavigator({
           <ChevronRight size={15} className="shrink-0 text-accent-red" />
         </button>
       )}
-      <div id={panelId} hidden={!open}>
+      <div
+        id={panelId}
+        hidden={!open}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            setOpen(false);
+            triggerRef.current?.focus({ preventScroll: true });
+          }
+        }}
+      >
         {open && (
           <div className="deadset-view-switch mt-3">
             <label className="flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-black/25 px-3">
               <Search size={14} className="shrink-0 text-grit-dim" />
               <input
+                ref={searchRef}
                 type="search"
                 defaultValue={query}
                 onChange={(event) => setQuery(event.currentTarget.value)}
@@ -146,6 +158,23 @@ export function SessionNavigator({
                 aria-label="Find a session movement"
                 className="min-w-0 flex-1 bg-transparent py-2 text-base text-grit outline-none"
               />
+              {query && (
+                <button
+                  type="button"
+                  aria-label="Clear movement search"
+                  className="grid min-h-11 min-w-11 place-items-center text-grit-dim"
+                  onClick={() => {
+                    hapticSelection();
+                    setQuery("");
+                    if (searchRef.current) {
+                      searchRef.current.value = "";
+                      searchRef.current.focus();
+                    }
+                  }}
+                >
+                  <X size={16} />
+                </button>
+              )}
             </label>
             <button
               type="button"
@@ -159,7 +188,7 @@ export function SessionNavigator({
               Unfinished only
             </button>
             <ol
-              className="max-h-64 space-y-1 overflow-y-auto overscroll-contain"
+              className="no-scrollbar max-h-64 space-y-1 overflow-y-auto overscroll-contain"
               aria-label="Session movements"
             >
               {visible.map((row) => (

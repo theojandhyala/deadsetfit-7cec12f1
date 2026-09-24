@@ -36,20 +36,23 @@ export interface SessionPlanReview {
 
 export function buildSessionPlanReview(session: WorkoutSession): SessionPlanReview {
   const rows = session.exercises.map<SessionReviewRow>((exercise) => {
+    const plannedSets = Number.isFinite(exercise.targetSets)
+      ? Math.max(0, Math.floor(exercise.targetSets))
+      : 0;
     const completedSets = completedWorkingSets(exercise.sets);
     const rpes = workingRpes(exercise.sets);
     const status: SessionReviewStatus =
       completedSets === 0
         ? "SKIPPED"
-        : completedSets < exercise.targetSets
+        : completedSets < plannedSets
           ? "SHORT"
-          : completedSets > exercise.targetSets
+          : completedSets > plannedSets
             ? "ABOVE"
             : "HIT";
     return {
       exerciseId: exercise.exerciseId,
       name: exercise.name,
-      plannedSets: exercise.targetSets,
+      plannedSets,
       completedSets,
       status,
       ...(rpes.length

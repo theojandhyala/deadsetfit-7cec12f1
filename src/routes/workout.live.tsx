@@ -98,6 +98,8 @@ import { SessionNavigator } from "@/components/SessionNavigator";
 import { FormCoaching } from "@/components/FormCoaching";
 import { SessionReflection } from "@/components/SessionReflection";
 import { SessionPlanReview } from "@/components/SessionPlanReview";
+import { SessionComparison } from "@/components/SessionComparison";
+import { comparablePreviousVolume } from "@/lib/session-comparison";
 import { SessionExerciseSheet } from "@/components/SessionExerciseSheet";
 import { notifyRivalWorkout } from "@/lib/push-notifications.functions";
 import { fitSessionToTimeBudget, type WorkoutTimeBudget } from "@/lib/time-budget-workout";
@@ -694,15 +696,7 @@ function LiveWorkoutPage() {
    */
   const lastTime = useMemo(() => {
     if (!session) return null;
-    const previous = state.sessions
-      .filter((s) => s.endedAt && s.id !== session.id && s.label === session.label)
-      .sort((a, b) => b.startedAt.localeCompare(a.startedAt))[0];
-    if (!previous) return null;
-    const volume = previous.exercises.reduce(
-      (sum, e) => sum + e.sets.reduce((inner, cs) => inner + setVolume(cs), 0),
-      0,
-    );
-    return volume > 0 ? { volume, date: previous.date } : null;
+    return comparablePreviousVolume(session, state.sessions);
   }, [state.sessions, session]);
 
   // Pre-logged defaults: allocated weight from the schedule → last session
@@ -1454,8 +1448,8 @@ function LiveWorkoutPage() {
 
       {lastTime && (
         <div className="border-b border-grit px-4 py-2.5">
-          <div className="flex items-baseline justify-between">
-            <span className="label-cap text-[9px] text-grit-dim">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <span className="label-cap min-w-0 break-words text-[9px] text-grit-dim">
               VS LAST {session.label.toUpperCase()}
             </span>
             <span
@@ -1469,9 +1463,9 @@ function LiveWorkoutPage() {
           </div>
           <div className="mt-1.5 h-1.5 rounded-full bg-[#1a1a1a] overflow-hidden">
             <div
-              className="h-full rounded-full transition-all"
+              className="h-full w-full origin-left rounded-full transition-transform duration-300 motion-reduce:transition-none"
               style={{
-                width: `${Math.min(100, Math.round((totals.vol / lastTime.volume) * 100))}%`,
+                transform: `scaleX(${Math.min(1, Math.max(0, totals.vol / lastTime.volume))})`,
                 background: totals.vol >= lastTime.volume ? "#22c55e" : "#e63222",
               }}
             />
@@ -3123,7 +3117,7 @@ function FinishedScreen({
     >
       <div className="flex-1 px-6 pt-10 pb-6 flex flex-col">
         <p className="label-cap text-accent-red">SESSION COMPLETE</p>
-        <h1 className="display text-5xl font-extrabold uppercase text-grit leading-none mt-2">
+        <h1 className="display break-words text-5xl font-extrabold uppercase text-grit leading-none mt-2">
           {session.label.split(" — ")[0]}
         </h1>
 
@@ -3137,13 +3131,13 @@ function FinishedScreen({
           <div className="bg-grit-card border border-grit p-4 mt-3">
             <p className="label-cap text-[10px] text-grit-dim">TOTAL VOLUME</p>
             <p className="display text-3xl font-extrabold mt-1 text-grit">
-              {Math.round(session.totalVolume).toLocaleString()}{" "}
-              <span className="text-sm text-grit-dim">kg</span>
+              {formatVolume(session.totalVolume, unitOf(state))}
             </p>
           </div>
         )}
 
         <SessionPlanReview session={session} />
+        <SessionComparison session={session} history={state.sessions} unit={unitOf(state)} />
 
         <div className="mt-3">
           <SessionReflection sessionId={session.id} />

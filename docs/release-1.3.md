@@ -2,7 +2,7 @@
 
 Last recorded submission: build 165 — Waiting for Review on September 12 (not rechecked here)
 Started: 6 September 2026  
-Current local candidate: 1.3 (166), not submitted
+Current local candidate: 1.3 (167), installed and launched on Theo’s iPhone, not submitted
 
 Production baseline: App Store version 1.2. This update is built directly on that shipped product;
 it is not based on the archived 1.1 build.
@@ -27,6 +27,28 @@ This is not a feature dump. Every addition must improve at least one of these mo
 
 ## Scope and status
 
+### Build 167 — workout evidence and physical preview (24 September)
+
+- Add “What changed today” to the completed workout: previous and current best working efforts per movement, with improved, matched, baseline and different-effort states. Repeated movement occurrences are combined, while duration, distance and weight records stay separate.
+- Avoid false progress claims: a heavier low-rep set is not automatically better than a lighter high-rep set; warm-ups, drop sets, invalid records, unfinished sessions and future/overlapping sessions are excluded from this comparison. No muscle-growth estimate is implied.
+- Only compare live tonnage against an earlier session with the same prescription, not another workout that happens to share its label. Volume still includes valid drop-set tonnage and excludes warm-ups.
+- Show per-movement average RPE in the session receipt, wrap full movement names and honour kg/lb preferences in finished-session volume.
+- Add transform-based progress indicators with Reduce Motion support, accessible progress semantics, clear-search and Escape/focus-return controls in the workout navigator.
+- Guard malformed historical set targets and preserve existing branding, onboarding, subscription products and saved training history.
+
+Verification: `npm run appstore:strict` passes with 105 test files / 873 tests, TypeScript, lint,
+production build, CSS and Xcode project checks plus read-only provider-start readiness checks.
+Real-component browser walkthrough at 320×740 and 393×852 measured no horizontal overflow; comparison
+expansion, search, clear and Escape/focus return worked with no captured console warnings/errors.
+These checks used explicit local example data, not production account mutations.
+
+The signed physical-iPhone Release build succeeds. Build 167 was installed without uninstalling the
+existing app and successfully launched on Theo’s iPhone using `devicectl`. The earlier signing blocker
+is resolved without removing Push Notifications entitlements. No upload or App Store submission was
+performed. Owner device testing is next; real purchases/restore, full signup, password-reset delivery
+and notification delivery have not been retested in this candidate. A successful install is not a
+claim that every release gate below is complete.
+
 ### Time Fit — must-keep exercise and accessible preview (24 September)
 
 - Choose an optional must-keep movement when fitting a session into 20, 30 or 45 minutes. Every repeat occurrence and linked superset partner is retained; remaining work fills the budget in programme order.
@@ -40,7 +62,8 @@ Verification: strict release checks pass with 104 test files / 863 tests. Real-c
 walkthrough covers 320×500 and 393×852 CSS viewports, selection, membership-event handoff, Tab wrap,
 Escape and return focus. No horizontal overflow measured in either sheet; controls are at least
 44px high, and no preview console warnings/errors were captured. Membership purchase itself and
-physical-iPhone interaction have not been retested; the signing blocker below remains unresolved.
+physical-iPhone interaction had not been retested at this checkpoint; the signing blocker was later
+resolved for build 167 above.
 The updated native Release build also compiles successfully and has been installed in the iPhone
 17 Pro simulator. It has not been submitted or installed on the physical phone.
 
@@ -61,7 +84,7 @@ Simulator walkthrough verifies the branded welcome, staged email-to-password sig
 the email, switching to existing-account login, and visible input/action controls with the software
 keyboard. No account was created, password changed, purchase made or reset email sent in this walkthrough.
 
-Physical-device build is currently blocked by Apple signing: no Xcode account and a cached profile
+At the build 166 checkpoint, physical-device compilation was blocked by Apple signing: no Xcode account and a cached profile
 without the Push Notifications capability. No entitlement has been removed as a workaround.
 Build 166 is not installed on the physical phone, uploaded or submitted. Physical-device purchase/restore,
 notification delivery, real account creation and password-reset delivery still need verification.
