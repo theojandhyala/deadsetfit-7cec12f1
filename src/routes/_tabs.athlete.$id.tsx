@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   ArrowLeft,
@@ -17,7 +17,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { askConfirm, askText } from "@/lib/confirm";
-import { getAthleteCard, updateFriendship, type FriendAction } from "@/lib/social.functions";
+import { getAthleteCard, setAthleteFollow } from "@/lib/social.functions";
+import { ProfileConnections } from "@/components/ProfileConnections";
+import { followLabel } from "@/lib/social-connections";
 import { blockUser, unblockUser, isBlocked, reportContent } from "@/lib/account.functions";
 import { FifaCard } from "@/components/FifaCard";
 import { RARITY_COLOR, type AchievementRarity } from "@/lib/achievements";
@@ -28,71 +30,81 @@ import { GRADED_MUSCLES, TIER_COLOR, type StrengthTier } from "@/lib/strength-gr
 
 export const Route = createFileRoute("/_tabs/athlete/$id")({
   head: () => ({ meta: [{ title: "DEADSET — Athlete" }] }),
-  component: AthletePage,
+  component: AthleteRoute,
 });
 
 type Card = Awaited<ReturnType<typeof getAthleteCard>>;
 
-function AthletePage() {
+function AthleteRoute() {
   const { id } = Route.useParams();
+  return <AthletePage key={id} id={id} />;
+}
+
+function AthletePage({ id }: { id: string }) {
   const navigate = useNavigate();
   const _get = getAthleteCard;
-  const _updateFriendship = updateFriendship;
   const _block = blockUser;
   const _unblock = unblockUser;
-  const _isBlocked = isBlocked;
   const _report = reportContent;
   const [card, setCard] = useState<Card | null>(null);
   const [busy, setBusy] = useState(false);
   const [blocked, setBlocked] = useState(false);
+  const request = useRef(0);
+  const mounted = useRef(true);
 
-  const loadAthlete = useCallback(() => {
-    _get({ data: { userId: id } })
-      .then(setCard)
-      .catch((e) => {
+  const loadAthlete = useCallback(async () => {
+    if (!mounted.current) return;
+    const version = ++request.current;
+    try {
+      const block = await isBlocked({ data: { userId: id } });
+      if (version !== request.current) return;
+      setBlocked(block.blocked);
+      if (block.blocked) {
+        setCard(null);
+        return;
+      }
+      const next = await _get({ data: { userId: id } });
+      if (version === request.current) setCard(next);
+    } catch (e) {
+      if (version === request.current) {
         toast.error(e instanceof Error ? e.message : "Failed");
-        navigate({ to: "/friends" });
-      });
-    _isBlocked({ data: { userId: id } })
-      .then((r) => setBlocked(r.blocked))
-      .catch(() => {});
-  }, [_get, _isBlocked, id, navigate]);
+        void navigate({ to: "/friends" });
+      }
+    }
+  }, [_get, id, navigate]);
 
   useEffect(() => {
-    loadAthlete();
+    mounted.current = true;
+    setCard(null);
+    setBlocked(false);
+    void loadAthlete();
+    return () => {
+      mounted.current = false;
+      request.current += 1;
+    };
   }, [loadAthlete]);
 
   async function follow() {
-    if (!card || card.isMe) return;
-    const friends = card.following && card.followsMe;
-    const action: FriendAction = friends
-      ? "remove"
-      : card.following
-        ? "cancel"
-        : card.followsMe
-          ? "accept"
-          : "send";
-    if (action === "remove") {
+    if (!card || card.isMe || busy || blocked) return;
+    if (card.following) {
       const confirmed = await askConfirm({
-        title: `Remove ${card.display_name || card.username || "this athlete"}?`,
-        message: "You will lose the friends-only muscle comparison until you add each other again.",
-        confirmLabel: "Remove friend",
-        danger: true,
+        title: `Unfollow ${card.display_name || card.username || "this athlete"}?`,
+        message:
+          "Their posts leave your following feed. If you're mutual friends, progress comparison will also close. Their follow is unchanged.",
+        confirmLabel: "Unfollow",
       });
       if (!confirmed) return;
     }
     setBusy(true);
     try {
-      await _updateFriendship({ data: { userId: id, action } });
+      const result = await setAthleteFollow({ userId: id, following: !card.following });
       hapticPlanUpdated();
       toast.success(
-        action === "accept"
-          ? "Friend added — comparison unlocked"
-          : action === "send"
-            ? "Friend request sent"
-            : action === "cancel"
-              ? "Request cancelled"
-              : "Friend removed",
+        result.following
+          ? card.followsMe
+            ? "Following each other — you're friends"
+            : "Following athlete"
+          : "Unfollowed",
       );
       await loadAthlete();
     } catch (e) {
@@ -104,7 +116,7 @@ function AthletePage() {
   }
 
   async function toggleBlock() {
-    if (!card || card.isMe) return;
+    if (!card || card.isMe || busy) return;
     const next = !blocked;
     const verb = next ? "Block" : "Unblock";
     if (next) {
@@ -116,17 +128,21 @@ function AthletePage() {
       });
       if (!ok) return;
     }
+    setBusy(true);
     setBlocked(next);
     try {
       if (next) await _block({ data: { userId: id } });
       else await _unblock({ data: { userId: id } });
       toast.success(next ? "Blocked" : "Unblocked");
       if (next) {
-        setCard({ ...card, following: false });
+        request.current += 1;
+        setCard(null);
       }
     } catch (e) {
       setBlocked(!next);
       toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -146,6 +162,38 @@ function AthletePage() {
       toast.error(e instanceof Error ? e.message : "Couldn't send report");
     }
   }
+
+  if (blocked)
+    return (
+      <section className="m-5 rounded-2xl border border-white/10 bg-grit-card p-5 text-grit">
+        <h1 className="display text-2xl font-black uppercase">Athlete blocked</h1>
+        <p className="mt-2 text-sm text-grit-dim">
+          Their profile is hidden. Unblocking does not restore follows or friendships.
+        </p>
+        <button
+          type="button"
+          disabled={busy}
+          className="btn-ghost mt-4 min-h-11 w-full"
+          onClick={async () => {
+            if (busy) return;
+            setBusy(true);
+            try {
+              await _unblock({ data: { userId: id } });
+              await loadAthlete();
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Couldn't unblock");
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {busy ? "Unblocking…" : "Unblock athlete"}
+        </button>
+        <Link to="/friends" className="mt-3 block py-3 text-center text-xs text-grit-dim">
+          Back to community
+        </Link>
+      </section>
+    );
 
   if (!card)
     return (
@@ -263,6 +311,15 @@ function AthletePage() {
         </div>
       </section>
 
+      <div className="px-5 mb-5">
+        <ProfileConnections
+          key={id}
+          userId={id}
+          counts={{ followers: card.followerCount, following: card.followingCount }}
+          onChange={() => void loadAthlete()}
+        />
+      </div>
+
       {badgeWall?.top?.length ? (
         <section className="px-5 mb-5">
           <div className="deadset-section-title mb-2">
@@ -297,11 +354,6 @@ function AthletePage() {
               Follows you
             </div>
           )}
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            <Tile label="Followers" v={card.followerCount} />
-            <Tile label="Following" v={card.followingCount} />
-            <Tile label="DS PTS" v={card.grit_points ?? 0} />
-          </div>
           <button
             onClick={() => {
               hapticSelection();
@@ -318,19 +370,19 @@ function AthletePage() {
               <Loader2 size={14} className="animate-spin" />
             ) : friends ? (
               <>
-                <UserCheck size={14} /> FRIENDS · TAP TO REMOVE
+                <UserCheck size={14} /> FRIENDS · FOLLOWING
               </>
             ) : card.followsMe ? (
               <>
-                <UserPlus size={14} /> ACCEPT FRIEND
+                <UserPlus size={14} /> {followLabel(false, true)}
               </>
             ) : card.following ? (
               <>
-                <UserCheck size={14} /> REQUEST SENT
+                <UserCheck size={14} /> Following
               </>
             ) : (
               <>
-                <UserPlus size={14} /> ADD FRIEND
+                <UserPlus size={14} /> Follow athlete
               </>
             )}
           </button>
@@ -351,6 +403,7 @@ function AthletePage() {
             </button>
             <button
               onClick={toggleBlock}
+              disabled={busy}
               className={`flex-1 py-2.5 text-xs label-cap inline-flex items-center justify-center gap-1.5 border transition-colors ${
                 blocked
                   ? "border-accent-red text-accent-red"
@@ -561,15 +614,6 @@ function MuscleHeadToHead({
         )}
       </div>
     </section>
-  );
-}
-
-function Tile({ label, v }: { label: string; v: number }) {
-  return (
-    <div className="bg-grit-card border border-grit p-3 text-center">
-      <p className="display font-extrabold text-grit text-xl leading-none">{v}</p>
-      <p className="label-cap text-[10px] text-grit-dim mt-1">{label}</p>
-    </div>
   );
 }
 

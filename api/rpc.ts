@@ -17,6 +17,7 @@ import type { Database } from "../src/integrations/supabase/types";
 import { revokeAppleRefreshToken } from "../src/lib/apple-oauth.server";
 import { athleteSearchRank, normalizeAthleteSearchQuery } from "../src/lib/athlete-search";
 import { apnsConfigured, sendApns } from "../src/lib/apns.server";
+import { connectionQuery, connectionPageRows, followCommand } from "../src/lib/social-connections";
 
 interface AuthCtx {
   supabase: SupabaseClient<Database>;
@@ -1471,6 +1472,8 @@ const handlers: Record<string, Handler> = {
     const { supabase, userId } = await requireAuth(req);
     const d = z.object({ userId: z.string().uuid() }).parse(data);
     if (d.userId === userId) throw new Error("Can't follow self");
+    const hidden = await blockedUserIds(supabaseAdmin, userId);
+    if (hidden.has(d.userId)) throw new Error("Athlete unavailable");
     const { data: existing } = await supabase
       .from("follows")
       .select("follower_id")
@@ -1478,15 +1481,107 @@ const handlers: Record<string, Handler> = {
       .eq("following_id", d.userId)
       .maybeSingle();
     if (existing) {
-      await supabase
+      const { error } = await supabase
         .from("follows")
         .delete()
         .eq("follower_id", userId)
         .eq("following_id", d.userId);
+      if (error) throw new Error(error.message);
       return { following: false };
     }
-    await supabase.from("follows").insert({ follower_id: userId, following_id: d.userId });
+    const { error } = await supabase
+      .from("follows")
+      .insert({ follower_id: userId, following_id: d.userId });
+    if (error) throw new Error(error.message);
     return { following: true };
+  },
+
+  async setAthleteFollow(data, req) {
+    const { userId } = await requireAuth(req);
+    const d = followCommand.parse(data);
+    if (d.userId === userId) throw new Error("You can't follow yourself");
+    const hidden = await blockedUserIds(supabaseAdmin, userId);
+    if (hidden.has(d.userId)) throw new Error("Athlete unavailable");
+    const { data: target, error: targetError } = await supabaseAdmin
+      .from("public_profiles")
+      .select("id")
+      .eq("id", d.userId)
+      .maybeSingle();
+    if (targetError) throw new Error(targetError.message);
+    if (!target) throw new Error("Athlete unavailable");
+    // Explicit desired state is safe to retry; unfollow never removes the other person's choice.
+    const { error } = d.following
+      ? await supabaseAdmin
+          .from("follows")
+          .upsert(
+            { follower_id: userId, following_id: d.userId },
+            { onConflict: "follower_id,following_id", ignoreDuplicates: true },
+          )
+      : await supabaseAdmin
+          .from("follows")
+          .delete()
+          .eq("follower_id", userId)
+          .eq("following_id", d.userId);
+    if (error) throw new Error(error.message);
+    return { following: d.following };
+  },
+
+  async getAthleteConnections(data, req) {
+    const { userId } = await requireAuth(req);
+    const d = connectionQuery.parse(data);
+    const hidden = await blockedUserIds(supabaseAdmin, userId);
+    if (hidden.has(d.userId)) throw new Error("Athlete unavailable");
+    const { data: target, error: targetError } = await supabaseAdmin
+      .from("public_profiles")
+      .select("id")
+      .eq("id", d.userId)
+      .maybeSingle();
+    if (targetError) throw new Error(targetError.message);
+    if (!target) throw new Error("Athlete unavailable");
+    const incoming = d.direction === "followers";
+    const { data: edges, error } = await supabaseAdmin
+      .from("follows")
+      .select("follower_id, following_id, created_at")
+      .eq(incoming ? "following_id" : "follower_id", d.userId)
+      .order("created_at", { ascending: false })
+      .order(incoming ? "follower_id" : "following_id")
+      .range(d.offset, d.offset + 30);
+    if (error) throw new Error(error.message);
+    const ids = (edges ?? [])
+      .slice(0, 30)
+      .map((edge) => (incoming ? edge.follower_id : edge.following_id))
+      .filter((id) => !hidden.has(id));
+    if (!ids.length)
+      return { athletes: [], nextOffset: (edges?.length ?? 0) > 30 ? d.offset + 30 : null };
+    const [profiles, outgoing, followers] = await Promise.all([
+      supabaseAdmin
+        .from("public_profiles")
+        .select("id, username, display_name, avatar_url, bio")
+        .in("id", ids),
+      supabaseAdmin
+        .from("follows")
+        .select("following_id")
+        .eq("follower_id", userId)
+        .in("following_id", ids),
+      supabaseAdmin
+        .from("follows")
+        .select("follower_id")
+        .eq("following_id", userId)
+        .in("follower_id", ids),
+    ]);
+    for (const result of [profiles, outgoing, followers])
+      if (result.error) throw new Error(result.error.message);
+    return {
+      athletes: connectionPageRows(
+        ids,
+        (profiles.data ?? []).flatMap((row) => (row.id ? [{ ...row, id: row.id }] : [])),
+        userId,
+        hidden,
+        new Set((outgoing.data ?? []).map((row) => row.following_id)),
+        new Set((followers.data ?? []).map((row) => row.follower_id)),
+      ),
+      nextOffset: (edges?.length ?? 0) > 30 ? d.offset + 30 : null,
+    };
   },
 
   async getFriendConnections(_data, req) {
@@ -1939,7 +2034,10 @@ const handlers: Record<string, Handler> = {
 
   async getMyFollowStats(_data, req) {
     const { supabase, userId } = await requireAuth(req);
-    const [{ count: following }, { count: followers }] = await Promise.all([
+    const [
+      { count: following, error: followingError },
+      { count: followers, error: followersError },
+    ] = await Promise.all([
       supabase
         .from("follows")
         .select("*", { count: "exact", head: true })
@@ -1949,12 +2047,16 @@ const handlers: Record<string, Handler> = {
         .select("*", { count: "exact", head: true })
         .eq("following_id", userId),
     ]);
+    if (followingError) throw new Error(followingError.message);
+    if (followersError) throw new Error(followersError.message);
     return { following: following ?? 0, followers: followers ?? 0 };
   },
 
   async getAthleteCard(data, req) {
     const { supabase, userId } = await requireAuth(req);
     const d = z.object({ userId: z.string().uuid() }).parse(data);
+    const hidden = await blockedUserIds(supabaseAdmin, userId);
+    if (hidden.has(d.userId)) throw new Error("Athlete unavailable");
     const { data: row, error } = await supabaseAdmin
       .from("public_profiles")
       .select(
@@ -2540,12 +2642,14 @@ const handlers: Record<string, Handler> = {
     const { supabase, userId } = await requireAuth(req);
     const d = z.object({ userId: z.string().uuid() }).parse(data);
     if (d.userId === userId) throw new Error("Can't block yourself");
-    await supabase
+    // Service role is required to remove the incoming edge as well as our own.
+    const { error: followError } = await supabaseAdmin
       .from("follows")
       .delete()
       .or(
         `and(follower_id.eq.${userId},following_id.eq.${d.userId}),and(follower_id.eq.${d.userId},following_id.eq.${userId})`,
       );
+    if (followError) throw new Error(followError.message);
     const { error } = await supabase
       .from("user_blocks")
       .upsert(

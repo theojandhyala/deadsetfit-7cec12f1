@@ -59,6 +59,7 @@ const MOTIVATION_LABEL: Record<string, string> = {
 import { currentMilestone, nextMilestone, milestoneProgress } from "@/lib/streak-milestones";
 import { emitGritEarned } from "@/lib/grit-events";
 import { saveProfile } from "@/lib/profile.functions";
+import { ProfileConnections } from "@/components/ProfileConnections";
 import { deleteMyAccount } from "@/lib/account.functions";
 import { finishLocalAccountExit } from "@/lib/account-exit";
 import { unregisterPushTokens } from "@/lib/push-notifications.functions";
@@ -567,6 +568,34 @@ function ProfilePage() {
           ))}
         </div>
       </nav>
+
+      {session && session !== "loading" && (
+        <div className="px-5 mb-4">
+          <ProfileConnections key={session.userId} userId={session.userId} own />
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <Link
+              to="/friends"
+              search={{ section: "GYM" }}
+              className="press min-h-16 rounded-2xl border border-white/10 bg-grit-card p-3"
+            >
+              <span className="block text-xs font-black text-grit">My gym</span>
+              <span className="mt-1 block text-[10px] text-grit-dim">
+                Join your local leaderboard →
+              </span>
+            </Link>
+            <Link
+              to="/friends"
+              search={{ section: "FEED" }}
+              className="press min-h-16 rounded-2xl border border-white/10 bg-grit-card p-3"
+            >
+              <span className="block text-xs font-black text-grit">Following feed</span>
+              <span className="mt-1 block text-[10px] text-grit-dim">
+                Keep up with your people →
+              </span>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {profileCompletion < 100 && (
         <section className="mx-5 mb-4 rounded-2xl border border-white/10 bg-grit-card p-4">

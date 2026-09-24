@@ -1,4 +1,13 @@
 import { callRpc } from "./rpc-client";
+import type { ConnectionDirection, ConnectionPage } from "./social-connections";
+
+export const getAthleteConnections = (data: {
+  userId: string;
+  direction: ConnectionDirection;
+  offset?: number;
+}) => callRpc<ConnectionPage>("getAthleteConnections", data);
+export const setAthleteFollow = (data: { userId: string; following: boolean }) =>
+  callRpc<{ following: boolean }>("setAthleteFollow", data);
 
 export type FeedScope = "global" | "following" | "crew";
 

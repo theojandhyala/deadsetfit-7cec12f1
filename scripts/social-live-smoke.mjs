@@ -19,7 +19,9 @@ const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
 const rpcOrigin = (process.env.DEADSET_RPC_ORIGIN || "https://deadsetfit.org").replace(/\/$/, "");
 
 if (!supabaseUrl || !serviceRoleKey || !publishableKey) {
-  throw new Error("SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and SUPABASE_PUBLISHABLE_KEY are required");
+  throw new Error(
+    "SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and SUPABASE_PUBLISHABLE_KEY are required",
+  );
 }
 
 const admin = createClient(supabaseUrl, serviceRoleKey, {
@@ -28,6 +30,9 @@ const admin = createClient(supabaseUrl, serviceRoleKey, {
 const suffix = `${Date.now().toString(36)}${randomBytes(3).toString("hex")}`;
 const password = `Qa-${randomBytes(18).toString("base64url")}!`;
 const createdUserIds = [];
+const localHandler = process.argv.includes("--local-handler")
+  ? (await import("../api/rpc.ts")).default
+  : null;
 
 function client() {
   return createClient(supabaseUrl, publishableKey, {
@@ -80,6 +85,30 @@ async function createQaAthlete(label, city) {
 }
 
 async function rpc(athlete, fn, data) {
+  if (localHandler) {
+    let status = 200;
+    let payload;
+    const res = {
+      setHeader() {
+        return res;
+      },
+      status(code) {
+        status = code;
+        return res;
+      },
+      json(value) {
+        payload = value;
+        return res;
+      },
+    };
+    await localHandler(
+      { method: "POST", headers: { authorization: `Bearer ${athlete.token}` }, body: { fn, data } },
+      res,
+    );
+    if (status !== 200 || payload?.error)
+      throw new Error(`${fn} failed (${status}): ${payload?.error}`);
+    return payload.result;
+  }
   const response = await fetch(`${rpcOrigin}/api/rpc`, {
     method: "POST",
     headers: {
@@ -118,7 +147,10 @@ async function run() {
 
   const nearby = await rpc(alpha, "getNearbyAthletes");
   assert.equal(nearby.myCity, "Leeds");
-  assert(nearby.athletes.some((athlete) => athlete.id === beta.id), "nearby must include same-city athlete");
+  assert(
+    nearby.athletes.some((athlete) => athlete.id === beta.id),
+    "nearby must include same-city athlete",
+  );
 
   assert.deepEqual(await rpc(alpha, "updateFriendship", { userId: beta.id, action: "send" }), {
     ok: true,
@@ -128,14 +160,18 @@ async function run() {
     ok: true,
     status: "NONE",
   });
-  assert(!(await rpc(alpha, "getFriendConnections")).outgoing.some((athlete) => athlete.id === beta.id));
+  assert(
+    !(await rpc(alpha, "getFriendConnections")).outgoing.some((athlete) => athlete.id === beta.id),
+  );
 
   await rpc(alpha, "updateFriendship", { userId: beta.id, action: "send" });
   assert.deepEqual(await rpc(beta, "updateFriendship", { userId: alpha.id, action: "decline" }), {
     ok: true,
     status: "NONE",
   });
-  assert(!(await rpc(alpha, "getFriendConnections")).outgoing.some((athlete) => athlete.id === beta.id));
+  assert(
+    !(await rpc(alpha, "getFriendConnections")).outgoing.some((athlete) => athlete.id === beta.id),
+  );
 
   assert.deepEqual(await rpc(alpha, "updateFriendship", { userId: beta.id, action: "send" }), {
     ok: true,
@@ -167,6 +203,60 @@ async function run() {
   assert.equal(card.followsMe, true);
   assert.equal(card.city, "Leeds");
 
+  const gymName = `QA Lift Club ${suffix}`;
+  await rpc(alpha, "updateMyGym", { gymName });
+  await rpc(beta, "updateMyGym", { gymName });
+  const gyms = await rpc(alpha, "searchLocalGyms", { q: gymName });
+  assert(gyms.gyms.some((gym) => gym.name === gymName && gym.memberCount === 2));
+  const gym = await rpc(alpha, "getGymHub");
+  assert.equal(gym.gymName, gymName);
+  assert(
+    gym.athletes.some((athlete) => athlete.id === beta.id),
+    "joined athlete must appear on gym board",
+  );
+  await rpc(beta, "updateMyGym", { gymName: "" });
+  assert(!(await rpc(alpha, "getGymHub")).athletes.some((athlete) => athlete.id === beta.id));
+  await rpc(alpha, "updateMyGym", { gymName: "" });
+
+  const followers = await rpc(alpha, "getAthleteConnections", {
+    userId: beta.id,
+    direction: "followers",
+  });
+  assert(followers.athletes.some((row) => row.id === alpha.id && row.isMe));
+  const following = await rpc(alpha, "getAthleteConnections", {
+    userId: alpha.id,
+    direction: "following",
+  });
+  assert(following.athletes.some((row) => row.id === beta.id && row.following && row.followsMe));
+  assert.equal(following.nextOffset, null);
+  assert.deepEqual(
+    await rpc(alpha, "getAthleteConnections", {
+      userId: alpha.id,
+      direction: "following",
+      offset: 30,
+    }),
+    { athletes: [], nextOffset: null },
+  );
+  await assert.rejects(rpc(alpha, "setAthleteFollow", { userId: alpha.id, following: true }));
+  await assert.rejects(
+    rpc({ token: "" }, "getAthleteConnections", { userId: alpha.id, direction: "followers" }),
+  );
+  await assert.rejects(
+    rpc(alpha, "getAthleteConnections", { userId: alpha.id, direction: "followers", offset: -1 }),
+  );
+  await rpc(alpha, "setAthleteFollow", { userId: beta.id, following: false });
+  await rpc(alpha, "setAthleteFollow", { userId: beta.id, following: false });
+  const oneWay = await rpc(alpha, "getAthleteCard", { userId: beta.id });
+  assert.equal(oneWay.following, false);
+  assert.equal(oneWay.followsMe, true, "unfollow preserves the other person's choice");
+  await rpc(alpha, "setAthleteFollow", { userId: beta.id, following: true });
+  await rpc(alpha, "setAthleteFollow", { userId: beta.id, following: true });
+  assert.equal(
+    (await rpc(alpha, "getMyFollowStats")).following,
+    1,
+    "retries must not duplicate follows",
+  );
+
   await rpc(beta, "updateMyLocation", {
     city: "Manchester",
     country: "United Kingdom",
@@ -183,11 +273,32 @@ async function run() {
   assert(!afterRemoval.friends.some((athlete) => athlete.id === alpha.id));
 
   await rpc(beta, "updateMyLocation", { city: "Leeds", country: "United Kingdom", region: null });
-  assert((await rpc(alpha, "getNearbyAthletes")).athletes.some((athlete) => athlete.id === beta.id));
+  assert(
+    (await rpc(alpha, "getNearbyAthletes")).athletes.some((athlete) => athlete.id === beta.id),
+  );
+  await rpc(alpha, "setAthleteFollow", { userId: beta.id, following: true });
+  await rpc(beta, "setAthleteFollow", { userId: alpha.id, following: true });
   assert.deepEqual(await rpc(alpha, "blockUser", { userId: beta.id }), { blocked: true });
+  await assert.rejects(rpc(beta, "setAthleteFollow", { userId: alpha.id, following: true }));
+  await assert.rejects(rpc(beta, "toggleFollow", { userId: alpha.id }));
+  await assert.rejects(rpc(alpha, "getAthleteCard", { userId: beta.id }));
+  await assert.rejects(
+    rpc(beta, "getAthleteConnections", { userId: alpha.id, direction: "following" }),
+  );
+  assert.equal((await rpc(alpha, "getMyFollowStats")).following, 0);
+  assert.equal(
+    (await rpc(beta, "getMyFollowStats")).following,
+    0,
+    "block removes the incoming edge too",
+  );
   const blockedSearch = await rpc(alpha, "searchAthletes", { q: `@${beta.username}` });
-  assert(!blockedSearch.some((athlete) => athlete.id === beta.id), "blocked athletes must be hidden from search");
-  assert(!(await rpc(alpha, "getNearbyAthletes")).athletes.some((athlete) => athlete.id === beta.id));
+  assert(
+    !blockedSearch.some((athlete) => athlete.id === beta.id),
+    "blocked athletes must be hidden from search",
+  );
+  assert(
+    !(await rpc(alpha, "getNearbyAthletes")).athletes.some((athlete) => athlete.id === beta.id),
+  );
   assert.deepEqual(await rpc(alpha, "unblockUser", { userId: beta.id }), { blocked: false });
 
   await rpc(alpha, "updateMyLocation", { city: "", country: "", region: null });
@@ -198,7 +309,7 @@ async function run() {
   });
 
   console.log(
-    "Live social smoke test passed: username/display search, nearby, send/cancel/decline/accept/remove, inbox notifications, card comparison, block privacy and location clearing.",
+    "Social smoke passed: search, nearby, gym join/search/leaderboard/leave, friendship lifecycle, followers/following, idempotent follow/unfollow, auth/validation rejection, block privacy, notifications and location clearing.",
   );
 }
 

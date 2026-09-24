@@ -2,7 +2,7 @@
 
 Last recorded submission: build 165 — Waiting for Review on September 12 (not rechecked here)
 Started: 6 September 2026  
-Current local candidate: 1.3 (167), installed and launched on Theo’s iPhone, not submitted
+Current local candidate: 1.3 (168), installed and launched on Theo’s iPhone; not submitted
 
 Production baseline: App Store version 1.2. This update is built directly on that shipped product;
 it is not based on the archived 1.1 build.
@@ -26,6 +26,42 @@ This is not a feature dump. Every addition must improve at least one of these mo
 5. Share or compare progress safely.
 
 ## Scope and status
+
+### Build 168 — social discovery and profile connections (24 September)
+
+- Replace the sideways community navigation with six labelled destinations: People, My Gym,
+  Crews, Feed, Rankings and Invite. Query-backed destinations support direct links from Profile.
+- Add the “Lifting circle” profile section with follower/following counts and paginated athlete
+  lists, avatars, bios, follow-back status and direct profile navigation. Lists load on demand.
+- Expose follow/unfollow on public profiles. Preserve the existing graph: mutual follows are
+  friends. Unfollowing removes only the viewer's outgoing edge and never silently removes the
+  other person's follow. Explicit desired-state writes are safe to retry.
+- Default the feed to Following; provide direct My Gym and Following Feed shortcuts on Profile.
+  Gym entry no longer puts the generic people introduction ahead of the gym board.
+- Add authenticated, validated connection-list and follow endpoints. Respect blocks in both
+  directions for these endpoints and direct profile reads. Fix ignored follow-write errors,
+  false zero counts on failed requests, and block cleanup of incoming follow edges.
+- Keep an owner-only unblock screen for blocked profile links. Protect against stale profile
+  loads when moving between athletes; modal dismissal restores focus to its opener.
+
+Verification: 106 test files / 879 tests pass in strict checks. The extended social smoke script
+passes both against the local handler with the real database and against the deployed Cloudflare
+API: search, nearby, gym join/search/board/leave, friendship lifecycle, follow lists, idempotent
+follow/unfollow, unauthorized/invalid requests, bidirectional blocks and inbox notifications.
+Each smoke run created and deleted its own temporary QA accounts; no real user's connections changed.
+Browser checks of the real connection component using explicitly labelled local example data cover
+320×740 and 393×852, long names, pagination, follow UI updates, Escape and focus return. No horizontal
+overflow or captured console warnings/errors in those checks. This is not whole-app certification.
+
+Backend-only deployment: Cloudflare version `3318c7f1-8dbd-446d-88ee-5d9fb67ad2f3`.
+Signed physical-iPhone Release build succeeds. Build 168 was installed over the existing app and
+successfully launched through `devicectl`; no uninstall or data reset was performed.
+No App Store upload/submission or public website UI release in this pass.
+
+Remaining social scope: private in-app messaging is **not implemented** in this candidate. It needs
+participant-only database access, recipient controls, idempotent delivery, pagination, abuse/rate
+limits, block enforcement, reporting and deletion/privacy tests before a Message button is exposed.
+Richer group conversations and a profile activity gallery are also still future work.
 
 ### Build 167 — workout evidence and physical preview (24 September)
 

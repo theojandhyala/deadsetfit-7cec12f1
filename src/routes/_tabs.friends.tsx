@@ -72,6 +72,11 @@ import { RankShareCard } from "@/components/RankShareCard";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_tabs/friends")({
+  validateSearch: (search: Record<string, unknown>): { section?: Tab } => ({
+    section: ["FRIENDS", "GYM", "CREW", "FEED", "ARENA", "INVITE"].includes(String(search.section))
+      ? (search.section as Tab)
+      : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "DEADSET — Friends" },
@@ -93,12 +98,13 @@ export const Route = createFileRoute("/_tabs/friends")({
   component: FriendsPage,
 });
 
-type Tab = "FRIENDS" | "CREW" | "FEED" | "ARENA" | "INVITE";
+type Tab = "FRIENDS" | "GYM" | "CREW" | "FEED" | "ARENA" | "INVITE";
 
 function FriendsPage() {
   const navigate = useNavigate();
   const [session, setSession] = useState<{ userId: string } | null | "loading">("loading");
-  const [tab, setTab] = useState<Tab>("FRIENDS");
+  const { section } = Route.useSearch();
+  const tab = section ?? "FRIENDS";
 
   useEffect(() => {
     let cancelled = false;
@@ -177,28 +183,46 @@ function FriendsPage() {
       <header className="px-5 pt-4 pb-2 flex items-start justify-between">
         <div>
           <p className="label-cap">FRIENDS</p>
-          <h1 className="display text-4xl font-extrabold text-grit leading-none mt-1">YOUR CREW</h1>
+          <h1 className="display text-4xl font-extrabold text-grit leading-none mt-1">
+            LIFT TOGETHER
+          </h1>
+          <p className="mt-2 max-w-[32ch] text-xs leading-relaxed text-grit-dim">
+            Your people. Your gym. More reasons to show up.
+          </p>
         </div>
         <NotificationsBell />
       </header>
-      <div className="px-5 mt-3 flex gap-2 border-b border-grit overflow-x-auto">
-        {(["FRIENDS", "CREW", "FEED", "ARENA", "INVITE"] as Tab[]).map((t) => (
+      <nav aria-label="Community sections" className="px-5 mt-3 grid grid-cols-3 gap-2">
+        {(
+          [
+            ["FRIENDS", "People", "Friends & nearby", Users],
+            ["GYM", "My gym", "Join & compete", Building2],
+            ["CREW", "Crews", "Your group", Dumbbell],
+            ["FEED", "Feed", "Lifts & updates", Flame],
+            ["ARENA", "Rankings", "Climb the board", Trophy],
+            ["INVITE", "Invite", "Bring your mates", UserPlus],
+          ] as const
+        ).map(([t, label, description, Icon]) => (
           <button
             key={t}
-            onClick={() => setTab(t)}
-            className="label-cap pb-3 pt-1 border-b-2 whitespace-nowrap"
-            style={{
-              borderColor: tab === t ? "#e63222" : "transparent",
-              color: tab === t ? "#f5f5f0" : "#8a8a8a",
+            type="button"
+            aria-current={tab === t ? "page" : undefined}
+            onClick={() => {
+              hapticSelection();
+              void navigate({ to: "/friends", search: { section: t }, replace: true });
             }}
+            className={`press min-h-20 min-w-0 rounded-2xl border p-2 text-left transition-colors motion-reduce:transition-none ${tab === t ? "border-accent-red/60 bg-accent-red/15 text-grit" : "border-white/10 bg-grit-card text-grit-dim"}`}
           >
-            {t}
+            <Icon size={16} className="mb-2 text-accent-red" />
+            <span className="block text-xs font-black">{label}</span>
+            <span className="mt-1 block text-[9px] leading-relaxed">{description}</span>
           </button>
         ))}
-      </div>
+      </nav>
       <div className="pt-4">
         {tab === "FEED" && <Feed userId={session.userId} />}
         {tab === "FRIENDS" && <Friends />}
+        {tab === "GYM" && <Friends key="gym" initialView="GYM" />}
         {tab === "CREW" && <CrewPanel />}
         {tab === "ARENA" && <League userId={session.userId} />}
         {tab === "INVITE" && <Invite />}
@@ -234,7 +258,7 @@ function Feed({ userId }: { userId: string }) {
   const [openComments, setOpenComments] = useState<string | null>(null);
   const [pickerFor, setPickerFor] = useState<string | null>(null);
   const [menuFor, setMenuFor] = useState<string | null>(null);
-  const [scope, setScope] = useState<FeedScope>("global");
+  const [scope, setScope] = useState<FeedScope>("following");
 
   const load = useCallback(async () => {
     try {
@@ -1204,7 +1228,7 @@ function normalizeCountry(raw: string | null | undefined): string {
   return s;
 }
 
-function Friends() {
+function Friends({ initialView = "CREW" }: { initialView?: FriendView }) {
   const _search = searchAthletes;
   const _suggest = getSuggestedAthletes;
   const _connections = getFriendConnections;
@@ -1236,7 +1260,7 @@ function Friends() {
   const [localGyms, setLocalGyms] = useState<LocalGymOption[]>([]);
   const [gymBusy, setGymBusy] = useState(false);
   const [gymError, setGymError] = useState<string | null>(null);
-  const [view, setView] = useState<FriendView>("CREW");
+  const [view, setView] = useState<FriendView>(initialView);
   // These DOM-owned fields are also set programmatically (initial load, GPS,
   // normalize-on-save), so their .value must be synced imperatively — a
   // defaultValue alone only applies at mount.
@@ -1557,56 +1581,59 @@ function Friends() {
 
   return (
     <div className="px-5 pb-6">
-      <div className="border border-accent-red/70 bg-grit-card rounded-2xl p-4 mb-4 relative overflow-hidden">
-        <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-accent-red/20 blur-2xl" />
-        <p className="label-cap text-accent-red text-[10px] flex items-center gap-1.5">
-          <Swords size={12} /> BUILD YOUR CREW
-        </p>
-        <h2 className="display text-[1.65rem] font-extrabold uppercase text-grit leading-none mt-1">
-          Add rivals. Chase PRs.
-        </h2>
-        <p className="text-xs text-grit-dim mt-2 leading-relaxed">
-          Search usernames, follow local lifters, invite mates, then compete in arenas and
-          leaderboards.
-        </p>
-        <div className="grid grid-cols-3 gap-2 mt-4">
-          <Link
-            to="/challenges"
-            className="btn-ghost py-2 text-[10px] flex items-center justify-center gap-1.5"
-          >
-            <Swords size={12} /> Arena
-          </Link>
-          <Link
-            to="/leaderboard"
-            className="btn-ghost py-2 text-[10px] flex items-center justify-center gap-1.5"
-          >
-            <Trophy size={12} /> Boards
-          </Link>
-          <Link
-            to="/guide"
-            className="btn-ghost py-2 text-[10px] flex items-center justify-center gap-1.5"
-          >
-            <BookOpen size={12} /> Guide
-          </Link>
-        </div>
-      </div>
+      {view !== "GYM" && (
+        <>
+          <div className="border border-accent-red/70 bg-grit-card rounded-2xl p-4 mb-4 relative overflow-hidden">
+            <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-accent-red/20 blur-2xl" />
+            <p className="label-cap text-accent-red text-[10px] flex items-center gap-1.5">
+              <Swords size={12} /> BUILD YOUR CREW
+            </p>
+            <h2 className="display text-[1.65rem] font-extrabold uppercase text-grit leading-none mt-1">
+              Add rivals. Chase PRs.
+            </h2>
+            <p className="text-xs text-grit-dim mt-2 leading-relaxed">
+              Search usernames, follow local lifters, invite mates, then compete in arenas and
+              leaderboards.
+            </p>
+            <div className="grid grid-cols-3 gap-2 mt-4">
+              <Link
+                to="/challenges"
+                className="btn-ghost py-2 text-[10px] flex items-center justify-center gap-1.5"
+              >
+                <Swords size={12} /> Arena
+              </Link>
+              <Link
+                to="/leaderboard"
+                className="btn-ghost py-2 text-[10px] flex items-center justify-center gap-1.5"
+              >
+                <Trophy size={12} /> Boards
+              </Link>
+              <Link
+                to="/guide"
+                className="btn-ghost py-2 text-[10px] flex items-center justify-center gap-1.5"
+              >
+                <BookOpen size={12} /> Guide
+              </Link>
+            </div>
+          </div>
 
-      {/* Friendship stats */}
-      <div className="grid grid-cols-2 gap-2 mb-4">
-        <div className="bg-grit-card border border-grit rounded-2xl p-3 text-center">
-          <p className="display font-extrabold text-grit text-2xl leading-none">
-            {connections?.friends.length ?? "—"}
-          </p>
-          <p className="label-cap text-[10px] text-[#8a8a8a] mt-1">Friends</p>
-        </div>
-        <div className="bg-grit-card border border-grit rounded-2xl p-3 text-center">
-          <p className="display font-extrabold text-grit text-2xl leading-none">
-            {connections?.incoming.length ?? "—"}
-          </p>
-          <p className="label-cap text-[10px] text-[#8a8a8a] mt-1">Requests</p>
-        </div>
-      </div>
-
+          {/* Friendship stats */}
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            <div className="bg-grit-card border border-grit rounded-2xl p-3 text-center">
+              <p className="display font-extrabold text-grit text-2xl leading-none">
+                {connections?.friends.length ?? "—"}
+              </p>
+              <p className="label-cap text-[10px] text-[#8a8a8a] mt-1">Friends</p>
+            </div>
+            <div className="bg-grit-card border border-grit rounded-2xl p-3 text-center">
+              <p className="display font-extrabold text-grit text-2xl leading-none">
+                {connections?.incoming.length ?? "—"}
+              </p>
+              <p className="label-cap text-[10px] text-[#8a8a8a] mt-1">Requests</p>
+            </div>
+          </div>
+        </>
+      )}
       <div
         className="mb-4 grid grid-cols-4 gap-1 rounded-2xl border border-white/10 bg-black/30 p-1"
         role="tablist"
