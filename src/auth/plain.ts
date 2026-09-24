@@ -1,4 +1,5 @@
 import { createClient, type Session } from "@supabase/supabase-js";
+import { installAuthKeyboardLayout } from "./keyboard-layout";
 import {
   authModeFromUrl,
   buildOAuthStartUrl,
@@ -56,6 +57,7 @@ const emailSummary = document.getElementById("email-summary") as HTMLElement;
 const emailSummaryRow = document.getElementById("email-summary-row") as HTMLParagraphElement;
 const passwordLabel = document.getElementById("password-label") as HTMLLabelElement;
 const signupBack = document.getElementById("signup-back") as HTMLButtonElement;
+installAuthKeyboardLayout(submitButton);
 
 let mode: "signin" | "signup" = "signup";
 let signupStage: 1 | 2 = 1;
@@ -94,11 +96,11 @@ function setBusy(busy: boolean) {
       ? "Set New Password"
       : recoveryCodeMode
         ? "Verify Code"
-      : mode === "signup"
-        ? signupStage === 1
-          ? "Continue"
-          : "Create Account"
-        : "Log In";
+        : mode === "signup"
+          ? signupStage === 1
+            ? "Continue"
+            : "Create Account"
+          : "Log In";
 }
 
 function animateStage(element: HTMLElement) {
@@ -108,6 +110,15 @@ function animateStage(element: HTMLElement) {
 }
 
 function renderAuthStage(focus = false) {
+  if (recoveryCodeMode) {
+    signupProgress.hidden = true;
+    signupBack.hidden = true;
+    emailStage.hidden = true;
+    passwordStage.hidden = true;
+    emailInput.required = false;
+    passwordInput.required = false;
+    return;
+  }
   if (recoveryMode) {
     signupProgress.hidden = true;
     emailStage.hidden = true;
@@ -378,6 +389,7 @@ function enterRecoveryCodeMode(email: string) {
   authSubtitle.textContent = `Enter the one-time code sent to ${email}.`;
   submitButton.textContent = "Verify Code";
   setMessage("We sent a secure reset code and link.", "success");
+  renderAuthStage();
   recoveryCodeInput.focus();
 }
 

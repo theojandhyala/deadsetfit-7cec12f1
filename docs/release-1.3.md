@@ -1,8 +1,8 @@
 # DEADSET 1.3 — Strength You Can See
 
-Status: submitted — Waiting for Review
+Last recorded submission: build 165 — Waiting for Review on September 12 (not rechecked here)
 Started: 6 September 2026  
-iOS version/build: 1.3 (165)
+Current local candidate: 1.3 (166), not submitted
 
 Production baseline: App Store version 1.2. This update is built directly on that shipped product;
 it is not based on the archived 1.1 build.
@@ -26,6 +26,28 @@ This is not a feature dump. Every addition must improve at least one of these mo
 5. Share or compare progress safely.
 
 ## Scope and status
+
+### Build 166 device-preview preparation — 24 September
+
+- Preserve duration/distance tracking, duration targets and selected bar weights when repeating a workout.
+- Start repeats with empty logs and no inherited completion, PR totals, rest clocks or one-session adaptation badges; preserve prior history.
+- Prevent a repeated-start action from replacing an already-active workout.
+- Repair the standalone auth markup/controller mismatch: missing password-reset controls previously threw during initialization, preventing the signup submit handler from attaching.
+- Restore the 8-digit recovery-code field, one-time-code autofill and resend control; hide inactive signup/password stages while entering a recovery code.
+- Keep auth fields and continuation buttons above the software keyboard, including the native accessory strip; preserve document scrolling without a nested page scroller.
+- Add ten regression cases covering repeated-session integrity, keyboard geometry and the auth markup/controller contract. Full strict checks pass with 104 files / 858 tests.
+- Bundle the current production web assets and advance all native targets to build 166.
+- Correct the release brief to describe the existing free tier and selectable annual membership.
+
+Native Release simulator compilation succeeds. Build 166 is installed and launches on the iPhone 17 Pro simulator.
+Simulator walkthrough verifies the branded welcome, staged email-to-password signup, Back preserving
+the email, switching to existing-account login, and visible input/action controls with the software
+keyboard. No account was created, password changed, purchase made or reset email sent in this walkthrough.
+
+Physical-device build is currently blocked by Apple signing: no Xcode account and a cached profile
+without the Push Notifications capability. No entitlement has been removed as a workaround.
+Build 166 is not installed on the physical phone, uploaded or submitted. Physical-device purchase/restore,
+notification delivery, real account creation and password-reset delivery still need verification.
 
 ### Post-submission candidate — Guided setup and workout integrity (23 September)
 

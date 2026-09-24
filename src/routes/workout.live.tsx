@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { repeatWorkout } from "@/lib/repeat-workout";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import {
@@ -531,32 +532,16 @@ function LiveWorkoutPage() {
     hapticWorkoutStart();
     set((st) => {
       const last = st.sessions.find((s) => s.id === sourceId);
-      if (!last) return st;
-      const s: WorkoutSession = {
+      if (
+        !last?.endedAt ||
+        st.sessions.some((session) => session.id === st.activeSessionId && !session.endedAt)
+      )
+        return st;
+      const s = repeatWorkout(last, {
         id: crypto.randomUUID(),
         date: isoDay(),
-        dayKey: last.dayKey,
-        programId: last.programId ?? null,
         startedAt: new Date().toISOString(),
-        totalVolume: 0,
-        prCount: 0,
-        label: last.label,
-        exercises: last.exercises.map((e) => ({
-          exerciseId: e.exerciseId,
-          name: e.name,
-          primary_muscles: e.primary_muscles,
-          targetSets: Math.max(1, completedWorkingSets(e.sets) || e.targetSets),
-          targetReps: e.targetReps,
-          plannedWeightKg: e.plannedWeightKg,
-          restSeconds: e.restSeconds,
-          targetRir: e.targetRir,
-          progression: e.progression,
-          tempo: e.tempo,
-          note: e.note,
-          supersetId: e.supersetId,
-          sets: [],
-        })),
-      };
+      });
       return { ...st, sessions: [...st.sessions, s], activeSessionId: s.id };
     });
   }

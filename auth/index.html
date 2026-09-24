@@ -61,11 +61,10 @@
         position: relative;
         min-height: 100vh;
         min-height: 100dvh;
-        overflow-x: hidden;
-        overflow-y: auto;
+        overflow-x: clip;
         scrollbar-width: none;
         padding: max(72px, calc(env(safe-area-inset-top) + 52px)) 24px
-          max(28px, calc(env(safe-area-inset-bottom) + 20px));
+          calc(max(28px, calc(env(safe-area-inset-bottom) + 20px)) + var(--auth-keyboard-inset, 0px));
         background:
           radial-gradient(
             ellipse at 50% 5%,
@@ -888,7 +887,7 @@
 
             <div class="auth-step" id="password-stage" hidden>
               <p class="email-summary" id="email-summary-row">Creating account for <strong id="email-summary"></strong></p>
-              <div class="field">
+              <div class="field" id="password-field">
                 <label for="password" id="password-label">Create a password</label>
                 <div class="pw-wrap">
                   <input
@@ -941,6 +940,24 @@
                 </div>
                 <p class="pw-hint" id="password-hint">At least 6 characters</p>
               </div>
+            </div>
+
+            <div class="field" id="recovery-code-field" hidden>
+              <label for="recovery-code">8-digit reset code</label>
+              <input
+                id="recovery-code"
+                name="recovery-code"
+                type="text"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                pattern="[0-9]{8}"
+                minlength="8"
+                maxlength="8"
+                placeholder="12345678"
+                aria-describedby="recovery-code-hint"
+              />
+              <p class="pw-hint" id="recovery-code-hint">Use the code in your password-reset email.</p>
+              <button class="stage-back" id="recovery-resend" type="button">Send a new code</button>
             </div>
 
             <button class="forgot" id="forgot" type="button" hidden>Forgot password?</button>

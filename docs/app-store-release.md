@@ -1,6 +1,6 @@
 # DEADSET App Store Release Brief
 
-Updated: August 28, 2026
+Updated: September 24, 2026
 
 ## Positioning
 
@@ -68,9 +68,10 @@ TRAIN WITH PEOPLE
 - Compete in ranked leagues and head-to-head challenges
 - Report or block users directly in the app
 
-Eligible new members receive a seven-day free trial, then DEADSET is £5.99 per month in the UK or
-Apple's displayed local price. One membership unlocks workout planning, logging, Strength Map,
-muscle development, progression, competition, recovery, and history tools.
+Start with DEADSET's free training tier for planning and logging. Optional DEADSET Pro unlocks
+advanced analytics, programming and competition features. Apple confirms each plan's localized
+price and renewal terms before purchase. Eligible new subscribers receive a seven-day free trial;
+monthly and annual memberships are available. Never advertise trial eligibility as universal.
 
 Private campaign codes are distributed directly to their intended recipients and are never named
 in App Store metadata or public app UI. The generic Apple redemption sheet remains available for
@@ -173,10 +174,13 @@ These cannot be completed only in the repository:
   the HTTPS callback bridge and `org.deadsetfit.app://auth/callback`.
 - Confirm the first-party Apple code exchange, service-only refresh-token storage, and Sign in with
   Apple revocation during account deletion on a physical iPhone.
-- Confirm the monthly StoreKit product loads at Apple's localized price, shows the one-week trial only
-  to eligible accounts, purchases, restores and opens Apple's subscription-management screen in the
-  submitted build. The annual identifier is legacy-entitlement-only and Stripe must remain unavailable
+- Confirm both monthly and annual StoreKit products load at Apple's localized prices, show a trial
+  only when the selected product's offer and account eligibility confirm it, purchase, restore and
+  open Apple's subscription-management screen in the submitted build. Stripe must remain unavailable
   inside the iOS app.
+- Refresh the Apple provisioning profiles with Push Notifications support before physical-device
+  installation or archiving. On September 24, Xcode reported no signed-in account and the cached
+  DEADSET development profile lacked `aps-environment`. Do not strip that entitlement to bypass signing.
 - Complete App Store Connect privacy answers, age rating, category, support URL, screenshots, review
   account, and export-compliance questions.
 - Confirm Cloudflare production secrets for Supabase, Stripe, and webhooks.
