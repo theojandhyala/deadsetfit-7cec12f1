@@ -95,6 +95,7 @@ function cloneWithSets<T extends TimeBudgetExercise>(exercise: T, targetSets: nu
 export function buildTimeBudgetPlan<T extends TimeBudgetExercise>(
   exercises: T[],
   targetMinutes: WorkoutTimeBudget,
+  priorityExerciseId?: string,
 ): TimeBudgetPlan<T> {
   const clean = normalised(exercises);
   const originalMinutes = estimateWorkoutMinutes(clean);
@@ -113,19 +114,33 @@ export function buildTimeBudgetPlan<T extends TimeBudgetExercise>(
   const originals = new Map<T, T>();
   const omitted: T[] = [];
   const groups = groupsFor(clean);
+  const priorityGroups = new Set(
+    groups.filter((group) => group.some((exercise) => exercise.exerciseId === priorityExerciseId)),
+  );
 
-  for (const group of groups) {
+  // Reserve the chosen movement (including every repeat and its superset
+  // partners) before filling spare time. Restore programme order below.
+  for (const group of [...priorityGroups, ...groups.filter((item) => !priorityGroups.has(item))]) {
     const minimum = group.map((exercise) =>
       cloneWithSets(exercise, Math.min(2, exercise.targetSets)),
     );
     const candidate = [...selected, ...minimum];
-    if (selected.length === 0 || estimateWorkoutMinutes(candidate) <= targetMinutes) {
+    if (
+      priorityGroups.has(group) ||
+      selected.length === 0 ||
+      estimateWorkoutMinutes(candidate) <= targetMinutes
+    ) {
       minimum.forEach((exercise, index) => originals.set(exercise, group[index]!));
       selected.push(...minimum);
     } else {
       omitted.push(...group);
     }
   }
+  const positionByOriginal = new Map(clean.map((exercise, position) => [exercise, position]));
+  selected.sort(
+    (a, b) =>
+      positionByOriginal.get(originals.get(a)!)! - positionByOriginal.get(originals.get(b)!)!,
+  );
 
   // Extremely short budgets still keep the first movement actionable.
   while (selected.length && estimateWorkoutMinutes(selected) > targetMinutes) {
@@ -178,6 +193,7 @@ export function buildTimeBudgetPlan<T extends TimeBudgetExercise>(
 export function fitSessionToTimeBudget(
   session: WorkoutSession,
   targetMinutes?: WorkoutTimeBudget,
+  priorityExerciseId?: string,
 ): WorkoutSession {
   if (
     !targetMinutes ||
@@ -186,7 +202,7 @@ export function fitSessionToTimeBudget(
   )
     return session;
   const originalExercises = session.exercises;
-  const plan = buildTimeBudgetPlan(originalExercises, targetMinutes);
+  const plan = buildTimeBudgetPlan(originalExercises, targetMinutes, priorityExerciseId);
   return {
     ...session,
     exercises: plan.exercises as WorkoutSessionExercise[],

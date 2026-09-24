@@ -27,6 +27,23 @@ This is not a feature dump. Every addition must improve at least one of these mo
 
 ## Scope and status
 
+### Time Fit — must-keep exercise and accessible preview (24 September)
+
+- Choose an optional must-keep movement when fitting a session into 20, 30 or 45 minutes. Every repeat occurrence and linked superset partner is retained; remaining work fills the budget in programme order.
+- Preserve weights, timed/distance effort targets and the saved programme. Unknown priorities fall back to automatic selection. Already-started and completed sessions remain untouched.
+- Show an honest over-budget warning and actual estimated duration on the start action when even the minimum retained work cannot fit.
+- Keep the action button and time-saved summary outside the scrolling preview. Full movement names wrap instead of being cut off.
+- Use a modal portal with focus trapping, Escape dismissal, background scroll locking, return focus, 44px controls, reduced-motion support and a membership handoff after dismissal.
+- Five additional regression cases cover priority preservation, repeats, supersets, removed movements, impossible budgets and all 27 exercise/budget combinations. Existing session-integrity coverage also exercises the priority path.
+
+Verification: strict release checks pass with 104 test files / 863 tests. Real-component browser
+walkthrough covers 320×500 and 393×852 CSS viewports, selection, membership-event handoff, Tab wrap,
+Escape and return focus. No horizontal overflow measured in either sheet; controls are at least
+44px high, and no preview console warnings/errors were captured. Membership purchase itself and
+physical-iPhone interaction have not been retested; the signing blocker below remains unresolved.
+The updated native Release build also compiles successfully and has been installed in the iPhone
+17 Pro simulator. It has not been submitted or installed on the physical phone.
+
 ### Build 166 device-preview preparation — 24 September
 
 - Preserve duration/distance tracking, duration targets and selected bar weights when repeating a workout.

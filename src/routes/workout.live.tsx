@@ -129,6 +129,7 @@ type LiveWorkoutSearch = {
   day?: DayKey;
   source?: Exclude<WorkoutSource, "auto">;
   budget?: WorkoutTimeBudget;
+  priority?: string;
   ramp?: "return";
 };
 
@@ -146,6 +147,10 @@ export const Route = createFileRoute("/workout/live")({
         ? search.budget
         : undefined,
     ramp: search.ramp === "return" ? "return" : undefined,
+    priority:
+      typeof search.priority === "string" && search.priority.length <= 160
+        ? search.priority
+        : undefined,
   }),
   head: () => ({ meta: [{ title: "DEADSET — Live Workout" }] }),
   component: LiveWorkoutPage,
@@ -178,6 +183,7 @@ function buildSession(
   source: WorkoutSource = "auto",
   budget?: WorkoutTimeBudget,
   returnGapDays?: number | null,
+  priorityExerciseId?: string,
 ): WorkoutSession | null {
   const active = state.programs.find((p) => p.id === state.activeProgramId);
   const autopilot = state.trainingAutopilot?.enabled
@@ -223,6 +229,7 @@ function buildSession(
             }),
           },
           budget,
+          priorityExerciseId,
         ),
         returnGapDays,
         unitOf(state),
@@ -276,6 +283,7 @@ function buildSession(
         }),
       },
       budget,
+      priorityExerciseId,
     ),
     returnGapDays,
     unitOf(state),
@@ -563,6 +571,7 @@ function LiveWorkoutPage() {
           requested.source ?? "auto",
           requested.budget,
           requested.ramp === "return" ? eligibleReturnGap(repairedState.sessions) : null,
+          requested.priority,
         );
         if (!requestedSession) return repairedState;
         return {
@@ -583,7 +592,7 @@ function LiveWorkoutPage() {
         activeSessionId: s.id,
       };
     });
-  }, [requested.budget, requested.day, requested.ramp, requested.source, set]);
+  }, [requested.budget, requested.day, requested.ramp, requested.source, requested.priority, set]);
 
   const session = state.sessions.find((s) => s.id === state.activeSessionId);
 

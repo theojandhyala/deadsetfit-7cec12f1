@@ -16,6 +16,80 @@ const exercises = [
 ];
 
 describe("time-budget workout", () => {
+  const crowded = Array.from({ length: 9 }, (_, index) => ({
+    exerciseId: `move-${index}`,
+    name: `Movement ${index + 1}`,
+    targetSets: 4,
+    restSeconds: 120,
+  }));
+
+  it("reserves a late must-keep movement without changing programme order or source", () => {
+    const before = JSON.stringify(crowded);
+    expect(
+      buildTimeBudgetPlan(crowded, 20).omitted.some((item) => item.exerciseId === "move-8"),
+    ).toBe(true);
+    const plan = buildTimeBudgetPlan(crowded, 20, "move-8");
+    expect(plan.exercises.some((item) => item.exerciseId === "move-8")).toBe(true);
+    expect(plan.estimatedMinutes).toBeLessThanOrEqual(20);
+    const ids = plan.exercises.map((item) => item.exerciseId);
+    expect(ids).toEqual(
+      crowded.filter((item) => ids.includes(item.exerciseId)).map((item) => item.exerciseId),
+    );
+    expect(JSON.stringify(crowded)).toBe(before);
+  });
+
+  it("keeps every repeat and the selected movement's superset partner", () => {
+    const input = [
+      ...crowded,
+      { exerciseId: "priority", name: "Priority heavy", targetSets: 3, supersetId: "pair" },
+      { exerciseId: "partner", name: "Partner", targetSets: 3, supersetId: "pair" },
+      { exerciseId: "priority", name: "Priority backoff", targetSets: 2 },
+    ];
+    const plan = buildTimeBudgetPlan(input, 20, "priority");
+    expect(plan.exercises.filter((item) => item.exerciseId === "priority")).toHaveLength(2);
+    expect(plan.exercises.some((item) => item.exerciseId === "partner")).toBe(true);
+    expect(plan.estimatedMinutes).toBeLessThanOrEqual(20);
+    expect(plan.omitted.some((item) => ["priority", "partner"].includes(item.exerciseId))).toBe(
+      false,
+    );
+  });
+
+  it("falls back to programme order for a removed or unknown priority", () => {
+    expect(buildTimeBudgetPlan(crowded, 20, "deleted")).toEqual(buildTimeBudgetPlan(crowded, 20));
+  });
+
+  it("honestly reports a must-keep effort that cannot fit", () => {
+    const input = [
+      ...crowded,
+      {
+        exerciseId: "hold",
+        name: "Long hold",
+        targetSets: 1,
+        tracking: "DURATION" as const,
+        targetSeconds: 1800,
+      },
+    ];
+    const plan = buildTimeBudgetPlan(input, 20, "hold");
+    expect(plan.exercises).toHaveLength(1);
+    expect(plan.exercises[0]).toMatchObject({ targetSeconds: 1800 });
+    expect(plan.estimatedMinutes).toBeGreaterThan(20);
+  });
+
+  it("bounds every feasible priority and partitions the input exactly once", () => {
+    for (const budget of [20, 30, 45] as const) {
+      for (const priority of crowded) {
+        const plan = buildTimeBudgetPlan(crowded, budget, priority.exerciseId);
+        expect(plan.estimatedMinutes).toBeLessThanOrEqual(budget);
+        expect(plan.exercises.some((item) => item.exerciseId === priority.exerciseId)).toBe(true);
+        expect([...plan.exercises, ...plan.omitted].map((item) => item.exerciseId).sort()).toEqual(
+          crowded.map((item) => item.exerciseId).sort(),
+        );
+        expect(plan.exercises.every((item) => item.targetSets >= 1 && item.targetSets <= 4)).toBe(
+          true,
+        );
+      }
+    }
+  });
   it("counts prescribed duration instead of treating long holds as forty seconds", () => {
     const holds = [
       { exerciseId: "hold", name: "Plank", targetSets: 3, targetReps: "5 min", restSeconds: 60 },
@@ -121,12 +195,25 @@ describe("time-budget workout", () => {
         sets: [],
       })),
     };
-    const fitted = fitSessionToTimeBudget(session, 20);
+    const fitted = fitSessionToTimeBudget(session, 20, "calf");
     expect(fitted).not.toBe(session);
     expect(fitted.timeBudgetMinutes).toBe(20);
     expect(fitted.originalExerciseCount).toBe(5);
     expect(fitted.label).toBe("LOWER");
     expect(session.exercises).toHaveLength(5);
     expect(session.label).toBe("LOWER");
+    expect(fitted.exercises.some((item) => item.exerciseId === "calf")).toBe(true);
+    expect(
+      fitSessionToTimeBudget({ ...session, endedAt: "2026-09-23T13:00:00Z" }, 20, "calf")
+        .timeBudgetMinutes,
+    ).toBeUndefined();
+    const started = {
+      ...session,
+      exercises: session.exercises.map((item, index) => ({
+        ...item,
+        sets: index === 0 ? [{ weight: 20, reps: 8, at: "2026-09-23T12:01:00Z" }] : [],
+      })),
+    };
+    expect(fitSessionToTimeBudget(started, 20, "calf")).toBe(started);
   });
 });
