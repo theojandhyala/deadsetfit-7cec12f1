@@ -10,7 +10,6 @@ import {
   Flag,
   Ban,
   Swords,
-  MapPin,
   Dumbbell,
   Flame,
   Layers3,
@@ -21,9 +20,10 @@ import { getAthleteCard, setAthleteFollow } from "@/lib/social.functions";
 import { ProfileConnections } from "@/components/ProfileConnections";
 import { followLabel } from "@/lib/social-connections";
 import { blockUser, unblockUser, isBlocked, reportContent } from "@/lib/account.functions";
-import { FifaCard } from "@/components/FifaCard";
+import { AthleteProfileHero } from "@/components/AthleteProfileHero";
+import { MutualFriends } from "@/components/ProfileDiscovery";
 import { RARITY_COLOR, type AchievementRarity } from "@/lib/achievements";
-import { gritBadge, badgeColor } from "@/lib/calc";
+import { gritBadge } from "@/lib/calc";
 import { hapticFailure, hapticPlanUpdated, hapticSelection } from "@/lib/haptics";
 import { MuscleDiagram } from "@/components/MuscleDiagram";
 import { GRADED_MUSCLES, TIER_COLOR, type StrengthTier } from "@/lib/strength-grades";
@@ -206,19 +206,6 @@ function AthletePage({ id }: { id: string }) {
   const overall = Number(stats.overall) || 0;
   const topPRs =
     (stats.topPRs as Array<{ id: string; label: string; value: number; unit: string }>) || [];
-  // Fallback to empty 6-tile shape if profile hasn't pushed stats yet.
-  const HEADLINE_FALLBACK = [
-    { id: "bench-press", label: "BENCH", unit: "kg" },
-    { id: "squat", label: "SQUAT", unit: "kg" },
-    { id: "deadlift", label: "DEAD", unit: "kg" },
-    { id: "ohp", label: "OHP", unit: "kg" },
-    { id: "pull-ups", label: "PULL", unit: "reps" },
-    { id: "push-ups", label: "PUSH", unit: "reps" },
-  ];
-  const prs = HEADLINE_FALLBACK.map((h) => {
-    const found = topPRs.find((p) => p.id === h.id);
-    return { id: h.id, label: h.label, unit: h.unit, value: found?.value ?? 0 };
-  });
   const badgeWall =
     (stats.badges as {
       earned?: number;
@@ -226,7 +213,6 @@ function AthletePage({ id }: { id: string }) {
       top?: { id: string; label: string; icon: string; rarity: string }[];
     } | null) || null;
   const badge = gritBadge(Number(card.grit_points ?? 0));
-  const badgeC = badgeColor(badge);
   const friends = Boolean(card.following && card.followsMe);
   const theirStrengthMap = publicStrengthMap(stats.strengthMap);
   const myStrengthMap = publicStrengthMap(
@@ -251,74 +237,96 @@ function AthletePage({ id }: { id: string }) {
         <p className="label-cap">ATHLETE</p>
       </header>
 
-      <section className="px-5 mb-4">
-        <FifaCard
-          name={card.display_name || card.username || "Athlete"}
-          username={card.username}
-          avatarUrl={card.avatar_url}
-          badge={badge}
-          badgeColor={badgeC}
-          overall={overall}
-          gritPoints={card.grit_points ?? overall}
-          prs={prs}
-          weightKg={Number(stats.weightKg) || undefined}
-          heightCm={Number(stats.heightCm) || undefined}
-          goal={String(stats.goal || "")}
-          experience={String(stats.experience || "")}
-        />
+      <AthleteProfileHero
+        name={card.display_name || card.username || "Athlete"}
+        username={card.username}
+        avatarUrl={card.avatar_url}
+        bio={card.bio}
+        location={location}
+        rank={badge}
+        connections={
+          <ProfileConnections
+            key={id}
+            userId={id}
+            compact
+            counts={{ followers: card.followerCount, following: card.followingCount }}
+            onChange={() => void loadAthlete()}
+          />
+        }
+        actions={
+          !card.isMe ? (
+            <button
+              onClick={() => {
+                hapticSelection();
+                void follow();
+              }}
+              disabled={busy}
+              className={
+                card.following
+                  ? "btn-ghost flex min-h-11 w-full items-center justify-center gap-2"
+                  : "btn-grit flex min-h-11 w-full items-center justify-center gap-2"
+              }
+            >
+              {busy ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : card.following ? (
+                <UserCheck size={16} />
+              ) : (
+                <UserPlus size={16} />
+              )}
+              {friends ? "Friends · Following" : followLabel(card.following, card.followsMe)}
+            </button>
+          ) : (
+            <Link to="/profile" className="btn-ghost block min-h-11 text-center">
+              Edit my profile
+            </Link>
+          )
+        }
+      />
+      {!card.isMe && (
+        <div className="px-5 mb-4">
+          <MutualFriends key={id} userId={id} />
+        </div>
+      )}
+      <section
+        className="mx-5 mb-5 grid grid-cols-4 gap-1 border-y border-white/10 py-4"
+        aria-label="Training stats"
+      >
+        {[
+          { Icon: Dumbbell, value: totalWorkouts, label: "Workouts" },
+          { Icon: Layers3, value: totalWorkingSets, label: "Sets" },
+          { Icon: Flame, value: publicStreak, label: "Streak" },
+          { Icon: Trophy, value: totalPRs, label: "PRs" },
+        ].map(({ Icon, value, label }) => (
+          <div key={label} className="min-w-0 text-center">
+            <Icon size={14} className="mx-auto text-accent-red" />
+            <p className="display mt-2 break-all text-xl font-black text-grit">
+              {value.toLocaleString()}
+            </p>
+            <p className="mt-1 text-[9px] font-bold uppercase text-grit-dim">{label}</p>
+          </div>
+        ))}
       </section>
 
-      <section className="px-5 mb-5">
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_90%_0%,rgba(230,50,34,0.17),transparent_38%),linear-gradient(145deg,#17181c,#0b0b0d)] p-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="display text-xl font-black uppercase text-grit">
-              {card.display_name || card.username || "Athlete"}
-            </p>
-            <span className="rounded-full border border-white/10 bg-black/25 px-2 py-1 text-[8px] font-black uppercase text-grit-dim">
-              {card.level}
-            </span>
-          </div>
-          {card.username && (
-            <p className="mt-0.5 text-xs font-bold text-accent-red">@{card.username}</p>
-          )}
-          {location && (
-            <p className="mt-2 flex items-center gap-1.5 text-[10px] font-bold text-grit-dim">
-              <MapPin size={11} className="text-accent-red" /> {location}
-            </p>
-          )}
-          <p className="mt-3 text-sm leading-relaxed text-grit">
-            {card.bio || "This athlete has not added a bio yet."}
-          </p>
-          <div className="mt-4 grid grid-cols-4 gap-1.5">
-            {[
-              { Icon: Dumbbell, value: totalWorkouts, label: "Workouts" },
-              { Icon: Layers3, value: totalWorkingSets, label: "Sets" },
-              { Icon: Flame, value: publicStreak, label: "Streak" },
-              { Icon: Trophy, value: totalPRs, label: "PRs" },
-            ].map(({ Icon, value, label }) => (
-              <div
+      <section className="mx-5 mb-5" aria-label="Shared training details">
+        <div className="flex flex-wrap gap-2">
+          {[
+            ["Goal", String(stats.goal || "").replaceAll("_", " ")],
+            ["Experience", String(stats.experience || "").replaceAll("_", " ")],
+            ["Body weight", Number(stats.weightKg) > 0 ? `${Number(stats.weightKg)} kg` : ""],
+            ["Height", Number(stats.heightCm) > 0 ? `${Number(stats.heightCm)} cm` : ""],
+          ]
+            .filter(([, value]) => value)
+            .map(([label, value]) => (
+              <p
                 key={label}
-                className="rounded-xl border border-white/10 bg-black/25 p-2 text-center"
+                className="max-w-full break-words rounded-xl border border-white/10 px-3 py-2 text-xs text-grit"
               >
-                <Icon size={12} className="mx-auto text-accent-red" />
-                <p className="display mt-1 text-lg font-black leading-none text-grit">{value}</p>
-                <p className="mt-1 text-[6px] font-black uppercase tracking-wide text-grit-dim">
-                  {label}
-                </p>
-              </div>
+                <span className="mr-1 text-grit-dim">{label}:</span> {value}
+              </p>
             ))}
-          </div>
         </div>
       </section>
-
-      <div className="px-5 mb-5">
-        <ProfileConnections
-          key={id}
-          userId={id}
-          counts={{ followers: card.followerCount, following: card.followingCount }}
-          onChange={() => void loadAthlete()}
-        />
-      </div>
 
       {badgeWall?.top?.length ? (
         <section className="px-5 mb-5">
@@ -354,38 +362,6 @@ function AthletePage({ id }: { id: string }) {
               Follows you
             </div>
           )}
-          <button
-            onClick={() => {
-              hapticSelection();
-              void follow();
-            }}
-            disabled={busy}
-            className={
-              card.following
-                ? "btn-ghost w-full py-3 flex items-center justify-center gap-2"
-                : "btn-grit w-full py-3 flex items-center justify-center gap-2"
-            }
-          >
-            {busy ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : friends ? (
-              <>
-                <UserCheck size={14} /> FRIENDS · FOLLOWING
-              </>
-            ) : card.followsMe ? (
-              <>
-                <UserPlus size={14} /> {followLabel(false, true)}
-              </>
-            ) : card.following ? (
-              <>
-                <UserCheck size={14} /> Following
-              </>
-            ) : (
-              <>
-                <UserPlus size={14} /> Follow athlete
-              </>
-            )}
-          </button>
           {friends && (
             <Link
               to="/challenges"

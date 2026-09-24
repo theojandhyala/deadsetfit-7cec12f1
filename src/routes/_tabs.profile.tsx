@@ -66,20 +66,15 @@ import { unregisterPushTokens } from "@/lib/push-notifications.functions";
 import { hapticFailure, hapticSaved, hapticSelection, hapticUndo } from "@/lib/haptics";
 import { usePro } from "@/hooks/usePro";
 import { isNativeIos } from "@/lib/platform";
-import { FifaCard } from "@/components/FifaCard";
+import { AthleteProfileHero } from "@/components/AthleteProfileHero";
+import { ProfileDiscovery } from "@/components/ProfileDiscovery";
 import { ProBadge } from "@/components/ProBadge";
 import { StreakShareCard } from "@/components/StreakShareCard";
 import { StatsGrid } from "@/components/StatsGrid";
 import { LiftLevels } from "@/components/LiftLevels";
 import { TrophyCase } from "@/components/TrophyCase";
 import { RankedArena } from "@/components/RankedArena";
-import {
-  PR_CATALOG,
-  computeFifaStats,
-  buildPublicStats,
-  buildHeadlinePRs,
-  type PRDef,
-} from "@/lib/fifa-stats";
+import { PR_CATALOG, buildPublicStats, type PRDef } from "@/lib/fifa-stats";
 import {
   getFriendConnections,
   updateMyLocation,
@@ -240,7 +235,6 @@ function ProfilePage() {
   const score = calculateGritScore(state);
   const badge = gritBadge(score.total);
   const badgeC = badgeColor(badge);
-  const fifa = computeFifaStats(state);
   const startW = p.startingWeightKg ?? p.weightKg;
   const delta = p.weightKg - startW;
   const bmi = (p.weightKg / Math.pow(p.heightCm / 100, 2)).toFixed(1);
@@ -470,7 +464,7 @@ function ProfilePage() {
     <div className="deadset-page">
       <header className="px-5 pt-4 pb-3 flex items-start justify-between">
         <div className="flex items-center gap-2">
-          <p className="label-cap">YOUR CARD</p>
+          <p className="label-cap">YOUR PROFILE</p>
           {isPro && <ProBadge size="sm" />}
         </div>
         <div className="flex items-center gap-1">
@@ -482,7 +476,17 @@ function ProfilePage() {
             <Settings size={17} />
           </Link>
           <button
-            onClick={() => (editing ? save() : setEditing(true))}
+            onClick={() => {
+              if (editing) void save();
+              else {
+                setEditing(true);
+                requestAnimationFrame(() =>
+                  document
+                    .getElementById("profile-details")
+                    ?.scrollIntoView({ behavior: "instant" }),
+                );
+              }
+            }}
             disabled={savingProfile}
             className="min-h-10 rounded-xl px-3 label-cap text-accent-red disabled:opacity-50 press"
           >
@@ -516,38 +520,53 @@ function ProfilePage() {
         </section>
       )}
 
-      {/* === FIFA card === */}
-      <section className="px-5 mb-5 relative">
-        <button
-          onClick={() => fileRef.current?.click()}
-          className="absolute top-1 right-7 z-10 bg-accent-red rounded-full p-1.5 shadow tap-44"
-          aria-label="Change photo"
-        >
-          <Pencil size={10} />
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => e.target.files?.[0] && changePhoto(e.target.files[0])}
-        />
-        <FifaCard
-          name={p.displayName || p.username || "Athlete"}
-          username={p.username}
-          avatarUrl={p.avatarDataUrl}
-          badge={badge}
-          badgeColor={badgeC}
-          overall={fifa.overall}
-          gritPoints={score.total}
-          prs={buildHeadlinePRs(state)}
-          weightKg={p.weightKg}
-          heightCm={p.heightCm}
-          goal={p.goal}
-          experience={p.experience}
-          isPro={isPro}
-        />
-      </section>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => e.target.files?.[0] && changePhoto(e.target.files[0])}
+      />
+      <AthleteProfileHero
+        name={p.displayName || p.username || "Athlete"}
+        username={p.username}
+        avatarUrl={p.avatarDataUrl}
+        bio={p.bio || "Your training. Your people. Your progress."}
+        location={[p.city, p.country].filter(Boolean).join(", ")}
+        rank={badge}
+        onChangePhoto={() => fileRef.current?.click()}
+        connections={
+          session && session !== "loading" ? (
+            <ProfileConnections key={session.userId} userId={session.userId} own compact />
+          ) : null
+        }
+        actions={
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              className="btn-ghost min-h-11 text-xs"
+              onClick={() => {
+                hapticSelection();
+                setEditing(true);
+                requestAnimationFrame(() =>
+                  document
+                    .getElementById("profile-details")
+                    ?.scrollIntoView({ behavior: "instant" }),
+                );
+              }}
+            >
+              Edit profile
+            </button>
+            <Link
+              to="/friends"
+              search={{ section: "FRIENDS" }}
+              className="btn-grit flex min-h-11 items-center justify-center text-xs"
+            >
+              Find friends
+            </Link>
+          </div>
+        }
+      />
 
       <nav className="px-5 mb-4" aria-label="Profile shortcuts">
         <div className="grid grid-cols-4 gap-2">
@@ -571,7 +590,7 @@ function ProfilePage() {
 
       {session && session !== "loading" && (
         <div className="px-5 mb-4">
-          <ProfileConnections key={session.userId} userId={session.userId} own />
+          <ProfileDiscovery locationKey={[p.city, p.country].join("|")} />
           <div className="mt-2 grid grid-cols-2 gap-2">
             <Link
               to="/friends"
@@ -603,7 +622,7 @@ function ProfilePage() {
             <div>
               <p className="label-cap text-[9px] text-accent-red">ATHLETE PROFILE</p>
               <p className="display mt-1 text-lg font-black uppercase text-grit">
-                Make your card recognisable
+                Make your profile recognisable
               </p>
             </div>
             <span className="display text-xl font-black text-grit">{profileCompletion}%</span>
@@ -636,7 +655,7 @@ function ProfilePage() {
       <section className="mx-5 mb-4 overflow-hidden rounded-2xl border border-accent-red/35 bg-[radial-gradient(circle_at_90%_0%,rgba(230,50,34,0.2),transparent_36%),linear-gradient(145deg,#17181c,#0c0c0e)] p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="label-cap text-[9px] text-accent-red">YOUR SOCIAL LIFTING CARD</p>
+            <p className="label-cap text-[9px] text-accent-red">YOUR LIFTING CIRCLE</p>
             <p className="display mt-1 text-xl font-black uppercase text-grit">Friends & rivals</p>
             <p className="mt-1 max-w-[30ch] text-[10px] leading-relaxed text-grit-dim">
               Compare Strength Maps, PRs and streaks with athletes you accept.
@@ -668,7 +687,7 @@ function ProfilePage() {
               params={{ id: session.userId }}
               className="btn-ghost min-h-11 text-center text-[10px]"
             >
-              View public card
+              View public profile
             </Link>
           ) : (
             <Link to="/friends" className="btn-ghost min-h-11 text-center text-[10px]">

@@ -117,6 +117,15 @@ export const searchAthletes = ({ data }: { data: { q: string } }) =>
 
 export const getSuggestedAthletes = () => callRpc<any[]>("getSuggestedAthletes");
 
+export interface MutualFriendPreview {
+  id: string;
+  username: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+}
+export const getMutualFriends = (userId: string) =>
+  callRpc<{ athletes: MutualFriendPreview[] }>("getMutualFriends", { userId });
+
 export const getMyFollowStats = () =>
   callRpc<{ following: number; followers: number }>("getMyFollowStats");
 

@@ -278,7 +278,35 @@ async function run() {
   );
   await rpc(alpha, "setAthleteFollow", { userId: beta.id, following: true });
   await rpc(beta, "setAthleteFollow", { userId: alpha.id, following: true });
+  const gamma = await createQaAthlete("gamma", "Leeds");
+  await rpc(alpha, "setAthleteFollow", { userId: gamma.id, following: true });
+  await rpc(gamma, "setAthleteFollow", { userId: alpha.id, following: true });
+  await rpc(beta, "setAthleteFollow", { userId: gamma.id, following: true });
+  assert.deepEqual(
+    await rpc(alpha, "getMutualFriends", { userId: beta.id }),
+    { athletes: [] },
+    "three edges are not a shared friendship",
+  );
+  await rpc(gamma, "setAthleteFollow", { userId: beta.id, following: true });
+  const mutuals = await rpc(alpha, "getMutualFriends", { userId: beta.id });
+  assert.deepEqual(
+    mutuals.athletes.map((row) => row.id),
+    [gamma.id],
+  );
+  assert.deepEqual(Object.keys(mutuals.athletes[0]).sort(), [
+    "avatar_url",
+    "display_name",
+    "id",
+    "username",
+  ]);
+  await assert.rejects(rpc({ token: "" }, "getMutualFriends", { userId: beta.id }));
+  await assert.rejects(rpc(alpha, "getMutualFriends", { userId: "invalid" }));
+  await rpc(alpha, "blockUser", { userId: gamma.id });
+  assert.deepEqual(await rpc(alpha, "getMutualFriends", { userId: beta.id }), { athletes: [] });
+  await rpc(beta, "blockUser", { userId: gamma.id });
   assert.deepEqual(await rpc(alpha, "blockUser", { userId: beta.id }), { blocked: true });
+  await assert.rejects(rpc(alpha, "getMutualFriends", { userId: beta.id }));
+  await assert.rejects(rpc(beta, "getMutualFriends", { userId: alpha.id }));
   await assert.rejects(rpc(beta, "setAthleteFollow", { userId: alpha.id, following: true }));
   await assert.rejects(rpc(beta, "toggleFollow", { userId: alpha.id }));
   await assert.rejects(rpc(alpha, "getAthleteCard", { userId: beta.id }));
@@ -309,7 +337,7 @@ async function run() {
   });
 
   console.log(
-    "Social smoke passed: search, nearby, gym join/search/leaderboard/leave, friendship lifecycle, followers/following, idempotent follow/unfollow, auth/validation rejection, block privacy, notifications and location clearing.",
+    "Social smoke passed: search, nearby, gym join/search/leaderboard/leave, friendship lifecycle, followers/following, mutual friendships and privacy, idempotent follow/unfollow, auth/validation rejection, block privacy, notifications and location clearing.",
   );
 }
 

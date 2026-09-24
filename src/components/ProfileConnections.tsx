@@ -17,11 +17,13 @@ export function ProfileConnections({
   counts,
   own = false,
   onChange,
+  compact = false,
 }: {
   userId: string;
   counts?: { followers: number; following: number };
   own?: boolean;
   onChange?: () => void;
+  compact?: boolean;
 }) {
   const [myCounts, setMyCounts] = useState<typeof counts>();
   const [countError, setCountError] = useState(false);
@@ -39,13 +41,21 @@ export function ProfileConnections({
   }, [refresh, userId]);
   const totals = own ? myCounts : counts;
   return (
-    <section className="overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(135deg,#251312,#111214)]">
-      <div className="flex items-center gap-2 px-4 pt-4">
-        <Users size={15} className="text-accent-red" />
-        <h2 className="label-cap text-[10px] text-grit">
-          {own ? "Your lifting circle" : "Lifting circle"}
-        </h2>
-      </div>
+    <section
+      className={
+        compact
+          ? "mx-auto mt-3 max-w-xs"
+          : "overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(135deg,#251312,#111214)]"
+      }
+    >
+      {!compact && (
+        <div className="flex items-center gap-2 px-4 pt-4">
+          <Users size={15} className="text-accent-red" />
+          <h2 className="label-cap text-[10px] text-grit">
+            {own ? "Your lifting circle" : "Lifting circle"}
+          </h2>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-2 p-3">
         {(["followers", "following"] as const).map((kind) => (
           <button
@@ -56,15 +66,25 @@ export function ProfileConnections({
               hapticSelection();
               setDirection(kind);
             }}
-            className="press min-h-16 rounded-xl border border-white/10 bg-black/25 p-3 text-left"
+            className={
+              compact
+                ? "press min-h-14 min-w-0 rounded-xl p-2 text-center"
+                : "press min-h-16 rounded-xl border border-white/10 bg-black/25 p-3 text-left"
+            }
             aria-label={`View ${kind}`}
           >
             <span className="display block text-2xl font-black text-grit">
               {totals?.[kind]?.toLocaleString() ?? "—"}
             </span>
-            <span className="mt-1 flex items-center justify-between text-[10px] font-bold capitalize text-grit-dim">
+            <span
+              className={
+                compact
+                  ? "mt-1 block text-xs font-semibold capitalize text-grit-dim"
+                  : "mt-1 flex items-center justify-between text-[10px] font-bold capitalize text-grit-dim"
+              }
+            >
               {kind}
-              <ArrowUpRight size={12} />
+              {!compact && <ArrowUpRight size={12} />}
             </span>
           </button>
         ))}
@@ -74,10 +94,12 @@ export function ProfileConnections({
           Counts unavailable · Retry
         </button>
       )}
-      <p className="px-4 pb-4 text-[10px] leading-relaxed text-grit-dim">
-        Follow to keep up with public posts. Follow each other to become friends and compare
-        progress.
-      </p>
+      {!compact && (
+        <p className="px-4 pb-4 text-[10px] leading-relaxed text-grit-dim">
+          Follow to keep up with public posts. Follow each other to become friends and compare
+          progress.
+        </p>
+      )}
       <Dialog.Root
         open={direction !== null}
         onOpenChange={(open) => {

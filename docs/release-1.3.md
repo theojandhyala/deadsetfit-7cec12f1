@@ -2,7 +2,7 @@
 
 Last recorded submission: build 165 — Waiting for Review on September 12 (not rechecked here)
 Started: 6 September 2026  
-Current local candidate: 1.3 (168), installed and launched on Theo’s iPhone; not submitted
+Current local candidate: 1.3 (169), installed on Theo’s iPhone; not submitted
 
 Production baseline: App Store version 1.2. This update is built directly on that shipped product;
 it is not based on the archived 1.1 build.
@@ -26,6 +26,39 @@ This is not a feature dump. Every addition must improve at least one of these mo
 5. Share or compare progress safely.
 
 ## Scope and status
+
+### Build 169 — social-first profiles (24 September)
+
+- Replace trading-card presentation on both profile routes with one photo-led identity:
+  circular photo, name, handle, rank, bio, shared city, compact follower/following lists and
+  a prominent follow/back/edit action. Keep existing training records, badges, comparisons,
+  Strength Maps and already-shared goal/body details. No training or payment data migration.
+- Put nearby athlete suggestions directly on the owner's profile, using their voluntarily
+  shared city/country. Explicitly distinguish city discovery from live/precise location.
+  Provide loading, empty and retry states; do not prompt for GPS permission.
+- Add authenticated mutual-friend previews: all four reciprocal follow edges must exist.
+  Respect blocks in both directions for both profile owners and shared friends. Return only
+  public identity fields. Preview up to six verified friends from the viewer's 200 most-recent
+  follows; never present this bounded sample as an exact mutual total.
+- Edit actions now open the actual profile-details form. Broken/missing avatar images have
+  initials fallbacks. Preserve original DEADSET branding and existing animations elsewhere.
+
+Verification: strict checks pass (106 files / 879 unit tests, types, lint, production build,
+CSS and native project/readiness checks). Extended three-account smoke tests pass against the
+local handler and deployed production API, including incomplete-vs-complete mutual graph,
+public-field allowlist, invalid/unauthenticated calls, blocking and existing social flows.
+Temporary QA accounts were deleted by test cleanup; real-user follows were not changed.
+Phone-width browser QA of production components with labelled fixture data passed at 393px
+and 320px: no sideways overflow, working follow-back UI and modal focus restoration, no captured
+console warnings/errors. A full live-account native UI walkthrough is not claimed.
+
+Backend-only deployment: `f41b5667-ed17-4214-98f5-7c745683e891`.
+Signed physical-iPhone Release build succeeded; build 169 installed over the existing app without
+an uninstall or data reset.
+App Store submission remains on hold for owner preview/approval. No public website UI deployment.
+Marketing feature-slide direction sent to the existing “Improve Cast and Deadset posts” task:
+creator-authorized non-AI photos only, existing scheduled publisher, truthful released-feature
+claims. No publication or slot is claimed without confirmation from that task.
 
 ### Build 168 — social discovery and profile connections (24 September)
 

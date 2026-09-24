@@ -1584,6 +1584,59 @@ const handlers: Record<string, Handler> = {
     };
   },
 
+  async getMutualFriends(data, req) {
+    const { userId } = await requireAuth(req);
+    const d = z.object({ userId: z.string().uuid() }).parse(data);
+    if (d.userId === userId) return { athletes: [] };
+    const [hidden, targetHidden] = await Promise.all([
+      blockedUserIds(supabaseAdmin, userId),
+      blockedUserIds(supabaseAdmin, d.userId),
+    ]);
+    if (hidden.has(d.userId)) throw new Error("Athlete unavailable");
+    // A bounded preview, not a total. Verify all four edges before calling anyone mutual.
+    const outgoing = await supabaseAdmin
+      .from("follows")
+      .select("following_id")
+      .eq("follower_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (outgoing.error) throw new Error(outgoing.error.message);
+    const ids = (outgoing.data ?? [])
+      .map((row) => row.following_id)
+      .filter((id) => id !== d.userId && id !== userId && !hidden.has(id) && !targetHidden.has(id));
+    if (!ids.length) return { athletes: [] };
+    const [back, targetOut, targetBack] = await Promise.all([
+      supabaseAdmin
+        .from("follows")
+        .select("follower_id")
+        .eq("following_id", userId)
+        .in("follower_id", ids),
+      supabaseAdmin
+        .from("follows")
+        .select("following_id")
+        .eq("follower_id", d.userId)
+        .in("following_id", ids),
+      supabaseAdmin
+        .from("follows")
+        .select("follower_id")
+        .eq("following_id", d.userId)
+        .in("follower_id", ids),
+    ]);
+    for (const result of [back, targetOut, targetBack])
+      if (result.error) throw new Error(result.error.message);
+    const a = new Set((back.data ?? []).map((row) => row.follower_id));
+    const b = new Set((targetOut.data ?? []).map((row) => row.following_id));
+    const c = new Set((targetBack.data ?? []).map((row) => row.follower_id));
+    const shared = ids.filter((id) => a.has(id) && b.has(id) && c.has(id)).slice(0, 6);
+    if (!shared.length) return { athletes: [] };
+    const profiles = await supabaseAdmin
+      .from("public_profiles")
+      .select("id, username, display_name, avatar_url")
+      .in("id", shared);
+    if (profiles.error) throw new Error(profiles.error.message);
+    return { athletes: profiles.data ?? [] };
+  },
+
   async getFriendConnections(_data, req) {
     const { supabase, userId } = await requireAuth(req);
     const hidden = await blockedUserIds(supabase, userId);
