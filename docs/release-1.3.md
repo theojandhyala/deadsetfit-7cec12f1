@@ -55,6 +55,7 @@ console warnings/errors. A full live-account native UI walkthrough is not claime
 Backend-only deployment: `f41b5667-ed17-4214-98f5-7c745683e891`.
 Signed physical-iPhone Release build succeeded; build 169 installed over the existing app without
 an uninstall or data reset.
+Remote launch was refused because the iPhone was locked; unlock and open DEADSET for owner preview.
 App Store submission remains on hold for owner preview/approval. No public website UI deployment.
 Marketing feature-slide direction sent to the existing “Improve Cast and Deadset posts” task:
 creator-authorized non-AI photos only, existing scheduled publisher, truthful released-feature
