@@ -60,6 +60,7 @@ import { currentMilestone, nextMilestone, milestoneProgress } from "@/lib/streak
 import { emitGritEarned } from "@/lib/grit-events";
 import { saveProfile } from "@/lib/profile.functions";
 import { ProfileConnections } from "@/components/ProfileConnections";
+import { ProfileActivity } from "@/components/ProfileActivity";
 import { deleteMyAccount } from "@/lib/account.functions";
 import { finishLocalAccountExit } from "@/lib/account-exit";
 import { unregisterPushTokens } from "@/lib/push-notifications.functions";
@@ -568,6 +569,7 @@ function ProfilePage() {
         }
       />
 
+      {session && session !== "loading" && <ProfileActivity userId={session.userId} own />}
       <nav className="px-5 mb-4" aria-label="Profile shortcuts">
         <div className="grid grid-cols-4 gap-2">
           {[

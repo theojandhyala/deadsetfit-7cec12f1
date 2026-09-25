@@ -128,6 +128,62 @@ async function run() {
   const alpha = await createQaAthlete("alpha", "Leeds");
   const beta = await createQaAthlete("beta", "Leeds");
 
+  assert.deepEqual(await rpc(alpha, "getAthleteActivity", { userId: alpha.id }), {
+    posts: [],
+    next: null,
+  });
+  // Historical timestamps keep disposable fixtures away from today's global feed.
+  const { error: activitySeedError } = await admin.from("posts").insert(
+    Array.from({ length: 13 }, (_, n) => ({
+      user_id: beta.id,
+      kind: n === 0 ? "pr" : "text",
+      content: "Temporary release QA activity",
+      metadata: n === 0 ? { lift: "Bench", weight: 80, reps: 5 } : {},
+      created_at: "2000-01-01T10:00:00Z",
+    })),
+  );
+  if (activitySeedError) throw activitySeedError;
+  const activityFirst = await rpc(alpha, "getAthleteActivity", { userId: beta.id });
+  assert.equal(activityFirst.posts.length, 12);
+  assert(activityFirst.next);
+  assert(activityFirst.posts.every((post) => post.user_id === beta.id));
+  const { error: newerPostError } = await admin
+    .from("posts")
+    .insert({
+      user_id: beta.id,
+      kind: "text",
+      content: "Temporary newer QA activity",
+      created_at: "2001-01-01T10:00:00Z",
+    });
+  if (newerPostError) throw newerPostError;
+  const activityLast = await rpc(alpha, "getAthleteActivity", {
+    userId: beta.id,
+    before: activityFirst.next,
+  });
+  assert.equal(activityLast.posts.length, 1, "inserting a newer post must not shift the cursor");
+  assert.equal(activityLast.next, null);
+  assert.equal(
+    new Set([...activityFirst.posts, ...activityLast.posts].map((post) => post.id)).size,
+    13,
+  );
+  assert.deepEqual(Object.keys(activityFirst.posts[0]).sort(), [
+    "content",
+    "created_at",
+    "id",
+    "image_url",
+    "kind",
+    "metadata",
+    "user_id",
+  ]);
+  await assert.rejects(rpc({ token: "" }, "getAthleteActivity", { userId: beta.id }));
+  await assert.rejects(rpc(alpha, "getAthleteActivity", { userId: "invalid" }));
+  await assert.rejects(
+    rpc(alpha, "getAthleteActivity", {
+      userId: beta.id,
+      before: { id: beta.id, createdAt: "bad" },
+    }),
+  );
+
   const search = await rpc(alpha, "searchAthletes", { q: `@${beta.username}` });
   assert(
     search.some((athlete) => athlete.id === beta.id),
@@ -305,6 +361,8 @@ async function run() {
   assert.deepEqual(await rpc(alpha, "getMutualFriends", { userId: beta.id }), { athletes: [] });
   await rpc(beta, "blockUser", { userId: gamma.id });
   assert.deepEqual(await rpc(alpha, "blockUser", { userId: beta.id }), { blocked: true });
+  await assert.rejects(rpc(alpha, "getAthleteActivity", { userId: beta.id }));
+  await assert.rejects(rpc(beta, "getAthleteActivity", { userId: alpha.id }));
   await assert.rejects(rpc(alpha, "getMutualFriends", { userId: beta.id }));
   await assert.rejects(rpc(beta, "getMutualFriends", { userId: alpha.id }));
   await assert.rejects(rpc(beta, "setAthleteFollow", { userId: alpha.id, following: true }));
@@ -337,7 +395,7 @@ async function run() {
   });
 
   console.log(
-    "Social smoke passed: search, nearby, gym join/search/leaderboard/leave, friendship lifecycle, followers/following, mutual friendships and privacy, idempotent follow/unfollow, auth/validation rejection, block privacy, notifications and location clearing.",
+    "Social smoke passed: profile activity pagination, author isolation and privacy; search, nearby, gym join/search/leaderboard/leave, friendship lifecycle, followers/following, mutual friendships and privacy, idempotent follow/unfollow, auth/validation rejection, block privacy, notifications and location clearing.",
   );
 }
 

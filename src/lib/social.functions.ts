@@ -1,5 +1,9 @@
 import { callRpc } from "./rpc-client";
 import type { ConnectionDirection, ConnectionPage } from "./social-connections";
+import type { ActivityQuery, ActivityPage } from "./profile-activity";
+
+export const getAthleteActivity = (data: ActivityQuery) =>
+  callRpc<ActivityPage>("getAthleteActivity", data);
 
 export const getAthleteConnections = (data: {
   userId: string;

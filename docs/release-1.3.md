@@ -2,7 +2,7 @@
 
 Last recorded submission: build 165 — Waiting for Review on September 12 (not rechecked here)
 Started: 6 September 2026  
-Current local candidate: 1.3 (169), installed on Theo’s iPhone; not submitted
+Current local candidate: 1.3 (170), signed build ready; phone unavailable, not installed or submitted
 
 Production baseline: App Store version 1.2. This update is built directly on that shipped product;
 it is not based on the archived 1.1 build.
@@ -26,6 +26,33 @@ This is not a feature dump. Every addition must improve at least one of these mo
 5. Share or compare progress safely.
 
 ## Scope and status
+
+### Build 170 — shared profile activity (25 September)
+
+- Add a branded two-column activity gallery on your own and other athletes' profiles.
+  Four moments initially; expand, load older posts, and tap for full text/photo/PR details.
+  Reuse existing public posts rather than copying or exposing private training history.
+- Mark PR posts as self-reported. Handle malformed metadata, missing/failed images and empty
+  profiles; accept HTTPS image URLs only and omit referrer headers.
+- Add a sign-in-required athlete activity endpoint. Keep existing database row permissions,
+  enforce bidirectional blocks, select only post fields, and page by timestamp plus ID so
+  new inserts do not shift older pages. Loads are bounded to 12 visible posts plus lookahead.
+- Include retry states, duplicate-load prevention, stale-profile response protection, a modal
+  with focus restoration and report-post access. Existing training stats remain unchanged.
+
+Verification: 107 test files / 885 tests, TypeScript, lint, production build, CSS and Xcode
+project checks pass. Local-handler tests against the real database pass empty results, author
+isolation, equal-timestamp pagination, new-insert stability, field allowlisting, unauthorized/
+invalid requests and bidirectional blocks alongside existing social tests. Temporary test posts
+are historical QA fixtures, removed with their temporary accounts by the test cleanup.
+Initial native-readiness live OAuth probes failed due to local networking. Retrying with
+IPv4-first DNS passed both Google and Apple probes; no TLS/security checks were disabled.
+Browser-control tools are unavailable in this session: the new gallery has not had a visual or
+touch-interaction walkthrough. Do not call this whole-app certification or submit before preview.
+The extended social test also passed against the deployed production API. Cloudflare backend-only
+version: `94764f8f-9380-4bc4-8497-5b66c8294029`. No public website UI deployment.
+Signed Release build 170 succeeded. `devicectl list devices` reports Theo's iPhone unavailable,
+so build 169 remains installed; build 170 awaits device reconnection and a visual preview.
 
 ### Build 169 — social-first profiles (24 September)
 

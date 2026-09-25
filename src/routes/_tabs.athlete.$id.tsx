@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { askConfirm, askText } from "@/lib/confirm";
 import { getAthleteCard, setAthleteFollow } from "@/lib/social.functions";
 import { ProfileConnections } from "@/components/ProfileConnections";
+import { ProfileActivity } from "@/components/ProfileActivity";
 import { followLabel } from "@/lib/social-connections";
 import { blockUser, unblockUser, isBlocked, reportContent } from "@/lib/account.functions";
 import { AthleteProfileHero } from "@/components/AthleteProfileHero";
@@ -328,6 +329,7 @@ function AthletePage({ id }: { id: string }) {
         </div>
       </section>
 
+      <ProfileActivity userId={id} own={Boolean(card.isMe)} />
       {badgeWall?.top?.length ? (
         <section className="px-5 mb-5">
           <div className="deadset-section-title mb-2">

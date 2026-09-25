@@ -18,6 +18,7 @@ import { revokeAppleRefreshToken } from "../src/lib/apple-oauth.server";
 import { athleteSearchRank, normalizeAthleteSearchQuery } from "../src/lib/athlete-search";
 import { apnsConfigured, sendApns } from "../src/lib/apns.server";
 import { connectionQuery, connectionPageRows, followCommand } from "../src/lib/social-connections";
+import { activityQuery, activityPage } from "../src/lib/profile-activity";
 
 interface AuthCtx {
   supabase: SupabaseClient<Database>;
@@ -1136,6 +1137,27 @@ const handlers: Record<string, Handler> = {
   },
 
   // === Social: feed ===
+  async getAthleteActivity(data, req) {
+    const { supabase, userId } = await requireAuth(req);
+    const d = activityQuery.parse(data);
+    const hidden = await blockedUserIds(supabaseAdmin, userId);
+    if (hidden.has(d.userId)) throw new Error("Athlete unavailable");
+    let query = supabase
+      .from("posts")
+      .select("id, user_id, kind, content, image_url, metadata, created_at")
+      .eq("user_id", d.userId)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(13);
+    if (d.before)
+      query = query.or(
+        `created_at.lt.${d.before.createdAt},and(created_at.eq.${d.before.createdAt},id.lt.${d.before.id})`,
+      );
+    const { data: rows, error } = await query;
+    if (error) throw new Error(error.message);
+    return activityPage((rows ?? []).map((row) => ({ ...row, content: row.content ?? "" })));
+  },
+
   async getFeed(data, req) {
     const { supabase, userId } = await requireAuth(req);
     const requested = (data as { scope?: string } | undefined)?.scope;
